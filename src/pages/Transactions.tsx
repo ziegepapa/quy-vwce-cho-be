@@ -3,16 +3,18 @@ import { deleteTransaction, listTransactions, uid, upsertTransaction } from "../
 import type { Transaction, TxType } from "../lib/types";
 import { calcQuantity, formatDateVN, formatMoney } from "../lib/calc";
 import { nowIso } from "../lib/defaults";
+import ActionMenu from "../components/ActionMenu";
+import { IconPlus } from "../components/Icons";
 
-const TYPES: { value: TxType; label: string }[] = [
-  { value: "buy_vwce", label: "Mua VWCE" },
-  { value: "sell_vwce", label: "Bán VWCE" },
-  { value: "cash_in", label: "Nạp cash" },
-  { value: "cash_out", label: "Rút cash" },
-  { value: "tax", label: "Thuế" },
-  { value: "fee", label: "Phí" },
-  { value: "safe_interest", label: "Lãi an toàn" },
-  { value: "adjust", label: "Điều chỉnh" },
+const TYPES: { value: TxType; label: string; sign: "+" | "-" | "~" }[] = [
+  { value: "buy_vwce", label: "Mua VWCE", sign: "~" },
+  { value: "sell_vwce", label: "Bán VWCE", sign: "~" },
+  { value: "cash_in", label: "Nạp cash", sign: "+" },
+  { value: "cash_out", label: "Rút cash", sign: "-" },
+  { value: "tax", label: "Thuế", sign: "-" },
+  { value: "fee", label: "Phí", sign: "-" },
+  { value: "safe_interest", label: "Lãi an toàn", sign: "+" },
+  { value: "adjust", label: "Điều chỉnh", sign: "~" },
 ];
 
 const emptyForm = () => ({
@@ -34,6 +36,7 @@ export default function Transactions() {
   const [q, setQ] = useState("");
   const [yearFilter, setYearFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState<"all" | TxType>("all");
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   async function reload() {
     setTxs(await listTransactions());
@@ -83,8 +86,7 @@ export default function Transactions() {
       alert("Cần giá hoặc số lượng");
       return;
     }
-    let quantity: number | undefined =
-      form.quantity ? Number(form.quantity) : undefined;
+    let quantity: number | undefined = form.quantity ? Number(form.quantity) : undefined;
     if (
       (form.type === "buy_vwce" || form.type === "sell_vwce") &&
       unitPrice &&
@@ -115,37 +117,71 @@ export default function Transactions() {
     await reload();
   }
 
+  function openEdit(t: Transaction) {
+    setEditId(t.id);
+    setForm({
+      date: t.date,
+      type: t.type,
+      amount: String(t.amount),
+      unitPrice: String(t.unitPrice ?? ""),
+      quantity: String(t.quantity ?? ""),
+      fee: String(t.fee ?? 0),
+      tax: String(t.tax ?? 0),
+      notes: t.notes,
+    });
+    setShow(true);
+  }
+
   return (
     <div>
       <div className="row-between">
         <h1 className="page-title">Giao dịch</h1>
         <button
           type="button"
+          className="fab"
+          aria-label="Thêm giao dịch"
           onClick={() => {
             setEditId(null);
             setForm(emptyForm());
             setShow(true);
           }}
         >
-          +
+          <IconPlus />
         </button>
       </div>
 
-      <div className="card" style={{ marginBottom: 12 }}>
-        <p className="muted" style={{ fontSize: ".8rem", margin: 0 }}>
-          Quy ước: <strong>Nạp cash</strong> mới tăng vốn đóng. <strong>Mua VWCE</strong> chỉ
-          chuyển cash → chứng khoán (không đếm vốn lần 2). Bán VWCE đưa tiền về cash sau phí/thuế.
-        </p>
-      </div>
+      <button
+        type="button"
+        className="callout-toggle"
+        onClick={() => setRulesOpen((v) => !v)}
+        aria-expanded={rulesOpen}
+      >
+        Quy ước dòng tiền {rulesOpen ? "▴" : "▾"}
+      </button>
+      {rulesOpen && (
+        <div className="banner info">
+          <strong>Nạp cash</strong> mới tăng vốn đóng. <strong>Mua VWCE</strong> chỉ chuyển cash →
+          chứng khoán (không đếm vốn lần 2). Bán VWCE đưa tiền về cash sau phí/thuế.
+        </div>
+      )}
 
       <div className="field">
-        <label>Tìm</label>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ghi chú, loại…" />
+        <label htmlFor="tx-search">Tìm</label>
+        <input
+          id="tx-search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Ghi chú, loại…"
+        />
       </div>
       <div className="grid2">
         <div className="field">
-          <label>Năm</label>
-          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+          <label htmlFor="tx-year">Năm</label>
+          <select
+            id="tx-year"
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+          >
             <option value="all">Tất cả</option>
             {years.map((y) => (
               <option key={y} value={y}>
@@ -155,8 +191,9 @@ export default function Transactions() {
           </select>
         </div>
         <div className="field">
-          <label>Loại</label>
+          <label htmlFor="tx-type">Loại</label>
           <select
+            id="tx-type"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as "all" | TxType)}
           >
@@ -173,7 +210,7 @@ export default function Transactions() {
         <button
           type="button"
           className="secondary"
-          style={{ marginBottom: 12 }}
+          style={{ marginBottom: 12, width: "100%" }}
           onClick={() => {
             setYearFilter("all");
             setTypeFilter("all");
@@ -185,77 +222,86 @@ export default function Transactions() {
       )}
 
       {!filtered.length ? (
-        <div className="empty">Chưa có giao dịch.</div>
+        <div className="empty card">
+          <p>Chưa có giao dịch.</p>
+          <button
+            type="button"
+            onClick={() => {
+              setEditId(null);
+              setForm(emptyForm());
+              setShow(true);
+            }}
+          >
+            Thêm giao dịch đầu tiên
+          </button>
+        </div>
       ) : (
-        filtered.map((t) => (
-          <div className="card list-item" key={t.id} style={{ borderBottom: "none" }}>
-            <div>
-              <strong>{TYPES.find((x) => x.value === t.type)?.label}</strong>
-              <div className="muted">{formatDateVN(t.date)}</div>
-              {t.notes && <div className="muted">{t.notes}</div>}
-              {t.quantity != null && (
-                <div className="muted">
-                  SL {t.quantity.toFixed(4)}
-                  {t.unitPrice != null ? ` @ ${formatMoney(t.unitPrice)}` : ""}
+        <div className="card" style={{ padding: "0.25rem 0.75rem" }}>
+          {filtered.map((t) => {
+            const meta = TYPES.find((x) => x.value === t.type);
+            const sign = meta?.sign ?? "~";
+            const amountClass =
+              sign === "+" ? "positive" : sign === "-" ? "negative" : "";
+            return (
+              <div className="tx-row" key={t.id}>
+                <div className="tx-icon" aria-hidden>
+                  {sign === "+" ? "↑" : sign === "-" ? "↓" : "⇄"}
                 </div>
-              )}
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div>{formatMoney(t.amount)}</div>
-              <button
-                type="button"
-                className="secondary"
-                style={{ minHeight: 36, marginTop: 4 }}
-                onClick={() => {
-                  setEditId(t.id);
-                  setForm({
-                    date: t.date,
-                    type: t.type,
-                    amount: String(t.amount),
-                    unitPrice: String(t.unitPrice ?? ""),
-                    quantity: String(t.quantity ?? ""),
-                    fee: String(t.fee ?? 0),
-                    tax: String(t.tax ?? 0),
-                    notes: t.notes,
-                  });
-                  setShow(true);
-                }}
-              >
-                Sửa
-              </button>
-              <button
-                type="button"
-                className="danger"
-                style={{ minHeight: 36, marginLeft: 4 }}
-                onClick={async () => {
-                  if (confirm("Xóa giao dịch này?")) {
-                    await deleteTransaction(t.id);
-                    await reload();
-                  }
-                }}
-              >
-                Xóa
-              </button>
-            </div>
-          </div>
-        ))
+                <div className="tx-body">
+                  <div className="row-between">
+                    <strong>{meta?.label ?? t.type}</strong>
+                    <span className={`metric-value ${amountClass}`} style={{ fontSize: "1rem" }}>
+                      {sign === "-" ? "−" : sign === "+" ? "+" : ""}
+                      {formatMoney(t.amount)}
+                    </span>
+                  </div>
+                  <div className="row-between">
+                    <span className="muted">
+                      {formatDateVN(t.date)}
+                      {t.notes ? ` · ${t.notes}` : ""}
+                      {t.quantity != null ? ` · SL ${t.quantity.toFixed(4)}` : ""}
+                    </span>
+                    <ActionMenu
+                      actions={[
+                        { label: "Sửa", onClick: () => openEdit(t) },
+                        {
+                          label: "Xóa",
+                          danger: true,
+                          onClick: async () => {
+                            if (confirm("Xóa giao dịch này?")) {
+                              await deleteTransaction(t.id);
+                              await reload();
+                            }
+                          },
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {show && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
+            <div className="sheet-handle" aria-hidden />
             <h2>{editId ? "Sửa" : "Thêm"} giao dịch</h2>
             <div className="field">
-              <label>Ngày</label>
+              <label htmlFor="f-date">Ngày</label>
               <input
+                id="f-date"
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
               />
             </div>
             <div className="field">
-              <label>Loại</label>
+              <label htmlFor="f-type">Loại</label>
               <select
+                id="f-type"
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value as TxType })}
               >
@@ -267,12 +313,13 @@ export default function Transactions() {
               </select>
             </div>
             <div className="field">
-              <label>
+              <label htmlFor="f-amt">
                 {form.type === "buy_vwce" || form.type === "sell_vwce"
                   ? "Tổng tiền thanh toán"
                   : "Số tiền"}
               </label>
               <input
+                id="f-amt"
                 inputMode="decimal"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
@@ -281,16 +328,18 @@ export default function Transactions() {
             {(form.type === "buy_vwce" || form.type === "sell_vwce") && (
               <>
                 <div className="field">
-                  <label>Giá 1 VWCE</label>
+                  <label htmlFor="f-price">Giá 1 VWCE</label>
                   <input
+                    id="f-price"
                     inputMode="decimal"
                     value={form.unitPrice}
                     onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
                   />
                 </div>
                 <div className="field">
-                  <label>Số lượng (để trống = tự tính)</label>
+                  <label htmlFor="f-qty">Số lượng (để trống = tự tính)</label>
                   <input
+                    id="f-qty"
                     inputMode="decimal"
                     value={form.quantity}
                     onChange={(e) => setForm({ ...form, quantity: e.target.value })}
@@ -299,16 +348,18 @@ export default function Transactions() {
                 </div>
                 <div className="grid2">
                   <div className="field">
-                    <label>Phí</label>
+                    <label htmlFor="f-fee">Phí</label>
                     <input
+                      id="f-fee"
                       inputMode="decimal"
                       value={form.fee}
                       onChange={(e) => setForm({ ...form, fee: e.target.value })}
                     />
                   </div>
                   <div className="field">
-                    <label>Thuế</label>
+                    <label htmlFor="f-tax">Thuế</label>
                     <input
+                      id="f-tax"
                       inputMode="decimal"
                       value={form.tax}
                       onChange={(e) => setForm({ ...form, tax: e.target.value })}
@@ -316,16 +367,17 @@ export default function Transactions() {
                   </div>
                 </div>
                 {unitPrice > 0 && amount > 0 && (
-                  <p className="muted" style={{ fontSize: ".8rem" }}>
-                    Preview: SL ≈ {autoQty.toFixed(4)} · Giá trị CK ≈{" "}
+                  <div className="banner info">
+                    Preview: SL ≈ {autoQty.toFixed(4)} · CK ≈{" "}
                     {formatMoney(Math.max(0, amount - fee - tax))}
-                  </p>
+                  </div>
                 )}
               </>
             )}
             <div className="field">
-              <label>Ghi chú{form.type === "adjust" ? " (bắt buộc)" : ""}</label>
+              <label htmlFor="f-notes">Ghi chú{form.type === "adjust" ? " (bắt buộc)" : ""}</label>
               <textarea
+                id="f-notes"
                 rows={2}
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
