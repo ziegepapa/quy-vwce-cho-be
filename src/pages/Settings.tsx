@@ -83,10 +83,12 @@ export default function SettingsPage({ onReload }: { onReload: () => void }) {
     if (!confirm(`Xem trước backup:\n${preview}\n\nTiếp tục nhập? (sẽ tự backup dữ liệu hiện tại trước)`))
       return;
 
-    // Auto-backup current data before overwrite
     try {
       const current = await exportBackup();
-      downloadJson(current, `vwce-auto-before-import-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
+      downloadJson(
+        current,
+        `vwce-auto-before-import-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`,
+      );
     } catch {
       /* still allow import */
     }
@@ -117,10 +119,11 @@ export default function SettingsPage({ onReload }: { onReload: () => void }) {
         ].join(","),
       )
       .join("\n");
-    // BOM UTF-8 for Excel
     const bom = "\uFEFF";
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([bom + header + rows], { type: "text/csv;charset=utf-8" }));
+    a.href = URL.createObjectURL(
+      new Blob([bom + header + rows], { type: "text/csv;charset=utf-8" }),
+    );
     a.download = "vwce-transactions.csv";
     a.click();
   }
@@ -202,7 +205,8 @@ export default function SettingsPage({ onReload }: { onReload: () => void }) {
           <div className="field">
             <label>Lợi suất VWCE</label>
             <input
-              type="number"ados step="0.001"
+              type="number"
+              step="0.001"
               value={s.vwceReturn}
               onChange={(e) => setS({ ...s, vwceReturn: +e.target.value })}
               onBlur={() => persist({ vwceReturn: s.vwceReturn })}
