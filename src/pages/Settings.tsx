@@ -13,7 +13,13 @@ import type { AnnualChecklist, AppSettings, BackupPayload } from "../lib/types";
 import { APP_VERSION, SCHEMA_VERSION } from "../lib/types";
 import { csvEscape, formatDateVN } from "../lib/calc";
 
-export default function SettingsPage({ onReload }: { onReload: () => void }) {
+export default function SettingsPage({
+  onReload,
+  onOpenMigrate,
+}: {
+  onReload: () => void;
+  onOpenMigrate?: () => void;
+}) {
   const [s, setS] = useState<AppSettings | null>(null);
   const [metaBackup, setMetaBackup] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
@@ -328,6 +334,11 @@ export default function SettingsPage({ onReload }: { onReload: () => void }) {
         <button type="button" className="secondary" onClick={exportCsv}>
           Xuất CSV giao dịch
         </button>
+        {onOpenMigrate && (
+          <button type="button" className="secondary" onClick={onOpenMigrate}>
+            Nhập dữ liệu local vào tài khoản
+          </button>
+        )}
         <button
           type="button"
           className="danger"
@@ -356,7 +367,10 @@ export default function SettingsPage({ onReload }: { onReload: () => void }) {
           v{APP_VERSION} · {online ? "Online" : "Offline"} · Sao lưu:{" "}
           {metaBackup ? formatDateVN(metaBackup.slice(0, 10)) : "chưa có"}
         </p>
-        <p>Không phải tư vấn đầu tư/thuế. Giá vốn trung bình chỉ theo dõi nội bộ.</p>
+        <p>
+          Dữ liệu lưu trên thiết bị và đồng bộ Supabase khi đã đăng nhập. Không phải tư vấn
+          đầu tư/thuế.
+        </p>
       </div>
     </div>
   );
