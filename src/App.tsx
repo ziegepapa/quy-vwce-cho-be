@@ -8,13 +8,10 @@ import {
   getSettings,
 } from "./lib/db";
 import type { AppSettings } from "./lib/types";
-import {
-  getSyncMeta,
-  listConflicts,
-  runSync,
-} from "./lib/sync/engine";
+import { getSyncMeta, listConflicts, runSync } from "./lib/sync/engine";
 import { outboxCount } from "./lib/sync/outbox";
-import { SYNC_STATUS_LABEL, type SyncStatus } from "./lib/sync/types";
+import type { SyncStatus } from "./lib/sync/types";
+import TopBar from "./components/TopBar";
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
 import Goals from "./pages/Goals";
@@ -23,6 +20,14 @@ import SettingsPage from "./pages/Settings";
 import Onboarding from "./pages/Onboarding";
 import AuthPage from "./pages/Auth";
 import MigrateWizard from "./pages/MigrateWizard";
+
+const NAV: [string, string, string][] = [
+  ["/", "⌂", "Tổng quan"],
+  ["/transactions", "⇄", "Giao dịch"],
+  ["/goals", "○", "Mục tiêu"],
+  ["/simulation", "↗", "Mô phỏng"],
+  ["/settings", "⚙", "Cài đặt"],
+];
 
 export default function App() {
   const auth = useAuth();
@@ -62,8 +67,7 @@ export default function App() {
       if (auth.user) {
         const meta = await getSyncMeta(auth.user.id);
         const counts = await countLocalData();
-        const hasLocal =
-          counts.goals + counts.transactions + counts.settings > 0;
+        const hasLocal = counts.goals + counts.transactions + counts.settings > 0;
         if (hasLocal && !meta.migrateWizardDone && !meta.migrateWizardSkipped) {
           setShowWizard(true);
         }
@@ -80,9 +84,8 @@ export default function App() {
 
   useEffect(() => {
     const on = () => {
-      if (auth.user) {
-        runSync(auth.user.id).then(() => refreshSyncBadge());
-      } else refreshSyncBadge();
+      if (auth.user) runSync(auth.user.id).then(() => refreshSyncBadge());
+      else refreshSyncBadge();
     };
     const off = () => setSyncStatus("offline");
     window.addEventListener("online", on);
@@ -150,32 +153,33 @@ export default function App() {
     auth.user?.email?.split("@")[0] ||
     settings.planName;
 
+  const navLinks = NAV.map(([to, icon, label]) => (
+    <NavLink
+      key={to}
+      to={to}
+      end={to === "/"}
+      className={({ isActive }) => (isActive ? "active" : "")}
+    >
+      <span aria-hidden>{icon}</span>
+      {label}
+    </NavLink>
+  ));
+
   return (
-    <>
+    <div className="app-layout">
+      <aside className="sidebar" aria-label="Điều hướng">
+        <div className="sidebar-brand">Quỹ VWCE</div>
+        <nav className="sidebar-nav">{navLinks}</nav>
+      </aside>
+
       <div className="app-shell">
         {auth.user && (
-          <header className="top-bar">
-            <div>
-              <div className="muted" style={{ fontSize: ".75rem" }}>
-                Xin chào
-              </div>
-              <strong style={{ fontSize: ".95rem" }}>{displayName}</strong>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div className="muted" style={{ fontSize: ".7rem" }}>
-                {SYNC_STATUS_LABEL[syncStatus]}
-                {pending > 0 ? ` · ${pending} chờ` : ""}
-              </div>
-              <button
-                type="button"
-                className="secondary"
-                style={{ minHeight: 36, fontSize: ".75rem", padding: ".3rem .6rem" }}
-                onClick={handleSignOut}
-              >
-                Đăng xuất
-              </button>
-            </div>
-          </header>
+          <TopBar
+            displayName={displayName}
+            syncStatus={syncStatus}
+            pending={pending}
+            onSignOut={handleSignOut}
+          />
         )}
         <Routes>
           <Route path="/" element={<Overview />} />
@@ -193,15 +197,10 @@ export default function App() {
           />
         </Routes>
       </div>
+
       <nav className="bottom-nav" aria-label="Điều hướng chính">
         <div className="bottom-nav-inner">
-          {[
-            ["/", "⌂", "Tổng quan"],
-            ["/transactions", "⇄", "Giao dịch"],
-            ["/goals", "○", "Mục tiêu"],
-            ["/simulation", "↗", "Mô phỏng"],
-            ["/settings", "⚙", "Cài đặt"],
-          ].map(([to, icon, label]) => (
+          {NAV.map(([to, icon, label]) => (
             <NavLink
               key={to}
               to={to}
@@ -214,6 +213,6 @@ export default function App() {
           ))}
         </div>
       </nav>
-    </>
+    </div>
   );
 }
