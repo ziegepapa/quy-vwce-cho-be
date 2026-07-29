@@ -3,7 +3,7 @@ import type { AnnualChecklist, AppMetadata, AppSettings, BackupPayload, Goal, Mo
 import { SCHEMA_VERSION } from "./types";
 import { defaultChecklist, defaultGoals, defaultSettings, nowIso, uid } from "./defaults";
 import type { ConflictRecord, OutboxItem, SyncMeta } from "./sync/types";
-import { enqueueOutbox } from "./sync/engine";
+import { enqueueOutbox } from "./sync/outbox";
 
 export class VwceDB extends Dexie {
   settings!: Table<AppSettings, string>;
@@ -26,7 +26,6 @@ export class VwceDB extends Dexie {
       monthlySnapshots: "id, year, month",
       appMetadata: "id",
     });
-    // v2: thêm bảng đồng bộ — không đụng data v1
     this.version(2).stores({
       settings: "id",
       goals: "id, dueDate",
@@ -69,10 +68,11 @@ export async function getSettings(): Promise<AppSettings> {
 
 export async function saveSettings(partial: Partial<AppSettings>, opts?: { sync?: boolean }): Promise<void> {
   const current = await getSettings();
-  const next = { ...current, ...partial, id: "settings", updatedAt: nowIso(), version: (current as AppSettings & { version?: number }).version ? ((current as AppSettings & { version?: number }).version! + 1) : 1 };
+  const ver = ((current as AppSettings & { version?: number }).version ?? 0) + 1;
+  const next = { ...current, ...partial, id: "settings", updatedAt: nowIso(), version: ver };
   await db.settings.put(next as AppSettings);
   if (opts?.sync !== false) {
-    await enqueueOutbox("settings", "settings", "upsert", next, (next as { version?: number }).version ?? 1);
+    await enqueueOutbox("settings", "settings", "upsert", next, ver);
   }
 }
 
@@ -86,10 +86,11 @@ export async function listTransactions(): Promise<Transaction[]> {
 }
 
 export async function upsertTransaction(tx: Transaction, opts?: { sync?: boolean }): Promise<void> {
-  const next = { ...tx, updatedAt: nowIso(), version: (tx as Transaction & { version?: number }).version ? ((tx as Transaction & { version?: number }).version! + 1) : 1 };
+  const ver = ((tx as Transaction & { version?: number }).version ?? 0) + 1;
+  const next = { ...tx, updatedAt: nowIso(), version: ver };
   await db.transactions.put(next as Transaction);
   if (opts?.sync !== false) {
-    await enqueueOutbox("transactions", next.id, "upsert", next, (next as { version?: number }).version ?? 1);
+    await enqueueOutbox("transactions", next.id, "upsert", next, ver);
   }
 }
 
@@ -101,10 +102,11 @@ export async function deleteTransaction(id: string, opts?: { sync?: boolean }): 
 }
 
 export async function upsertGoal(g: Goal, opts?: { sync?: boolean }): Promise<void> {
-  const next = { ...g, updatedAt: nowIso(), version: (g as Goal & { version?: number }).version ? ((g as Goal & { version?: number }).version! + 1) : 1 };
+  const ver = ((g as Goal & { version?: number }).version ?? 0) + 1;
+  const next = { ...g, updatedAt: nowIso(), version: ver };
   await db.goals.put(next as Goal);
   if (opts?.sync !== false) {
-    await enqueueOutbox("goals", next.id, "upsert", next, (next as { version?: number }).version ?? 1);
+    await enqueueOutbox("goals", next.id, "upsert", next, ver);
   }
 }
 
@@ -196,7 +198,6 @@ export async function clearAllData(): Promise<void> {
   );
 }
 
-/** Xóa cache nghiệp vụ khi đổi/đăng xuất user — giữ meta máy nếu cần */
 export async function clearUserBusinessData(): Promise<void> {
   await db.transaction(
     "rw",
