@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { useAuth } from "./lib/auth";
 import {
@@ -12,6 +12,7 @@ import { getSyncMeta, listConflicts, runSync } from "./lib/sync/engine";
 import { outboxCount } from "./lib/sync/outbox";
 import type { SyncStatus } from "./lib/sync/types";
 import TopBar from "./components/TopBar";
+import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
 import Goals from "./pages/Goals";
@@ -21,12 +22,12 @@ import Onboarding from "./pages/Onboarding";
 import AuthPage from "./pages/Auth";
 import MigrateWizard from "./pages/MigrateWizard";
 
-const NAV: [string, string, string][] = [
-  ["/", "⌂", "Tổng quan"],
-  ["/transactions", "⇄", "Giao dịch"],
-  ["/goals", "○", "Mục tiêu"],
-  ["/simulation", "↗", "Mô phỏng"],
-  ["/settings", "⚙", "Cài đặt"],
+const NAV: { to: string; label: string; icon: ReactNode }[] = [
+  { to: "/", label: "Tổng quan", icon: <IconHome /> },
+  { to: "/transactions", label: "Giao dịch", icon: <IconTx /> },
+  { to: "/goals", label: "Mục tiêu", icon: <IconGoal /> },
+  { to: "/simulation", label: "Mô phỏng", icon: <IconSim /> },
+  { to: "/settings", label: "Cài đặt", icon: <IconSettings /> },
 ];
 
 export default function App() {
@@ -110,6 +111,17 @@ export default function App() {
     await auth.signOut();
   }
 
+  async function handleSyncNow() {
+    if (!auth.user) return;
+    setSyncStatus("syncing");
+    try {
+      await runSync(auth.user.id);
+    } catch {
+      /* */
+    }
+    await refreshSyncBadge();
+  }
+
   if (!auth.ready || !ready) {
     return (
       <div className="app-shell">
@@ -153,23 +165,23 @@ export default function App() {
     auth.user?.email?.split("@")[0] ||
     settings.planName;
 
-  const navLinks = NAV.map(([to, icon, label]) => (
-    <NavLink
-      key={to}
-      to={to}
-      end={to === "/"}
-      className={({ isActive }) => (isActive ? "active" : "")}
-    >
-      <span aria-hidden>{icon}</span>
-      {label}
-    </NavLink>
-  ));
-
   return (
     <div className="app-layout">
       <aside className="sidebar" aria-label="Điều hướng">
         <div className="sidebar-brand">Quỹ VWCE</div>
-        <nav className="sidebar-nav">{navLinks}</nav>
+        <nav className="sidebar-nav">
+          {NAV.map(({ to, label, icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/"}
+              className={({ isActive }) => (isActive ? "active" : "")}
+            >
+              {icon}
+              {label}
+            </NavLink>
+          ))}
+        </nav>
       </aside>
 
       <div className="app-shell">
@@ -179,6 +191,7 @@ export default function App() {
             syncStatus={syncStatus}
             pending={pending}
             onSignOut={handleSignOut}
+            onSyncNow={handleSyncNow}
           />
         )}
         <Routes>
@@ -200,15 +213,15 @@ export default function App() {
 
       <nav className="bottom-nav" aria-label="Điều hướng chính">
         <div className="bottom-nav-inner">
-          {NAV.map(([to, icon, label]) => (
+          {NAV.map(({ to, label, icon }) => (
             <NavLink
               key={to}
               to={to}
               end={to === "/"}
               className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}
             >
-              <span aria-hidden>{icon}</span>
-              {label}
+              {icon}
+              <span>{label}</span>
             </NavLink>
           ))}
         </div>
