@@ -29,4 +29,4 @@ export type BackupPayload = {
   transactions: Transaction[]; annualChecklists: AnnualChecklist[]; monthlySnapshots: MonthlySnapshot[];
 };
 export const SCHEMA_VERSION = 1;
-export const APP_VERSION = "1.0.0";
+export const APP_VERSION = "1.1.0";
