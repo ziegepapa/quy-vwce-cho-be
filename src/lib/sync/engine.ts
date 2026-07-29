@@ -2,6 +2,9 @@ import { supabase } from "../supabase";
 import { db } from "../db";
 import { nowIso, uid } from "../defaults";
 import type { ConflictRecord, EntityTable, OutboxItem, SyncMeta, SyncStatus } from "./types";
+import { enqueueOutbox, outboxCount } from "./outbox";
+
+export { enqueueOutbox, outboxCount };
 
 const REMOTE_TABLE: Record<EntityTable, string> = {
   settings: "app_settings",
@@ -55,35 +58,6 @@ export async function saveSyncMeta(partial: Partial<SyncMeta> & { userId: string
   return next;
 }
 
-export async function enqueueOutbox(
-  table: EntityTable,
-  entityId: string,
-  op: "upsert" | "delete",
-  payload: unknown,
-  version = 1,
-): Promise<void> {
-  // Collapse duplicate pending ops for same entity
-  const pending = await db.outbox.where("entityId").equals(entityId).toArray();
-  for (const p of pending) {
-    if (p.table === table) await db.outbox.delete(p.id);
-  }
-  const item: OutboxItem = {
-    id: uid("ob"),
-    table,
-    entityId,
-    op,
-    payload,
-    version,
-    createdAt: nowIso(),
-    attempts: 0,
-  };
-  await db.outbox.put(item);
-}
-
-export async function outboxCount(): Promise<number> {
-  return db.outbox.count();
-}
-
 export async function listConflicts(): Promise<ConflictRecord[]> {
   return db.conflicts.filter((c) => !c.resolved).toArray();
 }
@@ -130,10 +104,7 @@ export async function pushOutbox(userId: string): Promise<{ pushed: number; erro
         attempts,
         lastError: e instanceof Error ? e.message : String(e),
       });
-      if (attempts >= 8) {
-        // keep in outbox but stop hammering in this cycle
-        break;
-      }
+      if (attempts >= 8) break;
     }
   }
   if (pushed > 0) await saveSyncMeta({ userId, lastPushedAt: nowIso() });
@@ -175,7 +146,6 @@ export async function pullDelta(userId: string): Promise<{ pulled: number; confl
     for (const row of data) {
       const entityId = row.id as string;
       if (row.deleted_at) {
-        // soft delete locally
         if (table === "settings") await db.settings.delete(entityId);
         else if (table === "goals") await db.goals.delete(entityId);
         else if (table === "transactions") await db.transactions.delete(entityId);
@@ -201,7 +171,6 @@ export async function pullDelta(userId: string): Promise<{ pulled: number; confl
         .count();
 
       if (local && pending > 0) {
-        // both sides changed → conflict
         const conflict: ConflictRecord = {
           id: uid("cf"),
           table,
@@ -233,7 +202,6 @@ export async function pullDelta(userId: string): Promise<{ pulled: number; confl
         }
       }
 
-      // apply remote
       const withMeta = { ...payload, id: entityId, version: remoteVer, updatedAt: remoteUpdated };
       if (table === "settings") await db.settings.put(withMeta as never);
       else if (table === "goals") await db.goals.put(withMeta as never);
@@ -259,7 +227,12 @@ export async function runSync(userId: string): Promise<{
     const pending = await outboxCount();
     const c = (await listConflicts()).length;
     return {
-      status: computeSyncStatus({ online: false, syncing: false, conflictCount: c, pendingOutbox: pending }),
+      status: computeSyncStatus({
+        online: false,
+        syncing: false,
+        conflictCount: c,
+        pendingOutbox: pending,
+      }),
       pushed: 0,
       pulled: 0,
       conflicts: c,
