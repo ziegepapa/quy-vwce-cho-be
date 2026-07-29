@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SyncStatus } from "../lib/sync/types";
 import { SyncStatusIndicator } from "./SyncStatusIndicator";
 
@@ -39,55 +39,98 @@ export default function TopBar({
   syncStatus,
   pending,
   onSignOut,
+  onSyncNow,
 }: {
   displayName: string;
   syncStatus: SyncStatus;
   pending: number;
   onSignOut: () => void;
+  onSyncNow?: () => void;
 }) {
   const [clock, setClock] = useState(() => formatBerlinNow());
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Cập nhật mỗi phút — không re-render toàn app mỗi giây
     const tick = () => setClock(formatBerlinNow());
     const id = window.setInterval(tick, 30_000);
-    // Align to next minute roughly
     const delay = 60_000 - (Date.now() % 60_000);
-    const once = window.setTimeout(() => {
-      tick();
-    }, delay);
+    const once = window.setTimeout(tick, delay);
     return () => {
       clearInterval(id);
       clearTimeout(once);
     };
   }, []);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [menuOpen]);
+
   const initial = (displayName.trim()[0] || "?").toUpperCase();
 
   return (
     <header className="top-bar">
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <div className="avatar" aria-hidden>
-          {initial}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", minWidth: 0 }}>
+        <div className="avatar-wrap" ref={menuRef}>
+          <button
+            type="button"
+            className="avatar avatar-btn"
+            aria-label="Menu tài khoản"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            {initial}
+          </button>
+          {menuOpen && (
+            <div className="avatar-menu" role="menu">
+              <div className="avatar-menu-head">
+                <strong>{displayName}</strong>
+                <div className="muted" style={{ fontSize: ".75rem" }}>
+                  {clock.date}
+                </div>
+              </div>
+              {onSyncNow && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onSyncNow();
+                  }}
+                >
+                  Đồng bộ ngay
+                </button>
+              )}
+              <button
+                type="button"
+                role="menuitem"
+                className="danger-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onSignOut();
+                }}
+              >
+                Đăng xuất
+              </button>
+            </div>
+          )}
         </div>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div className="top-bar-greeting">{greetingBerlin(clock.hour)}</div>
           <div className="top-bar-name">{displayName}</div>
           <div className="top-bar-meta">
-            {clock.date} · {clock.time} (Berlin)
+            {clock.date} · {clock.time}
           </div>
         </div>
       </div>
       <div className="top-bar-actions">
         <SyncStatusIndicator status={syncStatus} pending={pending} />
-        <button
-          type="button"
-          className="secondary"
-          style={{ minHeight: 36, fontSize: ".75rem", padding: ".3rem .65rem" }}
-          onClick={onSignOut}
-        >
-          Đăng xuất
-        </button>
       </div>
     </header>
   );
