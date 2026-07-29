@@ -14,12 +14,16 @@ html, body, #root { margin: 0; min-height: 100%; }
 body { padding-top: var(--safe-top); background: var(--ivory); }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { min-height: 44px; min-width: 44px; cursor: pointer; border-radius: 12px; border: none; background: var(--navy); color: #f7f4ee; padding: .65rem 1rem; font-weight: 600; }
+button:disabled { opacity: .55; cursor: not-allowed; }
 button.secondary { background: transparent; color: var(--navy); border: 1.5px solid var(--navy); }
 button.danger { background: var(--red); }
 input, select, textarea { width: 100%; padding: .7rem .85rem; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); min-height: 44px; }
 label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .3rem; color: var(--muted); }
 .field { margin-bottom: .85rem; }
 .app-shell { max-width: 28rem; margin: 0 auto; min-height: 100dvh; padding: .75rem 1rem calc(var(--nav-h) + var(--safe-bottom) + 1rem); }
+.auth-shell { display: flex; flex-direction: column; justify-content: center; }
+.auth-card { margin-top: 2rem; }
+.top-bar { display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-bottom: .75rem; padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
 .page-title { margin: 0 0 .25rem; font-size: 1.45rem; font-weight: 700; }
 .muted { color: var(--muted); font-size: .9rem; }
 .card { background: var(--card); border-radius: 1rem; padding: 1rem; box-shadow: var(--shadow); margin-bottom: .75rem; }
@@ -45,3 +49,7 @@ label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .3re
 .progress-track > span { display: block; height: 100%; background: var(--navy); }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15,20,25,.45); display: flex; align-items: flex-end; justify-content: center; z-index: 100; padding: 1rem; padding-bottom: calc(1rem + var(--safe-bottom)); }
 .modal { background: var(--card); border-radius: 1.1rem; padding: 1.1rem; width: 100%; max-width: 28rem; max-height: 85dvh; overflow: auto; }
+code { font-size: .85em; background: var(--border); padding: .1rem .35rem; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
