@@ -1,35 +1,66 @@
-/** Pure calculation helpers */
+/** Pure calculation helpers — no side effects */
+
 export function monthlyRate(annualRate: number): number {
+  if (!Number.isFinite(annualRate) || annualRate <= -1) return 0;
   return Math.pow(1 + annualRate, 1 / 12) - 1;
 }
+
 export function inflate(presentValue: number, inflationRate: number, years: number): number {
-  return presentValue * Math.pow(1 + inflationRate, years);
+  if (!Number.isFinite(presentValue) || !Number.isFinite(inflationRate)) return presentValue;
+  const y = Math.max(0, years);
+  return presentValue * Math.pow(1 + inflationRate, y);
 }
+
 export function monthsBetween(from: Date, to: Date): number {
   return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
 }
+
+/** Parse YYYY-MM-DD as local calendar date (no UTC shift). */
 export function parseDate(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d);
+  return new Date(y, (m || 1) - 1, d || 1);
 }
+
 export function formatDateVN(iso: string): string {
   if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
+  const parts = iso.slice(0, 10).split("-");
+  if (parts.length < 3) return iso;
+  const [y, m, d] = parts;
   return `${d}/${m}/${y}`;
 }
+
 export function formatMoney(n: number, currency = "EUR"): string {
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(n);
 }
+
 export function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
-export function calcQuantity(amount: number, unitPrice: number, fee = 0, tax = 0): number {
-  if (unitPrice <= 0) return 0;
-  return (amount - fee - tax) / unitPrice;
+
+export function isValidNumber(n: unknown): n is number {
+  return typeof n === "number" && Number.isFinite(n);
 }
+
+/** quantity = (amount - fee - tax) / unitPrice when amount is total payment */
+export function calcQuantity(amount: number, unitPrice: number, fee = 0, tax = 0): number {
+  if (!isValidNumber(unitPrice) || unitPrice <= 0) return 0;
+  if (!isValidNumber(amount)) return 0;
+  const net = amount - (fee || 0) - (tax || 0);
+  if (net <= 0) return 0;
+  return net / unitPrice;
+}
+
 export type ProgressStatus = "green" | "yellow" | "red";
+
 export function goalProgressStatus(opts: {
-  targetAdjusted: number; protectedAmount: number; monthsRemaining: number;
+  targetAdjusted: number;
+  protectedAmount: number;
+  monthsRemaining: number;
 }): ProgressStatus {
   const { targetAdjusted, protectedAmount, monthsRemaining } = opts;
   if (targetAdjusted <= 0) return "green";
@@ -39,9 +70,22 @@ export function goalProgressStatus(opts: {
   if (ratio >= 0.9) return "yellow";
   return "red";
 }
+
+export function statusLabel(s: ProgressStatus): string {
+  if (s === "green") return "Đúng tiến độ";
+  if (s === "yellow") return "Thiếu nhẹ";
+  return "Thiếu / rủi ro";
+}
+
 export function requiredSafeAmount(opts: {
-  targetAmount: number; inflationRate: number; baseYear: number; targetYear: number;
-  useInflation: boolean; bufferPct: number; estimatedTax?: number; estimatedFees?: number;
+  targetAmount: number;
+  inflationRate: number;
+  baseYear: number;
+  targetYear: number;
+  useInflation: boolean;
+  bufferPct: number;
+  estimatedTax?: number;
+  estimatedFees?: number;
 }): number {
   let amount = opts.targetAmount;
   if (opts.useInflation) {
@@ -50,72 +94,256 @@ export function requiredSafeAmount(opts: {
   }
   return amount + amount * opts.bufferPct + (opts.estimatedTax ?? 0) + (opts.estimatedFees ?? 0);
 }
-export function etfToSell(opts: { requiredSafe: number; currentSafe: number; expectedFutureCash: number }): number {
+
+export function etfToSell(opts: {
+  requiredSafe: number;
+  currentSafe: number;
+  expectedFutureCash: number;
+}): number {
   return Math.max(0, opts.requiredSafe - opts.currentSafe - opts.expectedFutureCash);
 }
+
 export type PortfolioState = {
-  vwceQty: number; vwceCostBasis: number; totalBought: number; totalSold: number;
-  totalFees: number; totalTax: number; cashBalance: number; totalContributed: number; totalWithdrawn: number;
+  vwceQty: number;
+  vwceCostBasis: number;
+  totalBought: number;
+  totalSold: number;
+  totalFees: number;
+  totalTax: number;
+  cashBalance: number;
+  totalContributed: number;
+  totalWithdrawn: number;
 };
-export type TxInput = { type: string; amount: number; unitPrice?: number; quantity?: number; fee?: number; tax?: number };
+
+export type TxInput = {
+  type: string;
+  amount: number;
+  unitPrice?: number;
+  quantity?: number;
+  fee?: number;
+  tax?: number;
+};
+
 export function emptyPortfolio(): PortfolioState {
-  return { vwceQty: 0, vwceCostBasis: 0, totalBought: 0, totalSold: 0, totalFees: 0, totalTax: 0, cashBalance: 0, totalContributed: 0, totalWithdrawn: 0 };
+  return {
+    vwceQty: 0,
+    vwceCostBasis: 0,
+    totalBought: 0,
+    totalSold: 0,
+    totalFees: 0,
+    totalTax: 0,
+    cashBalance: 0,
+    totalContributed: 0,
+    totalWithdrawn: 0,
+  };
 }
+
+/**
+ * Cash-flow rules:
+ * - cash_in: external money in → +cash, +totalContributed
+ * - cash_out: money leaves → -cash, +totalWithdrawn
+ * - buy_vwce: cash → VWCE (NOT new contribution)
+ * - sell_vwce: VWCE → cash after fee/tax (NOT contribution)
+ * - fee/tax: -cash, +totals
+ * - safe_interest: +cash, no contribution
+ * - adjust: +cash (can be negative), no contribution by default
+ */
 export function applyTransaction(state: PortfolioState, tx: TxInput): PortfolioState {
   const s = { ...state };
-  const fee = tx.fee ?? 0;
-  const tax = tx.tax ?? 0;
+  const fee = isValidNumber(tx.fee) ? tx.fee : 0;
+  const tax = isValidNumber(tx.tax) ? tx.tax : 0;
+  const amount = isValidNumber(tx.amount) ? tx.amount : 0;
+
   switch (tx.type) {
     case "buy_vwce": {
-      const qty = tx.quantity ?? calcQuantity(tx.amount, tx.unitPrice ?? 0, fee, tax);
-      s.vwceCostBasis += tx.amount; s.vwceQty += qty; s.totalBought += tx.amount;
-      s.totalFees += fee; s.totalTax += tax; s.cashBalance -= tx.amount; s.totalContributed += tx.amount;
+      const unitPrice = tx.unitPrice ?? 0;
+      let qty =
+        tx.quantity != null && isValidNumber(tx.quantity) && tx.quantity > 0
+          ? tx.quantity
+          : calcQuantity(amount, unitPrice, fee, tax);
+      if (!isValidNumber(qty) || qty < 0) qty = 0;
+      // Securities value = amount - fee - tax (when amount is total payment)
+      const securitiesValue = Math.max(0, amount - fee - tax);
+      s.vwceCostBasis += securitiesValue;
+      s.vwceQty += qty;
+      s.totalBought += securitiesValue;
+      s.totalFees += fee;
+      s.totalTax += tax;
+      // Spend full payment from cash; do NOT count as new contribution
+      s.cashBalance -= amount;
       break;
     }
     case "sell_vwce": {
-      const qty = tx.quantity ?? 0;
+      let qty = tx.quantity ?? 0;
+      if (!isValidNumber(qty) || qty < 0) qty = 0;
+      if (qty > s.vwceQty) qty = s.vwceQty; // cannot sell more than owned
       if (qty > 0 && s.vwceQty > 0) {
         const avg = s.vwceCostBasis / s.vwceQty;
         s.vwceCostBasis = Math.max(0, s.vwceCostBasis - avg * qty);
         s.vwceQty = Math.max(0, s.vwceQty - qty);
-        s.totalSold += tx.amount; s.cashBalance += tx.amount - fee - tax;
-        s.totalFees += fee; s.totalTax += tax;
+        s.totalSold += amount;
+        s.cashBalance += amount - fee - tax;
+        s.totalFees += fee;
+        s.totalTax += tax;
       }
       break;
     }
-    case "cash_in": s.cashBalance += tx.amount; s.totalContributed += tx.amount; break;
-    case "cash_out": s.cashBalance -= tx.amount; s.totalWithdrawn += tx.amount; break;
-    case "tax": s.cashBalance -= tx.amount; s.totalTax += tx.amount; break;
-    case "fee": s.cashBalance -= tx.amount; s.totalFees += tx.amount; break;
-    case "safe_interest": s.cashBalance += tx.amount; break;
-    case "adjust": s.cashBalance += tx.amount; break;
+    case "cash_in":
+      s.cashBalance += amount;
+      s.totalContributed += amount;
+      break;
+    case "cash_out":
+      s.cashBalance -= amount;
+      s.totalWithdrawn += amount;
+      break;
+    case "tax":
+      s.cashBalance -= amount;
+      s.totalTax += amount;
+      break;
+    case "fee":
+      s.cashBalance -= amount;
+      s.totalFees += amount;
+      break;
+    case "safe_interest":
+      s.cashBalance += amount;
+      break;
+    case "adjust":
+      s.cashBalance += amount;
+      break;
   }
   return s;
 }
-export type SimMonth = { year: number; month: number; vwce: number; cash: number; total: number; contributed: number; withdrawn: number };
-export type SimParams = {
-  startYear: number; startMonth: number; endYear: number; endMonth: number;
-  initialVwce: number; initialCash: number; contributionYear1: number; contributionFromYear2: number;
-  vwceAnnualReturn: number; safeAnnualReturn: number; contributionAtEndOfMonth?: boolean;
+
+export function avgCost(state: PortfolioState): number {
+  if (state.vwceQty <= 0) return 0;
+  return state.vwceCostBasis / state.vwceQty;
+}
+
+export type SimMonth = {
+  year: number;
+  month: number;
+  vwce: number;
+  cash: number;
+  total: number;
+  contributed: number;
+  withdrawn: number;
 };
+
+export type SimWithdrawal = { year: number; month: number; amount: number };
+export type SimTransfer = { year: number; month: number; amount: number }; // ETF → cash
+
+export type SimParams = {
+  startYear: number;
+  startMonth: number;
+  endYear: number;
+  endMonth: number;
+  initialVwce: number;
+  initialCash: number;
+  contributionYear1: number;
+  contributionFromYear2: number;
+  vwceAnnualReturn: number;
+  safeAnnualReturn: number;
+  contributionAtEndOfMonth?: boolean;
+  /** Extra contribution growth after year 2, monthly amount delta per year index beyond 1 */
+  contributionGrowthPct?: number;
+  withdrawals?: SimWithdrawal[];
+  transfers?: SimTransfer[]; // sell ETF value into cash (by market value assumption)
+};
+
 export function simulateMonthly(params: SimParams): SimMonth[] {
   const rVwce = monthlyRate(params.vwceAnnualReturn);
   const rSafe = monthlyRate(params.safeAnnualReturn);
-  let vwce = params.initialVwce, cash = params.initialCash, contributed = 0, withdrawn = 0;
+  let vwce = params.initialVwce;
+  let cash = params.initialCash;
+  let contributed = 0;
+  let withdrawn = 0;
   const out: SimMonth[] = [];
-  let y = params.startYear, m = params.startMonth;
+  let y = params.startYear;
+  let m = params.startMonth;
+  const atEnd = params.contributionAtEndOfMonth !== false;
+  const growth = params.contributionGrowthPct ?? 0;
+
   while (y < params.endYear || (y === params.endYear && m <= params.endMonth)) {
-    vwce *= 1 + rVwce; cash *= 1 + rSafe;
-    const yearIndex = y - params.startYear + (m < params.startMonth ? -1 : 0);
-    const contrib = yearIndex <= 0 ? params.contributionYear1 : params.contributionFromYear2;
-    if (params.contributionAtEndOfMonth !== false) { vwce += contrib; contributed += contrib; }
-    out.push({ year: y, month: m, vwce: round2(vwce), cash: round2(cash), total: round2(vwce + cash), contributed: round2(contributed), withdrawn: round2(withdrawn) });
-    m += 1; if (m > 12) { m = 1; y += 1; }
+    // 1. Apply returns on opening balance
+    vwce *= 1 + rVwce;
+    cash *= 1 + rSafe;
+
+    const yearIndex =
+      (y - params.startYear) * 12 + (m - params.startMonth);
+    const yearsSinceStart = Math.floor(Math.max(0, yearIndex) / 12);
+    let contrib =
+      yearsSinceStart <= 0 ? params.contributionYear1 : params.contributionFromYear2;
+    if (yearsSinceStart >= 2 && growth !== 0) {
+      contrib =
+        params.contributionFromYear2 *
+        Math.pow(1 + growth, yearsSinceStart - 1);
+    }
+
+    // 2. Contribution at start of month (optional)
+    if (!atEnd && contrib > 0) {
+      vwce += contrib;
+      contributed += contrib;
+    }
+
+    // 3. Transfer ETF → cash
+    for (const t of params.transfers ?? []) {
+      if (t.year === y && t.month === m && t.amount > 0) {
+        const move = Math.min(vwce, t.amount);
+        vwce -= move;
+        cash += move;
+      }
+    }
+
+    // 4. Withdrawals
+    for (const w of params.withdrawals ?? []) {
+      if (w.year === y && w.month === m && w.amount > 0) {
+        let need = w.amount;
+        const fromCash = Math.min(cash, need);
+        cash -= fromCash;
+        need -= fromCash;
+        if (need > 0) {
+          const fromVwce = Math.min(vwce, need);
+          vwce -= fromVwce;
+          need -= fromVwce;
+        }
+        withdrawn += w.amount - need;
+      }
+    }
+
+    // 5. Contribution at end of month
+    if (atEnd && contrib > 0) {
+      vwce += contrib;
+      contributed += contrib;
+    }
+
+    out.push({
+      year: y,
+      month: m,
+      vwce: round2(vwce),
+      cash: round2(cash),
+      total: round2(vwce + cash),
+      contributed: round2(contributed),
+      withdrawn: round2(withdrawn),
+    });
+
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
   }
   return out;
 }
+
 export function yearEndSnapshots(months: SimMonth[]): SimMonth[] {
   const map = new Map<number, SimMonth>();
   for (const row of months) map.set(row.year, row);
   return [...map.values()].sort((a, b) => a.year - b.year);
+}
+
+/** Escape a CSV field (RFC-style). */
+export function csvEscape(value: string | number): string {
+  const s = String(value ?? "");
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
 }
