@@ -1,0 +1,47 @@
+:root {
+  --navy: #1e3a5f; --navy-deep: #13233f; --ivory: #f7f4ee; --card: #fff;
+  --muted: #5c6b84; --green: #1f6b3a; --green-bg: #e7f5eb; --yellow: #8a6d1d;
+  --yellow-bg: #fbf3d5; --red: #9b2c2c; --red-bg: #fde8e8; --border: #e4d9c5;
+  --shadow: 0 1px 2px rgba(19,35,63,.04), 0 8px 24px rgba(19,35,63,.05);
+  --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-top: env(safe-area-inset-top, 0px); --nav-h: 64px;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; color: var(--navy-deep); background: var(--ivory);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --ivory:#0f1419; --card:#1a222d; --navy-deep:#e8eef7; --navy:#8eb4e0; --muted:#9aabbf; --border:#2a3544; }
+}
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; min-height: 100%; }
+body { padding-top: var(--safe-top); background: var(--ivory); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { min-height: 44px; min-width: 44px; cursor: pointer; border-radius: 12px; border: none; background: var(--navy); color: #f7f4ee; padding: .65rem 1rem; font-weight: 600; }
+button.secondary { background: transparent; color: var(--navy); border: 1.5px solid var(--navy); }
+button.danger { background: var(--red); }
+input, select, textarea { width: 100%; padding: .7rem .85rem; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); min-height: 44px; }
+label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .3rem; color: var(--muted); }
+.field { margin-bottom: .85rem; }
+.app-shell { max-width: 28rem; margin: 0 auto; min-height: 100dvh; padding: .75rem 1rem calc(var(--nav-h) + var(--safe-bottom) + 1rem); }
+.page-title { margin: 0 0 .25rem; font-size: 1.45rem; font-weight: 700; }
+.muted { color: var(--muted); font-size: .9rem; }
+.card { background: var(--card); border-radius: 1rem; padding: 1rem; box-shadow: var(--shadow); margin-bottom: .75rem; }
+.card h2 { margin: 0 0 .5rem; font-size: 1rem; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+.metric-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; }
+.metric-value { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pill { display: inline-flex; padding: .2rem .55rem; border-radius: 999px; font-size: .75rem; font-weight: 650; }
+.pill.green { background: var(--green-bg); color: var(--green); }
+.pill.yellow { background: var(--yellow-bg); color: var(--yellow); }
+.pill.red { background: var(--red-bg); color: var(--red); }
+.bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; padding: .35rem .5rem calc(.35rem + var(--safe-bottom)); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(12px); border-top: 1px solid var(--border); display: flex; justify-content: center; z-index: 50; }
+.bottom-nav-inner { display: flex; width: 100%; max-width: 28rem; }
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .15rem; text-decoration: none; color: var(--muted); font-size: .68rem; font-weight: 600; padding: .35rem .2rem; min-height: 48px; background: none; border: none; }
+.nav-item.active { color: var(--navy); }
+.row-between { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.stack { display: flex; flex-direction: column; gap: .5rem; }
+.list-item { display: flex; justify-content: space-between; gap: .5rem; padding: .7rem 0; border-bottom: 1px solid var(--border); }
+.empty { text-align: center; padding: 1.5rem 1rem; color: var(--muted); }
+.banner { background: var(--yellow-bg); color: var(--yellow); padding: .75rem 1rem; border-radius: 12px; font-size: .85rem; margin-bottom: .75rem; }
+.disclaimer { font-size: .8rem; color: var(--muted); line-height: 1.4; }
+.progress-track { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin: .35rem 0; }
+.progress-track > span { display: block; height: 100%; background: var(--navy); }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15,20,25,.45); display: flex; align-items: flex-end; justify-content: center; z-index: 100; padding: 1rem; padding-bottom: calc(1rem + var(--safe-bottom)); }
+.modal { background: var(--card); border-radius: 1.1rem; padding: 1.1rem; width: 100%; max-width: 28rem; max-height: 85dvh; overflow: auto; }
