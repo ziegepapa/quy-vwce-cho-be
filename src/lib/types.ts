@@ -29,4 +29,5 @@ export type BackupPayload = {
   transactions: Transaction[]; annualChecklists: AnnualChecklist[]; monthlySnapshots: MonthlySnapshot[];
 };
 export const SCHEMA_VERSION = 1;
-export const APP_VERSION = "1.1.0";
+/** Hiển thị ở Cài đặt — đổi khi ship UI lớn */
+export const APP_VERSION = "1.3.0";
