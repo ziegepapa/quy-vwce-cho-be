@@ -375,3 +375,35 @@ export function parseDecimal(input: string | number | null | undefined): number 
   const n = Number(normalized);
   return Number.isFinite(n) ? n : 0;
 }
+
+/**
+ * Đọc số do người dùng nhập, chấp nhận cả kiểu VN/DE và kiểu Anh–Mỹ:
+ *   "123,446"   → 123.446
+ *   "1.234,56"  → 1234.56
+ *   "1,234.56"  → 1234.56
+ *   "12 €"      → 12
+ *   "" | rác    → 0
+ * Quy tắc: dấu phân cách thập phân là dấu xuất hiện SAU CÙNG.
+ */
+export function parseDecimal(input: string | number | null | undefined): number {
+  if (typeof input === "number") return Number.isFinite(input) ? input : 0;
+  const s = String(input ?? "")
+    .trim()
+    .replace(/[\s\u00A0€%]/g, "");
+  if (!s) return 0;
+
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+
+  let normalized: string;
+  if (lastComma === -1 && lastDot === -1) {
+    normalized = s;
+  } else if (lastComma > lastDot) {
+    normalized = s.replace(/\./g, "").replace(",", ".");
+  } else {
+    normalized = s.replace(/,/g, "");
+  }
+
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : 0;
+}
