@@ -5,6 +5,7 @@ import { AuthProvider } from "./lib/auth";
 import App from "./App";
 import "./index.css";
 import "./styles/dock.css";
+import "./styles/bento.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

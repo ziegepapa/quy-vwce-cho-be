@@ -104,7 +104,7 @@ export default function Overview() {
         id: "stale-price",
         priority: "medium",
         title: `Giá VWCE cũ ${age} ngày`,
-        why: `Đang dùng giá ngày ${formatDateVN(settings.latestPriceDate)} — nên cập nhật.",
+        why: `Đang dùng giá ngày ${formatDateVN(settings.latestPriceDate)} — nên cập nhật.`,
         cta: "Cập nhật",
         to: "/settings",
       });
@@ -155,7 +155,6 @@ export default function Overview() {
         </p>
       </header>
 
-      {/* Hero bento 2x2 */}
       {total === 0 && txs.length === 0 ? (
         <div className="card surface-raised empty-hero">
           <div className="empty-icon" aria-hidden>
@@ -172,15 +171,17 @@ export default function Overview() {
       ) : (
         <div className="bento-hero surface-raised">
           <div className="metric-label">Tổng tài sản</div>
-          <div className="metric-value financial-display" aria-label={`${formatMoney(total)}`}>
-            {formatMoney(total)}
-          </div>
+          <div className="metric-value financial-display">{formatMoney(total)}</div>
           <p className="story-caption">
             {pnl !== 0 && price
               ? `Lãi/lỗ tạm ${pnl >= 0 ? "+" : ""}${formatMoney(pnl)}${pnlPct ? ` (${pnlPct}%)` : ""} so với giá vốn.`
               : "Nhập giá VWCE và giao dịch để thấy biến động."}
           </p>
-          <div className="alloc-bar" role="img" aria-label={`VWCE ${ratio}%, an toàn ${100 - ratio}%`}>
+          <div
+            className="alloc-bar"
+            role="img"
+            aria-label={`VWCE ${ratio}%, an toàn ${100 - ratio}%`}
+          >
             <div className="alloc-seg alloc-vwce" style={{ width: `${ratio}%` }} />
             <div className="alloc-seg alloc-cash" style={{ width: `${100 - ratio}%` }} />
           </div>
@@ -195,14 +196,17 @@ export default function Overview() {
         </div>
       )}
 
-      {/* Insight cards */}
       {insights.length > 0 && (
         <section className="insight-stack" aria-label="Việc cần làm">
           {insights.slice(0, 4).map((ins) => (
             <article key={ins.id} className={`insight-card priority-${ins.priority}`}>
               <div className="insight-top">
                 <span className={`priority-chip ${ins.priority}`}>
-                  {ins.priority === "high" ? "Ưu tiên cao" : ins.priority === "medium" ? "Trung bình" : "Thấp"}
+                  {ins.priority === "high"
+                    ? "Ưu tiên cao"
+                    : ins.priority === "medium"
+                      ? "Trung bình"
+                      : "Thấp"}
                 </span>
               </div>
               <h3 className="insight-title">{ins.title}</h3>
@@ -215,7 +219,6 @@ export default function Overview() {
         </section>
       )}
 
-      {/* Bento metrics — uneven sizes */}
       <div className="bento">
         <div className="bento-tile span-2 surface-raised">
           <div className="metric-label">Giá trị VWCE</div>
@@ -244,9 +247,7 @@ export default function Overview() {
           <div className={`metric-value ${pnl >= 0 ? "positive" : "negative"}`}>
             {formatMoney(pnl)}
           </div>
-          <p className="story-caption">
-            Chỉ mang tính theo dõi nội bộ, chưa tính thuế thực tế.
-          </p>
+          <p className="story-caption">Chỉ mang tính theo dõi nội bộ, chưa tính thuế thực tế.</p>
         </div>
         <div className="bento-tile surface-raised tile-sm">
           <div className="metric-label">Phí + thuế</div>
