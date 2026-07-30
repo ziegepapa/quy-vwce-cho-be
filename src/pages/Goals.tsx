@@ -11,8 +11,21 @@ import {
   statusLabel,
 } from "../lib/calc";
 import { nowIso } from "../lib/defaults";
+import { useNavAction } from "../lib/navActions";
 import ActionMenu from "../components/ActionMenu";
-import { IconPlus } from "../components/Icons";
+
+const BLANK_FORM = {
+  name: "Mục tiêu",
+  dueDate: "2038-06-30",
+  amount: "10000",
+  mode: "purchasing_power" as GoalMode,
+  baseYear: "2026",
+  inflationRate: "0.02",
+  bufferPct: "0.1",
+  urgency: "hard" as GoalUrgency,
+  protectedAmount: "0",
+  notes: "",
+};
 
 function Ring({ pct, status }: { pct: number; status: string }) {
   const shown = pct <= 0 ? 2 : Math.min(100, pct);
@@ -40,18 +53,7 @@ export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Goal | null>(null);
-  const [form, setForm] = useState({
-    name: "Mục tiêu",
-    dueDate: "2038-06-30",
-    amount: "10000",
-    mode: "purchasing_power" as GoalMode,
-    baseYear: "2026",
-    inflationRate: "0.02",
-    bufferPct: "0.1",
-    urgency: "hard" as GoalUrgency,
-    protectedAmount: "0",
-    notes: "",
-  });
+  const [form, setForm] = useState(BLANK_FORM);
 
   async function reload() {
     setGoals(await listGoals());
@@ -60,7 +62,20 @@ export default function Goals() {
     reload();
   }, []);
 
-  const today = new Date();
+  // V9 B2: một đường vào duy nhất cho "thêm mới".
+  // Trước đây nút empty-state quên reset `edit` → lưu đè lên mục tiêu cũ.
+  function openCreate() {
+    setEdit(null);
+    setForm(BLANK_FORM);
+    setShow(true);
+  }
+
+  // V9 B2: icon "+" trên top bar chỉ hiện khi dòng này chạy.
+  useNavAction("addGoal", openCreate);
+
+  // V9 B2: new Date() mọi render làm useMemo bên dưới mất tác dụng.
+  const today = useMemo(() => new Date(), []);
+
   const summary = useMemo(() => {
     let need = 0;
     let protectedSum = 0;
@@ -134,32 +149,8 @@ export default function Goals() {
 
   return (
     <div>
-      <div className="row-between" style={{ marginBottom: 12 }}>
-        <div />
-        <button
-          type="button"
-          className="fab"
-          aria-label="Thêm mục tiêu"
-          onClick={() => {
-            setEdit(null);
-            setForm({
-              name: "Mục tiêu",
-              dueDate: "2038-06-30",
-              amount: "10000",
-              mode: "purchasing_power",
-              baseYear: "2026",
-              inflationRate: "0.02",
-              bufferPct: "0.1",
-              urgency: "hard",
-              protectedAmount: "0",
-              notes: "",
-            });
-            setShow(true);
-          }}
-        >
-          <IconPlus />
-        </button>
-      </div>
+      {/* V9 B2: hàng FAB cũ đã xoá. Nút "+" giờ nằm trên top bar
+          qua useNavAction("addGoal") — tiết được ~56px ở đầu màn. */}
 
       <div className="goals-hero surface-raised">
         <Ring pct={summary.pct} status={summary.pct >= 80 ? "green" : summary.pct >= 40 ? "yellow" : "red"} />
@@ -184,7 +175,7 @@ export default function Goals() {
       {!goals.length && (
         <div className="empty card surface-raised">
           <p>Chưa có mục tiêu.</p>
-          <button type="button" onClick={() => setShow(true)}>
+          <button type="button" onClick={openCreate}>
             Thêm mục tiêu đầu tiên
           </button>
         </div>
