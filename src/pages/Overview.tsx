@@ -1,21 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { db, getSettings, listGoals, listTransactions } from "../lib/db";
+import { getSettings, listGoals, listTransactions } from "../lib/db";
 import type { AppSettings, Goal, Transaction } from "../lib/types";
 import {
   applyTransaction,
   avgCost,
+  buildEquitySeries,
   emptyPortfolio,
-  formatDateVN,
   formatMoney,
   goalProgressStatus,
   inflate,
   monthsBetween,
   parseDate,
-  requiredSafeAmount,
-  statusLabel,
 } from "../lib/calc";
-import { ETF } from "../lib/defaults";
 
 type Insight = {
   id: string;
@@ -26,26 +23,80 @@ type Insight = {
   to: string;
 };
 
-function greetingBerlin(hour: number): string {
-  if (hour < 5) return "Chào buổi tối";
-  if (hour < 12) return "Chào buổi sáng";
-  if (hour < 18) return "Chào buổi chiều";
-  return "Chào buổi tối";
+function Sparkline({ points }: { points: { value: number }[] }) {
+  if (points.length < 2) {
+    return (
+      <svg className="sparkline" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden>
+        <path d="M0 28 Q30 20 60 24 T120 18" fill="none" stroke="rgba(255,255,255,.25)" strokeWidth="1.5" strokeDasharray="3 3" />
+      </svg>
+    );
+  }
+  const vals = points.map((p) => p.value);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const span = max - min || 1;
+  const coords = vals
+    .map((v, i) => {
+      const x = (i / (vals.length - 1)) * 120;
+      const y = 36 - ((v - min) / span) * 28;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const area = `0,40 ${coords} 120,40`;
+  return (
+    <svg className="sparkline" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden>
+      <polygon points={area} fill="url(#spFade)" />
+      <polyline points={coords} fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinejoin="round" />
+      <defs>
+        <linearGradient id="spFade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(255,255,255,.25)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
 }
 
-export default function Overview({ displayName }: { displayName?: string }) {
+function MiniRing({ pct }: { pct: number }) {
+  const shown = pct <= 0 ? 3 : Math.min(100, pct);
+  const r = 18;
+  const c = 2 * Math.PI * r;
+  const offset = c - (shown / 100) * c;
+  return (
+    <svg className="mini-ring" width="44" height="44" viewBox="0 0 44 44" aria-hidden>
+      <circle cx="22" cy="22" r={r} fill="none" stroke="rgba(16,24,40,.08)" strokeWidth="4" />
+      <circle
+        cx="22"
+        cy="22"
+        r={r}
+        fill="none"
+        stroke="var(--primary-600)"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={offset}
+        transform="rotate(-90 22 22)"
+      />
+      <text x="22" y="25" textAnchor="middle" className="mini-ring-pct">
+        {Math.round(pct)}%
+      </text>
+    </svg>
+  );
+}
+
+export default function Overview(_props: { displayName?: string }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [txs, setTxs] = useState<Transaction[]>([]);
-  const [lastBackup, setLastBackup] = useState("");
   const [loading, setLoading] = useState(true);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [moreActions, setMoreActions] = useState(false);
 
   useEffect(() => {
     (async () => {
       setSettings(await getSettings());
       setGoals(await listGoals());
       setTxs(await listTransactions());
-      setLastBackup((await db.appMetadata.get("meta"))?.lastBackupAt ?? "");
       setLoading(false);
     })();
   }, []);
@@ -58,19 +109,16 @@ export default function Overview({ displayName }: { displayName?: string }) {
     return s;
   }, [txs]);
 
-  const berlinHour = Number(
-    new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Europe/Berlin",
-      hour: "numeric",
-      hour12: false,
-    }).format(new Date()),
+  const series = useMemo(
+    () => buildEquitySeries(txs, settings?.latestVwcePrice ?? 0),
+    [txs, settings?.latestVwcePrice],
   );
 
   if (loading) {
     return (
-      <div className="bento">
-        <div className="skeleton" style={{ height: 180, borderRadius: 28 }} />
-        <div className="skeleton" style={{ height: 72, borderRadius: 20 }} />
+      <div className="ov">
+        <div className="skeleton" style={{ height: 176, borderRadius: 18 }} />
+        <div className="skeleton" style={{ height: 64, borderRadius: 10, marginTop: 20 }} />
       </div>
     );
   }
@@ -82,52 +130,28 @@ export default function Overview({ displayName }: { displayName?: string }) {
   const today = new Date();
   const ym = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   const hasContribThisMonth = txs.some((t) => t.type === "cash_in" && t.date.startsWith(ym));
-  const daysSinceBackup = lastBackup
-    ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000)
-    : 999;
+
+  const mode: "empty" | "early" | "active" =
+    txs.length === 0 && total === 0 ? "empty" : txs.length < 3 ? "early" : "active";
 
   const insights: Insight[] = [];
-  if (!hasContribThisMonth) {
+  if (!hasContribThisMonth && mode !== "empty") {
     insights.push({
       id: "contrib",
       priority: "high",
       title: "Chưa ghi nhận đóng góp tháng này",
-      why: "Nhịp đóng góp đều đặn giúp giữ đúng kế hoạch dài hạn.",
+      why: "Nhịp đóng góp đều giúp giữ đúng kế hoạch dài hạn.",
       cta: "Ghi nhận",
       to: "/transactions",
     });
   }
-  if (!price) {
+  if (!price && mode !== "empty") {
     insights.push({
       id: "price",
       priority: "high",
       title: "Chưa cập nhật giá VWCE",
-      why: "Số liệu tài sản đang thiếu giá thị trường — có thể lệch thực tế.",
-      cta: "Cập nhật giá",
-      to: "/settings",
-    });
-  } else if (settings?.latestPriceDate) {
-    const age = Math.floor(
-      (Date.now() - new Date(settings.latestPriceDate).getTime()) / 86400000,
-    );
-    if (age > 7) {
-      insights.push({
-        id: "stale-price",
-        priority: "medium",
-        title: `Giá VWCE cũ ${age} ngày`,
-        why: `Đang dùng giá ngày ${formatDateVN(settings.latestPriceDate)} — nên cập nhật.`,
-        cta: "Cập nhật",
-        to: "/settings",
-      });
-    }
-  }
-  if (daysSinceBackup > 90) {
-    insights.push({
-      id: "backup",
-      priority: "medium",
-      title: "Chưa backup trong 90 ngày",
-      why: "Xuất JSON định kỳ bảo vệ dữ liệu nếu mất thiết bị.",
-      cta: "Sao lưu",
+      why: "Số liệu tài sản có thể lệch thực tế.",
+      cta: "Cập nhật",
       to: "/settings",
     });
   }
@@ -140,11 +164,11 @@ export default function Overview({ displayName }: { displayName?: string }) {
       g.mode === "purchasing_power" ? inflate(g.amount, g.inflationRate, years) : g.amount;
     if (months <= 36 && months > 0 && g.protectedAmount < adjusted * 0.5) {
       insights.push({
-        id: `goal-${g.id}`,
+        id: `g-${g.id}`,
         priority: "high",
-        title: `${g.name}: cash bucket chậm tiến độ`,
-        why: `Còn ${months} tháng nhưng mới bảo vệ ${Math.round((g.protectedAmount / (adjusted || 1)) * 100)}% mục tiêu.`,
-        cta: "Xem mục tiêu",
+        title: `${g.name}: chậm tiến độ`,
+        why: `Còn ${months} tháng · đã bảo vệ ${Math.round((g.protectedAmount / (adjusted || 1)) * 100)}%.`,
+        cta: "Xem",
         to: "/goals",
       });
     }
@@ -153,224 +177,189 @@ export default function Overview({ displayName }: { displayName?: string }) {
   const ratio = total > 0 ? Math.round((vwceValue / total) * 100) : 0;
   const pnlPct =
     portfolio.vwceCostBasis > 0 ? ((pnl / portfolio.vwceCostBasis) * 100).toFixed(1) : null;
-  const empty = total === 0 && txs.length === 0;
+
+  // Nearest goal only
+  let nearest: Goal | null = null;
+  let nearestMonths = Infinity;
+  let nearestPct = 0;
+  let nearestPerMonth = 0;
+  for (const g of goals) {
+    const due = parseDate(g.dueDate);
+    const m = monthsBetween(today, due);
+    if (m >= 0 && m < nearestMonths) {
+      nearestMonths = m;
+      nearest = g;
+      const years = Math.max(0, due.getFullYear() - g.baseYear);
+      const adj =
+        g.mode === "purchasing_power" ? inflate(g.amount, g.inflationRate, years) : g.amount;
+      nearestPct = adj > 0 ? Math.min(100, (g.protectedAmount / adj) * 100) : 0;
+      const gap = Math.max(0, adj - g.protectedAmount);
+      nearestPerMonth = m > 0 ? gap / m : gap;
+    }
+  }
+
+  const primary = insights[0];
+  const rest = insights.slice(1);
 
   return (
-    <div>
-      {displayName && (
-        <p className="overview-greeting">
-          {greetingBerlin(berlinHour)}, {displayName}
-        </p>
-      )}
-
-      {empty ? (
-        <div className="card surface-raised empty-hero">
-          <div className="onboard-illu" aria-hidden>
-            <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
-              <rect x="16" y="28" width="64" height="44" rx="10" fill="var(--primary-050)" />
-              <rect x="24" y="36" width="32" height="6" rx="3" fill="var(--primary-500)" opacity="0.5" />
-              <rect x="24" y="48" width="48" height="6" rx="3" fill="var(--primary-500)" opacity="0.35" />
-              <circle cx="68" cy="58" r="14" fill="var(--success-050)" stroke="var(--success-600)" strokeWidth="2" />
-              <path d="M62 58l4 4 8-8" stroke="var(--success-600)" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+    <div className="ov">
+      {/* Block 1 — Hero */}
+      <section className={`hero-v8 hero-${mode}`}>
+        <div className="hero-noise" aria-hidden />
+        {mode === "empty" ? (
+          <div className="hero-empty-inner">
+            <p className="hero-label">Tổng tài sản</p>
+            <p className="hero-empty-copy">Bắt đầu bằng giao dịch đầu tiên</p>
+            <Link to="/transactions" className="hero-cta">
+              Thêm giao dịch đầu tiên
+            </Link>
           </div>
-          <h2 className="empty-title">Bắt đầu quỹ của bé</h2>
-          <p className="muted" style={{ maxWidth: 280, margin: "0 auto" }}>
-            Ghi nhận khoản nạp đầu tiên để theo dõi tài sản, mục tiêu và mô phỏng.
-          </p>
-          <Link to="/transactions" className="btn-link">
-            Thêm giao dịch đầu tiên
-          </Link>
-          <div className="mini-steps">
-            <span>1 Nạp tiền</span>
-            <span className="step-conn" />
-            <span>2 Mua VWCE</span>
-            <span className="step-conn" />
-            <span>3 Đặt mục tiêu</span>
-          </div>
-        </div>
-      ) : (
-        <div className="bento-hero mesh-hero">
-          <div className="hero-label">TỔNG TÀI SẢN</div>
-          <div className="hero-money">{formatMoney(total)}</div>
-          {pnl !== 0 && price && (
-            <div className="hero-delta">
-              <span className="hero-delta-pill">
+        ) : (
+          <>
+            <p className="hero-label">Tổng tài sản</p>
+            <p className="hero-amount">
+              <span className="hero-num">{formatMoney(total).replace(/\s*€$/, "")}</span>
+              <span className="hero-eur">€</span>
+            </p>
+            {pnl !== 0 && price > 0 && (
+              <span className="hero-delta">
                 {pnl >= 0 ? "↑" : "↓"} {formatMoney(Math.abs(pnl))}
                 {pnlPct ? ` (${pnlPct}%)` : ""}
               </span>
+            )}
+            <Sparkline points={series} />
+            <div className="alloc-v8" role="img" aria-label={`VWCE ${ratio}%, an toàn ${100 - ratio}%`}>
+              <div className="alloc-seg-v8 vwce" style={{ flex: Math.max(ratio, 1) }} />
+              <div className="alloc-seg-v8 cash" style={{ flex: Math.max(100 - ratio, 1) }} />
             </div>
-          )}
-          <div
-            className="alloc-bar"
-            role="img"
-            aria-label={`VWCE ${ratio}%, an toàn ${100 - ratio}%`}
-          >
-            <div className="alloc-seg alloc-vwce" style={{ width: `${Math.max(ratio, 0)}%` }} />
-            <div className="alloc-gap" />
-            <div className="alloc-seg alloc-cash" style={{ width: `${Math.max(100 - ratio, 0)}%` }} />
-          </div>
-          <div className="alloc-legend">
-            <span>VWCE {ratio}%</span>
-            <span>An toàn {100 - ratio}%</span>
-          </div>
-          <p className="hero-caption">
-            {settings?.latestPriceDate
-              ? `Giá VWCE ${formatMoney(price)} · ${formatDateVN(settings.latestPriceDate)}`
-              : `${ETF.ticker} · ${ETF.isin}`}
-          </p>
-        </div>
-      )}
+            <div className="alloc-legend-v8">
+              <span>VWCE {ratio}%</span>
+              <span>An toàn {100 - ratio}%</span>
+            </div>
+            {mode === "early" && (
+              <p className="hero-early">Còn {Math.max(0, 3 - txs.length)} bước để hoàn tất thiết lập · · ·</p>
+            )}
+          </>
+        )}
+      </section>
 
-      {insights.length > 0 && (
-        <section className="insight-stack" aria-label="Việc cần làm">
-          {insights.slice(0, 2).map((ins) => (
-            <Link key={ins.id} to={ins.to} className={`insight-card priority-${ins.priority}`}>
-              <div className={`insight-icon priority-${ins.priority}`} aria-hidden>
-                {ins.priority === "high" ? "!" : "i"}
+      {/* Block 2 — StatStrip (skip zeros spam on empty) */}
+      {mode !== "empty" && (
+        <section className="stat-strip">
+          <div className="stat-col">
+            <span className="stat-label">VWCE</span>
+            <span className="stat-val">{formatMoney(vwceValue)}</span>
+          </div>
+          <div className="stat-rule" aria-hidden />
+          <div className="stat-col">
+            <span className="stat-label">An toàn</span>
+            <span className="stat-val">{formatMoney(portfolio.cashBalance)}</span>
+          </div>
+          <div className="stat-rule" aria-hidden />
+          <div className="stat-col">
+            <span className="stat-label">Lãi–lỗ</span>
+            <span className={`stat-val ${pnl >= 0 ? "pos" : "neg"}`}>{formatMoney(pnl)}</span>
+          </div>
+          <button
+            type="button"
+            className="stat-detail-btn"
+            onClick={() => setDetailOpen((v) => !v)}
+            aria-expanded={detailOpen}
+          >
+            Chi tiết {detailOpen ? "▴" : "▾"}
+          </button>
+          {detailOpen && (
+            <dl className="stat-detail-list">
+              <div>
+                <dt>SL VWCE</dt>
+                <dd>{portfolio.vwceQty.toFixed(4)}</dd>
               </div>
-              <div className="insight-body">
-                <h3 className="insight-title">{ins.title}</h3>
-                <p className="insight-why">{ins.why}</p>
-                <span className="insight-cta">{ins.cta} →</span>
+              <div>
+                <dt>Giá vốn TB</dt>
+                <dd>{formatMoney(avgCost(portfolio))}</dd>
               </div>
-            </Link>
-          ))}
-          {insights.length > 2 && (
-            <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-              +{insights.length - 2} việc khác
-            </p>
+              <div>
+                <dt>Vốn đã đóng</dt>
+                <dd>{formatMoney(portfolio.totalContributed)}</dd>
+              </div>
+              <div>
+                <dt>Đã rút</dt>
+                <dd>{formatMoney(portfolio.totalWithdrawn)}</dd>
+              </div>
+              <div>
+                <dt>Phí + thuế</dt>
+                <dd>{formatMoney(portfolio.totalFees + portfolio.totalTax)}</dd>
+              </div>
+            </dl>
           )}
         </section>
       )}
 
-      {!empty && (
-        <div className="bento">
-          <div className="bento-tile span-2 surface-raised">
-            <div className="metric-label">Giá trị VWCE</div>
-            <div className="metric-value money-lg">{formatMoney(vwceValue)}</div>
-            <p className="story-caption">
-              {ratio}% tổng tài sản · {portfolio.vwceQty.toFixed(4)} SL
-            </p>
-          </div>
-          <div className="bento-tile surface-raised">
-            <div className="metric-label">Tiền an toàn</div>
-            <div className="metric-value money-md">{formatMoney(portfolio.cashBalance)}</div>
-            <p className="story-caption">{100 - ratio}% tổng tài sản</p>
-          </div>
-          <div className="bento-tile surface-raised">
-            <div className="metric-label">Vốn đã đóng</div>
-            <div className="metric-value money-md">{formatMoney(portfolio.totalContributed)}</div>
-            <p className="story-caption">Tổng nạp vào quỹ</p>
-          </div>
-          <div className="bento-tile span-2 surface-raised">
-            <div className="metric-label">Lãi/lỗ chưa thực hiện</div>
-            <div className={`metric-value money-lg ${pnl >= 0 ? "positive" : "negative"}`}>
-              {formatMoney(pnl)}
+      {/* Block 3 — ActionStack */}
+      {primary && (
+        <section className="action-stack">
+          <Link to={primary.to} className="action-item">
+            <div className={`action-icon pri-${primary.priority}`} aria-hidden>
+              !
             </div>
-            <p className="story-caption">
-              {pnlPct ? `${pnlPct}% so với giá vốn` : "Chưa có giá vốn"} · chỉ theo dõi nội bộ
-            </p>
-          </div>
-          <div className="bento-tile surface-raised tile-sm">
-            <div className="metric-label">SL VWCE</div>
-            <div className="metric-value" style={{ fontSize: 17 }}>
-              {portfolio.vwceQty.toFixed(4)}
+            <div className="action-body">
+              <p className="action-title">{primary.title}</p>
+              <p className="action-why">{primary.why}</p>
+              <span className="action-cta">{primary.cta} →</span>
             </div>
-          </div>
-          <div className="bento-tile surface-raised tile-sm">
-            <div className="metric-label">Giá vốn TB</div>
-            <div className="metric-value" style={{ fontSize: 17 }}>
-              {formatMoney(avgCost(portfolio))}
-            </div>
-          </div>
-          <div className="bento-tile surface-raised tile-sm">
-            <div className="metric-label">Đã rút</div>
-            <div className="metric-value" style={{ fontSize: 15 }}>
-              {formatMoney(portfolio.totalWithdrawn)}
-            </div>
-          </div>
-          <div className="bento-tile surface-raised tile-sm">
-            <div className="metric-label">Phí + thuế</div>
-            <div className="metric-value" style={{ fontSize: 15 }}>
-              {formatMoney(portfolio.totalFees + portfolio.totalTax)}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <h2 className="section-title">Tiến độ mục tiêu</h2>
-      {goals.length === 0 && (
-        <div className="empty card surface-raised">
-          <p>Chưa có mục tiêu.</p>
-          <Link to="/goals" className="btn-link">
-            Thêm mục tiêu
           </Link>
-        </div>
-      )}
-      <div className="timeline">
-        {goals.map((g) => {
-          if (g.amount <= 0 && !g.name.includes("2042")) return null;
-          const due = parseDate(g.dueDate);
-          const years = Math.max(0, due.getFullYear() - g.baseYear);
-          const adjusted =
-            g.mode === "purchasing_power" ? inflate(g.amount, g.inflationRate, years) : g.amount;
-          const months = monthsBetween(today, due);
-          const status = goalProgressStatus({
-            targetAdjusted: adjusted || 1,
-            protectedAmount: g.protectedAmount,
-            monthsRemaining: months,
-          });
-          const pct = adjusted > 0 ? Math.min(100, (g.protectedAmount / adjusted) * 100) : 0;
-          const need =
-            adjusted > 0
-              ? requiredSafeAmount({
-                  targetAmount: g.amount,
-                  inflationRate: g.inflationRate,
-                  baseYear: g.baseYear,
-                  targetYear: due.getFullYear(),
-                  useInflation: g.mode === "purchasing_power",
-                  bufferPct: g.bufferPct,
-                })
-              : 0;
-          const gap = Math.max(0, adjusted - g.protectedAmount);
-          const perMonth = months > 0 ? gap / months : gap;
-          return (
-            <div className="timeline-item" key={g.id}>
-              <div className={`timeline-dot ${status}`} aria-hidden />
-              <div className="card surface-raised" style={{ marginBottom: 0 }}>
-                <div className="row-between">
-                  <strong>{g.name}</strong>
-                  <span className={`status-chip ${status}`}>{statusLabel(status)}</span>
-                </div>
-                <p className="muted" style={{ margin: "4px 0", fontSize: 12 }}>
-                  Hạn {formatDateVN(g.dueDate)} · {months} tháng
-                </p>
-                {adjusted > 0 && (
-                  <>
-                    <div className="progress-track">
-                      <span style={{ width: `${Math.max(pct, pct === 0 ? 0 : pct)}%` }} />
+          {rest.length > 0 && (
+            <>
+              <button
+                type="button"
+                className="action-more"
+                onClick={() => setMoreActions((v) => !v)}
+              >
+                {moreActions ? "Thu gọn" : `+${rest.length} việc khác`}
+              </button>
+              {moreActions &&
+                rest.map((ins) => (
+                  <Link key={ins.id} to={ins.to} className="action-item action-item-sm">
+                    <div className={`action-icon pri-${ins.priority}`} aria-hidden>
+                      i
                     </div>
-                    <p className="story-caption">
-                      Bảo vệ {formatMoney(g.protectedAmount)} / {formatMoney(adjusted)}
-                      {gap > 0 && months > 0
-                        ? ` — cần ~${formatMoney(perMonth)}/tháng`
-                        : ""}
-                    </p>
-                    <p className="muted" style={{ margin: "4px 0 0", fontSize: 12 }}>
-                      Cần an toàn {formatMoney(need)}
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                    <div className="action-body">
+                      <p className="action-title">{ins.title}</p>
+                      <span className="action-cta">{ins.cta} →</span>
+                    </div>
+                  </Link>
+                ))}
+            </>
+          )}
+        </section>
+      )}
 
-      <p className="disclaimer" style={{ marginTop: 16 }}>
-        Không phải tư vấn đầu tư. Lãi/lỗ và giá vốn chỉ theo dõi nội bộ.
-      </p>
+      {/* Block 4 — NextGoal (1 row) */}
+      {nearest && (
+        <section className="next-goal">
+          <Link to="/goals" className="next-goal-row">
+            <MiniRing pct={nearestPct} />
+            <div className="next-goal-body">
+              <p className="next-goal-name">{nearest.name}</p>
+              <p className="next-goal-meta">
+                Còn {nearestMonths} tháng
+                {nearestPerMonth > 0 ? ` · cần thêm ${formatMoney(nearestPerMonth)}/tháng` : ""}
+              </p>
+            </div>
+            <span className="next-goal-chev" aria-hidden>
+              ›
+            </span>
+          </Link>
+          {goals.length > 1 && (
+            <Link to="/goals" className="next-goal-all">
+              Xem cả {goals.length} mục tiêu →
+            </Link>
+          )}
+        </section>
+      )}
+
+      {/* Block 5 — Footnote */}
+      <p className="ov-foot">Không phải tư vấn đầu tư. Lãi/lỗ chỉ theo dõi nội bộ.</p>
     </div>
   );
 }

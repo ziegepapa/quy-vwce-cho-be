@@ -196,7 +196,7 @@ export default function App() {
           />
         )}
         <Routes>
-          <Route path="/" element={<Overview displayName={displayName} />} />
+          <Route path="/" element={<Overview />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/simulation" element={<Simulation />} />
