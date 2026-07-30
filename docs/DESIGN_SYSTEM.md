@@ -1,61 +1,42 @@
-# Design System 2026/2027 — Quỹ VWCE cho bé
+# Design System V6 2026 — Quỹ VWCE cho bé
+
+## Depth system (3 layers)
+
+| Layer | Token / class | Use |
+|-------|---------------|-----|
+| Base | `--color-bg` | Page background |
+| Raised | `.surface-raised`, `--shadow-raised` | Cards, tiles, panels |
+| Overlay | `--shadow-dock`, `--color-surface-translucent` | Dock, sheets, modal |
+
+## Liquid Glass dock
+
+- File: `src/styles/dock.css` + `BottomDock.tsx`
+- Floating, radius 28px, translucent + `backdrop-filter`
+- Progressive blur strip above dock (`.app-shell::after`)
+- Auto-hide on scroll down; respects `prefers-reduced-motion`
+- Active: primary-muted pill behind icon
+
+## Bento grid
+
+- File: `src/styles/bento.css`
+- Hero: full-width gradient tile with alloc bar + storytelling caption
+- Metrics: `span-2` for important (VWCE, PnL), 1×1 for secondary, `tile-sm` for fees
+- Not a uniform 2-column grid of equal cards
+
+## Insight cards
+
+Replace todo bullets. Each has priority chip, title, why-it-matters, CTA link.
 
 ## Tokens
 
-File: `src/styles/tokens.css` (imported by `src/index.css`).
+`src/styles/tokens.css` — surfaces, blur, shadow-dock/fab/overlay, radius-card/sheet/dock, motion, safe-area.
 
-| Nhóm | CSS variables |
-|------|----------------|
-| Brand | `--color-primary`, `--color-accent` |
-| Surface | `--color-bg`, `--color-surface`, `--color-border` |
-| Text | `--color-text`, `--color-text-muted` |
-| Status | `--color-success`, `--color-warning`, `--color-danger` |
-| Sync | `--sync-synced` … `--sync-conflict` |
-| Spacing | `--space-1` … `--space-8` |
-| Radius | `--radius-sm` … `--radius-xl` |
-| Motion | `--duration-fast` (~160–200ms) |
-| Safe area | `--safe-top/bottom/left/right` |
-| Dock | `--dock-h`, `--dock-pad`, `--dock-radius` |
-
-Dark mode: `prefers-color-scheme: dark`.  
-Reduced motion: `prefers-reduced-motion: reduce` (dock không auto-hide).
-
-## Navigation 2026 — Bottom Dock
-
-- Component: `src/components/BottomDock.tsx`
-- Styles: `src/styles/dock.css`
-- **Không** dùng tab bar full-bleed phẳng dính đáy.
-- Dock **nổi** (elevated surface + shadow nhiều lớp), bo góc lớn, max-width ~26rem, căn giữa.
-- Active: nền `primary-muted` + pill.
-- Auto-hide khi scroll xuống / hiện khi scroll lên (tắt nếu reduced-motion).
-- Safe-area: `padding-bottom: dock-pad + env(safe-area-inset-bottom)`.
-- Desktop ≥900px: ẩn dock, dùng sidebar.
-
-## Components
-
-| Component | File / class |
-|-----------|----------------|
-| BottomDock | `BottomDock.tsx` |
-| TopBar + avatar menu | `TopBar.tsx` |
-| SyncStatusIndicator | 4 trạng thái shared |
-| ActionMenu | menu ⋮ thay Sửa/Xóa |
-| Icons | SVG stroke 1.75 |
-| FAB | `.fab` |
-| Progress ring | `.progress-ring` |
-| Sheet | `.modal` + `.sheet-handle` |
-
-## SyncStatus
-
-```ts
-type SyncStatus = "synced" | "syncing" | "offline" | "conflict";
-```
-
-Labels: Đã đồng bộ / Đang đồng bộ / Ngoại tuyến / Có xung đột.
+Dark mode: first-class independent surfaces (not inverted light).
 
 ## Conventions
 
-- Money: `formatMoney` + tabular nums.
-- Status = màu + chữ (pill).
-- Forms: `<label htmlFor>`.
-- Destructive: confirm rõ ràng.
-- Input font ≥16px (tránh zoom Safari).
+- Money: tabular nums + story caption
+- Forms: bottom sheet on mobile
+- Actions: OverflowMenu, not inline Sửa/Xóa
+- Touch ≥ 44px; input font ≥ 16px
+- Version: `APP_VERSION` in `types.ts` (currently 1.4.0)
