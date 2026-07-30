@@ -14,6 +14,28 @@ import { nowIso } from "../lib/defaults";
 import ActionMenu from "../components/ActionMenu";
 import { IconPlus } from "../components/Icons";
 
+function Ring({ pct, status }: { pct: number; status: string }) {
+  const shown = pct <= 0 ? 2 : Math.min(100, pct);
+  return (
+    <div className="progress-ring" aria-label={`${Math.round(pct)}%`}>
+      <svg viewBox="0 0 36 36">
+        <path
+          className="ring-bg"
+          d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31"
+        />
+        <path
+          className={`ring-fg ${status}`}
+          strokeDasharray={`${shown}, 100`}
+          d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31"
+        />
+        <text x="18" y="20.5" textAnchor="middle" className="ring-text">
+          {Math.round(pct)}%
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [show, setShow] = useState(false);
@@ -57,7 +79,11 @@ export default function Goals() {
         nearest = g;
       }
     }
-    return { need, protectedSum, nearest, nearestMonths, count: goals.length };
+    const gap = Math.max(0, need - protectedSum);
+    const monthsLeft = nearestMonths === Infinity ? 0 : nearestMonths;
+    const perMonth = monthsLeft > 0 ? gap / monthsLeft : gap;
+    const pct = need > 0 ? Math.min(100, (protectedSum / need) * 100) : 0;
+    return { need, protectedSum, gap, nearest, nearestMonths, count: goals.length, perMonth, pct };
   }, [goals, today]);
 
   async function save() {
@@ -108,8 +134,8 @@ export default function Goals() {
 
   return (
     <div>
-      <div className="row-between" style={{ marginBottom: 4 }}>
-        <h1 className="page-title">Mục tiêu</h1>
+      <div className="row-between" style={{ marginBottom: 12 }}>
+        <div />
         <button
           type="button"
           className="fab"
@@ -135,36 +161,28 @@ export default function Goals() {
         </button>
       </div>
 
-      <div className="card card-hero" style={{ marginBottom: 12 }}>
-        <div className="grid2" style={{ gap: 12 }}>
-          <div>
-            <div className="metric-label">Số mục tiêu</div>
-            <div className="metric-value">{summary.count}</div>
+      <div className="goals-hero surface-raised">
+        <Ring pct={summary.pct} status={summary.pct >= 80 ? "green" : summary.pct >= 40 ? "yellow" : "red"} />
+        <div className="goals-hero-body">
+          <div className="metric-label">Còn thiếu</div>
+          <div className="hero-money" style={{ color: "var(--text-primary)", fontSize: 28 }}>
+            {formatMoney(summary.gap)}
           </div>
-          <div>
-            <div className="metric-label">Cần bảo vệ</div>
-            <div className="metric-value">{formatMoney(summary.need)}</div>
-          </div>
-          <div>
-            <div className="metric-label">Đã bảo vệ</div>
-            <div className="metric-value">{formatMoney(summary.protectedSum)}</div>
-          </div>
-          <div>
-            <div className="metric-label">Còn thiếu</div>
-            <div className="metric-value">
-              {formatMoney(Math.max(0, summary.need - summary.protectedSum))}
-            </div>
-          </div>
-        </div>
-        {summary.nearest && (
-          <p className="muted" style={{ marginBottom: 0, marginTop: 12 }}>
-            Gần nhất: {summary.nearest.name} · {summary.nearestMonths} tháng
+          <p className="story-caption">
+            Cần bảo vệ {formatMoney(summary.need)} · Đã bảo vệ {formatMoney(summary.protectedSum)}
           </p>
-        )}
+        </div>
       </div>
 
+      {summary.count > 0 && summary.gap > 0 && summary.nearestMonths > 0 && (
+        <div className="story-banner">
+          Với nhịp hiện tại, cần thêm{" "}
+          <strong>{formatMoney(summary.perMonth)}/tháng</strong> để đạt cả {summary.count} mục tiêu.
+        </div>
+      )}
+
       {!goals.length && (
-        <div className="empty card">
+        <div className="empty card surface-raised">
           <p>Chưa có mục tiêu.</p>
           <button type="button" onClick={() => setShow(true)}>
             Thêm mục tiêu đầu tiên
@@ -191,76 +209,61 @@ export default function Goals() {
           return (
             <div className="timeline-item" key={g.id}>
               <div className={`timeline-dot ${status}`} aria-hidden />
-              <div className="card goal-card">
-                <div className="row-between">
-                  <div>
-                    <strong>{g.name}</strong>
-                    <div className="muted">{formatDateVN(g.dueDate)}</div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span className={`pill ${g.urgency === "hard" ? "red" : "yellow"}`}>
-                      {g.urgency === "hard" ? "Bắt buộc" : "Linh hoạt"}
-                    </span>
-                    <ActionMenu
-                      actions={[
-                        { label: "Sửa", onClick: () => openEdit(g) },
-                        {
-                          label: "Xóa",
-                          danger: true,
-                          onClick: async () => {
-                            if (confirm("Xóa mục tiêu này?")) {
-                              await deleteGoal(g.id);
-                              await reload();
-                            }
-                          },
-                        },
-                      ]}
-                    />
-                  </div>
-                </div>
-
-                <div className="row-between" style={{ marginTop: 10 }}>
-                  <div>
-                    <div className="metric-value" style={{ fontSize: "1.05rem" }}>
-                      {formatMoney(g.amount)}
-                      {g.mode === "purchasing_power" && g.amount > 0 && (
-                        <span className="muted" style={{ fontWeight: 500, fontSize: ".85rem" }}>
-                          {" "}
-                          → {formatMoney(adj)}
-                        </span>
-                      )}
+              <div className="card surface-raised goal-card">
+                <div className="row-between" style={{ alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", gap: 12, flex: 1, minWidth: 0 }}>
+                    <Ring pct={pct} status={status} />
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: 16, fontWeight: 650 }}>{g.name}</strong>
+                      <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                        {formatDateVN(g.dueDate)} · {months} tháng
+                      </div>
+                      <span className="urgency-chip" style={{ marginTop: 6 }}>
+                        {g.urgency === "hard" ? "Bắt buộc" : "Linh hoạt"}
+                      </span>
                     </div>
-                    <span className={`pill ${status}`} style={{ marginTop: 6 }}>
-                      {statusLabel(status)}
-                    </span>
                   </div>
-                  <div className="progress-ring" aria-label={`${Math.round(pct)}%`}>
-                    <svg viewBox="0 0 36 36">
-                      <path
-                        className="ring-bg"
-                        d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31"
-                      />
-                      <path
-                        className={`ring-fg ${status}`}
-                        strokeDasharray={`${pct}, 100`}
-                        d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31"
-                      />
-                      <text x="18" y="20.5" textAnchor="middle" className="ring-text">
-                        {Math.round(pct)}%
-                      </text>
-                    </svg>
-                  </div>
+                  <ActionMenu
+                    actions={[
+                      { label: "Sửa", onClick: () => openEdit(g) },
+                      {
+                        label: "Xóa",
+                        danger: true,
+                        onClick: async () => {
+                          if (confirm("Xóa mục tiêu này?")) {
+                            await deleteGoal(g.id);
+                            await reload();
+                          }
+                        },
+                      },
+                    ]}
+                  />
                 </div>
 
-                <div className="progress-track" style={{ marginTop: 10 }}>
+                <div style={{ marginTop: 12 }}>
+                  <span className="muted" style={{ fontSize: 15 }}>
+                    {formatMoney(g.amount)}
+                  </span>
+                  {g.mode === "purchasing_power" && g.amount > 0 && (
+                    <>
+                      <span className="muted"> → </span>
+                      <span className="metric-value money-md">{formatMoney(adj)}</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="progress-track">
                   <span style={{ width: `${pct}%` }} />
                 </div>
-                <p className="muted" style={{ margin: "6px 0 0", fontSize: ".8rem" }}>
-                  Bảo vệ {formatMoney(g.protectedAmount)} · Thiếu {formatMoney(gap)} · {months} tháng
-                </p>
+
+                <div className="row-between" style={{ marginTop: 4 }}>
+                  <span className={`status-chip ${status}`}>{statusLabel(status)}</span>
+                </div>
+
                 {gap > 0 && months > 0 && (
-                  <p className="muted" style={{ margin: "4px 0 0", fontSize: ".8rem" }}>
-                    Cần bảo vệ thêm khoảng {formatMoney(perMonth)}/tháng
+                  <p className="story-caption" style={{ marginTop: 8 }}>
+                    Cần bảo vệ thêm <strong style={{ fontWeight: 650 }}>{formatMoney(perMonth)}</strong>
+                    /tháng
                   </p>
                 )}
               </div>
@@ -299,7 +302,6 @@ export default function Goals() {
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
               />
-              <p className="field-hint">Sức mua năm {form.baseYear}</p>
             </div>
             <div className="field">
               <label htmlFor="g-mode">Chế độ</label>
@@ -333,7 +335,7 @@ export default function Goals() {
               </div>
             </div>
             <div className="field">
-              <label htmlFor="g-prot">Đã bảo vệ (cash bucket)</label>
+              <label htmlFor="g-prot">Đã bảo vệ</label>
               <input
                 id="g-prot"
                 inputMode="decimal"
@@ -349,7 +351,7 @@ export default function Goals() {
                 onChange={(e) => setForm({ ...form, urgency: e.target.value as GoalUrgency })}
               >
                 <option value="hard">Bắt buộc</option>
-                <option value="soft">Linh hoạt</option>
+                <option value="flexible">Linh hoạt</option>
               </select>
             </div>
             <div className="banner info" style={{ marginBottom: 12 }}>
