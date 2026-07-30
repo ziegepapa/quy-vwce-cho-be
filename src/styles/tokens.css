@@ -1,4 +1,4 @@
-/* Design System V7 — numeric specs */
+/* Design System V9 — numeric specs */
 :root {
   --bg-base: #F4F6FA;
   --surface: #FBFCFE;
@@ -50,9 +50,18 @@
   --color-info-bg: var(--primary-050);
 
   --sync-synced: var(--success-600);
-  --sync-syncing: var(--primary-500);
+  --sync-syncing: var(--warning-600);
   --sync-offline: var(--text-tertiary);
-  --sync-conflict: var(--warning-600);
+  --sync-conflict: var(--danger-600);
+
+  /* ===== V9 B1: z-index scale — CHỈ dùng qua biến, cấm số trần ===== */
+  --z-base: 0;
+  --z-dock: 40;
+  --z-navbar: 50;
+  --z-scrim: 60;
+  --z-popover: 70;
+  --z-sheet: 80;
+  --z-toast: 90;
 
   /* 3-layer shadows — mandatory */
   --shadow-raised:
@@ -67,10 +76,15 @@
     0 1px 1px rgba(11, 18, 32, 0.04),
     0 8px 24px rgba(11, 18, 32, 0.12),
     0 24px 48px rgba(11, 18, 32, 0.10);
+  --shadow-popover:
+    0 2px 4px rgba(16, 24, 40, 0.05),
+    0 16px 32px -8px rgba(16, 24, 40, 0.14);
   --shadow-fab: 0 4px 14px rgba(43, 63, 168, 0.35);
   --shadow-sm: var(--shadow-raised);
   --shadow-md: var(--shadow-raised);
   --shadow-lg: var(--shadow-overlay);
+
+  --hairline: rgba(16, 24, 40, 0.06);
 
   --r-control: 12px;
   --r-chip: 999px;
@@ -79,6 +93,7 @@
   --r-hero: 28px;
   --r-sheet: 28px;
   --r-dock: 26px;
+  --r-icon-box: 11px;
   --radius-sm: 8px;
   --radius-md: var(--r-control);
   --radius-lg: var(--r-card);
@@ -123,14 +138,21 @@
   --blur-nav: 20px;
   --blur-progressive: 16px;
 
-  --nav-h: 52px;
-  --nav-h-condensed: 44px;
-  --sidebar-w: 260px;
-  --content-max: 42rem;
+  /* ===== V9 B1: một nguồn duy nhất cho chiều cao navbar ===== */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+
+  --nav-h: 56px;
+  --nav-h-condensed: 48px;
+  /* JS ghi đè --nav-h-dyn khi navbar co lại; luôn có giá trị hợp lệ */
+  --nav-h-dyn: var(--nav-h);
+  /* Offset dùng cho mọi vùng nội dung nằm dưới navbar fixed */
+  --nav-total: calc(var(--nav-h-dyn) + var(--safe-top));
+
+  --sidebar-w: 260px;
+  --content-max: 42rem;
 
   --d-fast: 160ms;
   --d-base: 220ms;
@@ -167,6 +189,7 @@
     --danger-050: #4C0519;
     --color-surface-overlay: rgba(17, 23, 38, 0.88);
     --color-surface-translucent: rgba(17, 23, 38, 0.78);
+    --hairline: rgba(255, 255, 255, 0.08);
     --shadow-raised:
       0 1px 2px rgba(0, 0, 0, 0.3),
       0 4px 12px rgba(0, 0, 0, 0.25),
@@ -179,6 +202,9 @@
       0 1px 1px rgba(0, 0, 0, 0.3),
       0 8px 24px rgba(0, 0, 0, 0.4),
       0 24px 48px rgba(0, 0, 0, 0.35);
+    --shadow-popover:
+      0 2px 4px rgba(0, 0, 0, 0.35),
+      0 16px 32px -8px rgba(0, 0, 0, 0.45);
   }
 }
 
