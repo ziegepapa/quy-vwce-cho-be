@@ -13,6 +13,39 @@ import type { AnnualChecklist, AppSettings, BackupPayload } from "../lib/types";
 import { APP_VERSION, SCHEMA_VERSION } from "../lib/types";
 import { csvEscape, formatDateVN } from "../lib/calc";
 
+function pctDisplay(decimal: number): string {
+  if (!Number.isFinite(decimal)) return "—";
+  return `${(decimal * 100).toLocaleString("vi-VN", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1,
+  })} %`;
+}
+
+function Segmented({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="seg-control" role="group">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          className={value === o.value ? "seg-opt active" : "seg-opt"}
+          onClick={() => onChange(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function SettingsPage({
   onReload,
   onOpenMigrate,
@@ -25,6 +58,8 @@ export default function SettingsPage({
   const [online, setOnline] = useState(navigator.onLine);
   const [checklist, setChecklist] = useState<AnnualChecklist | null>(null);
   const [checklistYear, setChecklistYear] = useState(new Date().getFullYear());
+  const [deleteStep, setDeleteStep] = useState(0);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -78,17 +113,7 @@ export default function SettingsPage({
       alert(`schemaVersion không khớp (file: ${data.schemaVersion}, app: ${SCHEMA_VERSION})`);
       return;
     }
-    const preview = [
-      `Export: ${data.exportedAt ?? "?"}`,
-      `Settings: ${data.settings?.length ?? 0}`,
-      `Goals: ${data.goals?.length ?? 0}`,
-      `Transactions: ${data.transactions?.length ?? 0}`,
-      `Checklists: ${data.annualChecklists?.length ?? 0}`,
-      `Snapshots: ${data.monthlySnapshots?.length ?? 0}`,
-    ].join("\n");
-    if (!confirm(`Xem trước backup:\n${preview}\n\nTiếp tục nhập? (sẽ tự backup dữ liệu hiện tại trước)`))
-      return;
-
+    if (!confirm("Tiếp tục nhập? (sẽ tự backup dữ liệu hiện tại trước)")) return;
     try {
       const current = await exportBackup();
       downloadJson(
@@ -96,9 +121,8 @@ export default function SettingsPage({
         `vwce-auto-before-import-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`,
       );
     } catch {
-      /* still allow import */
+      /* */
     }
-
     try {
       await importBackup(data);
       alert("Nhập backup thành công");
@@ -125,10 +149,9 @@ export default function SettingsPage({
         ].join(","),
       )
       .join("\n");
-    const bom = "\uFEFF";
     const a = document.createElement("a");
     a.href = URL.createObjectURL(
-      new Blob([bom + header + rows], { type: "text/csv;charset=utf-8" }),
+      new Blob(["\uFEFF" + header + rows], { type: "text/csv;charset=utf-8" }),
     );
     a.download = "vwce-transactions.csv";
     a.click();
@@ -137,44 +160,102 @@ export default function SettingsPage({
   if (!s) return <p className="muted">Đang tải…</p>;
 
   return (
-    <div>
-      <h1 className="page-title">Cài đặt</h1>
-      <div className="card">
-        <div className="field">
-          <label>Tên kế hoạch</label>
+    <div className="settings-v9">
+      <p className="group-label">Kế hoạch</p>
+      <div className="group-box">
+        <div className="group-row">
+          <label htmlFor="s-plan">Tên kế hoạch</label>
           <input
+            id="s-plan"
             value={s.planName}
             onChange={(e) => setS({ ...s, planName: e.target.value })}
             onBlur={() => persist({ planName: s.planName })}
           />
         </div>
-        <div className="field">
-          <label>Tên bé (tuỳ chọn)</label>
+        <div className="group-row">
+          <label htmlFor="s-child">Tên bé</label>
           <input
+            id="s-child"
             value={s.childName}
             onChange={(e) => setS({ ...s, childName: e.target.value })}
             onBlur={() => persist({ childName: s.childName })}
           />
         </div>
-        <div className="field">
-          <label>Tài khoản đứng tên</label>
-          <select
+        <div className="group-row">
+          <span className="group-row-label">Tài khoản đứng tên</span>
+          <Segmented
             value={s.accountType}
-            onChange={(e) => {
-              const accountType = e.target.value as "child" | "parent";
+            options={
+              [
+                { value: "parent", label: "Cha/mẹ" },
+                { value: "child", label: "Bé" },
+              ]
+            }
+            onChange={(v) => {
+              const accountType = v as "child" | "parent";
               setS({ ...s, accountType });
               persist({ accountType });
             }}
-          >
-            <option value="parent">Cha/mẹ</option>
-            <option value="child">Bé</option>
-          </select>
+          />
         </div>
-        <div className="field">
-          <label>Giá VWCE gần nhất</label>
+      </div>
+
+      <p className="group-label">Giả định</p>
+      <div className="group-box">
+        <div className="group-row row-between-inline">
+          <span className="group-row-label">Lạm phát</span>
           <input
-            type="number"
-            step="0.01"
+            className="pct-input"
+            inputMode="decimal"
+            value={(s.inflationRate * 100).toFixed(1)}
+            onChange={(e) => setS({ ...s, inflationRate: (+e.target.value || 0) / 100 })}
+            onBlur={() => persist({ inflationRate: s.inflationRate })}
+            aria-label={`Lạm phát ${pctDisplay(s.inflationRate)}`}
+          />
+          <span className="pct-suffix">%</span>
+        </div>
+        <div className="group-row row-between-inline">
+          <span className="group-row-label">Buffer</span>
+          <input
+            className="pct-input"
+            inputMode="decimal"
+            value={(s.bufferPct * 100).toFixed(1)}
+            onChange={(e) => setS({ ...s, bufferPct: (+e.target.value || 0) / 100 })}
+            onBlur={() => persist({ bufferPct: s.bufferPct })}
+          />
+          <span className="pct-suffix">%</span>
+        </div>
+        <div className="group-row row-between-inline">
+          <span className="group-row-label">Lợi suất VWCE</span>
+          <input
+            className="pct-input"
+            inputMode="decimal"
+            value={(s.vwceReturn * 100).toFixed(1)}
+            onChange={(e) => setS({ ...s, vwceReturn: (+e.target.value || 0) / 100 })}
+            onBlur={() => persist({ vwceReturn: s.vwceReturn })}
+          />
+          <span className="pct-suffix">%</span>
+        </div>
+        <div className="group-row row-between-inline">
+          <span className="group-row-label">Lợi suất an toàn</span>
+          <input
+            className="pct-input"
+            inputMode="decimal"
+            value={(s.safeReturn * 100).toFixed(1)}
+            onChange={(e) => setS({ ...s, safeReturn: (+e.target.value || 0) / 100 })}
+            onBlur={() => persist({ safeReturn: s.safeReturn })}
+          />
+          <span className="pct-suffix">%</span>
+        </div>
+      </div>
+
+      <p className="group-label">Tài sản</p>
+      <div className="group-box">
+        <div className="group-row row-between-inline">
+          <span className="group-row-label">Giá VWCE gần nhất</span>
+          <input
+            className="pct-input wide"
+            inputMode="decimal"
             value={s.latestVwcePrice || ""}
             onChange={(e) => setS({ ...s, latestVwcePrice: +e.target.value })}
             onBlur={() =>
@@ -184,114 +265,52 @@ export default function SettingsPage({
               })
             }
           />
+          <span className="pct-suffix">€</span>
         </div>
-        <div className="grid2">
-          <div className="field">
-            <label>Lạm phát</label>
-            <input
-              type="number"
-              step="0.001"
-              value={s.inflationRate}
-              onChange={(e) => setS({ ...s, inflationRate: +e.target.value })}
-              onBlur={() => persist({ inflationRate: s.inflationRate })}
-            />
-          </div>
-          <div className="field">
-            <label>Buffer</label>
-            <input
-              type="number"
-              step="0.01"
-              value={s.bufferPct}
-              onChange={(e) => setS({ ...s, bufferPct: +e.target.value })}
-              onBlur={() => persist({ bufferPct: s.bufferPct })}
-            />
-          </div>
-        </div>
-        <div className="grid2">
-          <div className="field">
-            <label>Lợi suất VWCE</label>
-            <input
-              type="number"
-              step="0.001"
-              value={s.vwceReturn}
-              onChange={(e) => setS({ ...s, vwceReturn: +e.target.value })}
-              onBlur={() => persist({ vwceReturn: s.vwceReturn })}
-            />
-          </div>
-          <div className="field">
-            <label>Lợi suất an toàn</label>
-            <input
-              type="number"
-              step="0.001"
-              value={s.safeReturn}
-              onChange={(e) => setS({ ...s, safeReturn: +e.target.value })}
-              onBlur={() => persist({ safeReturn: s.safeReturn })}
-            />
-          </div>
-        </div>
-        <div className="field">
-          <label>Hạn 2042</label>
-          <select
+        {s.latestPriceDate && (
+          <p className="group-hint">Cập nhật {formatDateVN(s.latestPriceDate)}</p>
+        )}
+      </div>
+
+      <p className="group-label">Hạn</p>
+      <div className="group-box">
+        <div className="group-row">
+          <span className="group-row-label">Hạn 2042</span>
+          <Segmented
             value={s.endMode}
-            onChange={(e) => {
-              const endMode = e.target.value as "hard" | "flexible";
+            options={
+              [
+                { value: "hard", label: "Hạn cứng" },
+                { value: "flexible", label: "Linh hoạt" },
+              ]
+            }
+            onChange={(v) => {
+              const endMode = v as "hard" | "flexible";
               setS({ ...s, endMode });
               persist({ endMode });
             }}
-          >
-            <option value="hard">Hạn cứng</option>
-            <option value="flexible">Linh hoạt</option>
-          </select>
-        </div>
-        <div className="grid2">
-          <div className="field">
-            <label>Đóng góp năm 1</label>
-            <input
-              type="number"
-              value={s.contributionY1}
-              onChange={(e) => setS({ ...s, contributionY1: +e.target.value })}
-              onBlur={() => persist({ contributionY1: s.contributionY1 })}
-            />
-          </div>
-          <div className="field">
-            <label>Từ năm 2</label>
-            <input
-              type="number"
-              value={s.contributionY2}
-              onChange={(e) => setS({ ...s, contributionY2: +e.target.value })}
-              onBlur={() => persist({ contributionY2: s.contributionY2 })}
-            />
-          </div>
+          />
         </div>
       </div>
 
-      <div className="card">
-        <div className="row-between">
-          <h2>Checklist</h2>
-          <select
+      <p className="group-label">Checklist {checklistYear}</p>
+      <div className="group-box">
+        <div className="group-row">
+          <label htmlFor="cl-year">Năm</label>
+          <input
+            id="cl-year"
+            type="number"
             value={checklistYear}
             onChange={(e) => setChecklistYear(+e.target.value)}
-            style={{ width: "auto", minHeight: 36 }}
-          >
-            {[0, 1, 2, 3, 4].map((i) => {
-              const y = new Date().getFullYear() - 2 + i;
-              return (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              );
-            })}
-          </select>
+          />
         </div>
         {checklist?.items.map((item) => (
-          <label
-            key={item.key}
-            style={{ display: "flex", gap: 8, marginBottom: 8, color: "inherit", fontWeight: 500 }}
-          >
+          <label key={item.key} className="switch-row">
+            <span>{item.label}</span>
             <input
               type="checkbox"
+              className="ios-switch"
               checked={item.done}
-              style={{ width: 20, height: 20, minHeight: 20 }}
               onChange={async () => {
                 const items = checklist.items.map((i) =>
                   i.key === item.key ? { ...i, done: !i.done } : i,
@@ -301,24 +320,16 @@ export default function SettingsPage({
                 setChecklist(next);
               }}
             />
-            <span>{item.label}</span>
           </label>
         ))}
       </div>
 
-      <div className="card stack">
-        <button type="button" onClick={doExport}>
+      <p className="group-label">Dữ liệu</p>
+      <div className="group-box">
+        <button type="button" className="group-action" onClick={doExport}>
           Xuất JSON
         </button>
-        <label
-          className="secondary"
-          style={{
-            textAlign: "center",
-            padding: ".65rem",
-            border: "1.5px solid var(--navy)",
-            borderRadius: 12,
-          }}
-        >
+        <label className="group-action">
           Nhập JSON
           <input
             type="file"
@@ -331,47 +342,64 @@ export default function SettingsPage({
             }}
           />
         </label>
-        <button type="button" className="secondary" onClick={exportCsv}>
+        <button type="button" className="group-action" onClick={exportCsv}>
           Xuất CSV giao dịch
         </button>
         {onOpenMigrate && (
-          <button type="button" className="secondary" onClick={onOpenMigrate}>
+          <button type="button" className="group-action" onClick={onOpenMigrate}>
             Nhập dữ liệu local vào tài khoản
           </button>
         )}
-        <button
-          type="button"
-          className="danger"
-          onClick={async () => {
-            if (!confirm("Bước 1/2: Xóa toàn bộ dữ liệu trên thiết bị này?")) return;
-            if (!confirm("Bước 2/2: Xác nhận xóa — không hoàn tác được?")) return;
-            await clearAllData();
-            window.location.reload();
-          }}
-        >
-          Xóa toàn bộ dữ liệu
-        </button>
       </div>
 
-      <div className="card">
-        <h2>Cài PWA iPhone</h2>
-        <ol className="muted" style={{ paddingLeft: "1.2rem" }}>
-          <li>Mở bằng Safari</li>
-          <li>Chia sẻ → Thêm vào Màn hình chính</li>
-          <li>Mở icon app (standalone, offline sau lần tải đầu)</li>
-        </ol>
+      <p className="group-label">Vùng nguy hiểm</p>
+      <div className="group-box">
+        {deleteStep === 0 ? (
+          <button type="button" className="group-action danger-text" onClick={() => setDeleteStep(1)}>
+            Xóa toàn bộ dữ liệu
+          </button>
+        ) : (
+          <div className="delete-confirm">
+            <p className="muted" style={{ fontSize: 13 }}>
+              Gõ <strong>XOA</strong> để xác nhận. Không hoàn tác được.
+            </p>
+            <input
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder="XOA"
+              autoCapitalize="characters"
+            />
+            <div className="stack" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="danger"
+                disabled={deleteConfirm !== "XOA"}
+                onClick={async () => {
+                  await clearAllData();
+                  window.location.reload();
+                }}
+              >
+                Xác nhận xóa
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setDeleteStep(0);
+                  setDeleteConfirm("");
+                }}
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="card disclaimer">
-        <p>
-          v{APP_VERSION} · {online ? "Online" : "Offline"} · Sao lưu:{" "}
-          {metaBackup ? formatDateVN(metaBackup.slice(0, 10)) : "chưa có"}
-        </p>
-        <p>
-          Dữ liệu lưu trên thiết bị và đồng bộ Supabase khi đã đăng nhập. Không phải tư vấn
-          đầu tư/thuế.
-        </p>
-      </div>
+      <p className="settings-foot">
+        v{APP_VERSION} · {online ? "Online" : "Offline"} · Sao lưu:{" "}
+        {metaBackup ? formatDateVN(metaBackup.slice(0, 10)) : "chưa có"}
+      </p>
     </div>
   );
 }

@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type { SyncStatus } from "../lib/sync/types";
 import { SYNC_STATUS_LABEL } from "../lib/sync/types";
+import AvatarMenu, { avatarGradient } from "./AvatarMenu";
 
 const TITLES: Record<string, string> = {
   "/": "Tổng quan",
@@ -11,11 +12,11 @@ const TITLES: Record<string, string> = {
   "/settings": "Cài đặt",
 };
 
-function syncDotColor(status: SyncStatus): string {
-  if (status === "synced") return "var(--success-600)";
-  if (status === "syncing") return "var(--primary-500)";
-  if (status === "conflict") return "var(--warning-600)";
-  return "var(--text-tertiary)";
+function syncRingClass(status: SyncStatus): string {
+  if (status === "synced") return "sync-ring synced";
+  if (status === "syncing") return "sync-ring syncing";
+  if (status === "conflict") return "sync-ring conflict";
+  return "sync-ring offline";
 }
 
 export default function CollapsingNavBar({
@@ -35,104 +36,70 @@ export default function CollapsingNavBar({
   const title = TITLES[pathname] ?? "Quỹ VWCE";
   const [progress, setProgress] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const reduced = useRef(false);
+  const reduced = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false,
+  )[0];
 
   useEffect(() => {
-    reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     function onScroll() {
       const y = window.scrollY;
       const p = Math.min(1, Math.max(0, y / 24));
-      setProgress(reduced.current ? (y > 12 ? 1 : 0) : p);
+      setProgress(reduced ? (y > 12 ? 1 : 0) : p);
     }
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onDoc(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [menuOpen]);
+  }, [reduced]);
 
   const initial = (displayName.trim()[0] || "?").toUpperCase();
   const condensed = progress > 0.5;
-  const h = 52 - progress * 8;
-  const titleSize = 22 - progress * 5;
-  const titleWeight = progress > 0.5 ? 600 : 700;
+  const h = 56 - progress * 8;
 
   return (
-    <header
-      className={`collapse-nav${condensed ? " is-condensed" : ""}`}
-      style={{
-        ["--nav-progress" as string]: String(progress),
-        ["--nav-h-dyn" as string]: `${h}px`,
-        ["--nav-title-size" as string]: `${titleSize}px`,
-        ["--nav-title-weight" as string]: String(titleWeight),
-      }}
-    >
-      <div className="collapse-nav-inner">
-        <h1 className="collapse-nav-title">{title}</h1>
-        <div className="collapse-nav-right">
-          <span
-            className="sync-dot-only"
-            role="status"
-            aria-label={`${SYNC_STATUS_LABEL[syncStatus]}${pending > 0 ? `, ${pending} chờ` : ""}`}
-            title={SYNC_STATUS_LABEL[syncStatus]}
-            style={{ background: syncDotColor(syncStatus) }}
-          />
-          <div className="avatar-wrap" ref={menuRef}>
+    <>
+      <header
+        className={`collapse-nav${condensed ? " is-condensed" : ""}`}
+        style={{
+          ["--nav-h-dyn" as string]: `${h}px`,
+        }}
+      >
+        <div className="collapse-nav-inner">
+          <div className="nav-leading">
+            <span className="nav-logo" aria-hidden />
+            <h1 className="collapse-nav-title">{title}</h1>
+          </div>
+          <div className="collapse-nav-right">
             <button
               type="button"
-              className="avatar avatar-sm avatar-btn"
-              aria-label="Menu tài khoản"
+              className="avatar-btn-wrap"
+              aria-label={`Menu tài khoản, ${SYNC_STATUS_LABEL[syncStatus]}`}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((v) => !v)}
             >
-              {initial}
+              <span
+                className="avatar avatar-sm"
+                style={{ background: avatarGradient(displayName) }}
+              >
+                {initial}
+              </span>
+              <span className={syncRingClass(syncStatus)} aria-hidden />
             </button>
-            {menuOpen && (
-              <div className="avatar-menu" role="menu">
-                <div className="avatar-menu-head">
-                  <strong>{displayName}</strong>
-                  <div className="muted" style={{ fontSize: 12 }}>
-                    {SYNC_STATUS_LABEL[syncStatus]}
-                    {pending > 0 ? ` · ${pending} chờ` : ""}
-                  </div>
-                </div>
-                {onSyncNow && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onSyncNow();
-                    }}
-                  >
-                    Đồng bộ ngay
-                  </button>
-                )}
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="danger-item"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onSignOut();
-                  }}
-                >
-                  Đăng xuất
-                </button>
-              </div>
-            )}
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+      <div className="nav-spacer" aria-hidden style={{ height: `calc(${h}px + env(safe-area-inset-top, 0px))` }} />
+      <AvatarMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        displayName={displayName}
+        syncStatus={syncStatus}
+        pending={pending}
+        onSignOut={onSignOut}
+        onSyncNow={onSyncNow}
+      />
+    </>
   );
 }
