@@ -9,20 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
-/**
- * V9 B2 — ĐĂNG KÝ HÀNH ĐỘNG CHO TOP BAR
- *
- * Vấn đề: CollapsingNavBar sống ở App.tsx, nhưng hành động (mở modal giá,
- * mở ô tìm kiếm, mở form mục tiêu) lại nằm bên trong từng trang.
- *
- * Cách giải: mỗi trang gọi useNavAction("search", handler) khi mount.
- * Navbar chỉ hiện icon nào đã có trang đăng ký.
- *
- * Chốt quan trọng: hàm thật được giữ trong ref, chỉ *danh sách tên* là state.
- * Nếu đặt hàm vào state thì mỗi render của trang tạo một hàm mới
- * → setState → render lại → vòng lặp vô tận.
- */
-
+/** Các hành động mà top bar có thể hiển thị. Trang tự đăng ký cái nó cần. */
 export type NavActionName =
   | "updatePrice"
   | "search"
@@ -37,32 +24,40 @@ type RegistryApi = {
 
 const NavActionsContext = createContext<RegistryApi | null>(null);
 
-/** Dùng MỘT lẦn, trong App.tsx. */
+/**
+ * Dùng MỘT lần duy nhất trong App.
+ * Handler giữ trong ref (đổi mỗi render, không nên gây re-render).
+ * Chỉ danh sách TÊN nằm trong state, nên App chỉ render lại khi
+ * một trang đăng ký hoặc bỏ đăng ký hành động.
+ */
 export function useNavActionRegistry() {
-  const fns = useRef(new Map<NavActionName, () => void>());
+  const handlers = useRef(new Map<NavActionName, () => void>());
   const [names, setNames] = useState<readonly NavActionName[]>([]);
 
-  const register = useCallback((name: NavActionName, fn: () => void) => {
-    fns.current.set(name, fn);
-    setNames((prev) => (prev.includes(name) ? prev : [...prev, name]));
-  }, []);
-
-  const unregister = useCallback((name: NavActionName) => {
-    fns.current.delete(name);
-    setNames((prev) =>
-      prev.includes(name) ? prev.filter((n) => n !== name) : prev,
-    );
-  }, []);
-
   const api = useMemo<RegistryApi>(
-    () => ({ register, unregister }),
-    [register, unregister],
+    () => ({
+      register(name, fn) {
+        handlers.current.set(name, fn);
+        setNames((prev) => (prev.includes(name) ? prev : [...prev, name]));
+      },
+      unregister(name) {
+        handlers.current.delete(name);
+        setNames((prev) =>
+          prev.includes(name) ? prev.filter((n) => n !== name) : prev,
+        );
+      },
+    }),
+    [],
   );
 
-  /** navAction("search") → hàm, hoặc undefined nếu chưa trang nào đăng ký. */
   const navAction = useCallback(
-    (name: NavActionName): (() => void) | undefined =>
-      names.includes(name) ? () => fns.current.get(name)?.() : undefined,
+    (name: NavActionName): (() => void) | undefined => {
+      if (!names.includes(name)) return undefined;
+      return () => {
+        const fn = handlers.current.get(name);
+        if (fn) fn();
+      };
+    },
     [names],
   );
 
@@ -84,16 +79,12 @@ export function NavActionsProvider({
 }
 
 /**
- * Dùng trong trang. Ví dụ, trong Transactions.tsx:
- *   useNavAction("search", () => setSearchOpen(true));
- *
- * `fn` được phép đổi identity mọi render — không cần useCallback.
+ * Dùng trong trang. Phải gọi TRƯỚC mọi return sớm của component,
+ * nếu không thứ tự hook sẽ đổi giữa các render.
  */
 export function useNavAction(name: NavActionName, fn: () => void) {
   const ctx = useContext(NavActionsContext);
   const fnRef = useRef(fn);
-  // Cập nhật trong lúc render: an toàn vì không gây re-render,
-  // và đảm bảo lần bấm đầu tiên gọi đúng closure mới nhất.
   fnRef.current = fn;
 
   useEffect(() => {
