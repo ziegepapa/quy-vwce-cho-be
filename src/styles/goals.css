@@ -1,0 +1,43 @@
+/* Goals hero V7 §8 */
+.goals-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  margin-bottom: 12px;
+  border-radius: var(--r-hero);
+}
+
+.goals-hero .progress-ring {
+  width: 84px;
+  height: 84px;
+}
+
+.goals-hero-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.story-banner {
+  background: rgba(43, 63, 168, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+.story-banner strong {
+  color: var(--text-primary);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-card {
+  transition: transform var(--d-fast) ease;
+}
+
+.goal-card:active {
+  transform: scale(0.985);
+}
