@@ -9,6 +9,7 @@ import "./styles/nav.css";
 import "./styles/bento.css";
 import "./styles/goals.css";
 import "./styles/overview-v8.css";
+import "./styles/settings-v9.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
