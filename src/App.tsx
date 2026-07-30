@@ -11,6 +11,7 @@ import type { AppSettings } from "./lib/types";
 import { getSyncMeta, listConflicts, runSync } from "./lib/sync/engine";
 import { outboxCount } from "./lib/sync/outbox";
 import type { SyncStatus } from "./lib/sync/types";
+import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
 import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
@@ -38,6 +39,9 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
   const [pending, setPending] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
+
+  // V9 B2: phải gọi trước mọi return sớm, nếu không thứ tự hook sẽ đổi giữa các render.
+  const { api: navActionsApi, navAction } = useNavActionRegistry();
 
   const refreshSyncBadge = useCallback(async () => {
     const p = await outboxCount();
@@ -193,23 +197,30 @@ export default function App() {
             pending={pending}
             onSignOut={handleSignOut}
             onSyncNow={handleSyncNow}
+            onUpdatePrice={navAction("updatePrice")}
+            onSearch={navAction("search")}
+            onFilter={navAction("filter")}
+            onAddGoal={navAction("addGoal")}
+            onChangeScenario={navAction("changeScenario")}
           />
         )}
-        <Routes>
-          <Route path="/" element={<Overview />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/goals" element={<Goals />} />
-          <Route path="/simulation" element={<Simulation />} />
-          <Route
-            path="/settings"
-            element={
-              <SettingsPage
-                onReload={reload}
-                onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined}
-              />
-            }
-          />
-        </Routes>
+        <NavActionsProvider api={navActionsApi}>
+          <Routes>
+            <Route path="/" element={<Overview />} />
+            <Route path="/transactions" element={<Transactions />} />
+            <Route path="/goals" element={<Goals />} />
+            <Route path="/simulation" element={<Simulation />} />
+            <Route
+              path="/settings"
+              element={
+                <SettingsPage
+                  onReload={reload}
+                  onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined}
+                />
+              }
+            />
+          </Routes>
+        </NavActionsProvider>
       </div>
 
       <BottomDock items={NAV} />
