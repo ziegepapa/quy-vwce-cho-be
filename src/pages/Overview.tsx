@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { getSettings, listGoals, listTransactions } from "../lib/db";
+import { getSettings, listGoals, listTransactions, saveSettings } from "../lib/db";
 import type { AppSettings, Goal, Transaction } from "../lib/types";
 import {
   applyTransaction,
   avgCost,
   buildEquitySeries,
   emptyPortfolio,
+  formatDateVN,
   formatMoney,
   goalProgressStatus,
   inflate,
   monthsBetween,
   parseDate,
 } from "../lib/calc";
+import { useNavAction } from "../lib/navActions";
 
 type Insight = {
   id: string;
@@ -91,6 +93,9 @@ export default function Overview(_props: { displayName?: string }) {
   const [loading, setLoading] = useState(true);
   const [detailOpen, setDetailOpen] = useState(false);
   const [moreActions, setMoreActions] = useState(false);
+  // V9 B2: sheet cập nhật giá nhanh, mở từ icon refresh trên top bar
+  const [priceOpen, setPriceOpen] = useState(false);
+  const [priceInput, setPriceInput] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -113,6 +118,26 @@ export default function Overview(_props: { displayName?: string }) {
     () => buildEquitySeries(txs, settings?.latestVwcePrice ?? 0),
     [txs, settings?.latestVwcePrice],
   );
+
+  function openPriceSheet() {
+    const current = settings?.latestVwcePrice ?? 0;
+    setPriceInput(current > 0 ? String(current) : "");
+    setPriceOpen(true);
+  }
+
+  // V9 B2: phải gọi TRƯỚC return sớm "loading" bên dưới,
+  // nếu không thứ tự hook sẽ đổi giữa các render.
+  useNavAction("updatePrice", openPriceSheet);
+
+  async function savePrice() {
+    const value = Number(priceInput.replace(",", ".")) || 0;
+    await saveSettings({
+      latestVwcePrice: value,
+      latestPriceDate: new Date().toISOString().slice(0, 10),
+    });
+    setPriceOpen(false);
+    setSettings(await getSettings());
+  }
 
   if (loading) {
     return (
@@ -360,6 +385,44 @@ export default function Overview(_props: { displayName?: string }) {
 
       {/* Block 5 — Footnote */}
       <p className="ov-foot">Không phải tư vấn đầu tư. Lãi/lỗ chỉ theo dõi nội bộ.</p>
+
+      {/* V9 B2 — Sheet cập nhật giá. Dùng lại class có sẵn, không thêm CSS. */}
+      {priceOpen && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setPriceOpen(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-handle" aria-hidden />
+            <h2>Cập nhật giá VWCE</h2>
+            <div className="field">
+              <label htmlFor="ov-price">Giá gần nhất (€)</label>
+              <input
+                id="ov-price"
+                inputMode="decimal"
+                autoFocus
+                value={priceInput}
+                onChange={(e) => setPriceInput(e.target.value)}
+              />
+              {settings?.latestPriceDate ? (
+                <p className="field-hint">
+                  Lần cập nhật trước: {formatDateVN(settings.latestPriceDate)}
+                </p>
+              ) : null}
+            </div>
+            <div className="stack">
+              <button type="button" onClick={savePrice}>
+                Lưu
+              </button>
+              <button type="button" className="secondary" onClick={() => setPriceOpen(false)}>
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
