@@ -148,8 +148,12 @@
   --nav-h-condensed: 48px;
   /* JS ghi đè --nav-h-dyn khi navbar co lại; luôn có giá trị hợp lệ */
   --nav-h-dyn: var(--nav-h);
-  /* Offset dùng cho mọi vùng nội dung nằm dưới navbar fixed */
+  /* ĐỘNG: chỉ dùng cho .collapse-nav height và .avatar-menu-portal top.
+     CẤM dùng cho padding của vùng nội dung — sẽ gây giật khi cuộn. */
   --nav-total: calc(var(--nav-h-dyn) + var(--safe-top));
+  /* TĨNH: dùng cho mọi vùng nội dung nằm dưới navbar fixed.
+     Không phụ thuộc --nav-h-dyn nên không đổi khi cuộn. */
+  --nav-offset: calc(var(--nav-h) + var(--safe-top));
 
   --sidebar-w: 260px;
   --content-max: 42rem;
