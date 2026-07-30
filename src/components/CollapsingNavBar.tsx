@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type { SyncStatus } from "../lib/sync/types";
 import { SYNC_STATUS_LABEL } from "../lib/sync/types";
@@ -65,16 +65,16 @@ export default function CollapsingNavBar({
   const titleSize = 22 - progress * 5;
   const titleWeight = progress > 0.5 ? 600 : 700;
 
-  const style: CSSProperties = {
-    // @ts-expect-error CSS custom properties
-    "--nav-progress": String(progress),
-    "--nav-h-dyn": `${h}px`,
-    "--nav-title-size": `${titleSize}px`,
-    "--nav-title-weight": String(titleWeight),
-  };
-
   return (
-    <header className={`collapse-nav${condensed ? " is-condensed" : ""}`} style={style}>
+    <header
+      className={`collapse-nav${condensed ? " is-condensed" : ""}`}
+      style={{
+        ["--nav-progress" as string]: String(progress),
+        ["--nav-h-dyn" as string]: `${h}px`,
+        ["--nav-title-size" as string]: `${titleSize}px`,
+        ["--nav-title-weight" as string]: String(titleWeight),
+      }}
+    >
       <div className="collapse-nav-inner">
         <h1 className="collapse-nav-title">{title}</h1>
         <div className="collapse-nav-right">
