@@ -27,7 +27,7 @@ body {
   color: var(--color-text);
   background: var(--color-bg);
   /* V9 B1: KHÔNG padding-top ở đây. Navbar fixed tự xử lý safe-area,
-     vùng nội dung bù bằng --nav-total. Tránh cộng dồn hai lần. */
+     vùng nội dung bù bằng --nav-offset. Tránh cộng dồn hai lần. */
   padding-top: 0;
   -webkit-font-smoothing: antialiased;
 }
@@ -156,13 +156,14 @@ label {
   color: var(--color-primary);
 }
 
-/* V9 B1: padding-top bù đúng chiều cao navbar fixed + safe-area.
-   Thiếu dòng này thì 56px đầu mỗi màn bị navbar che. */
+/* V9 B1 (8b): padding-top bù chiều cao navbar fixed + safe-area.
+   DÙNG --nav-offset (tĩnh), KHÔNG dùng --nav-total (động theo scroll),
+   nếu không nội dung sẽ nhích 8px và giật mỗi lần cuộn. */
 .app-shell {
   max-width: 28rem;
   margin: 0 auto;
   min-height: 100dvh;
-  padding: calc(var(--nav-total) + var(--space-2)) var(--space-4)
+  padding: calc(var(--nav-offset) + var(--space-2)) var(--space-4)
     calc(var(--nav-h) + var(--safe-bottom) + var(--space-4));
 }
 
@@ -193,10 +194,11 @@ label {
   .bottom-nav {
     display: none !important;
   }
+  /* V9 B1 (8c): cũng dùng --nav-offset tĩnh */
   .app-shell {
     max-width: var(--content-max);
     margin: 0 auto;
-    padding: calc(var(--nav-total) + var(--space-4)) var(--space-6) var(--space-8);
+    padding: calc(var(--nav-offset) + var(--space-4)) var(--space-6) var(--space-8);
   }
 }
 
@@ -588,12 +590,14 @@ label {
   background: var(--color-surface-2);
 }
 
-/* Action menu — dùng chung Popover portal, xem nav.css */
+/* Action menu — dùng chung Popover portal, xem nav.css.
+   Tạm thời neo dưới navbar để vị trí xác định; B4 sẽ chuyển sang <Popover>. */
 .action-menu {
   position: relative;
 }
 .action-menu-panel {
   position: fixed;
+  top: calc(var(--nav-offset) + 6px);
   right: 16px;
   min-width: 180px;
   background: var(--color-surface);
