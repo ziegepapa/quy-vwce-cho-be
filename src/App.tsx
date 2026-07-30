@@ -12,6 +12,7 @@ import { getSyncMeta, listConflicts, runSync } from "./lib/sync/engine";
 import { outboxCount } from "./lib/sync/outbox";
 import type { SyncStatus } from "./lib/sync/types";
 import TopBar from "./components/TopBar";
+import BottomDock from "./components/BottomDock";
 import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
@@ -211,21 +212,7 @@ export default function App() {
         </Routes>
       </div>
 
-      <nav className="bottom-nav" aria-label="Điều hướng chính">
-        <div className="bottom-nav-inner">
-          {NAV.map(({ to, label, icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}
-            >
-              {icon}
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </div>
-      </nav>
+      <BottomDock items={NAV} />
     </div>
   );
 }
