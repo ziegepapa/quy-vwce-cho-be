@@ -1,97 +1,98 @@
-import { useEffect } from "react";
-import { createPortal } from "react-dom";
+import type { RefObject } from "react";
 import type { SyncStatus } from "../lib/sync/types";
 import { SYNC_STATUS_LABEL } from "../lib/sync/types";
-
-function hashHue(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return h % 360;
-}
+import Popover from "./Popover";
 
 export function avatarGradient(name: string): string {
-  const hue = hashHue(name || "?");
-  return `linear-gradient(135deg, hsl(${hue}, 55%, 42%), hsl(${(hue + 40) % 360}, 60%, 55%))`;
+  let hash = 0;
+  const s = name.trim() || "?";
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash * 31 + s.charCodeAt(i)) | 0;
+  }
+  const h1 = Math.abs(hash) % 360;
+  const h2 = (h1 + 40 + (Math.abs(hash >> 8) % 40)) % 360;
+  return `linear-gradient(135deg, hsl(${h1} 62% 46%), hsl(${h2} 58% 38%))`;
 }
+
+type AvatarMenuProps = {
+  open: boolean;
+  onClose: () => void;
+  displayName: string;
+  email?: string;
+  syncStatus: SyncStatus;
+  pending: number;
+  onSignOut: () => void;
+  onSyncNow?: () => void;
+  triggerRef: RefObject<HTMLElement | null>;
+};
 
 export default function AvatarMenu({
   open,
   onClose,
   displayName,
+  email,
   syncStatus,
   pending,
   onSignOut,
   onSyncNow,
-}: {
-  open: boolean;
-  onClose: () => void;
-  displayName: string;
-  syncStatus: SyncStatus;
-  pending: number;
-  onSignOut: () => void;
-  onSyncNow?: () => void;
-}) {
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
+  triggerRef,
+}: AvatarMenuProps) {
   const initial = (displayName.trim()[0] || "?").toUpperCase();
+  const gradient = avatarGradient(displayName);
+  const subLabel = email ?? SYNC_STATUS_LABEL[syncStatus];
+  const metaLabel =
+    pending > 0 ? `${pending} chờ` : SYNC_STATUS_LABEL[syncStatus];
 
-  return createPortal(
-    <>
-      <div className="menu-scrim" onPointerDown={onClose} aria-hidden />
-      <div className="avatar-menu-portal" role="menu" aria-label="Menu tài khoản">
-        <div className="avatar-menu-head">
-          <div
-            className="avatar avatar-menu-av"
-            style={{ background: avatarGradient(displayName) }}
-            aria-hidden
-          >
-            {initial}
-          </div>
-          <div>
-            <strong className="avatar-menu-name">{displayName}</strong>
-            <div className="avatar-menu-sub">
-              {SYNC_STATUS_LABEL[syncStatus]}
-              {pending > 0 ? ` · ${pending} chờ` : ""}
-            </div>
-          </div>
-        </div>
-        <div className="avatar-menu-rule" />
-        {onSyncNow && (
-          <button
-            type="button"
-            role="menuitem"
-            className="avatar-menu-item"
-            onClick={() => {
-              onClose();
-              onSyncNow();
-            }}
-          >
-            Đồng bộ ngay
-          </button>
-        )}
-        <div className="avatar-menu-rule" />
-        <button
-          type="button"
-          role="menuitem"
-          className="avatar-menu-item danger-item"
-          onClick={() => {
-            onClose();
-            onSignOut();
-          }}
+  return (
+    <Popover
+      open={open}
+      onClose={onClose}
+      triggerRef={triggerRef}
+      panelClassName="avatar-menu-portal"
+    >
+      <div className="avatar-menu-head" role="presentation">
+        <div
+          className="avatar avatar-menu-av"
+          style={{ background: gradient }}
+          aria-hidden
         >
-          Đăng xuất
-        </button>
+          {initial}
+        </div>
+        <div>
+          <span className="avatar-menu-name">{displayName || "Người dùng"}</span>
+          <div className="avatar-menu-sub">{subLabel}</div>
+        </div>
       </div>
-    </>,
-    document.body,
+      <div className="avatar-menu-rule" role="presentation" />
+      <button
+        type="button"
+        className="avatar-menu-item"
+        role="menuitem"
+        disabled={!onSyncNow}
+        onClick={() => {
+          onSyncNow?.();
+          onClose();
+        }}
+      >
+        Đồng bộ ngay
+        <span className="avatar-menu-item-meta">{metaLabel}</span>
+      </button>
+      <button type="button" className="avatar-menu-item" role="menuitem" disabled>
+        Chủ đề
+        <span className="avatar-menu-item-meta">Sắp có</span>
+      </button>
+      <div className="avatar-menu-rule" role="presentation" />
+      <button
+        type="button"
+        className="avatar-menu-item danger-item"
+        role="menuitem"
+        onClick={() => {
+          onClose();
+          onSignOut();
+        }}
+      >
+        Đăng xuất
+      </button>
+    </Popover>
   );
 }
