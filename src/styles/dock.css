@@ -1,12 +1,44 @@
-/* Floating Bottom Dock — fintech 2026/2027 */
+/* Floating Bottom Dock — Liquid Glass V6 */
 :root {
   --dock-h: 64px;
-  --dock-pad: 10px;
-  --dock-radius: 22px;
+  --dock-pad: 14px;
+  --dock-radius: 28px;
 }
 
 .app-shell {
-  padding-bottom: calc(var(--dock-h) + var(--safe-bottom) + var(--dock-pad) + 1.25rem) !important;
+  padding-bottom: calc(var(--dock-h) + var(--safe-bottom) + var(--dock-pad) + 1.5rem) !important;
+}
+
+/* Progressive blur strip above dock */
+.app-shell::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--dock-h) + var(--safe-bottom) + var(--dock-pad) + 28px);
+  pointer-events: none;
+  z-index: 40;
+  background: linear-gradient(
+    to top,
+    var(--color-bg) 0%,
+    color-mix(in srgb, var(--color-bg) 70%, transparent) 45%,
+    transparent 100%
+  );
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .app-shell::after {
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--color-bg) 85%, transparent) 0%,
+      transparent 100%
+    );
+    backdrop-filter: blur(var(--blur-progressive));
+    -webkit-backdrop-filter: blur(var(--blur-progressive));
+    mask-image: linear-gradient(to top, black 30%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to top, black 30%, transparent 100%);
+  }
 }
 
 .bottom-dock {
@@ -18,13 +50,15 @@
   display: flex;
   justify-content: center;
   pointer-events: none;
-  padding: 0 12px calc(var(--dock-pad) + var(--safe-bottom));
-  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease;
+  padding: 0 16px calc(var(--dock-pad) + var(--safe-bottom));
+  transition:
+    transform var(--duration-normal) var(--ease-emphasized),
+    opacity var(--duration-normal) ease;
 }
 
 .bottom-dock.is-hidden {
-  transform: translateY(calc(100% + 12px));
-  opacity: 0.01;
+  transform: translateY(calc(100% + 20px));
+  opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -39,32 +73,38 @@
 
 .bottom-dock-inner {
   pointer-events: auto;
+  position: relative;
   display: flex;
   align-items: stretch;
   width: 100%;
   max-width: 26rem;
   min-height: var(--dock-h);
-  padding: 6px 6px;
+  padding: 6px;
   border-radius: var(--dock-radius);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 8px 24px rgba(15, 23, 42, 0.1),
-    0 20px 40px rgba(15, 23, 42, 0.06);
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-dock);
+  overflow: hidden;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .bottom-dock-inner {
+    background: var(--color-surface-translucent);
+    backdrop-filter: blur(var(--blur-dock)) saturate(1.4);
+    -webkit-backdrop-filter: blur(var(--blur-dock)) saturate(1.4);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   .bottom-dock-inner {
-    background: color-mix(in srgb, var(--color-surface) 92%, #000);
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.35),
-      0 12px 32px rgba(0, 0, 0, 0.45);
+    border-color: rgba(255, 255, 255, 0.08);
   }
 }
 
 .dock-item {
   flex: 1;
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -76,11 +116,10 @@
   font-weight: 600;
   min-height: 52px;
   padding: 4px 2px;
-  border-radius: 16px;
+  border-radius: 20px;
   transition:
-    color 180ms ease,
-    background 180ms ease,
-    transform 160ms ease;
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -90,7 +129,11 @@
 
 .dock-item.active {
   color: var(--color-primary);
-  background: var(--color-primary-muted);
+  font-weight: 700;
+}
+
+.dock-item.active .dock-icon {
+  transform: scale(1.06);
 }
 
 .dock-icon {
@@ -99,6 +142,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
+  transition: transform var(--duration-fast) var(--ease);
 }
 
 .dock-icon svg {
@@ -115,8 +159,20 @@
   padding: 0 1px;
 }
 
+/* Active indicator pill (CSS-only approx via active bg) */
+.dock-item.active::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 18px;
+  background: var(--color-primary-muted);
+  z-index: -1;
+  transition: opacity var(--duration-fast) ease;
+}
+
 @media (min-width: 900px) {
-  .bottom-dock {
+  .bottom-dock,
+  .app-shell::after {
     display: none !important;
   }
   .app-shell {

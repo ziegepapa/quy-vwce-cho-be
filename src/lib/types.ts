@@ -30,4 +30,4 @@ export type BackupPayload = {
 };
 export const SCHEMA_VERSION = 1;
 /** Hiển thị ở Cài đặt — đổi khi ship UI lớn */
-export const APP_VERSION = "1.3.0";
+export const APP_VERSION = "1.4.0";
