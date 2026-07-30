@@ -11,7 +11,7 @@ import type { AppSettings } from "./lib/types";
 import { getSyncMeta, listConflicts, runSync } from "./lib/sync/engine";
 import { outboxCount } from "./lib/sync/outbox";
 import type { SyncStatus } from "./lib/sync/types";
-import TopBar from "./components/TopBar";
+import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
 import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import Overview from "./pages/Overview";
@@ -187,7 +187,7 @@ export default function App() {
 
       <div className="app-shell">
         {auth.user && (
-          <TopBar
+          <CollapsingNavBar
             displayName={displayName}
             syncStatus={syncStatus}
             pending={pending}
@@ -196,7 +196,7 @@ export default function App() {
           />
         )}
         <Routes>
-          <Route path="/" element={<Overview />} />
+          <Route path="/" element={<Overview displayName={displayName} />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/simulation" element={<Simulation />} />
