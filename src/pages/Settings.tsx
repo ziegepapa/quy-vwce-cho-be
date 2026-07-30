@@ -11,7 +11,7 @@ import {
 } from "../lib/db";
 import type { AnnualChecklist, AppSettings, BackupPayload } from "../lib/types";
 import { APP_VERSION, SCHEMA_VERSION } from "../lib/types";
-import { csvEscape, formatDateVN } from "../lib/calc";
+import { csvEscape, formatDateVN, parseDecimal } from "../lib/calc";
 
 function pctDisplay(decimal: number): string {
   if (!Number.isFinite(decimal)) return "—";
@@ -19,6 +19,74 @@ function pctDisplay(decimal: number): string {
     maximumFractionDigits: 1,
     minimumFractionDigits: 1,
   })} %`;
+}
+
+/** 2.5 → 0.025, tránh rác dấu phẩy động của phép chia số thực. */
+function pctToRate(pct: number): number {
+  return Math.round(pct * 1e4) / 1e6;
+}
+
+function formatNum(n: number, minFrac: number, maxFrac: number): string {
+  if (!Number.isFinite(n)) return "";
+  return n.toLocaleString("vi-VN", {
+    minimumFractionDigits: minFrac,
+    maximumFractionDigits: maxFrac,
+  });
+}
+
+/**
+ * Ô số giữ bản nháp dạng chuỗi trong lúc gõ.
+ * Vì sao phải làm vậy: nếu định dạng lại sau mỗi ký tự thì không ai
+ * gõ được số thập phân — con trỏ bị đẩy về cuối và giá trị bị viết lại.
+ * type="text" chứ không phải type="number": Safari iOS loại bỏ luôn
+ * dấu phẩy thập phân trên input số.
+ */
+function NumField({
+  id,
+  value,
+  onCommit,
+  className = "pct-input",
+  suffix,
+  minFrac = 0,
+  maxFrac = 2,
+  ariaLabel,
+}: {
+  id?: string;
+  value: number;
+  onCommit: (n: number) => void;
+  className?: string;
+  suffix?: string;
+  minFrac?: number;
+  maxFrac?: number;
+  ariaLabel?: string;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const display = draft !== null ? draft : value ? formatNum(value, minFrac, maxFrac) : "";
+
+  return (
+    <>
+      <input
+        id={id}
+        className={className}
+        type="text"
+        inputMode="decimal"
+        autoComplete="off"
+        aria-label={ariaLabel}
+        value={display}
+        onChange={(e) => setDraft(e.target.value)}
+        onFocus={(e) => {
+          setDraft(e.target.value);
+          e.target.select();
+        }}
+        onBlur={() => {
+          const next = draft === null ? value : parseDecimal(draft);
+          setDraft(null);
+          if (next !== value) onCommit(next);
+        }}
+      />
+      {suffix ? <span className="pct-suffix">{suffix}</span> : null}
+    </>
+  );
 }
 
 function Segmented({
@@ -167,7 +235,7 @@ export default function SettingsPage({
           <label htmlFor="s-plan">Tên kế hoạch</label>
           <input
             id="s-plan"
-            value={s.planName}
+            value={s.planName ?? ""}
             onChange={(e) => setS({ ...s, planName: e.target.value })}
             onBlur={() => persist({ planName: s.planName })}
           />
@@ -176,7 +244,7 @@ export default function SettingsPage({
           <label htmlFor="s-child">Tên bé</label>
           <input
             id="s-child"
-            value={s.childName}
+            value={s.childName ?? ""}
             onChange={(e) => setS({ ...s, childName: e.target.value })}
             onBlur={() => persist({ childName: s.childName })}
           />
@@ -185,17 +253,11 @@ export default function SettingsPage({
           <span className="group-row-label">Tài khoản đứng tên</span>
           <Segmented
             value={s.accountType}
-            options={
-              [
-                { value: "parent", label: "Cha/mẹ" },
-                { value: "child", label: "Bé" },
-              ]
-            }
-            onChange={(v) => {
-              const accountType = v as "child" | "parent";
-              setS({ ...s, accountType });
-              persist({ accountType });
-            }}
+            options={[
+              { value: "parent", label: "Cha/mẹ" },
+              { value: "child", label: "Bé" },
+            ]}
+            onChange={(v) => persist({ accountType: v as "child" | "parent" })}
           />
         </div>
       </div>
@@ -204,48 +266,47 @@ export default function SettingsPage({
       <div className="group-box">
         <div className="group-row row-between-inline">
           <span className="group-row-label">Lạm phát</span>
-          <input
-            className="pct-input"
-            inputMode="decimal"
-            value={(s.inflationRate * 100).toFixed(1)}
-            onChange={(e) => setS({ ...s, inflationRate: (+e.target.value || 0) / 100 })}
-            onBlur={() => persist({ inflationRate: s.inflationRate })}
-            aria-label={`Lạm phát ${pctDisplay(s.inflationRate)}`}
+          <NumField
+            value={s.inflationRate * 100}
+            minFrac={1}
+            maxFrac={1}
+            suffix="%"
+            ariaLabel={`Lạm phát ${pctDisplay(s.inflationRate)}`}
+            onCommit={(pct) => persist({ inflationRate: pctToRate(pct) })}
           />
-          <span className="pct-suffix">%</span>
         </div>
         <div className="group-row row-between-inline">
           <span className="group-row-label">Buffer</span>
-          <input
-            className="pct-input"
-            inputMode="decimal"
-            value={(s.bufferPct * 100).toFixed(1)}
-            onChange={(e) => setS({ ...s, bufferPct: (+e.target.value || 0) / 100 })}
-            onBlur={() => persist({ bufferPct: s.bufferPct })}
+          <NumField
+            value={s.bufferPct * 100}
+            minFrac={1}
+            maxFrac={1}
+            suffix="%"
+            ariaLabel={`Buffer ${pctDisplay(s.bufferPct)}`}
+            onCommit={(pct) => persist({ bufferPct: pctToRate(pct) })}
           />
-          <span className="pct-suffix">%</span>
         </div>
         <div className="group-row row-between-inline">
           <span className="group-row-label">Lợi suất VWCE</span>
-          <input
-            className="pct-input"
-            inputMode="decimal"
-            value={(s.vwceReturn * 100).toFixed(1)}
-            onChange={(e) => setS({ ...s, vwceReturn: (+e.target.value || 0) / 100 })}
-            onBlur={() => persist({ vwceReturn: s.vwceReturn })}
+          <NumField
+            value={s.vwceReturn * 100}
+            minFrac={1}
+            maxFrac={1}
+            suffix="%"
+            ariaLabel={`Lợi suất VWCE ${pctDisplay(s.vwceReturn)}`}
+            onCommit={(pct) => persist({ vwceReturn: pctToRate(pct) })}
           />
-          <span className="pct-suffix">%</span>
         </div>
         <div className="group-row row-between-inline">
           <span className="group-row-label">Lợi suất an toàn</span>
-          <input
-            className="pct-input"
-            inputMode="decimal"
-            value={(s.safeReturn * 100).toFixed(1)}
-            onChange={(e) => setS({ ...s, safeReturn: (+e.target.value || 0) / 100 })}
-            onBlur={() => persist({ safeReturn: s.safeReturn })}
+          <NumField
+            value={s.safeReturn * 100}
+            minFrac={1}
+            maxFrac={1}
+            suffix="%"
+            ariaLabel={`Lợi suất an toàn ${pctDisplay(s.safeReturn)}`}
+            onCommit={(pct) => persist({ safeReturn: pctToRate(pct) })}
           />
-          <span className="pct-suffix">%</span>
         </div>
       </div>
 
@@ -253,19 +314,20 @@ export default function SettingsPage({
       <div className="group-box">
         <div className="group-row row-between-inline">
           <span className="group-row-label">Giá VWCE gần nhất</span>
-          <input
+          <NumField
             className="pct-input wide"
-            inputMode="decimal"
-            value={s.latestVwcePrice || ""}
-            onChange={(e) => setS({ ...s, latestVwcePrice: +e.target.value })}
-            onBlur={() =>
+            value={s.latestVwcePrice}
+            minFrac={0}
+            maxFrac={4}
+            suffix="€"
+            ariaLabel="Giá VWCE gần nhất"
+            onCommit={(price) =>
               persist({
-                latestVwcePrice: s.latestVwcePrice,
+                latestVwcePrice: price,
                 latestPriceDate: new Date().toISOString().slice(0, 10),
               })
             }
           />
-          <span className="pct-suffix">€</span>
         </div>
         {s.latestPriceDate && (
           <p className="group-hint">Cập nhật {formatDateVN(s.latestPriceDate)}</p>
@@ -278,17 +340,11 @@ export default function SettingsPage({
           <span className="group-row-label">Hạn 2042</span>
           <Segmented
             value={s.endMode}
-            options={
-              [
-                { value: "hard", label: "Hạn cứng" },
-                { value: "flexible", label: "Linh hoạt" },
-              ]
-            }
-            onChange={(v) => {
-              const endMode = v as "hard" | "flexible";
-              setS({ ...s, endMode });
-              persist({ endMode });
-            }}
+            options={[
+              { value: "hard", label: "Hạn cứng" },
+              { value: "flexible", label: "Linh hoạt" },
+            ]}
+            onChange={(v) => persist({ endMode: v as "hard" | "flexible" })}
           />
         </div>
       </div>
@@ -301,7 +357,10 @@ export default function SettingsPage({
             id="cl-year"
             type="number"
             value={checklistYear}
-            onChange={(e) => setChecklistYear(+e.target.value)}
+            onChange={(e) => {
+              const y = Number(e.target.value);
+              if (y >= 2000 && y <= 2100) setChecklistYear(y);
+            }}
           />
         </div>
         {checklist?.items.map((item) => (
@@ -355,7 +414,11 @@ export default function SettingsPage({
       <p className="group-label">Vùng nguy hiểm</p>
       <div className="group-box">
         {deleteStep === 0 ? (
-          <button type="button" className="group-action danger-text" onClick={() => setDeleteStep(1)}>
+          <button
+            type="button"
+            className="group-action danger-text"
+            onClick={() => setDeleteStep(1)}
+          >
             Xóa toàn bộ dữ liệu
           </button>
         ) : (
@@ -373,7 +436,7 @@ export default function SettingsPage({
               <button
                 type="button"
                 className="danger"
-                disabled={deleteConfirm !== "XOA"}
+                disabled={deleteConfirm.trim().toUpperCase() !== "XOA"}
                 onClick={async () => {
                   await clearAllData();
                   window.location.reload();
