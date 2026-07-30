@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type { SyncStatus } from "../lib/sync/types";
 import { SYNC_STATUS_LABEL } from "../lib/sync/types";
@@ -36,11 +36,15 @@ export default function CollapsingNavBar({
   const title = TITLES[pathname] ?? "Quỹ VWCE";
   const [progress, setProgress] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const lastNavH = useRef<string | null>(null);
   const reduced = useState(() =>
     typeof window !== "undefined"
       ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
       : false,
   )[0];
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   useEffect(() => {
     function onScroll() {
@@ -53,18 +57,36 @@ export default function CollapsingNavBar({
     return () => window.removeEventListener("scroll", onScroll);
   }, [reduced]);
 
-  const initial = (displayName.trim()[0] || "?").toUpperCase();
-  const condensed = progress > 0.5;
   const h = 56 - progress * 8;
+  const condensed = progress > 0.5;
+
+  // Ghi --nav-h-dyn lên documentElement. Bắt buộc phải ở :root vì
+  // .collapse-nav và .avatar-menu-portal nằm ở hai cây DOM khác nhau.
+  useEffect(() => {
+    const value = `${h}px`;
+    if (lastNavH.current === value) return;
+
+    const raf = requestAnimationFrame(() => {
+      document.documentElement.style.setProperty("--nav-h-dyn", value);
+      lastNavH.current = value;
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  }, [h]);
+
+  useEffect(() => {
+    return () => {
+      document.documentElement.style.removeProperty("--nav-h-dyn");
+    };
+  }, []);
+
+  const initial = (displayName.trim()[0] || "?").toUpperCase();
 
   return (
     <>
-      <header
-        className={`collapse-nav${condensed ? " is-condensed" : ""}`}
-        style={{
-          ["--nav-h-dyn" as string]: `${h}px`,
-        }}
-      >
+      <header className={`collapse-nav${condensed ? " is-condensed" : ""}`}>
         <div className="collapse-nav-inner">
           <div className="nav-leading">
             <span className="nav-logo" aria-hidden />
@@ -72,6 +94,7 @@ export default function CollapsingNavBar({
           </div>
           <div className="collapse-nav-right">
             <button
+              ref={triggerRef}
               type="button"
               className="avatar-btn-wrap"
               aria-label={`Menu tài khoản, ${SYNC_STATUS_LABEL[syncStatus]}`}
@@ -85,20 +108,23 @@ export default function CollapsingNavBar({
               >
                 {initial}
               </span>
-              <span className={syncRingClass(syncStatus)} aria-hidden />
+              <span
+                className={syncRingClass(syncStatus)}
+                aria-label={SYNC_STATUS_LABEL[syncStatus]}
+              />
             </button>
           </div>
         </div>
       </header>
-      <div className="nav-spacer" aria-hidden style={{ height: `calc(${h}px + env(safe-area-inset-top, 0px))` }} />
       <AvatarMenu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={closeMenu}
         displayName={displayName}
         syncStatus={syncStatus}
         pending={pending}
         onSignOut={onSignOut}
         onSyncNow={onSyncNow}
+        triggerRef={triggerRef}
       />
     </>
   );
