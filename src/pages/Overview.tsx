@@ -26,7 +26,14 @@ type Insight = {
   to: string;
 };
 
-export default function Overview() {
+function greetingBerlin(hour: number): string {
+  if (hour < 5) return "Chào buổi tối";
+  if (hour < 12) return "Chào buổi sáng";
+  if (hour < 18) return "Chào buổi chiều";
+  return "Chào buổi tối";
+}
+
+export default function Overview({ displayName }: { displayName?: string }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [txs, setTxs] = useState<Transaction[]>([]);
@@ -51,15 +58,19 @@ export default function Overview() {
     return s;
   }, [txs]);
 
+  const berlinHour = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Berlin",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date()),
+  );
+
   if (loading) {
     return (
       <div className="bento">
-        <div className="skeleton bento-hero" style={{ minHeight: 140 }} />
-        <div className="skeleton" style={{ height: 88, borderRadius: 20 }} />
-        <div className="bento-row">
-          <div className="skeleton" style={{ height: 80, borderRadius: 18 }} />
-          <div className="skeleton" style={{ height: 80, borderRadius: 18 }} />
-        </div>
+        <div className="skeleton" style={{ height: 180, borderRadius: 28 }} />
+        <div className="skeleton" style={{ height: 72, borderRadius: 20 }} />
       </div>
     );
   }
@@ -132,7 +143,7 @@ export default function Overview() {
         id: `goal-${g.id}`,
         priority: "high",
         title: `${g.name}: cash bucket chậm tiến độ`,
-        why: `Còn ${months} tháng nhưng mới bảo vệ ${Math.round((g.protectedAmount / adjusted) * 100)}% mục tiêu.`,
+        why: `Còn ${months} tháng nhưng mới bảo vệ ${Math.round((g.protectedAmount / (adjusted || 1)) * 100)}% mục tiêu.`,
         cta: "Xem mục tiêu",
         to: "/goals",
       });
@@ -142,125 +153,156 @@ export default function Overview() {
   const ratio = total > 0 ? Math.round((vwceValue / total) * 100) : 0;
   const pnlPct =
     portfolio.vwceCostBasis > 0 ? ((pnl / portfolio.vwceCostBasis) * 100).toFixed(1) : null;
+  const empty = total === 0 && txs.length === 0;
 
   return (
     <div>
-      <header className="page-header">
-        <h1 className="page-title">Tổng quan</h1>
-        <p className="muted page-sub">
-          {ETF.ticker} · {ETF.isin}
-          {settings?.latestPriceDate
-            ? ` · Giá ${formatMoney(price)} (${formatDateVN(settings.latestPriceDate)})`
-            : ""}
+      {displayName && (
+        <p className="overview-greeting">
+          {greetingBerlin(berlinHour)}, {displayName}
         </p>
-      </header>
+      )}
 
-      {total === 0 && txs.length === 0 ? (
+      {empty ? (
         <div className="card surface-raised empty-hero">
-          <div className="empty-icon" aria-hidden>
-            ◇
+          <div className="onboard-illu" aria-hidden>
+            <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
+              <rect x="16" y="28" width="64" height="44" rx="10" fill="var(--primary-050)" />
+              <rect x="24" y="36" width="32" height="6" rx="3" fill="var(--primary-500)" opacity="0.5" />
+              <rect x="24" y="48" width="48" height="6" rx="3" fill="var(--primary-500)" opacity="0.35" />
+              <circle cx="68" cy="58" r="14" fill="var(--success-050)" stroke="var(--success-600)" strokeWidth="2" />
+              <path d="M62 58l4 4 8-8" stroke="var(--success-600)" strokeWidth="2" strokeLinecap="round" />
+            </svg>
           </div>
           <h2 className="empty-title">Bắt đầu quỹ của bé</h2>
-          <p className="muted">
+          <p className="muted" style={{ maxWidth: 280, margin: "0 auto" }}>
             Ghi nhận khoản nạp đầu tiên để theo dõi tài sản, mục tiêu và mô phỏng.
           </p>
           <Link to="/transactions" className="btn-link">
             Thêm giao dịch đầu tiên
           </Link>
+          <div className="mini-steps">
+            <span>1 Nạp tiền</span>
+            <span className="step-conn" />
+            <span>2 Mua VWCE</span>
+            <span className="step-conn" />
+            <span>3 Đặt mục tiêu</span>
+          </div>
         </div>
       ) : (
-        <div className="bento-hero surface-raised">
-          <div className="metric-label">Tổng tài sản</div>
-          <div className="metric-value financial-display">{formatMoney(total)}</div>
-          <p className="story-caption">
-            {pnl !== 0 && price
-              ? `Lãi/lỗ tạm ${pnl >= 0 ? "+" : ""}${formatMoney(pnl)}${pnlPct ? ` (${pnlPct}%)` : ""} so với giá vốn.`
-              : "Nhập giá VWCE và giao dịch để thấy biến động."}
-          </p>
+        <div className="bento-hero mesh-hero">
+          <div className="hero-label">TỔNG TÀI SẢN</div>
+          <div className="hero-money">{formatMoney(total)}</div>
+          {pnl !== 0 && price && (
+            <div className="hero-delta">
+              <span className="hero-delta-pill">
+                {pnl >= 0 ? "↑" : "↓"} {formatMoney(Math.abs(pnl))}
+                {pnlPct ? ` (${pnlPct}%)` : ""}
+              </span>
+            </div>
+          )}
           <div
             className="alloc-bar"
             role="img"
             aria-label={`VWCE ${ratio}%, an toàn ${100 - ratio}%`}
           >
-            <div className="alloc-seg alloc-vwce" style={{ width: `${ratio}%` }} />
-            <div className="alloc-seg alloc-cash" style={{ width: `${100 - ratio}%` }} />
+            <div className="alloc-seg alloc-vwce" style={{ width: `${Math.max(ratio, 0)}%` }} />
+            <div className="alloc-gap" />
+            <div className="alloc-seg alloc-cash" style={{ width: `${Math.max(100 - ratio, 0)}%` }} />
           </div>
           <div className="alloc-legend">
-            <span>
-              <i className="dot vwce" /> VWCE {ratio}%
-            </span>
-            <span>
-              <i className="dot cash" /> An toàn {100 - ratio}%
-            </span>
+            <span>VWCE {ratio}%</span>
+            <span>An toàn {100 - ratio}%</span>
           </div>
+          <p className="hero-caption">
+            {settings?.latestPriceDate
+              ? `Giá VWCE ${formatMoney(price)} · ${formatDateVN(settings.latestPriceDate)}`
+              : `${ETF.ticker} · ${ETF.isin}`}
+          </p>
         </div>
       )}
 
       {insights.length > 0 && (
         <section className="insight-stack" aria-label="Việc cần làm">
-          {insights.slice(0, 4).map((ins) => (
-            <article key={ins.id} className={`insight-card priority-${ins.priority}`}>
-              <div className="insight-top">
-                <span className={`priority-chip ${ins.priority}`}>
-                  {ins.priority === "high"
-                    ? "Ưu tiên cao"
-                    : ins.priority === "medium"
-                      ? "Trung bình"
-                      : "Thấp"}
-                </span>
+          {insights.slice(0, 2).map((ins) => (
+            <Link key={ins.id} to={ins.to} className={`insight-card priority-${ins.priority}`}>
+              <div className={`insight-icon priority-${ins.priority}`} aria-hidden>
+                {ins.priority === "high" ? "!" : "i"}
               </div>
-              <h3 className="insight-title">{ins.title}</h3>
-              <p className="insight-why">{ins.why}</p>
-              <Link to={ins.to} className="insight-cta">
-                {ins.cta} →
-              </Link>
-            </article>
+              <div className="insight-body">
+                <h3 className="insight-title">{ins.title}</h3>
+                <p className="insight-why">{ins.why}</p>
+                <span className="insight-cta">{ins.cta} →</span>
+              </div>
+            </Link>
           ))}
+          {insights.length > 2 && (
+            <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+              +{insights.length - 2} việc khác
+            </p>
+          )}
         </section>
       )}
 
-      <div className="bento">
-        <div className="bento-tile span-2 surface-raised">
-          <div className="metric-label">Giá trị VWCE</div>
-          <div className="metric-value">{formatMoney(vwceValue)}</div>
-          <p className="story-caption">
-            {portfolio.vwceQty.toFixed(4)} SL · giá vốn TB {formatMoney(avgCost(portfolio))}
-          </p>
-        </div>
-        <div className="bento-tile surface-raised">
-          <div className="metric-label">Tiền an toàn</div>
-          <div className="metric-value">{formatMoney(portfolio.cashBalance)}</div>
-          <p className="story-caption">Cash bucket</p>
-        </div>
-        <div className="bento-tile surface-raised">
-          <div className="metric-label">Vốn đã đóng</div>
-          <div className="metric-value">{formatMoney(portfolio.totalContributed)}</div>
-          <p className="story-caption">Tổng nạp vào quỹ</p>
-        </div>
-        <div className="bento-tile surface-raised">
-          <div className="metric-label">Đã rút</div>
-          <div className="metric-value">{formatMoney(portfolio.totalWithdrawn)}</div>
-          <p className="story-caption">Tổng rút ra</p>
-        </div>
-        <div className="bento-tile span-2 surface-raised">
-          <div className="metric-label">Lãi/lỗ chưa thực hiện</div>
-          <div className={`metric-value ${pnl >= 0 ? "positive" : "negative"}`}>
-            {formatMoney(pnl)}
+      {!empty && (
+        <div className="bento">
+          <div className="bento-tile span-2 surface-raised">
+            <div className="metric-label">Giá trị VWCE</div>
+            <div className="metric-value money-lg">{formatMoney(vwceValue)}</div>
+            <p className="story-caption">
+              {ratio}% tổng tài sản · {portfolio.vwceQty.toFixed(4)} SL
+            </p>
           </div>
-          <p className="story-caption">Chỉ mang tính theo dõi nội bộ, chưa tính thuế thực tế.</p>
-        </div>
-        <div className="bento-tile surface-raised tile-sm">
-          <div className="metric-label">Phí + thuế</div>
-          <div className="metric-value" style={{ fontSize: "1.05rem" }}>
-            {formatMoney(portfolio.totalFees + portfolio.totalTax)}
+          <div className="bento-tile surface-raised">
+            <div className="metric-label">Tiền an toàn</div>
+            <div className="metric-value money-md">{formatMoney(portfolio.cashBalance)}</div>
+            <p className="story-caption">{100 - ratio}% tổng tài sản</p>
+          </div>
+          <div className="bento-tile surface-raised">
+            <div className="metric-label">Vốn đã đóng</div>
+            <div className="metric-value money-md">{formatMoney(portfolio.totalContributed)}</div>
+            <p className="story-caption">Tổng nạp vào quỹ</p>
+          </div>
+          <div className="bento-tile span-2 surface-raised">
+            <div className="metric-label">Lãi/lỗ chưa thực hiện</div>
+            <div className={`metric-value money-lg ${pnl >= 0 ? "positive" : "negative"}`}>
+              {formatMoney(pnl)}
+            </div>
+            <p className="story-caption">
+              {pnlPct ? `${pnlPct}% so với giá vốn` : "Chưa có giá vốn"} · chỉ theo dõi nội bộ
+            </p>
+          </div>
+          <div className="bento-tile surface-raised tile-sm">
+            <div className="metric-label">SL VWCE</div>
+            <div className="metric-value" style={{ fontSize: 17 }}>
+              {portfolio.vwceQty.toFixed(4)}
+            </div>
+          </div>
+          <div className="bento-tile surface-raised tile-sm">
+            <div className="metric-label">Giá vốn TB</div>
+            <div className="metric-value" style={{ fontSize: 17 }}>
+              {formatMoney(avgCost(portfolio))}
+            </div>
+          </div>
+          <div className="bento-tile surface-raised tile-sm">
+            <div className="metric-label">Đã rút</div>
+            <div className="metric-value" style={{ fontSize: 15 }}>
+              {formatMoney(portfolio.totalWithdrawn)}
+            </div>
+          </div>
+          <div className="bento-tile surface-raised tile-sm">
+            <div className="metric-label">Phí + thuế</div>
+            <div className="metric-value" style={{ fontSize: 15 }}>
+              {formatMoney(portfolio.totalFees + portfolio.totalTax)}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <h2 className="section-title">Tiến độ mục tiêu</h2>
       {goals.length === 0 && (
         <div className="empty card surface-raised">
-          <p>Chưa có mục tiêu. Thêm ở tab Mục tiêu.</p>
+          <p>Chưa có mục tiêu.</p>
           <Link to="/goals" className="btn-link">
             Thêm mục tiêu
           </Link>
@@ -299,23 +341,23 @@ export default function Overview() {
               <div className="card surface-raised" style={{ marginBottom: 0 }}>
                 <div className="row-between">
                   <strong>{g.name}</strong>
-                  <span className={`pill ${status}`}>{statusLabel(status)}</span>
+                  <span className={`status-chip ${status}`}>{statusLabel(status)}</span>
                 </div>
-                <p className="muted" style={{ margin: "4px 0" }}>
-                  Hạn {formatDateVN(g.dueDate)} · {months} tháng còn lại
+                <p className="muted" style={{ margin: "4px 0", fontSize: 12 }}>
+                  Hạn {formatDateVN(g.dueDate)} · {months} tháng
                 </p>
                 {adjusted > 0 && (
                   <>
                     <div className="progress-track">
-                      <span style={{ width: `${pct}%` }} />
+                      <span style={{ width: `${Math.max(pct, pct === 0 ? 0 : pct)}%` }} />
                     </div>
                     <p className="story-caption">
                       Bảo vệ {formatMoney(g.protectedAmount)} / {formatMoney(adjusted)}
                       {gap > 0 && months > 0
-                        ? ` — cần thêm ~${formatMoney(perMonth)}/tháng.`
-                        : "."}
+                        ? ` — cần ~${formatMoney(perMonth)}/tháng`
+                        : ""}
                     </p>
-                    <p className="muted" style={{ margin: "4px 0 0", fontSize: ".75rem" }}>
+                    <p className="muted" style={{ margin: "4px 0 0", fontSize: 12 }}>
                       Cần an toàn {formatMoney(need)}
                     </p>
                   </>

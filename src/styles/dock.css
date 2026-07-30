@@ -1,63 +1,56 @@
-/* Floating Bottom Dock — Liquid Glass V6 */
+/* Floating Bottom Dock V7 §6 */
 :root {
-  --dock-h: 64px;
-  --dock-pad: 14px;
-  --dock-radius: 28px;
+  --dock-h: 58px;
+  --dock-pad: 10px;
+  --dock-radius: 26px;
 }
 
 .app-shell {
-  padding-bottom: calc(var(--dock-h) + var(--safe-bottom) + var(--dock-pad) + 1.5rem) !important;
+  padding-bottom: calc(var(--dock-h) + var(--dock-pad) + 16px + var(--safe-bottom)) !important;
 }
 
-/* Progressive blur strip above dock */
 .app-shell::after {
   content: "";
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(var(--dock-h) + var(--safe-bottom) + var(--dock-pad) + 28px);
+  height: 96px;
   pointer-events: none;
   z-index: 40;
   background: linear-gradient(
     to top,
-    var(--color-bg) 0%,
-    color-mix(in srgb, var(--color-bg) 70%, transparent) 45%,
+    var(--bg-base) 0%,
+    color-mix(in srgb, var(--bg-base) 55%, transparent) 50%,
     transparent 100%
   );
 }
 
 @supports (backdrop-filter: blur(1px)) {
   .app-shell::after {
-    background: linear-gradient(
-      to top,
-      color-mix(in srgb, var(--color-bg) 85%, transparent) 0%,
-      transparent 100%
-    );
+    background: transparent;
     backdrop-filter: blur(var(--blur-progressive));
     -webkit-backdrop-filter: blur(var(--blur-progressive));
-    mask-image: linear-gradient(to top, black 30%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to top, black 30%, transparent 100%);
+    mask-image: linear-gradient(to top, black 20%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to top, black 20%, transparent 100%);
   }
 }
 
 .bottom-dock {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 12px;
+  right: 12px;
+  bottom: calc(10px + var(--safe-bottom));
   z-index: 50;
   display: flex;
   justify-content: center;
   pointer-events: none;
-  padding: 0 16px calc(var(--dock-pad) + var(--safe-bottom));
-  transition:
-    transform var(--duration-normal) var(--ease-emphasized),
-    opacity var(--duration-normal) ease;
+  padding: 0;
+  transition: transform 200ms var(--ease-emphasized), opacity 200ms ease;
 }
 
 .bottom-dock.is-hidden {
-  transform: translateY(calc(100% + 20px));
+  transform: translateY(120%);
   opacity: 0;
 }
 
@@ -73,30 +66,29 @@
 
 .bottom-dock-inner {
   pointer-events: auto;
-  position: relative;
   display: flex;
   align-items: stretch;
   width: 100%;
   max-width: 26rem;
   min-height: var(--dock-h);
-  padding: 6px;
-  border-radius: var(--dock-radius);
-  background: var(--color-surface-overlay);
-  border: 1px solid var(--color-border-subtle);
+  padding: 4px;
+  border-radius: var(--r-dock);
+  background: rgba(251, 252, 254, 0.80);
+  border: 0.5px solid rgba(255, 255, 255, 0.6);
   box-shadow: var(--shadow-dock);
   overflow: hidden;
 }
 
 @supports (backdrop-filter: blur(1px)) {
   .bottom-dock-inner {
-    background: var(--color-surface-translucent);
-    backdrop-filter: blur(var(--blur-dock)) saturate(1.4);
-    -webkit-backdrop-filter: blur(var(--blur-dock)) saturate(1.4);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
   }
 }
 
 @media (prefers-color-scheme: dark) {
   .bottom-dock-inner {
+    background: rgba(17, 23, 38, 0.82);
     border-color: rgba(255, 255, 255, 0.08);
   }
 }
@@ -111,15 +103,13 @@
   justify-content: center;
   gap: 2px;
   text-decoration: none;
-  color: var(--color-text-muted);
-  font-size: 0.6rem;
+  color: var(--text-tertiary);
+  font-size: 10px;
   font-weight: 600;
-  min-height: 52px;
+  min-height: 50px;
   padding: 4px 2px;
-  border-radius: 20px;
-  transition:
-    color var(--duration-fast) ease,
-    transform var(--duration-fast) ease;
+  border-radius: 999px;
+  transition: color var(--d-fast) ease, transform 100ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -128,21 +118,29 @@
 }
 
 .dock-item.active {
-  color: var(--color-primary);
+  color: var(--primary-600);
   font-weight: 700;
 }
 
-.dock-item.active .dock-icon {
-  transform: scale(1.06);
+.dock-item.active::before {
+  content: "";
+  position: absolute;
+  width: 64px;
+  height: 38px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--primary-050);
+  z-index: -1;
 }
 
 .dock-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  transition: transform var(--duration-fast) var(--ease);
+  width: 22px;
+  height: 22px;
 }
 
 .dock-icon svg {
@@ -156,18 +154,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0 1px;
-}
-
-/* Active indicator pill (CSS-only approx via active bg) */
-.dock-item.active::before {
-  content: "";
-  position: absolute;
-  inset: 2px;
-  border-radius: 18px;
-  background: var(--color-primary-muted);
-  z-index: -1;
-  transition: opacity var(--duration-fast) ease;
 }
 
 @media (min-width: 900px) {

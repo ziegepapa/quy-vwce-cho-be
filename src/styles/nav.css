@@ -1,0 +1,82 @@
+/* Collapsing large-title nav — V7 §5 */
+.collapse-nav {
+  position: sticky;
+  top: 0;
+  z-index: 45;
+  height: calc(var(--nav-h-dyn, 52px) + var(--safe-top));
+  padding-top: var(--safe-top);
+  margin: 0 calc(-1 * var(--space-4)) var(--space-3);
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+  background: transparent;
+  border-bottom: 0.5px solid transparent;
+  transition: background var(--d-base) var(--ease-emphasized),
+    border-color var(--d-base) var(--ease-emphasized),
+    backdrop-filter var(--d-base) var(--ease-emphasized);
+}
+
+.collapse-nav.is-condensed {
+  background: rgba(251, 252, 254, 0.72);
+  border-bottom-color: rgba(11, 18, 32, 0.08);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .collapse-nav.is-condensed {
+    backdrop-filter: blur(var(--blur-nav)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--blur-nav)) saturate(180%);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .collapse-nav.is-condensed {
+    background: rgba(17, 23, 38, 0.78);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.collapse-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--nav-h-dyn, 52px);
+  gap: 12px;
+}
+
+.collapse-nav-title {
+  margin: 0;
+  font-size: var(--nav-title-size, 22px);
+  font-weight: var(--nav-title-weight, 700);
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collapse-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.sync-dot-only {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.avatar-sm {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  font-size: 12px !important;
+}
+
+/* Hide old page-title when nav owns the title */
+.app-shell > .collapse-nav ~ * .page-title {
+  /* pages may still use for non-nav contexts */
+}
