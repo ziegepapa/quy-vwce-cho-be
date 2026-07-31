@@ -13,24 +13,26 @@ import { buildEquitySeries, formatDateVN, formatMoney } from "../lib/calc";
 import "../styles/notfallmappe.css";
 
 /**
- * V10-A2 — Hồ sơ khẩn cấp.
+ * V10-A3 — Hồ sơ khẩn cấp.
  *
  * Nguyên tắc không thương lượng:
- *  1. Không có ô nhập mật khẩu / PIN / TAN. Ô không tồn tại thì không ai bị cám dỗ.
+ *  1. Không có ô nhập mật khẩu / PIN / TAN.
  *  2. Chỉ ghi NƠI CẤT giấy tờ gốc, không tải bản chụp lên.
  *  3. Nội dung có đồng bộ lên máy chủ — nói rõ, không giấu.
  *  4. Máy tự đọc lại nội dung và cảnh báo nếu thấy bí mật lọt vào.
  *
- * Trang này nằm sau màn hình đăng nhập của riêng bạn, nên BẢN IN GIẤY mới là
- * bản người thân thực sự dùng được. Mọi thứ ở đây phục vụ việc giữ bản in đó
- * luôn đúng và luôn mới.
+ * V10-A3 bỏ hẳn nút Lưu. Trang tự lưu sau khi ngừng gõ, tự lưu khi rời màn,
+ * và hỏi khi đóng tab lúc còn dở. Chân trang chỉ còn một nút In / Lưu PDF.
  */
 
 const SECRET_RE =
   /(mật\s*khẩu|mat\s*khau|matkhau|password|passwort|kennwort|\bpin\b|\btan\b|\botp\b|seed\s*phrase|private\s*key|recovery\s*phrase)/i;
 
-/** IBAN đầy đủ, ví dụ DE89 3704 0044 0532 0130 00. Cố ý bắt buộc mã nước viết hoa. */
+/** IBAN đầy đủ, ví dụ DE89 3704 0044 0532 0130 00. */
 const IBAN_RE = /\b[A-Z]{2}\s?\d{2}(?:\s?[A-Z0-9]{4}){3,7}\b/;
+
+/** Ngừng gõ bao lâu thì tự lưu. */
+const AUTOSAVE_MS = 900;
 
 function openAllSections() {
   document
@@ -61,7 +63,6 @@ export default function NotfallmappePage() {
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [justSaved, setJustSaved] = useState(false);
 
   // Bản sao mới nhất, để lúc rời trang còn lưu kịp.
   const dataRef = useRef<NotfallmappeData | null>(null);
@@ -81,6 +82,15 @@ export default function NotfallmappePage() {
       setTxs(await listTransactions());
     })();
   }, []);
+
+  // Tự lưu sau khi ngừng gõ.
+  useEffect(() => {
+    if (!dirty) return;
+    const t = window.setTimeout(() => {
+      void persist();
+    }, AUTOSAVE_MS);
+    return () => window.clearTimeout(t);
+  }, [data, dirty]);
 
   // Đóng tab hoặc tải lại trang khi chưa lưu.
   useEffect(() => {
@@ -181,7 +191,6 @@ export default function NotfallmappePage() {
   function patch(p: Partial<NotfallmappeData>) {
     setData((d) => (d ? { ...d, ...p } : d));
     setDirty(true);
-    setJustSaved(false);
   }
 
   function patchContact(id: string, p: Partial<EmergencyContact>) {
@@ -189,7 +198,6 @@ export default function NotfallmappePage() {
       d ? { ...d, contacts: d.contacts.map((c) => (c.id === id ? { ...c, ...p } : c)) } : d,
     );
     setDirty(true);
-    setJustSaved(false);
   }
 
   function patchDoc(id: string, p: Partial<DocumentLocation>) {
@@ -197,7 +205,6 @@ export default function NotfallmappePage() {
       d ? { ...d, documents: d.documents.map((x) => (x.id === id ? { ...x, ...p } : x)) } : d,
     );
     setDirty(true);
-    setJustSaved(false);
   }
 
   async function persist(extra?: Partial<NotfallmappeData>) {
@@ -209,7 +216,6 @@ export default function NotfallmappePage() {
       await saveSettings({ notfallmappe: next });
       setData(next);
       setDirty(false);
-      setJustSaved(true);
     } finally {
       setSaving(false);
     }
@@ -224,6 +230,20 @@ export default function NotfallmappePage() {
   }
 
   const childLabel = settings?.childName?.trim() || "bé";
+
+  const statusText = saving
+    ? "Đang lưu…"
+    : dirty
+      ? "Chưa lưu — sẽ tự lưu sau giây lát"
+      : data.updatedAt
+        ? `Đã lưu · cập nhật ${formatDateVN(data.updatedAt.slice(0, 10))}`
+        : "Đã lưu";
+
+  const statusClass = saving
+    ? "nfm-status is-saving"
+    : dirty
+      ? "nfm-status is-dirty"
+      : "nfm-status";
 
   return (
     <div className="nfm">
@@ -381,7 +401,6 @@ export default function NotfallmappePage() {
                       d ? { ...d, contacts: d.contacts.filter((x) => x.id !== c.id) } : d,
                     );
                     setDirty(true);
-                    setJustSaved(false);
                   }}
                 >
                   ✕
@@ -422,7 +441,6 @@ export default function NotfallmappePage() {
                   : d,
               );
               setDirty(true);
-              setJustSaved(false);
             }}
           >
             + Thêm người liên hệ
@@ -461,7 +479,6 @@ export default function NotfallmappePage() {
                         : d,
                     );
                     setDirty(true);
-                    setJustSaved(false);
                   }}
                 >
                   ✕
@@ -487,7 +504,6 @@ export default function NotfallmappePage() {
                   : d,
               );
               setDirty(true);
-              setJustSaved(false);
             }}
           >
             + Thêm giấy tờ
@@ -560,19 +576,11 @@ export default function NotfallmappePage() {
         </div>
       </section>
 
-      {justSaved && !dirty && <p className="nfm-saved">Đã lưu</p>}
-      {data.updatedAt && (
-        <p className="nfm-meta">
-          Cập nhật lần cuối {formatDateVN(data.updatedAt.slice(0, 10))}
-        </p>
-      )}
+      <p className={statusClass}>{statusText}</p>
 
-      <div className="nfm-foot">
+      <div className="nfm-actions">
         <button type="button" className="secondary" onClick={handlePrint}>
           In / Lưu PDF
-        </button>
-        <button type="button" onClick={() => persist()} disabled={!dirty || saving}>
-          {saving ? "Đang lưu…" : "Lưu"}
         </button>
       </div>
     </div>
