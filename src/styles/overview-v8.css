@@ -1,16 +1,17 @@
-/* V8 density — Overview 5 blocks */
+/* V9 — Overview 5 blocks */
 .ov {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* Hero */
+/* Hero
+   V9: bỏ max-height. Bản V8 đặt max-height:184px + overflow:hidden nên dòng
+   "Còn 1 bước để hoàn tất thiết lập" bị cắt ngang ở đáy thẻ. */
 .hero-v8 {
   position: relative;
   min-height: 168px;
-  max-height: 184px;
-  padding: 20px 20px 16px;
+  padding: 20px 20px 18px;
   border-radius: 18px;
   overflow: hidden;
   color: #fff;
@@ -116,10 +117,12 @@
   position: relative;
 }
 
+/* V9: dòng nhắc thiết lập — trước đây bị max-height cắt mất một nửa. */
 .hero-early {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   font-size: 12px;
-  opacity: 0.7;
+  line-height: 1.35;
+  opacity: 0.72;
   position: relative;
 }
 
