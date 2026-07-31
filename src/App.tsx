@@ -20,15 +20,37 @@ import Transactions from "./pages/Transactions";
 import Goals from "./pages/Goals";
 import Simulation from "./pages/Simulation";
 import SettingsPage from "./pages/Settings";
+import Notfallmappe from "./pages/Notfallmappe";
 import Onboarding from "./pages/Onboarding";
 import AuthPage from "./pages/Auth";
 import MigrateWizard from "./pages/MigrateWizard";
+
+/** V10-A — khiên, cho mục Hồ sơ khẩn cấp. Để cục bộ ở đây để không phải sửa Icons.tsx. */
+function IconShield() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 3l7 3v5.5c0 4.3-2.9 8.2-7 9.5-4.1-1.3-7-5.2-7-9.5V6l7-3z" />
+      <path d="M9.2 12.2l2 2 3.6-3.9" />
+    </svg>
+  );
+}
 
 const NAV: { to: string; label: string; icon: ReactNode }[] = [
   { to: "/", label: "Tổng quan", icon: <IconHome /> },
   { to: "/transactions", label: "Giao dịch", icon: <IconTx /> },
   { to: "/goals", label: "Mục tiêu", icon: <IconGoal /> },
   { to: "/simulation", label: "Mô phỏng", icon: <IconSim /> },
+  { to: "/notfallmappe", label: "Hồ sơ", icon: <IconShield /> },
   { to: "/settings", label: "Cài đặt", icon: <IconSettings /> },
 ];
 
@@ -210,6 +232,7 @@ export default function App() {
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/simulation" element={<Simulation />} />
+            <Route path="/notfallmappe" element={<Notfallmappe />} />
             <Route
               path="/settings"
               element={
