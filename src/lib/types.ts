@@ -37,6 +37,8 @@ export type Notfallmappe = {
   contacts: EmergencyContact[];
   documents: DocumentLocation[];
   wishes: string;
+  /** V10-A2 — lần in gần nhất. Bản in giấy mới là bản người thân dùng được. */
+  lastPrintedAt?: string;
   updatedAt: string;
 };
 
