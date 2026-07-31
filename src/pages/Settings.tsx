@@ -12,37 +12,8 @@ import {
 import type { AnnualChecklist, AppSettings, BackupPayload } from "../lib/types";
 import { APP_VERSION, SCHEMA_VERSION } from "../lib/types";
 import { csvEscape, formatDateVN, parseDecimal } from "../lib/calc";
-
-/* ===== V9 B3: chủ đề Sáng / Tối / Hệ thống ===== */
-
-type ThemeChoice = "light" | "dark" | "system";
-
-const THEME_KEY = "vwce-theme";
-
-function readTheme(): ThemeChoice {
-  try {
-    const v = localStorage.getItem(THEME_KEY);
-    return v === "light" || v === "dark" ? v : "system";
-  } catch {
-    return "system";
-  }
-}
-
-/**
- * "system" thì gỡ hẳn thuộc tính đi, để @media (prefers-color-scheme) trong
- * tokens.css tự quyết. "light"/"dark" thì ghi data-theme, và tokens.css đã
- * thu hẹp media query bằng :not([data-theme="light"]) nên lựa chọn thủ công
- * luôn thắng cài đặt của iOS.
- */
-function applyTheme(t: ThemeChoice) {
-  const root = document.documentElement;
-  if (t === "system") delete root.dataset.theme;
-  else root.dataset.theme = t;
-}
-
-// Chạy ngay khi module được nạp. App.tsx import trang này tĩnh nên dòng này
-// thực thi lúc khởi động, trước khung hình đầu tiên — không bị nháy sáng.
-applyTheme(readTheme());
+import type { ThemeChoice } from "../lib/theme";
+import { THEME_OPTIONS, persistTheme, readTheme } from "../lib/theme";
 
 function pctDisplay(decimal: number): string {
   if (!Number.isFinite(decimal)) return "—";
@@ -136,7 +107,6 @@ function Segmented({
           key={o.value}
           type="button"
           className={value === o.value ? "seg-opt active" : "seg-opt"}
-          aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
         >
           {o.label}
@@ -178,14 +148,9 @@ export default function SettingsPage({
     };
   }, [checklistYear]);
 
-  function chooseTheme(t: ThemeChoice) {
+  function pickTheme(t: ThemeChoice) {
     setTheme(t);
-    applyTheme(t);
-    try {
-      localStorage.setItem(THEME_KEY, t);
-    } catch {
-      /* chế độ riêng tư của Safari chặn ghi — vẫn đổi được cho phiên này */
-    }
+    persistTheme(t);
   }
 
   async function persist(partial: Partial<AppSettings>) {
@@ -272,6 +237,22 @@ export default function SettingsPage({
 
   return (
     <div className="settings-v9">
+      <p className="group-label">Giao diện</p>
+      <div className="group-box">
+        <div className="group-row">
+          <span className="group-row-label">Chủ đề</span>
+          <Segmented
+            value={theme}
+            options={THEME_OPTIONS}
+            onChange={(v) => pickTheme(v as ThemeChoice)}
+          />
+        </div>
+        <p className="group-hint">
+          Premium là nền hắc thạch với điểm nhấn champagne. Lựa chọn được nhớ
+          trên máy này.
+        </p>
+      </div>
+
       <p className="group-label">Kế hoạch</p>
       <div className="group-box">
         <div className="group-row">
@@ -303,25 +284,6 @@ export default function SettingsPage({
             onChange={(v) => persist({ accountType: v as "child" | "parent" })}
           />
         </div>
-      </div>
-
-      <p className="group-label">Giao diện</p>
-      <div className="group-box">
-        <div className="group-row">
-          <span className="group-row-label">Chủ đề</span>
-          <Segmented
-            value={theme}
-            options={[
-              { value: "light", label: "Sáng" },
-              { value: "dark", label: "Tối" },
-              { value: "system", label: "Hệ thống" },
-            ]}
-            onChange={(v) => chooseTheme(v as ThemeChoice)}
-          />
-        </div>
-        <p className="group-hint">
-          Hệ thống đi theo cài đặt Sáng/Tối của iOS. Lựa chọn được nhớ trên máy này.
-        </p>
       </div>
 
       <p className="group-label">Giả định</p>
