@@ -13,6 +13,7 @@ import {
   inflate,
   monthsBetween,
   parseDate,
+  parseDecimal,
 } from "../lib/calc";
 import { useNavAction } from "../lib/navActions";
 
@@ -130,7 +131,8 @@ export default function Overview(_props: { displayName?: string }) {
   useNavAction("updatePrice", openPriceSheet);
 
   async function savePrice() {
-    const value = Number(priceInput.replace(",", ".")) || 0;
+    // V9: parseDecimal thay cho replace(",", ".") — bản cũ sai với "1.234,56".
+    const value = parseDecimal(priceInput);
     await saveSettings({
       latestVwcePrice: value,
       latestPriceDate: new Date().toISOString().slice(0, 10),
