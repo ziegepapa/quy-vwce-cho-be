@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { deleteTransaction, listTransactions, uid, upsertTransaction } from "../lib/db";
 import type { Transaction, TxType } from "../lib/types";
-import { calcQuantity, formatDateVN, formatMoney } from "../lib/calc";
+import { calcQuantity, formatDateVN, formatMoney, parseDecimal } from "../lib/calc";
 import { nowIso } from "../lib/defaults";
 import ActionMenu from "../components/ActionMenu";
 import { IconPlus } from "../components/Icons";
@@ -60,21 +60,21 @@ export default function Transactions() {
     });
   }, [txs, q, yearFilter, typeFilter]);
 
-  const amount = Number(form.amount) || 0;
-  const unitPrice = form.unitPrice ? Number(form.unitPrice) : 0;
-  const fee = Number(form.fee) || 0;
-  const tax = Number(form.tax) || 0;
+  const amount = parseDecimal(form.amount);
+  const unitPrice = parseDecimal(form.unitPrice);
+  const fee = parseDecimal(form.fee);
+  const tax = parseDecimal(form.tax);
   const autoQty =
     form.type === "buy_vwce" || form.type === "sell_vwce"
       ? form.quantity
-        ? Number(form.quantity)
+        ? parseDecimal(form.quantity)
         : unitPrice > 0
           ? calcQuantity(amount, unitPrice, fee, tax)
           : 0
       : 0;
 
   async function save() {
-    if (!form.date || !Number.isFinite(amount)) {
+    if (!form.date || !form.amount.trim()) {
       alert("Ngày và số tiền bắt buộc");
       return;
     }
@@ -86,7 +86,7 @@ export default function Transactions() {
       alert("Cần giá hoặc số lượng");
       return;
     }
-    let quantity: number | undefined = form.quantity ? Number(form.quantity) : undefined;
+    let quantity: number | undefined = form.quantity ? parseDecimal(form.quantity) : undefined;
     if (
       (form.type === "buy_vwce" || form.type === "sell_vwce") &&
       unitPrice &&
