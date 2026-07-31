@@ -1,10 +1,52 @@
 export type GoalMode = "nominal" | "purchasing_power";
 export type GoalUrgency = "hard" | "flexible";
+
+/** V10-A — một người cần được báo tin trong tình huống khẩn cấp. */
+export type EmergencyContact = {
+  id: string;
+  name: string;
+  relation: string;
+  phone: string;
+  email: string;
+};
+
+/**
+ * V10-A — NƠI CẤT một giấy tờ gốc. Không bao giờ là bản chụp giấy tờ,
+ * và tuyệt đối không chứa mật khẩu, PIN hay TAN.
+ */
+export type DocumentLocation = {
+  id: string;
+  label: string;
+  location: string;
+};
+
+/**
+ * V10-A — Hồ sơ khẩn cấp.
+ *
+ * Lưu bên trong AppSettings chứ không phải bảng riêng, để thừa hưởng sẵn
+ * cơ chế đồng bộ và sao lưu của settings mà không phải nâng phiên bản Dexie.
+ */
+export type Notfallmappe = {
+  purpose: string;
+  custodyNote: string;
+  brokerName: string;
+  brokerAccountType: string;
+  isin: string;
+  cashBankName: string;
+  cashAccountNote: string;
+  contacts: EmergencyContact[];
+  documents: DocumentLocation[];
+  wishes: string;
+  updatedAt: string;
+};
+
 export type AppSettings = {
   id: string; planName: string; childName: string; accountType: "child" | "parent";
   currency: "EUR"; inflationRate: number; vwceReturn: number; safeReturn: number; bufferPct: number;
   endMode: GoalUrgency; startDate: string; endDate: string; latestVwcePrice: number; latestPriceDate: string;
   contributionY1: number; contributionY2: number; disclaimerAccepted: boolean; onboardingDone: boolean;
+  /** V10-A — tùy chọn, để bản ghi settings cũ vẫn hợp lệ. */
+  notfallmappe?: Notfallmappe;
   createdAt: string; updatedAt: string;
 };
 export type Goal = {
