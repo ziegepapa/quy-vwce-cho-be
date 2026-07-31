@@ -1,34 +1,44 @@
-/* Design System V9 — numeric specs */
+/* Design System V9 — violet-indigo palette */
 :root {
   color-scheme: light;
 
-  --bg-base: #F4F6FA;
-  --surface: #FBFCFE;
+  /* ===== Palette — oa oa điểm tím, không dùng xám trung tính ===== */
+  --bg-base: #F5F4FA;
+  --surface: #FCFBFF;
   --surface-raised: #FFFFFF;
-  --surface-sunken: #EEF1F7;
-  --text-primary: #0B1220;
-  --text-secondary: #5A6B85;
-  --text-tertiary: #8A99B0;
-  --border-subtle: #EBEFF5;
-  --border-strong: #D8E0EC;
-  --primary-600: #2B3FA8;
-  --primary-500: #3D53C6;
-  --primary-050: #EEF1FE;
-  --success-600: #0E9F6E;
-  --success-050: #E7F7F1;
-  --warning-600: #B45309;
-  --warning-050: #FDF4E7;
-  --danger-600: #C2334A;
-  --danger-050: #FCEEF0;
-  --focus-ring: #3D53C6;
+  --surface-sunken: #EFEDF7;
+  --text-primary: #181433;
+  --text-secondary: #605B7D;
+  --text-tertiary: #948FAF;
+  --border-subtle: #E8E5F2;
+  --border-strong: #D5D0E6;
+  --primary-600: #5B4BE8;
+  --primary-500: #7466F0;
+  --primary-050: #EFECFE;
+  --success-600: #0FA47F;
+  --success-050: #E4F7F1;
+  --warning-600: #C77A0A;
+  --warning-050: #FDF3E4;
+  --danger-600: #E0455F;
+  --danger-050: #FDECEF;
+  --focus-ring: #7466F0;
+
+  /* ===== Hero mesh — tokens hoá để đổi được theo chủ đề ===== */
+  --hero-from: #2E2472;
+  --hero-mid: #5B4BE8;
+  --hero-to: #8B7CF8;
+  --hero-glow: rgba(96, 214, 255, 0.30);
+  --hero-highlight: rgba(255, 255, 255, 0.14);
+  --hero-shadow: rgba(46, 36, 114, 0.34);
+  --hero-cta-text: #2E2472;
 
   /* Legacy aliases used by existing CSS */
   --color-bg: var(--bg-base);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-sunken);
   --color-surface-raised: var(--surface-raised);
-  --color-surface-overlay: rgba(251, 252, 254, 0.80);
-  --color-surface-translucent: rgba(251, 252, 254, 0.72);
+  --color-surface-overlay: rgba(252, 251, 255, 0.82);
+  --color-surface-translucent: rgba(252, 251, 255, 0.74);
   --color-border: var(--border-subtle);
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
@@ -36,7 +46,7 @@
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-tertiary);
   --color-text-tertiary: var(--text-tertiary);
-  --color-text-inverse: #F8FAFC;
+  --color-text-inverse: #FBFAFF;
   --color-primary: var(--primary-600);
   --color-primary-hover: var(--primary-500);
   --color-primary-muted: var(--primary-050);
@@ -65,28 +75,28 @@
   --z-sheet: 80;
   --z-toast: 90;
 
-  /* 3-layer shadows — mandatory */
+  /* 3-layer shadows — nhuộm tím nhẹ thay vì đen trung tính */
   --shadow-raised:
-    0 1px 2px rgba(11, 18, 32, 0.04),
-    0 4px 12px rgba(11, 18, 32, 0.05),
-    0 12px 32px rgba(11, 18, 32, 0.04);
+    0 1px 2px rgba(24, 20, 51, 0.04),
+    0 4px 12px rgba(24, 20, 51, 0.05),
+    0 12px 32px rgba(24, 20, 51, 0.04);
   --shadow-overlay:
-    0 2px 4px rgba(11, 18, 32, 0.06),
-    0 12px 28px rgba(11, 18, 32, 0.10),
-    0 32px 64px rgba(11, 18, 32, 0.12);
+    0 2px 4px rgba(24, 20, 51, 0.06),
+    0 12px 28px rgba(24, 20, 51, 0.10),
+    0 32px 64px rgba(24, 20, 51, 0.12);
   --shadow-dock:
-    0 1px 1px rgba(11, 18, 32, 0.04),
-    0 8px 24px rgba(11, 18, 32, 0.12),
-    0 24px 48px rgba(11, 18, 32, 0.10);
+    0 1px 1px rgba(24, 20, 51, 0.04),
+    0 8px 24px rgba(24, 20, 51, 0.12),
+    0 24px 48px rgba(24, 20, 51, 0.10);
   --shadow-popover:
-    0 2px 4px rgba(16, 24, 40, 0.05),
-    0 16px 32px -8px rgba(16, 24, 40, 0.14);
-  --shadow-fab: 0 4px 14px rgba(43, 63, 168, 0.35);
+    0 2px 4px rgba(24, 20, 51, 0.05),
+    0 16px 32px -8px rgba(24, 20, 51, 0.16);
+  --shadow-fab: 0 4px 14px rgba(91, 75, 232, 0.38);
   --shadow-sm: var(--shadow-raised);
   --shadow-md: var(--shadow-raised);
   --shadow-lg: var(--shadow-overlay);
 
-  --hairline: rgba(16, 24, 40, 0.06);
+  --hairline: rgba(24, 20, 51, 0.07);
 
   --r-control: 12px;
   --r-chip: 999px;
@@ -176,93 +186,109 @@
 /* ===== V9 B3: bảng màu Tối =====
    Trước đây bộ màu tối chỉ nằm trong @media (prefers-color-scheme: dark),
    nên nó hoàn toàn do iOS quyết định và công tắc trong ứng dụng vô nghĩa.
-   Nay có hai lối vào, dùng chung một bộ giá trị:
-     1. Người dùng chọn "Tối"      -> :root[data-theme="dark"]
-     2. Người dùng để "Hệ thống"   -> media query bên dưới
+   Nay có hai lối vào dùng chung một bộ giá trị:
+     1. Chọn "Tối"      -> :root[data-theme="dark"]
+     2. Để "Hệ thống"   -> media query bên dưới
    Media query được thu hẹp bằng :not([data-theme="light"]) để khi người dùng
    chọn "Sáng" thì iOS không kéo giao diện về tối nữa. */
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg-base: #0A0E17;
-    --surface: #111726;
-    --surface-raised: #182032;
-    --surface-sunken: #0F1520;
-    --text-primary: #EEF2F8;
-    --text-secondary: #9AA8C0;
-    --text-tertiary: #6B7A94;
-    --border-subtle: #232C40;
-    --border-strong: #2E3A52;
-    --primary-600: #818CF8;
-    --primary-500: #A5B4FC;
-    --primary-050: #1E1B4B;
-    --success-600: #34D399;
-    --success-050: #064E3B;
-    --warning-600: #FBBF24;
-    --warning-050: #78350F;
-    --danger-600: #FB7185;
-    --danger-050: #4C0519;
-    --color-surface-overlay: rgba(17, 23, 38, 0.88);
-    --color-surface-translucent: rgba(17, 23, 38, 0.78);
-    --hairline: rgba(255, 255, 255, 0.08);
+    --bg-base: #0C0A16;
+    --surface: #16132A;
+    --surface-raised: #1E1A36;
+    --surface-sunken: #110E20;
+    --text-primary: #EFEBFB;
+    --text-secondary: #A8A1C4;
+    --text-tertiary: #7A7396;
+    --border-subtle: #272242;
+    --border-strong: #342E54;
+    --primary-600: #9A8CFF;
+    --primary-500: #B4A9FF;
+    --primary-050: #241E4D;
+    --success-600: #34D9AE;
+    --success-050: #073F35;
+    --warning-600: #F5B841;
+    --warning-050: #4A2F08;
+    --danger-600: #FF7089;
+    --danger-050: #47101E;
+    --focus-ring: #B4A9FF;
+    --hero-from: #241C5C;
+    --hero-mid: #4B3BD6;
+    --hero-to: #7566EE;
+    --hero-glow: rgba(96, 214, 255, 0.22);
+    --hero-highlight: rgba(255, 255, 255, 0.10);
+    --hero-shadow: rgba(0, 0, 0, 0.55);
+    --color-surface-overlay: rgba(22, 19, 42, 0.88);
+    --color-surface-translucent: rgba(22, 19, 42, 0.78);
+    --hairline: rgba(255, 255, 255, 0.09);
     --shadow-raised:
-      0 1px 2px rgba(0, 0, 0, 0.3),
+      0 1px 2px rgba(0, 0, 0, 0.30),
       0 4px 12px rgba(0, 0, 0, 0.25),
-      0 12px 32px rgba(0, 0, 0, 0.2);
+      0 12px 32px rgba(0, 0, 0, 0.20);
     --shadow-overlay:
       0 2px 4px rgba(0, 0, 0, 0.35),
-      0 12px 28px rgba(0, 0, 0, 0.4),
+      0 12px 28px rgba(0, 0, 0, 0.40),
       0 32px 64px rgba(0, 0, 0, 0.45);
     --shadow-dock:
-      0 1px 1px rgba(0, 0, 0, 0.3),
-      0 8px 24px rgba(0, 0, 0, 0.4),
+      0 1px 1px rgba(0, 0, 0, 0.30),
+      0 8px 24px rgba(0, 0, 0, 0.40),
       0 24px 48px rgba(0, 0, 0, 0.35);
     --shadow-popover:
       0 2px 4px rgba(0, 0, 0, 0.35),
       0 16px 32px -8px rgba(0, 0, 0, 0.45);
+    --shadow-fab: 0 4px 14px rgba(0, 0, 0, 0.50);
   }
 }
 
 /* Đặt SAU media query để lựa chọn thủ công luôn thắng, bất kể cài đặt iOS. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg-base: #0A0E17;
-  --surface: #111726;
-  --surface-raised: #182032;
-  --surface-sunken: #0F1520;
-  --text-primary: #EEF2F8;
-  --text-secondary: #9AA8C0;
-  --text-tertiary: #6B7A94;
-  --border-subtle: #232C40;
-  --border-strong: #2E3A52;
-  --primary-600: #818CF8;
-  --primary-500: #A5B4FC;
-  --primary-050: #1E1B4B;
-  --success-600: #34D399;
-  --success-050: #064E3B;
-  --warning-600: #FBBF24;
-  --warning-050: #78350F;
-  --danger-600: #FB7185;
-  --danger-050: #4C0519;
-  --color-surface-overlay: rgba(17, 23, 38, 0.88);
-  --color-surface-translucent: rgba(17, 23, 38, 0.78);
-  --hairline: rgba(255, 255, 255, 0.08);
+  --bg-base: #0C0A16;
+  --surface: #16132A;
+  --surface-raised: #1E1A36;
+  --surface-sunken: #110E20;
+  --text-primary: #EFEBFB;
+  --text-secondary: #A8A1C4;
+  --text-tertiary: #7A7396;
+  --border-subtle: #272242;
+  --border-strong: #342E54;
+  --primary-600: #9A8CFF;
+  --primary-500: #B4A9FF;
+  --primary-050: #241E4D;
+  --success-600: #34D9AE;
+  --success-050: #073F35;
+  --warning-600: #F5B841;
+  --warning-050: #4A2F08;
+  --danger-600: #FF7089;
+  --danger-050: #47101E;
+  --focus-ring: #B4A9FF;
+  --hero-from: #241C5C;
+  --hero-mid: #4B3BD6;
+  --hero-to: #7566EE;
+  --hero-glow: rgba(96, 214, 255, 0.22);
+  --hero-highlight: rgba(255, 255, 255, 0.10);
+  --hero-shadow: rgba(0, 0, 0, 0.55);
+  --color-surface-overlay: rgba(22, 19, 42, 0.88);
+  --color-surface-translucent: rgba(22, 19, 42, 0.78);
+  --hairline: rgba(255, 255, 255, 0.09);
   --shadow-raised:
-    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.30),
     0 4px 12px rgba(0, 0, 0, 0.25),
-    0 12px 32px rgba(0, 0, 0, 0.2);
+    0 12px 32px rgba(0, 0, 0, 0.20);
   --shadow-overlay:
     0 2px 4px rgba(0, 0, 0, 0.35),
-    0 12px 28px rgba(0, 0, 0, 0.4),
+    0 12px 28px rgba(0, 0, 0, 0.40),
     0 32px 64px rgba(0, 0, 0, 0.45);
   --shadow-dock:
-    0 1px 1px rgba(0, 0, 0, 0.3),
-    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 1px 1px rgba(0, 0, 0, 0.30),
+    0 8px 24px rgba(0, 0, 0, 0.40),
     0 24px 48px rgba(0, 0, 0, 0.35);
   --shadow-popover:
     0 2px 4px rgba(0, 0, 0, 0.35),
     0 16px 32px -8px rgba(0, 0, 0, 0.45);
+  --shadow-fab: 0 4px 14px rgba(0, 0, 0, 0.50);
 }
 
 :root[data-theme="light"] {
