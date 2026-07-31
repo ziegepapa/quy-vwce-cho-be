@@ -22,16 +22,14 @@
 .group-box {
   background: var(--surface, #fcfcfd);
   border-radius: 18px;
-  border: 1px solid rgba(16, 24, 40, 0.05);
-  box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 4px 12px -2px rgba(16, 24, 40, 0.06);
+  border: 1px solid var(--hairline, rgba(16, 24, 40, 0.06));
+  box-shadow: var(--shadow-raised);
   overflow: hidden;
 }
 
 .group-row {
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+  border-bottom: 1px solid var(--hairline, rgba(16, 24, 40, 0.06));
 }
 
 .group-row:last-child {
@@ -52,8 +50,9 @@
   min-height: 44px;
   font-size: 16px;
   border-radius: 10px;
-  border: 1px solid rgba(16, 24, 40, 0.08);
-  background: rgba(16, 24, 40, 0.03);
+  border: 1px solid var(--border-subtle, #ebeff5);
+  background: var(--surface-sunken, #eef1f7);
+  color: var(--text-primary, #0b1220);
   padding: 0 12px;
 }
 
@@ -94,11 +93,12 @@
   color: var(--text-tertiary, #8a99b0);
 }
 
+/* Segmented control */
 .seg-control {
   display: flex;
   gap: 2px;
   padding: 2px;
-  background: rgba(16, 24, 40, 0.06);
+  background: var(--surface-sunken, #eef1f7);
   border-radius: 10px;
   min-height: 36px;
 }
@@ -114,23 +114,23 @@
   min-height: 32px;
   cursor: pointer;
   padding: 0 8px;
+  transition: background var(--d-fast, 160ms) var(--ease-standard);
 }
 
 .seg-opt.active {
-  background: #fff;
+  background: var(--surface-raised, #fff);
   color: var(--text-primary, #0b1220);
-  box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 2px 6px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--shadow-popover);
 }
 
+/* Switch row */
 .switch-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+  border-bottom: 1px solid var(--hairline, rgba(16, 24, 40, 0.06));
   font-size: 15px;
   font-weight: 500;
   margin: 0;
@@ -146,14 +146,15 @@
   height: 31px !important;
   min-height: 31px !important;
   appearance: none;
-  background: rgba(16, 24, 40, 0.12);
+  -webkit-appearance: none;
+  background: var(--border-strong, #d8e0ec);
   border-radius: 999px;
   position: relative;
   cursor: pointer;
   border: none !important;
   padding: 0 !important;
   flex-shrink: 0;
-  transition: background 0.2s;
+  transition: background var(--d-base, 220ms) var(--ease-standard);
 }
 
 .ios-switch::after {
@@ -166,17 +167,21 @@
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s;
+  transition: transform var(--d-base, 220ms) var(--ease-emphasized);
 }
 
 .ios-switch:checked {
   background: var(--success-600, #0e9f6e);
 }
 
+/* V9 B3: bản cũ viết `.ios-switch\:checked\::after` — dấu gạch chéo biến
+   `:checked::after` thành tên class nên selector không bao giờ khớp,
+   núm trắng đứng yên khi bật. */
 .ios-switch:checked::after {
   transform: translateX(20px);
 }
 
+/* Action rows */
 .group-action {
   display: flex;
   align-items: center;
@@ -184,7 +189,7 @@
   min-height: 48px;
   padding: 0 16px;
   border: none;
-  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+  border-bottom: 1px solid var(--hairline, rgba(16, 24, 40, 0.06));
   background: transparent;
   font-size: 15px;
   font-weight: 500;
@@ -211,4 +216,19 @@
 
 .delete-confirm {
   padding: 12px 16px 16px;
+}
+
+/* V9 B3: `.sr-only` đã được Popover.tsx dùng từ B1 nhưng chưa từng được
+   định nghĩa ở đâu — chữ thông báo cho trình đọc màn hình đang hiện ra giữa
+   giao diện. Đặt ở đây vì settings-v9.css được nạp toàn cục từ main.tsx. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
