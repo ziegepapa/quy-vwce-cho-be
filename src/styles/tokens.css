@@ -174,11 +174,14 @@
 }
 
 /* ===== V9 B3: bảng màu Tối =====
-   Ba nhánh:
-   1. Hệ thống Tối VÀ người dùng chưa khoá Sáng  → media query bên dưới
-   2. Người dùng chọn Tối                         → :root[data-theme="dark"]
-   3. Người dùng chọn Sáng                        → không nhánh nào chạy
-   Giá trị phải giống hệt nhau ở cả hai khối. */
+   Trước đây bộ màu tối chỉ nằm trong @media (prefers-color-scheme: dark),
+   nên nó hoàn toàn do iOS quyết định và công tắc trong ứng dụng vô nghĩa.
+   Nay có hai lối vào, dùng chung một bộ giá trị:
+     1. Người dùng chọn "Tối"      -> :root[data-theme="dark"]
+     2. Người dùng để "Hệ thống"   -> media query bên dưới
+   Media query được thu hẹp bằng :not([data-theme="light"]) để khi người dùng
+   chọn "Sáng" thì iOS không kéo giao diện về tối nữa. */
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
@@ -221,6 +224,7 @@
   }
 }
 
+/* Đặt SAU media query để lựa chọn thủ công luôn thắng, bất kể cài đặt iOS. */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg-base: #0A0E17;
