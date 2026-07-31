@@ -1,5 +1,7 @@
 /* Design System V9 — numeric specs */
 :root {
+  color-scheme: light;
+
   --bg-base: #F4F6FA;
   --surface: #FBFCFE;
   --surface-raised: #FFFFFF;
@@ -171,8 +173,15 @@
   --touch-min: 44px;
 }
 
+/* ===== V9 B3: bảng màu Tối =====
+   Ba nhánh:
+   1. Hệ thống Tối VÀ người dùng chưa khoá Sáng  → media query bên dưới
+   2. Người dùng chọn Tối                         → :root[data-theme="dark"]
+   3. Người dùng chọn Sáng                        → không nhánh nào chạy
+   Giá trị phải giống hệt nhau ở cả hai khối. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg-base: #0A0E17;
     --surface: #111726;
     --surface-raised: #182032;
@@ -210,6 +219,50 @@
       0 2px 4px rgba(0, 0, 0, 0.35),
       0 16px 32px -8px rgba(0, 0, 0, 0.45);
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-base: #0A0E17;
+  --surface: #111726;
+  --surface-raised: #182032;
+  --surface-sunken: #0F1520;
+  --text-primary: #EEF2F8;
+  --text-secondary: #9AA8C0;
+  --text-tertiary: #6B7A94;
+  --border-subtle: #232C40;
+  --border-strong: #2E3A52;
+  --primary-600: #818CF8;
+  --primary-500: #A5B4FC;
+  --primary-050: #1E1B4B;
+  --success-600: #34D399;
+  --success-050: #064E3B;
+  --warning-600: #FBBF24;
+  --warning-050: #78350F;
+  --danger-600: #FB7185;
+  --danger-050: #4C0519;
+  --color-surface-overlay: rgba(17, 23, 38, 0.88);
+  --color-surface-translucent: rgba(17, 23, 38, 0.78);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --shadow-raised:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 12px 32px rgba(0, 0, 0, 0.2);
+  --shadow-overlay:
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 12px 28px rgba(0, 0, 0, 0.4),
+    0 32px 64px rgba(0, 0, 0, 0.45);
+  --shadow-dock:
+    0 1px 1px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 24px 48px rgba(0, 0, 0, 0.35);
+  --shadow-popover:
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 16px 32px -8px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 @media (prefers-reduced-motion: reduce) {
