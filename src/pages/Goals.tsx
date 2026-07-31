@@ -8,6 +8,7 @@ import {
   inflate,
   monthsBetween,
   parseDate,
+  parseDecimal,
   statusLabel,
 } from "../lib/calc";
 import { nowIso } from "../lib/defaults";
@@ -106,13 +107,13 @@ export default function Goals() {
       id: edit?.id ?? uid("goal"),
       name: form.name,
       dueDate: form.dueDate,
-      amount: Number(form.amount) || 0,
+      amount: parseDecimal(form.amount),
       mode: form.mode,
       baseYear: Number(form.baseYear) || 2026,
-      inflationRate: Number(form.inflationRate) || 0,
-      bufferPct: Number(form.bufferPct) || 0,
+      inflationRate: parseDecimal(form.inflationRate),
+      bufferPct: parseDecimal(form.bufferPct),
       urgency: form.urgency,
-      protectedAmount: Number(form.protectedAmount) || 0,
+      protectedAmount: parseDecimal(form.protectedAmount),
       notes: form.notes,
       createdAt: edit?.createdAt ?? nowIso(),
       updatedAt: nowIso(),
@@ -142,10 +143,11 @@ export default function Goals() {
     0,
     parseDate(form.dueDate).getFullYear() - (Number(form.baseYear) || 2026),
   );
+  const previewAmount = parseDecimal(form.amount);
   const previewAdj =
     form.mode === "purchasing_power"
-      ? inflate(Number(form.amount) || 0, Number(form.inflationRate) || 0, previewYears)
-      : Number(form.amount) || 0;
+      ? inflate(previewAmount, parseDecimal(form.inflationRate), previewYears)
+      : previewAmount;
 
   return (
     <div>
@@ -346,7 +348,7 @@ export default function Goals() {
               </select>
             </div>
             <div className="banner info" style={{ marginBottom: 12 }}>
-              Preview: {formatMoney(Number(form.amount) || 0)}
+              Preview: {formatMoney(previewAmount)}
               {form.mode === "purchasing_power" && <> → {formatMoney(previewAdj)}</>}
             </div>
             <div className="stack">
