@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import type { SyncStatus } from "../lib/sync/types";
 import { SYNC_STATUS_LABEL } from "../lib/sync/types";
+import { THEME_LABEL, readTheme } from "../lib/theme";
 import Popover from "./Popover";
 
 export function avatarGradient(name: string): string {
@@ -42,6 +43,9 @@ export default function AvatarMenu({
   const subLabel = email ?? SYNC_STATUS_LABEL[syncStatus];
   const metaLabel =
     pending > 0 ? `${pending} chờ` : SYNC_STATUS_LABEL[syncStatus];
+  // Đọc lúc render chứ không giữ trong state: menu chỉ tồn tại khi đang mở,
+  // nên mỗi lần mở lại đã là giá trị mới nhất.
+  const themeLabel = THEME_LABEL[readTheme()];
 
   return (
     <Popover
@@ -77,10 +81,15 @@ export default function AvatarMenu({
         Đồng bộ ngay
         <span className="avatar-menu-item-meta">{metaLabel}</span>
       </button>
-      <button type="button" className="avatar-menu-item" role="menuitem" disabled>
+      <a
+        className="avatar-menu-item"
+        role="menuitem"
+        href="#/settings"
+        onClick={onClose}
+      >
         Chủ đề
-        <span className="avatar-menu-item-meta">Sắp có</span>
-      </button>
+        <span className="avatar-menu-item-meta">{themeLabel}</span>
+      </a>
       <div className="avatar-menu-rule" role="presentation" />
       <button
         type="button"
