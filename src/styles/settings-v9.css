@@ -12,7 +12,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.5;
-  color: var(--text-secondary, #5a6b85);
+  color: var(--text-secondary);
 }
 
 .group-label:first-child {
@@ -20,16 +20,16 @@
 }
 
 .group-box {
-  background: var(--surface, #fcfcfd);
+  background: var(--surface);
   border-radius: 18px;
-  border: 1px solid var(--hairline, rgba(16, 24, 40, 0.06));
+  border: 1px solid var(--hairline);
   box-shadow: var(--shadow-raised);
   overflow: hidden;
 }
 
 .group-row {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--hairline, rgba(16, 24, 40, 0.06));
+  border-bottom: 1px solid var(--hairline);
 }
 
 .group-row:last-child {
@@ -50,9 +50,9 @@
   min-height: 44px;
   font-size: 16px;
   border-radius: 10px;
-  border: 1px solid var(--border-subtle, #ebeff5);
-  background: var(--surface-sunken, #eef1f7);
-  color: var(--text-primary, #0b1220);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
   padding: 0 12px;
 }
 
@@ -83,14 +83,14 @@
 .pct-suffix {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-tertiary, #8a99b0);
+  color: var(--text-tertiary);
 }
 
 .group-hint {
   margin: 0;
   padding: 0 16px 12px;
   font-size: 12px;
-  color: var(--text-tertiary, #8a99b0);
+  color: var(--text-tertiary);
 }
 
 /* Segmented control */
@@ -98,7 +98,7 @@
   display: flex;
   gap: 2px;
   padding: 2px;
-  background: var(--surface-sunken, #eef1f7);
+  background: var(--surface-sunken);
   border-radius: 10px;
   min-height: 36px;
 }
@@ -110,16 +110,18 @@
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, #5a6b85);
+  color: var(--text-secondary);
   min-height: 32px;
   cursor: pointer;
   padding: 0 8px;
-  transition: background var(--d-fast, 160ms) var(--ease-standard);
+  transition:
+    background var(--d-fast) var(--ease-standard),
+    color var(--d-fast) var(--ease-standard);
 }
 
 .seg-opt.active {
-  background: var(--surface-raised, #fff);
-  color: var(--text-primary, #0b1220);
+  background: var(--surface-raised);
+  color: var(--text-primary);
   box-shadow: var(--shadow-popover);
 }
 
@@ -130,10 +132,11 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--hairline, rgba(16, 24, 40, 0.06));
+  border-bottom: 1px solid var(--hairline);
   font-size: 15px;
   font-weight: 500;
   margin: 0;
+  opacity: 1;
   color: inherit;
 }
 
@@ -147,14 +150,14 @@
   min-height: 31px !important;
   appearance: none;
   -webkit-appearance: none;
-  background: var(--border-strong, #d8e0ec);
+  background: var(--border-strong);
   border-radius: 999px;
   position: relative;
   cursor: pointer;
   border: none !important;
   padding: 0 !important;
   flex-shrink: 0;
-  transition: background var(--d-base, 220ms) var(--ease-standard);
+  transition: background var(--d-base) var(--ease-standard);
 }
 
 .ios-switch::after {
@@ -167,36 +170,47 @@
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: transform var(--d-base, 220ms) var(--ease-emphasized);
+  transition: transform var(--d-base) var(--ease-emphasized);
 }
 
 .ios-switch:checked {
-  background: var(--success-600, #0e9f6e);
+  background: var(--success-600);
 }
 
-/* V9 B3: bản cũ viết `.ios-switch\:checked\::after` — dấu gạch chéo biến
-   `:checked::after` thành tên class nên selector không bao giờ khớp,
-   núm trắng đứng yên khi bật. */
+/* V9 B3: bản cũ viết selector có dấu gạch chéo trước :checked nên nó bị
+   hiểu thành tên class, không bao giờ khớp — núm trắng đứng yên khi bật. */
 .ios-switch:checked::after {
   transform: translateX(20px);
 }
 
-/* Action rows */
+/* Action rows
+   V9 B3: `Nhập JSON` là thẻ <label> chứ không phải <button>, nên nó dính
+   luật `label` toàn cục trong index.css — có margin-bottom và opacity 0.6.
+   Ba dòng margin/opacity/letter-spacing dưới đây vô hiệu hoá chúng để mọi
+   dòng hành động cao bằng nhau và đậm bằng nhau. */
 .group-action {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
   min-height: 48px;
   padding: 0 16px;
+  margin: 0;
+  opacity: 1;
+  letter-spacing: normal;
   border: none;
-  border-bottom: 1px solid var(--hairline, rgba(16, 24, 40, 0.06));
+  border-bottom: 1px solid var(--hairline);
   background: transparent;
   font-size: 15px;
   font-weight: 500;
-  color: var(--text-primary, #0b1220);
+  color: var(--text-primary);
   cursor: pointer;
   text-align: left;
   border-radius: 0;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .group-action:last-child {
@@ -204,7 +218,20 @@
 }
 
 .group-action.danger-text {
-  color: var(--danger-600, #c2334a);
+  color: var(--danger-600);
+}
+
+/* Dấu ngoặc nhọn phải, cho biết dòng bấm được. */
+.group-action::after {
+  content: "\203A";
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.group-action.danger-text::after {
+  content: none;
 }
 
 .settings-foot {
@@ -218,9 +245,9 @@
   padding: 12px 16px 16px;
 }
 
-/* V9 B3: `.sr-only` đã được Popover.tsx dùng từ B1 nhưng chưa từng được
-   định nghĩa ở đâu — chữ thông báo cho trình đọc màn hình đang hiện ra giữa
-   giao diện. Đặt ở đây vì settings-v9.css được nạp toàn cục từ main.tsx. */
+/* V9 B3: `.sr-only` được Popover.tsx dùng từ B1 nhưng chưa từng được định
+   nghĩa ở đâu — chữ thông báo cho trình đọc màn hình hiện ra giữa giao diện.
+   Đặt ở đây vì settings-v9.css được nạp toàn cục từ main.tsx. */
 .sr-only {
   position: absolute;
   width: 1px;
