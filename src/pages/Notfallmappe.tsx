@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getSettings, listGoals, listTransactions, saveSettings } from "../lib/db";
 import type {
   AppSettings,
@@ -13,16 +13,47 @@ import { buildEquitySeries, formatDateVN, formatMoney } from "../lib/calc";
 import "../styles/notfallmappe.css";
 
 /**
- * V10-A — Hồ sơ khẩn cấp (Notfallmappe).
+ * V10-A2 — Hồ sơ khẩn cấp.
  *
- * Nguyên tắc không thương lượng, theo chuẩn Notfallmappe của Đức:
+ * Nguyên tắc không thương lượng:
  *  1. Không có ô nhập mật khẩu / PIN / TAN. Ô không tồn tại thì không ai bị cám dỗ.
  *  2. Chỉ ghi NƠI CẤT giấy tờ gốc, không tải bản chụp lên.
- *  3. Cảnh báo thường trực rằng nội dung có đồng bộ lên máy chủ.
+ *  3. Nội dung có đồng bộ lên máy chủ — nói rõ, không giấu.
+ *  4. Máy tự đọc lại nội dung và cảnh báo nếu thấy bí mật lọt vào.
  *
- * Mục 6 (bản chụp tình hình) là phần máy tự sinh — đó là lý do tính năng này
- * nằm trong app chứ không phải một tờ Word: nó luôn đúng tại thời điểm in.
+ * Trang này nằm sau màn hình đăng nhập của riêng bạn, nên BẢN IN GIẤY mới là
+ * bản người thân thực sự dùng được. Mọi thứ ở đây phục vụ việc giữ bản in đó
+ * luôn đúng và luôn mới.
  */
+
+const SECRET_RE =
+  /(mật\s*khẩu|mat\s*khau|matkhau|password|passwort|kennwort|\bpin\b|\btan\b|\botp\b|seed\s*phrase|private\s*key|recovery\s*phrase)/i;
+
+/** IBAN đầy đủ, ví dụ DE89 3704 0044 0532 0130 00. Cố ý bắt buộc mã nước viết hoa. */
+const IBAN_RE = /\b[A-Z]{2}\s?\d{2}(?:\s?[A-Z0-9]{4}){3,7}\b/;
+
+function openAllSections() {
+  document
+    .querySelectorAll<HTMLDetailsElement>("details.nfm-sec")
+    .forEach((el) => {
+      if (!el.open) {
+        el.dataset.reopen = "1";
+        el.open = true;
+      }
+    });
+}
+
+function restoreSections() {
+  document
+    .querySelectorAll<HTMLDetailsElement>("details.nfm-sec")
+    .forEach((el) => {
+      if (el.dataset.reopen === "1") {
+        el.open = false;
+        delete el.dataset.reopen;
+      }
+    });
+}
+
 export default function NotfallmappePage() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [data, setData] = useState<NotfallmappeData | null>(null);
@@ -30,7 +61,16 @@ export default function NotfallmappePage() {
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState("");
+  const [justSaved, setJustSaved] = useState(false);
+
+  // Bản sao mới nhất, để lúc rời trang còn lưu kịp.
+  const dataRef = useRef<NotfallmappeData | null>(null);
+  const dirtyRef = useRef(false);
+
+  useEffect(() => {
+    dataRef.current = data;
+    dirtyRef.current = dirty;
+  }, [data, dirty]);
 
   useEffect(() => {
     (async () => {
@@ -40,6 +80,38 @@ export default function NotfallmappePage() {
       setGoals(await listGoals());
       setTxs(await listTransactions());
     })();
+  }, []);
+
+  // Đóng tab hoặc tải lại trang khi chưa lưu.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
+  // Chuyển sang màn khác trong app: lưu nốt, không hỏi han.
+  useEffect(() => {
+    return () => {
+      if (dirtyRef.current && dataRef.current) {
+        void saveSettings({
+          notfallmappe: { ...dataRef.current, updatedAt: nowIso() },
+        });
+      }
+    };
+  }, []);
+
+  // In bằng phím tắt trên máy tính. Trên iPhone dùng nút, xem handlePrint.
+  useEffect(() => {
+    window.addEventListener("beforeprint", openAllSections);
+    window.addEventListener("afterprint", restoreSections);
+    return () => {
+      window.removeEventListener("beforeprint", openAllSections);
+      window.removeEventListener("afterprint", restoreSections);
+    };
   }, []);
 
   const snap = useMemo(() => {
@@ -54,43 +126,101 @@ export default function NotfallmappePage() {
     return { total, qty, price };
   }, [txs, settings]);
 
+  const filled = useMemo(() => {
+    if (!data) return [false, false, false, false, false];
+    return [
+      Boolean(data.purpose.trim() || data.custodyNote.trim()),
+      Boolean(
+        data.brokerName.trim() &&
+          (data.cashBankName.trim() || data.cashAccountNote.trim()),
+      ),
+      data.contacts.some((c) => c.name.trim() && c.phone.trim()),
+      data.documents.some((d) => d.location.trim()),
+      Boolean(data.wishes.trim()),
+    ];
+  }, [data]);
+
+  const filledCount = filled.filter(Boolean).length;
+
+  /**
+   * Quét bí mật lọt vào. Chạy hoàn toàn trong máy, không gửi đi đâu.
+   * Ô điện thoại được loại khỏi phép quét IBAN để tránh báo động giả.
+   */
+  const risks = useMemo(() => {
+    if (!data) return [] as string[];
+    const parts: { label: string; text: string }[] = [
+      { label: "Mục 1", text: `${data.purpose} ${data.custodyNote}` },
+      {
+        label: "Mục 2",
+        text: `${data.brokerName} ${data.brokerAccountType} ${data.cashBankName} ${data.cashAccountNote}`,
+      },
+      {
+        label: "Mục 3",
+        text: data.contacts.map((c) => `${c.name} ${c.relation} ${c.email}`).join(" "),
+      },
+      {
+        label: "Mục 4",
+        text: data.documents.map((d) => `${d.label} ${d.location}`).join(" "),
+      },
+      { label: "Mục 5", text: data.wishes },
+    ];
+    const out: string[] = [];
+    for (const p of parts) {
+      if (SECRET_RE.test(p.text)) {
+        out.push(`${p.label} có vẻ chứa mật khẩu, PIN hoặc TAN. Hãy xóa khỏi đây.`);
+      }
+      if (IBAN_RE.test(p.text)) {
+        out.push(`${p.label} có vẻ chứa số IBAN đầy đủ. Chỉ nên ghi 4 số cuối.`);
+      }
+    }
+    return out;
+  }, [data]);
+
   if (!data) return <p className="muted">Đang tải…</p>;
 
   function patch(p: Partial<NotfallmappeData>) {
     setData((d) => (d ? { ...d, ...p } : d));
     setDirty(true);
+    setJustSaved(false);
   }
 
   function patchContact(id: string, p: Partial<EmergencyContact>) {
     setData((d) =>
-      d
-        ? { ...d, contacts: d.contacts.map((c) => (c.id === id ? { ...c, ...p } : c)) }
-        : d,
+      d ? { ...d, contacts: d.contacts.map((c) => (c.id === id ? { ...c, ...p } : c)) } : d,
     );
     setDirty(true);
+    setJustSaved(false);
   }
 
   function patchDoc(id: string, p: Partial<DocumentLocation>) {
     setData((d) =>
-      d
-        ? { ...d, documents: d.documents.map((x) => (x.id === id ? { ...x, ...p } : x)) }
-        : d,
+      d ? { ...d, documents: d.documents.map((x) => (x.id === id ? { ...x, ...p } : x)) } : d,
     );
     setDirty(true);
+    setJustSaved(false);
   }
 
-  async function save() {
-    if (!data) return;
+  async function persist(extra?: Partial<NotfallmappeData>) {
+    const base = dataRef.current;
+    if (!base) return;
     setSaving(true);
-    const next: NotfallmappeData = { ...data, updatedAt: nowIso() };
+    const next: NotfallmappeData = { ...base, ...extra, updatedAt: nowIso() };
     try {
       await saveSettings({ notfallmappe: next });
       setData(next);
       setDirty(false);
-      setSavedAt(next.updatedAt);
+      setJustSaved(true);
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handlePrint() {
+    // iOS Safari không phát sự kiện beforeprint, nên mở tay trước khi in.
+    openAllSections();
+    await persist({ lastPrintedAt: nowIso() });
+    window.print();
+    window.setTimeout(restoreSections, 1000);
   }
 
   const childLabel = settings?.childName?.trim() || "bé";
@@ -105,21 +235,59 @@ export default function NotfallmappePage() {
         </span>
       </p>
 
-      <section className="nfm-sec">
-        <h2 className="nfm-sec-head">
-          <span className="nfm-sec-num">1</span> Quỹ này là gì
-        </h2>
+      {risks.length > 0 && (
+        <ul className="nfm-risk">
+          {risks.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      )}
+
+      <div className="nfm-progress">
+        <div className="nfm-progress-track">
+          <div
+            className="nfm-progress-fill"
+            style={{ width: `${(filledCount / 5) * 100}%` }}
+          />
+        </div>
+        <span className="nfm-progress-text">{filledCount}/5 mục đã điền</span>
+      </div>
+
+      <div className="nfm-print-note">
+        <p>
+          <strong>Bản in giấy mới là bản dùng được.</strong> Trang này nằm sau màn
+          hình đăng nhập của riêng bạn, nên nếu có chuyện xảy ra, người thân sẽ
+          không mở được. Hãy in ra và cất cùng chỗ với giấy tờ gốc.
+        </p>
+        <p className="nfm-print-when">
+          {data.lastPrintedAt
+            ? `In gần nhất ${formatDateVN(data.lastPrintedAt.slice(0, 10))}`
+            : "Chưa in lần nào"}
+        </p>
+      </div>
+
+      <details className="nfm-sec">
+        <summary>
+          <span className="nfm-sec-num">1</span>
+          <span className="nfm-sec-title">Quỹ này là gì</span>
+          <span className={filled[0] ? "nfm-sec-state ok" : "nfm-sec-state"}>
+            {filled[0] ? "Đã điền" : "Chưa điền"}
+          </span>
+          <span className="nfm-chev" aria-hidden>
+            ›
+          </span>
+        </summary>
         <div className="nfm-box">
           <label className="nfm-field">
             <span>Số tiền này dành cho ai và để làm gì</span>
             <textarea
               value={data.purpose}
               onChange={(e) => patch({ purpose: e.target.value })}
-              placeholder={`Viết cho người sẽ đọc nó mà không biết gì về quỹ. Ví dụ: đây là tiền dành cho ${childLabel}, dự kiến dùng từ 06/2038 cho việc học.`}
+              placeholder={`Viết cho người không biết gì về quỹ. Ví dụ: đây là tiền dành cho ${childLabel}, dự kiến dùng từ 06/2038.`}
             />
           </label>
           <label className="nfm-field">
-            <span>Tiền này đứng tên ai, và thực sự thuộc về ai</span>
+            <span>Tiền đứng tên ai, và thực sự thuộc về ai</span>
             <textarea
               value={data.custodyNote}
               onChange={(e) => patch({ custodyNote: e.target.value })}
@@ -127,12 +295,19 @@ export default function NotfallmappePage() {
             />
           </label>
         </div>
-      </section>
+      </details>
 
-      <section className="nfm-sec">
-        <h2 className="nfm-sec-head">
-          <span className="nfm-sec-num">2</span> Tài sản đang ở đâu
-        </h2>
+      <details className="nfm-sec">
+        <summary>
+          <span className="nfm-sec-num">2</span>
+          <span className="nfm-sec-title">Tài sản đang ở đâu</span>
+          <span className={filled[1] ? "nfm-sec-state ok" : "nfm-sec-state"}>
+            {filled[1] ? "Đã điền" : "Chưa điền"}
+          </span>
+          <span className="nfm-chev" aria-hidden>
+            ›
+          </span>
+        </summary>
         <div className="nfm-box">
           <div className="nfm-row-grid">
             <label className="nfm-field">
@@ -175,12 +350,19 @@ export default function NotfallmappePage() {
             </label>
           </div>
         </div>
-      </section>
+      </details>
 
-      <section className="nfm-sec">
-        <h2 className="nfm-sec-head">
-          <span className="nfm-sec-num">3</span> Người cần được báo tin
-        </h2>
+      <details className="nfm-sec">
+        <summary>
+          <span className="nfm-sec-num">3</span>
+          <span className="nfm-sec-title">Người cần được báo tin</span>
+          <span className={filled[2] ? "nfm-sec-state ok" : "nfm-sec-state"}>
+            {filled[2] ? "Đã điền" : "Chưa điền"}
+          </span>
+          <span className="nfm-chev" aria-hidden>
+            ›
+          </span>
+        </summary>
         <div className="nfm-box">
           {data.contacts.map((c) => (
             <div className="nfm-item" key={c.id}>
@@ -199,6 +381,7 @@ export default function NotfallmappePage() {
                       d ? { ...d, contacts: d.contacts.filter((x) => x.id !== c.id) } : d,
                     );
                     setDirty(true);
+                    setJustSaved(false);
                   }}
                 >
                   ✕
@@ -239,17 +422,25 @@ export default function NotfallmappePage() {
                   : d,
               );
               setDirty(true);
+              setJustSaved(false);
             }}
           >
             + Thêm người liên hệ
           </button>
         </div>
-      </section>
+      </details>
 
-      <section className="nfm-sec">
-        <h2 className="nfm-sec-head">
-          <span className="nfm-sec-num">4</span> Giấy tờ gốc cất ở đâu
-        </h2>
+      <details className="nfm-sec">
+        <summary>
+          <span className="nfm-sec-num">4</span>
+          <span className="nfm-sec-title">Giấy tờ gốc cất ở đâu</span>
+          <span className={filled[3] ? "nfm-sec-state ok" : "nfm-sec-state"}>
+            {filled[3] ? "Đã điền" : "Chưa điền"}
+          </span>
+          <span className="nfm-chev" aria-hidden>
+            ›
+          </span>
+        </summary>
         <div className="nfm-box">
           {data.documents.map((doc) => (
             <div className="nfm-item" key={doc.id}>
@@ -265,9 +456,12 @@ export default function NotfallmappePage() {
                   aria-label={`Xóa ${doc.label || "giấy tờ"}`}
                   onClick={() => {
                     setData((d) =>
-                      d ? { ...d, documents: d.documents.filter((x) => x.id !== doc.id) } : d,
+                      d
+                        ? { ...d, documents: d.documents.filter((x) => x.id !== doc.id) }
+                        : d,
                     );
                     setDirty(true);
+                    setJustSaved(false);
                   }}
                 >
                   ✕
@@ -293,17 +487,25 @@ export default function NotfallmappePage() {
                   : d,
               );
               setDirty(true);
+              setJustSaved(false);
             }}
           >
             + Thêm giấy tờ
           </button>
         </div>
-      </section>
+      </details>
 
-      <section className="nfm-sec">
-        <h2 className="nfm-sec-head">
-          <span className="nfm-sec-num">5</span> Nguyện vọng của bạn
-        </h2>
+      <details className="nfm-sec">
+        <summary>
+          <span className="nfm-sec-num">5</span>
+          <span className="nfm-sec-title">Nguyện vọng của bạn</span>
+          <span className={filled[4] ? "nfm-sec-state ok" : "nfm-sec-state"}>
+            {filled[4] ? "Đã điền" : "Chưa điền"}
+          </span>
+          <span className="nfm-chev" aria-hidden>
+            ›
+          </span>
+        </summary>
         <div className="nfm-box">
           <label className="nfm-field">
             <span>Nếu bạn không còn, số tiền này nên được dùng thế nào</span>
@@ -314,11 +516,12 @@ export default function NotfallmappePage() {
             />
           </label>
         </div>
-      </section>
+      </details>
 
-      <section className="nfm-sec">
-        <h2 className="nfm-sec-head">
-          <span className="nfm-sec-num">6</span> Tình hình tại thời điểm in
+      <section className="nfm-sec-static">
+        <h2>
+          <span className="nfm-sec-num">6</span>
+          <span className="nfm-sec-title">Tình hình tại thời điểm in</span>
         </h2>
         <div className="nfm-box">
           <div className="nfm-snap">
@@ -357,16 +560,18 @@ export default function NotfallmappePage() {
         </div>
       </section>
 
-      {savedAt && !dirty && <p className="nfm-saved">Đã lưu</p>}
+      {justSaved && !dirty && <p className="nfm-saved">Đã lưu</p>}
       {data.updatedAt && (
-        <p className="nfm-meta">Cập nhật lần cuối {formatDateVN(data.updatedAt.slice(0, 10))}</p>
+        <p className="nfm-meta">
+          Cập nhật lần cuối {formatDateVN(data.updatedAt.slice(0, 10))}
+        </p>
       )}
 
       <div className="nfm-foot">
-        <button type="button" className="secondary" onClick={() => window.print()}>
+        <button type="button" className="secondary" onClick={handlePrint}>
           In / Lưu PDF
         </button>
-        <button type="button" onClick={save} disabled={!dirty || saving}>
+        <button type="button" onClick={() => persist()} disabled={!dirty || saving}>
           {saving ? "Đang lưu…" : "Lưu"}
         </button>
       </div>
