@@ -13,7 +13,7 @@ import { buildEquitySeries, formatDateVN, formatMoney } from "../lib/calc";
 import "../styles/notfallmappe.css";
 
 /**
- * V10-A5 — Hồ sơ khẩn cấp.
+ * V10-A6 — Hồ sơ khẩn cấp.
  *
  * Nguyên tắc không thương lượng:
  *  1. Không có ô nhập mật khẩu / PIN / TAN.
@@ -21,12 +21,10 @@ import "../styles/notfallmappe.css";
  *  3. Nội dung có đồng bộ lên máy chủ — nói rõ, không giấu.
  *  4. Máy tự đọc lại nội dung và cảnh báo nếu thấy bí mật lọt vào.
  *
- * V10-A3 bỏ hẳn nút Lưu: tự lưu sau khi ngừng gõ, tự lưu khi rời màn,
- * hỏi khi đóng tab lúc còn dở. Chân trang chỉ còn một nút In / Lưu PDF.
- *
- * V10-A5 dọn bản in. Safari trên iPhone không phát sự kiện beforeprint,
- * nên trước khi in phải tự tay: mở hết mục gấp, nong ô nội dung dài cho
- * hiện đủ chữ, và xóa tạm chữ gợi ý để giấy không in ra chúng.
+ * Bản in trên iPhone là ca khó. Safari không phát sự kiện beforeprint, và nó
+ * tự vẽ nền cho các ô nhập theo giao diện tối của app, khiến chữ đen nằm
+ * trên nền đen. CSS không với tới chỗ đó, nên ở đây ta đặt thẳng kiểu lên
+ * từng phần tử trước khi in rồi gỡ ra sau khi in xong.
  */
 
 const SECRET_RE =
@@ -40,8 +38,32 @@ const AUTOSAVE_MS = 900;
 
 type PrintableField = HTMLInputElement | HTMLTextAreaElement;
 
+/** Nhớ lại thuộc tính style cũ để còn trả về nguyên trạng. */
+function rememberStyle(el: HTMLElement) {
+  if (el.dataset.prevStyle === undefined) {
+    el.dataset.prevStyle = el.getAttribute("style") ?? "";
+  }
+}
+
+function restoreStyle(el: HTMLElement) {
+  const prev = el.dataset.prevStyle;
+  if (prev === undefined) return;
+  if (prev === "") el.removeAttribute("style");
+  else el.setAttribute("style", prev);
+  delete el.dataset.prevStyle;
+}
+
 /** Dọn trang trước khi in. Gọi tay, vì iOS không phát beforeprint. */
 function openAllSections() {
+  // Bỏ con trỏ ra khỏi ô đang gõ. Ô đang được chọn hay in ra nền đen.
+  const active = document.activeElement;
+  if (active instanceof HTMLElement) active.blur();
+
+  // Ép toàn trang sang giao diện sáng, nếu không Safari vẽ nền tối cho ô nhập.
+  const root = document.documentElement;
+  rememberStyle(root);
+  root.style.setProperty("color-scheme", "light", "important");
+
   document
     .querySelectorAll<HTMLDetailsElement>("details.nfm-sec")
     .forEach((el) => {
@@ -51,30 +73,59 @@ function openAllSections() {
       }
     });
 
-  // Trên màn hình, ô nội dung dài có thanh cuộn riêng. Giấy thì không cuộn được.
+  // Các khung chứa: dập nền, bóng đổ, hiệu ứng làm mờ.
   document
-    .querySelectorAll<HTMLTextAreaElement>(".nfm textarea")
-    .forEach((el) => {
-      el.dataset.prevHeight = el.style.height;
-      el.style.height = "auto";
-      el.style.height = `${el.scrollHeight}px`;
-    });
-
-  // Chữ gợi ý là để hướng dẫn lúc gõ, không phải để in ra giấy.
-  document
-    .querySelectorAll<PrintableField>(
-      ".nfm input[placeholder], .nfm textarea[placeholder]",
+    .querySelectorAll<HTMLElement>(
+      ".nfm, .nfm-box, .nfm-item, .nfm-item-top, .nfm-field, .nfm-row-grid, details.nfm-sec, .nfm-sec-static",
     )
     .forEach((el) => {
+      rememberStyle(el);
+      el.style.setProperty("background-color", "#ffffff", "important");
+      el.style.setProperty("background-image", "none", "important");
+      el.style.setProperty("box-shadow", "none", "important");
+      el.style.setProperty("filter", "none", "important");
+      el.style.setProperty("backdrop-filter", "none", "important");
+      el.style.setProperty("-webkit-backdrop-filter", "none", "important");
+      el.style.setProperty("opacity", "1", "important");
+    });
+
+  // Từng ô nhập: nền trắng, chữ đen, không chữ gợi ý, hiện đủ chiều cao.
+  document
+    .querySelectorAll<PrintableField>(".nfm input, .nfm textarea")
+    .forEach((el) => {
+      rememberStyle(el);
+
       if (el.placeholder) {
         el.dataset.prevPlaceholder = el.placeholder;
         el.placeholder = "";
+      }
+
+      el.style.setProperty("background-color", "#ffffff", "important");
+      el.style.setProperty("background-image", "none", "important");
+      el.style.setProperty("color", "#000000", "important");
+      el.style.setProperty("-webkit-text-fill-color", "#000000", "important");
+      el.style.setProperty("caret-color", "transparent", "important");
+      el.style.setProperty("box-shadow", "none", "important");
+      el.style.setProperty("filter", "none", "important");
+      el.style.setProperty("opacity", "1", "important");
+      el.style.setProperty("-webkit-appearance", "none", "important");
+      el.style.setProperty("appearance", "none", "important");
+      el.style.setProperty("border", "none", "important");
+      el.style.setProperty("border-bottom", "1px dotted #bbbbbb", "important");
+
+      // Trên màn hình ô dài có thanh cuộn riêng. Giấy thì không cuộn được.
+      if (el instanceof HTMLTextAreaElement) {
+        el.style.setProperty("height", "auto", "important");
+        el.style.setProperty("height", `${el.scrollHeight}px`, "important");
+        el.style.setProperty("overflow", "visible", "important");
       }
     });
 }
 
 /** Trả trang về nguyên trạng sau khi in xong. */
 function restoreSections() {
+  restoreStyle(document.documentElement);
+
   document
     .querySelectorAll<HTMLDetailsElement>("details.nfm-sec")
     .forEach((el) => {
@@ -85,17 +136,15 @@ function restoreSections() {
     });
 
   document
-    .querySelectorAll<HTMLTextAreaElement>(".nfm textarea")
-    .forEach((el) => {
-      if (el.dataset.prevHeight !== undefined) {
-        el.style.height = el.dataset.prevHeight;
-        delete el.dataset.prevHeight;
-      }
-    });
+    .querySelectorAll<HTMLElement>(
+      ".nfm, .nfm-box, .nfm-item, .nfm-item-top, .nfm-field, .nfm-row-grid, details.nfm-sec, .nfm-sec-static",
+    )
+    .forEach(restoreStyle);
 
   document
     .querySelectorAll<PrintableField>(".nfm input, .nfm textarea")
     .forEach((el) => {
+      restoreStyle(el);
       if (el.dataset.prevPlaceholder !== undefined) {
         el.placeholder = el.dataset.prevPlaceholder;
         delete el.dataset.prevPlaceholder;
@@ -272,7 +321,8 @@ export default function NotfallmappePage() {
     // iOS Safari không phát sự kiện beforeprint, nên dọn tay trước khi in.
     openAllSections();
     await persist({ lastPrintedAt: nowIso() });
-    // Cho Safari kịp dựng lại bố cục sau khi mở mục và nong ô nội dung.
+    // Cho Safari kịp dựng lại bố cục sau khi đặt kiểu và nong ô nội dung.
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
     await new Promise<void>((r) => requestAnimationFrame(() => r()));
     window.print();
     window.setTimeout(restoreSections, 1500);
