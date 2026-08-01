@@ -424,11 +424,6 @@ export default function NotfallmappePage() {
           {data.documents.map((doc) => (
             <div className="nfm-item" key={doc.id}>
               <div className="nfm-item-top">
-                <input
-                  value={doc.label}
-                  onChange={(e) => patchDoc(doc.id, { label: e.target.value })}
-                  placeholder="Tên giấy tờ"
-                />
                 <button
                   type="button"
                   className="nfm-del"
@@ -445,11 +440,27 @@ export default function NotfallmappePage() {
                   ✕
                 </button>
               </div>
-              <input
-                value={doc.location}
-                onChange={(e) => patchDoc(doc.id, { location: e.target.value })}
-                placeholder="Nơi cất bản gốc — không ghi mật khẩu"
-              />
+              {/*
+               * Hai ô có nhãn rõ — bản in dùng cùng cấu trúc span + input
+               * như mục 1/2 nên CSS in tự hiện nhãn. Khóa dữ liệu không đổi:
+               * location = nơi cất, label = tên giấy tờ / ghi chú.
+               */}
+              <label className="nfm-field">
+                <span>Bản gốc cất ở đâu</span>
+                <input
+                  value={doc.location}
+                  onChange={(e) => patchDoc(doc.id, { location: e.target.value })}
+                  placeholder="Nơi cất bản gốc — không ghi mật khẩu"
+                />
+              </label>
+              <label className="nfm-field">
+                <span>Ghi chú</span>
+                <input
+                  value={doc.label}
+                  onChange={(e) => patchDoc(doc.id, { label: e.target.value })}
+                  placeholder="Tên giấy tờ hoặc ghi chú thêm"
+                />
+              </label>
             </div>
           ))}
           <button
