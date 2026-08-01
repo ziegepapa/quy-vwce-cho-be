@@ -227,30 +227,76 @@ details.nfm-sec[open] .nfm-chev { transform: rotate(90deg); }
 .nfm-actions { display: flex; }
 .nfm-actions button { flex: 1; margin: 0; min-height: 48px; }
 
-/* ================= Bản in — V10-A4 viết lại ================= */
+/* ================= Bản in A4 — không phụ thuộc theme ================= */
 
 @media print {
-  @page { size: A4 portrait; margin: 12mm; }
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
 
-  /* In đúng màu đã khai báo, không để trình duyệt tự đoán */
-  html, body {
-    background: #fff !important;
+  /*
+   * Reset token màu khi in. Theme mặc định là Premium (tối).
+   * Nếu không reset, var(--surface) / var(--text-primary) vẫn tối → vệt đen.
+   */
+  :root,
+  :root[data-theme="light"],
+  :root[data-theme="dark"],
+  :root[data-theme="premium"] {
+    --bg-base: #ffffff;
+    --surface: #ffffff;
+    --surface-raised: #ffffff;
+    --surface-sunken: #ffffff;
+    --text-primary: #000000;
+    --text-secondary: #222222;
+    --text-tertiary: #555555;
+    --border-subtle: #cccccc;
+    --border-strong: #999999;
+    --primary-600: #000000;
+    --primary-500: #000000;
+    --primary-050: #ffffff;
+    --success-600: #000000;
+    --success-050: #ffffff;
+    --warning-600: #000000;
+    --warning-050: #ffffff;
+    --danger-600: #000000;
+    --danger-050: #ffffff;
+    --hairline: #cccccc;
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-2: #ffffff;
+    --color-text: #000000;
+    --color-text-secondary: #222222;
+    --color-text-muted: #555555;
+    --color-primary: #000000;
+    --color-border: #cccccc;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  /* Gỡ lưới hai cột và chiều rộng tối đa — đây là thủ phạm của mảng xám bên phải */
-  .app-layout {
+  .app-layout,
+  .app-shell,
+  .nfm {
     display: block !important;
-    background: #fff !important;
-  }
-  .app-shell {
-    display: block !important;
+    width: 100% !important;
     max-width: none !important;
-    width: auto !important;
+    min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: #fff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
   }
 
   .collapse-nav,
@@ -265,48 +311,68 @@ details.nfm-sec[open] .nfm-chev { transform: rotate(90deg); }
   .nfm-progress,
   .nfm-print-note,
   .nfm-sec-state,
-  .nfm-chev { display: none !important; }
+  .nfm-chev {
+    display: none !important;
+  }
 
-  .nfm { gap: 10px; background: #fff !important; }
+  .nfm {
+    gap: 10px;
+  }
 
-  /* overflow:hidden làm mục bị cắt cụt khi vắt sang trang mới */
+  /* Cho phép ngắt trang trong thân mục; chỉ giữ tiêu đề không tách khỏi dòng đầu */
   details.nfm-sec,
   .nfm-sec-static {
     overflow: visible !important;
-    background: #fff !important;
-    border: 1px solid #999;
-    border-radius: 0;
+    background: #ffffff !important;
+    border: 1px solid #999999 !important;
+    border-radius: 0 !important;
+    break-inside: auto;
+    page-break-inside: auto;
+    box-shadow: none !important;
+  }
+
+  .nfm-sec > summary,
+  .nfm-sec-static > h2 {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    border-bottom: 1px solid #999999 !important;
+    min-height: 0 !important;
+    padding: 8px 10px !important;
+    break-after: avoid;
+    page-break-after: avoid;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  /* Ép trắng đen tuyệt đối — biến màu của giao diện là nguyên nhân vệt đen */
-  .nfm-sec > summary,
-  .nfm-sec-static > h2 {
-    background: #fff !important;
-    color: #000 !important;
-    border-bottom: 1px solid #999;
-    min-height: 0;
-    padding: 8px 10px;
-    break-after: avoid;
-    page-break-after: avoid;
-  }
   .nfm-sec-num {
-    background: transparent !important;
-    color: #000 !important;
-    border: 1px solid #999;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    border: 1px solid #999999 !important;
   }
-  .nfm-sec-title { color: #000 !important; }
+
+  .nfm-sec-title {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    background: transparent !important;
+  }
 
   .nfm-box,
   .nfm-field,
   .nfm-item,
   .nfm-snap-cell,
   .nfm-goals li {
-    background: #fff !important;
-    color: #000 !important;
-    border-color: #ccc;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #cccccc !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
+
   .nfm-field { padding: 8px 10px; }
   .nfm-item { padding: 8px 10px; }
 
@@ -314,30 +380,43 @@ details.nfm-sec[open] .nfm-chev { transform: rotate(90deg); }
   .nfm-field textarea,
   .nfm-item input {
     border: none !important;
-    border-bottom: 1px dotted #bbb !important;
+    border-bottom: 1px dotted #bbbbbb !important;
+    border-radius: 0 !important;
     background: transparent !important;
-    color: #000 !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
     box-shadow: none !important;
     padding: 0 0 2px !important;
+    min-height: 0 !important;
   }
 
-  /* Ô trống in ra dòng chấm để điền tay, không in chữ gợi ý */
+  /* CSS dự phòng; JS đã xóa placeholder trước khi in */
   .nfm-field input::placeholder,
   .nfm-field textarea::placeholder,
   .nfm-item input::placeholder {
     color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
     opacity: 0 !important;
   }
 
   .nfm-field textarea {
-    min-height: 0;
-    height: auto;
+    min-height: 0 !important;
+    height: auto !important;
     overflow: visible !important;
-    resize: none;
+    resize: none !important;
+    white-space: pre-wrap !important;
   }
 
   .nfm-snap-v,
   .nfm-snap-k,
   .nfm-field > span,
-  .nfm-meta { color: #000 !important; }
+  .nfm-goals span,
+  .nfm-meta {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+  }
+
+  .nfm-row-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
