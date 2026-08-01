@@ -1,4 +1,4 @@
-/* V10-A3 — Notfallmappe: mục gấp, tiến độ, cảnh báo rò rỉ, tự lưu, bản in */
+/* V10-A4 — Notfallmappe: mục gấp, tiến độ, cảnh báo rò rỉ, tự lưu, bản in */
 
 .nfm { display: flex; flex-direction: column; gap: 16px; }
 
@@ -214,7 +214,7 @@ details.nfm-sec[open] .nfm-chev { transform: rotate(90deg); }
 .nfm-goals li:last-child { border-bottom: none; }
 .nfm-goals span { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 
-/* ---------- Chân trang: V10-A3 bỏ thanh dính đáy ---------- */
+/* ---------- Chân trang ---------- */
 
 .nfm-status {
   margin: 0; text-align: center;
@@ -227,9 +227,32 @@ details.nfm-sec[open] .nfm-chev { transform: rotate(90deg); }
 .nfm-actions { display: flex; }
 .nfm-actions button { flex: 1; margin: 0; min-height: 48px; }
 
-/* ---------- Bản in ---------- */
+/* ================= Bản in — V10-A4 viết lại ================= */
 
 @media print {
+  @page { size: A4 portrait; margin: 12mm; }
+
+  /* In đúng màu đã khai báo, không để trình duyệt tự đoán */
+  html, body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Gỡ lưới hai cột và chiều rộng tối đa — đây là thủ phạm của mảng xám bên phải */
+  .app-layout {
+    display: block !important;
+    background: #fff !important;
+  }
+  .app-shell {
+    display: block !important;
+    max-width: none !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
   .collapse-nav,
   .bottom-dock,
   .sidebar,
@@ -244,28 +267,77 @@ details.nfm-sec[open] .nfm-chev { transform: rotate(90deg); }
   .nfm-sec-state,
   .nfm-chev { display: none !important; }
 
-  .app-shell { padding: 0 !important; }
+  .nfm { gap: 10px; background: #fff !important; }
 
-  .nfm { gap: 14px; }
-
+  /* overflow:hidden làm mục bị cắt cụt khi vắt sang trang mới */
   details.nfm-sec,
   .nfm-sec-static {
-    border: 1px solid #999; border-radius: 0;
-    break-inside: avoid; page-break-inside: avoid;
+    overflow: visible !important;
+    background: #fff !important;
+    border: 1px solid #999;
+    border-radius: 0;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
+
+  /* Ép trắng đen tuyệt đối — biến màu của giao diện là nguyên nhân vệt đen */
   .nfm-sec > summary,
   .nfm-sec-static > h2 {
-    border-bottom: 1px solid #999; color: #000;
+    background: #fff !important;
+    color: #000 !important;
+    border-bottom: 1px solid #999;
+    min-height: 0;
+    padding: 8px 10px;
+    break-after: avoid;
+    page-break-after: avoid;
   }
-  .nfm-sec-num { background: transparent; color: #000; }
-  .nfm-sec-title { color: #000; }
+  .nfm-sec-num {
+    background: transparent !important;
+    color: #000 !important;
+    border: 1px solid #999;
+  }
+  .nfm-sec-title { color: #000 !important; }
 
-  .nfm-field, .nfm-item, .nfm-snap-cell, .nfm-goals li { border-color: #ccc; }
+  .nfm-box,
+  .nfm-field,
+  .nfm-item,
+  .nfm-snap-cell,
+  .nfm-goals li {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #ccc;
+  }
+  .nfm-field { padding: 8px 10px; }
+  .nfm-item { padding: 8px 10px; }
+
   .nfm-field input,
   .nfm-field textarea,
   .nfm-item input {
-    border: none; background: transparent; color: #000;
+    border: none !important;
+    border-bottom: 1px dotted #bbb !important;
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    padding: 0 0 2px !important;
   }
-  .nfm-field textarea { min-height: 0; height: auto; }
-  .nfm-snap-v, .nfm-field > span, .nfm-meta { color: #000; }
+
+  /* Ô trống in ra dòng chấm để điền tay, không in chữ gợi ý */
+  .nfm-field input::placeholder,
+  .nfm-field textarea::placeholder,
+  .nfm-item input::placeholder {
+    color: transparent !important;
+    opacity: 0 !important;
+  }
+
+  .nfm-field textarea {
+    min-height: 0;
+    height: auto;
+    overflow: visible !important;
+    resize: none;
+  }
+
+  .nfm-snap-v,
+  .nfm-snap-k,
+  .nfm-field > span,
+  .nfm-meta { color: #000 !important; }
 }
