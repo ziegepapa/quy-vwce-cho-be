@@ -758,3 +758,67 @@ code {
     display: none !important;
   }
 }
+
+/* ===== Print: dập mọi lớp vẽ riêng của Safari (nguồn gốc vệt đen) ===== */
+@media print {
+  .nfm,
+  .nfm *,
+  .app-layout,
+  .app-shell,
+  #root {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+    will-change: auto !important;
+    mix-blend-mode: normal !important;
+    isolation: auto !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    background-image: none !important;
+    background-attachment: scroll !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Trả lại đường kẻ, vì dòng trên đã quét sạch nền của mọi thứ */
+  details.nfm-sec,
+  .nfm-sec-static {
+    border: 1px solid #999999 !important;
+  }
+
+  .nfm-sec > summary,
+  .nfm-sec-static > h2 {
+    border-bottom: 1px solid #999999 !important;
+  }
+
+  .nfm-field,
+  .nfm-item,
+  .nfm-snap-cell,
+  .nfm-goals li {
+    border-bottom: 1px solid #cccccc !important;
+  }
+
+  .nfm-row-grid .nfm-field:first-child,
+  .nfm-snap-cell:nth-child(odd) {
+    border-right: 1px solid #cccccc !important;
+  }
+
+  .nfm-field input,
+  .nfm-field textarea,
+  .nfm-item input {
+    border: none !important;
+    border-bottom: 1px dotted #bbbbbb !important;
+  }
+
+  .nfm-sec-num {
+    border: 1px solid #999999 !important;
+  }
+}
+
