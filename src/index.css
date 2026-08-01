@@ -852,3 +852,84 @@ code {
     color: #000000 !important;
   }
 }
+
+/* ===== Commit 45: dập mọi phần tử giao diện khi in ===== */
+@media print {
+  /* 1. Ẩn triệt để mọi thứ không phải nội dung hồ sơ.
+     Dùng cả thẻ, cả lớp, cả thuộc tính vị trí — để không
+     phụ thuộc vào việc nhớ đúng tên lớp. */
+  nav,
+  aside,
+  footer,
+  header,
+  .sidebar,
+  .bottom-dock,
+  .bottom-nav,
+  .collapse-nav,
+  .dock,
+  .app-layout > *:not(.app-shell),
+  [class*="dock"],
+  [class*="nav"]:not(.nfm):not(.nfm *) {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 2. Không cho bất cứ thứ gì bám dính hay nổi lên trên.
+     Phần tử position:fixed khi in sẽ bị Safari đóng đinh
+     vào một chỗ ngẫu nhiên trong luồng giấy — đó chính là
+     cách khối đen trôi từ trang 2 sang trang 3. */
+  * {
+    position: static !important;
+    float: none !important;
+  }
+
+  /* 3. Nền trắng, chữ đen, không giới hạn bề ngang —
+     lần này áp cho TOÀN BỘ cây, không chỉ .nfm */
+  html,
+  body,
+  #root,
+  #root * {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html,
+  body,
+  #root,
+  .app-layout,
+  .app-shell,
+  .nfm {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  /* 4. Trả lại các đường kẻ mà bước 3 vừa xóa mất */
+  .nfm-sec,
+  details.nfm-sec {
+    border: 1px solid #999999 !important;
+  }
+  .nfm-field,
+  .nfm-item,
+  .nfm-snap-cell,
+  .nfm-goals li {
+    border-bottom: 1px dotted #bbbbbb !important;
+  }
+  .nfm-row-grid .nfm-field:first-child,
+  .nfm-snap-cell:nth-child(odd) {
+    border-right: 1px dotted #bbbbbb !important;
+  }
+  .nfm-sec-num {
+    border: 1px solid #666666 !important;
+  }
+}
