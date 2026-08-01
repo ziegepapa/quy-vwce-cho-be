@@ -423,7 +423,17 @@ export default function NotfallmappePage() {
         <div className="nfm-box">
           {data.documents.map((doc) => (
             <div className="nfm-item" key={doc.id}>
+              {/*
+               * Tên giấy tờ là TIÊU ĐỀ khối — đứng đầu, không phải giá trị ô nhập.
+               * Khóa label giữ nguyên; vẫn sửa được tên.
+               */}
               <div className="nfm-item-top">
+                <input
+                  value={doc.label}
+                  onChange={(e) => patchDoc(doc.id, { label: e.target.value })}
+                  placeholder="Tên giấy tờ"
+                  aria-label="Tên giấy tờ"
+                />
                 <button
                   type="button"
                   className="nfm-del"
@@ -441,26 +451,30 @@ export default function NotfallmappePage() {
                 </button>
               </div>
               {/*
-               * Hai ô có nhãn rõ — bản in dùng cùng cấu trúc span + input
-               * như mục 1/2 nên CSS in tự hiện nhãn. Khóa dữ liệu không đổi:
-               * location = nơi cất, label = tên giấy tờ / ghi chú.
+               * Hai ô cạnh nhau (nfm-row-grid) để mục 4 không chiếm cả trang in.
+               * Chỉ location được lưu — "Ghi chú" là dòng trống để viết tay trên giấy
+               * (schema không có khóa notes; không đổi khóa dữ liệu).
                */}
-              <label className="nfm-field">
-                <span>Bản gốc cất ở đâu</span>
-                <input
-                  value={doc.location}
-                  onChange={(e) => patchDoc(doc.id, { location: e.target.value })}
-                  placeholder="Nơi cất bản gốc — không ghi mật khẩu"
-                />
-              </label>
-              <label className="nfm-field">
-                <span>Ghi chú</span>
-                <input
-                  value={doc.label}
-                  onChange={(e) => patchDoc(doc.id, { label: e.target.value })}
-                  placeholder="Tên giấy tờ hoặc ghi chú thêm"
-                />
-              </label>
+              <div className="nfm-row-grid">
+                <label className="nfm-field">
+                  <span>Bản gốc cất ở đâu</span>
+                  <input
+                    value={doc.location}
+                    onChange={(e) => patchDoc(doc.id, { location: e.target.value })}
+                    placeholder="Nơi cất bản gốc — không ghi mật khẩu"
+                  />
+                </label>
+                <label className="nfm-field">
+                  <span>Ghi chú</span>
+                  <input
+                    defaultValue=""
+                    readOnly
+                    tabIndex={-1}
+                    placeholder="Viết tay trên bản in nếu cần"
+                    aria-label="Ghi chú — dành để viết tay trên bản in"
+                  />
+                </label>
+              </div>
             </div>
           ))}
           <button
