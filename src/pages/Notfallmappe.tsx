@@ -13,7 +13,7 @@ import { buildEquitySeries, formatDateVN, formatMoney } from "../lib/calc";
 import "../styles/notfallmappe.css";
 
 /**
- * V10-A3 — Hồ sơ khẩn cấp.
+ * V10-A4 — Hồ sơ khẩn cấp.
  *
  * Nguyên tắc không thương lượng:
  *  1. Không có ô nhập mật khẩu / PIN / TAN.
@@ -21,8 +21,10 @@ import "../styles/notfallmappe.css";
  *  3. Nội dung có đồng bộ lên máy chủ — nói rõ, không giấu.
  *  4. Máy tự đọc lại nội dung và cảnh báo nếu thấy bí mật lọt vào.
  *
- * V10-A3 bỏ hẳn nút Lưu. Trang tự lưu sau khi ngừng gõ, tự lưu khi rời màn,
- * và hỏi khi đóng tab lúc còn dở. Chân trang chỉ còn một nút In / Lưu PDF.
+ * V10-A3 bỏ hẳn nút Lưu: tự lưu sau khi ngừng gõ, tự lưu khi rời màn,
+ * hỏi khi đóng tab lúc còn dở. Chân trang chỉ còn một nút In / Lưu PDF.
+ *
+ * V10-A4 sửa bản in: mở hết mục gấp VÀ nong ô nội dung dài trước khi in.
  */
 
 const SECRET_RE =
@@ -34,6 +36,13 @@ const IBAN_RE = /\b[A-Z]{2}\s?\d{2}(?:\s?[A-Z0-9]{4}){3,7}\b/;
 /** Ngừng gõ bao lâu thì tự lưu. */
 const AUTOSAVE_MS = 900;
 
+/**
+ * Trước khi in: mở hết mục gấp và nong ô nội dung dài.
+ *
+ * Textarea trên web có thanh cuộn riêng. Giấy thì không cuộn được, nên chữ
+ * vượt quá chiều cao sẽ bị cắt cụt. Phải đo chiều cao thật rồi gán vào,
+ * in xong thì trả lại nguyên trạng.
+ */
 function openAllSections() {
   document
     .querySelectorAll<HTMLDetailsElement>("details.nfm-sec")
@@ -43,6 +52,12 @@ function openAllSections() {
         el.open = true;
       }
     });
+
+  document.querySelectorAll<HTMLTextAreaElement>(".nfm textarea").forEach((el) => {
+    el.dataset.prevHeight = el.style.height;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  });
 }
 
 function restoreSections() {
@@ -54,6 +69,13 @@ function restoreSections() {
         delete el.dataset.reopen;
       }
     });
+
+  document.querySelectorAll<HTMLTextAreaElement>(".nfm textarea").forEach((el) => {
+    if (el.dataset.prevHeight !== undefined) {
+      el.style.height = el.dataset.prevHeight;
+      delete el.dataset.prevHeight;
+    }
+  });
 }
 
 export default function NotfallmappePage() {
