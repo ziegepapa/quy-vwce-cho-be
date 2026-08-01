@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   applyTransaction,
   emptyPortfolio,
@@ -49,11 +49,21 @@ type ProjectOutput = {
   interest: number;
 };
 
+type ContribScope = "y1" | "y2" | "both";
+
+type SnapshotSettings = {
+  contributionY1: number;
+  contributionY2: number;
+  vwceReturn: number;
+  inflationRate: number;
+};
+
 const TAX_RATE = 0.26375; // Abgeltungsteuer + Soli
 const TEILFREISTELLUNG = 0.3; // quỹ cổ phiếu
 const SPARERPAUSCH = 1000; // EUR/năm — áp một lần khi bán cuối kỳ
 const DEFAULT_TER = 0.0022;
 const MAX_YEARS = 40;
+const UNDO_MS = 12_000;
 
 /**
  * Hàm tính cuối kỳ DUY NHẤT — A/B/C đều gọi hàm này.
@@ -106,7 +116,6 @@ function projectEnd(input: ProjectInput): ProjectOutput {
     }
   }
 
-  // Nếu years không tròn (không xảy ra vì floor), vẫn chốt cuối kỳ
   const terminal = round2(balance);
   const contrib = round2(contributed);
   return {
@@ -117,13 +126,16 @@ function projectEnd(input: ProjectInput): ProjectOutput {
   };
 }
 
-/** Thuế lãi vốn Đức ước lượng khi bán cuối kỳ (không mô phỏng Vorabpauschale). */
+/**
+ * Thuế lãi vốn Đức ước lượng khi bán cuối kỳ (không mô phỏng Vorabpauschale).
+ * initialCostBasis = giá vốn danh mục hiện tại (vwceCostBasis + cash), KHÔNG phải giá thị trường.
+ */
 function estimateGermanExitTax(
   terminal: number,
   contributed: number,
-  initialBalance: number,
+  initialCostBasis: number,
 ): { afterTax: number; tax: number } {
-  const costBasis = Math.max(0, contributed + Math.max(0, initialBalance));
+  const costBasis = Math.max(0, contributed + Math.max(0, initialCostBasis));
   const gain = Math.max(0, terminal - costBasis);
   const afterTeil = gain * (1 - TEILFREISTELLUNG);
   const taxable = Math.max(0, afterTeil - SPARERPAUSCH);
@@ -137,13 +149,11 @@ function findMonthlyForTarget(
   base: Omit<ProjectInput, "monthlyContribution">,
 ): number {
   if (target <= 0 || base.years <= 0) return 0;
-  // Đã đủ từ số dư + lump
   const zero = projectEnd({ ...base, monthlyContribution: 0 });
   if (zero.terminal >= target) return 0;
 
   let lo = 0;
   let hi = Math.max(target, 1);
-  // Mở biên trên nếu cần
   for (let i = 0; i < 20; i++) {
     const r = projectEnd({ ...base, monthlyContribution: hi });
     if (r.terminal >= target) break;
@@ -215,6 +225,21 @@ export default function Simulation() {
   const [targetAmount, setTargetAmount] = useState("50000");
   const [targetYear, setTargetYear] = useState(String(new Date().getFullYear() + 15));
 
+  // [1] Lưu kế hoạch — xác nhận + hoàn tác
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [contribScope, setContribScope] = useState<ContribScope>("y1");
+  const [writeVwceReturn, setWriteVwceReturn] = useState(false);
+  const [writeInflation, setWriteInflation] = useState(false);
+  const [undoSnap, setUndoSnap] = useState<SnapshotSettings | null>(null);
+  const [undoVisible, setUndoVisible] = useState(false);
+  const undoTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current != null) window.clearTimeout(undoTimerRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     (async () => {
       const s = await getSettings();
@@ -223,7 +248,6 @@ export default function Simulation() {
       setTxs(await listTransactions());
       if (s.contributionY1 > 0) setMonthly(String(s.contributionY1));
       if (s.inflationRate > 0) setInflationPct(String(round2(s.inflationRate * 100)));
-      // Ước số năm từ endDate nếu có
       if (s.endDate) {
         const end = parseDate(s.endDate);
         const now = new Date();
@@ -238,19 +262,32 @@ export default function Simulation() {
     })();
   }, []);
 
-  const realBalance = useMemo(() => {
+  const portfolio = useMemo(() => {
     let p = emptyPortfolio();
     for (const t of [...txs].sort((a, b) => (a.date < b.date ? -1 : 1))) {
       p = applyTransaction(p, t);
     }
+    return p;
+  }, [txs]);
+
+  const realBalance = useMemo(() => {
     const price = settings?.latestVwcePrice ?? 0;
-    return round2(p.vwceQty * price + p.cashBalance);
-  }, [txs, settings]);
+    return round2(portfolio.vwceQty * price + portfolio.cashBalance);
+  }, [portfolio, settings]);
+
+  // Giá vốn danh mục (vwceCostBasis + tiền mặt mệnh giá) — dùng cho thuế, không dùng giá thị trường
+  const realCostBasis = useMemo(
+    () => round2(Math.max(0, portfolio.vwceCostBasis) + Math.max(0, portfolio.cashBalance)),
+    [portfolio],
+  );
 
   const initialBalance = useMemo(() => {
     if (balanceOverride.trim() !== "") return Math.max(0, parseDecimal(balanceOverride));
     return Math.max(0, realBalance);
   }, [balanceOverride, realBalance]);
+
+  // Khi ghi đè số dư thị trường, không suy diễn giá vốn — giữ giá vốn thật nếu còn danh mục
+  const initialCostBasis = realCostBasis;
 
   const monthlyN = Math.max(0, parseDecimal(monthly));
   const growthN = growthOn ? Math.max(0, parseDecimal(growthPct) / 100) : 0;
@@ -259,7 +296,6 @@ export default function Simulation() {
   const targetN = Math.max(0, parseDecimal(targetAmount));
   const ter = taxOn ? DEFAULT_TER : 0;
 
-  // Chế độ B: số năm = targetYear - năm hiện tại
   const yearsB = useMemo(() => {
     const ty = Number(targetYear) || new Date().getFullYear();
     return Math.max(1, Math.min(MAX_YEARS, ty - new Date().getFullYear()));
@@ -277,7 +313,6 @@ export default function Simulation() {
     [initialBalance, lumpN, growthN, ter],
   );
 
-  // Chế độ B: monthly cần cho từng kịch bản (dùng rate cơ sở để điền ô góp)
   const requiredMonthlyBase = useMemo(() => {
     if (mode !== "B") return monthlyN;
     const baseRate = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
@@ -290,7 +325,6 @@ export default function Simulation() {
 
   const monthlyForProject = mode === "B" ? requiredMonthlyBase : monthlyN;
 
-  // Chế độ C: số năm tới mục tiêu theo kịch bản cơ sở
   const yearsC = useMemo(() => {
     if (mode !== "C") return { years: effectiveYears, reached: true };
     const baseRate = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
@@ -312,7 +346,7 @@ export default function Simulation() {
         annualReturn: sc.rate,
       });
       const tax = taxOn
-        ? estimateGermanExitTax(out.terminal, out.contributed, initialBalance)
+        ? estimateGermanExitTax(out.terminal, out.contributed, initialCostBasis)
         : { tax: 0, afterTax: out.terminal };
       const pp = inflationOn
         ? purchasingPower(out.terminal, inflationN, yearsForProject)
@@ -330,7 +364,7 @@ export default function Simulation() {
     taxOn,
     inflationOn,
     inflationN,
-    initialBalance,
+    initialCostBasis,
   ]);
 
   const primary = results.find((r) => r.sc.id === "base") ?? results[1] ?? results[0];
@@ -359,14 +393,70 @@ export default function Simulation() {
     if (g.amount > 0) setTargetAmount(String(g.amount));
   }
 
-  async function persistPlan() {
+  function openSaveConfirm() {
+    setContribScope("y1");
+    setWriteVwceReturn(false);
+    setWriteInflation(false);
+    setSaveOpen(true);
+  }
+
+  async function confirmPersist() {
+    const current = settings ?? (await getSettings());
+    const snap: SnapshotSettings = {
+      contributionY1: current.contributionY1,
+      contributionY2: current.contributionY2,
+      vwceReturn: current.vwceReturn,
+      inflationRate: current.inflationRate,
+    };
+
+    const partial: Partial<AppSettings> = {};
+    if (contribScope === "y1" || contribScope === "both") {
+      partial.contributionY1 = monthlyForProject;
+    }
+    if (contribScope === "y2" || contribScope === "both") {
+      partial.contributionY2 = monthlyForProject;
+    }
+    if (writeVwceReturn) {
+      partial.vwceReturn = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
+    }
+    if (writeInflation) {
+      partial.inflationRate = inflationN;
+    }
+
+    if (Object.keys(partial).length === 0) {
+      setSaveOpen(false);
+      return;
+    }
+
+    await saveSettings(partial);
+    setSettings(await getSettings());
+    setSaveOpen(false);
+
+    setUndoSnap(snap);
+    setUndoVisible(true);
+    if (undoTimerRef.current != null) window.clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = window.setTimeout(() => {
+      setUndoVisible(false);
+      setUndoSnap(null);
+      undoTimerRef.current = null;
+    }, UNDO_MS);
+  }
+
+  async function undoPersist() {
+    if (!undoSnap) return;
     await saveSettings({
-      contributionY1: monthlyForProject,
-      contributionY2: monthlyForProject,
-      vwceReturn: scenarios.find((s) => s.id === "base")?.rate ?? 0.065,
-      inflationRate: inflationN,
+      contributionY1: undoSnap.contributionY1,
+      contributionY2: undoSnap.contributionY2,
+      vwceReturn: undoSnap.vwceReturn,
+      inflationRate: undoSnap.inflationRate,
     });
     setSettings(await getSettings());
+    setUndoVisible(false);
+    setUndoSnap(null);
+    if (undoTimerRef.current != null) {
+      window.clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
   }
 
   if (loading) {
@@ -383,9 +473,14 @@ export default function Simulation() {
     inflationOn,
   });
 
+  const baseRateNew = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
+  const oldY1 = settings?.contributionY1 ?? 0;
+  const oldY2 = settings?.contributionY2 ?? 0;
+  const oldVwce = settings?.vwceReturn ?? 0;
+  const oldInf = settings?.inflationRate ?? 0;
+
   return (
     <div className="stack" style={{ gap: 16 }}>
-      {/* Tab chế độ */}
       <div
         role="tablist"
         aria-label="Chế độ mô phỏng"
@@ -425,7 +520,6 @@ export default function Simulation() {
         {mode === "C" && "Góp cố định — máy tính bao lâu để đủ mục tiêu (tối đa 40 năm)."}
       </p>
 
-      {/* Thời hạn */}
       {(mode === "A" || mode === "C") && (
         <div className="card">
           <div className="field">
@@ -473,7 +567,6 @@ export default function Simulation() {
               ))}
             </div>
           )}
-          {/* Ngày sinh bé không có trong schema → ẩn nút 18/25 tuổi */}
         </div>
       )}
 
@@ -535,7 +628,6 @@ export default function Simulation() {
         </div>
       )}
 
-      {/* Góp & số dư */}
       <div className="card">
         {(mode === "A" || mode === "C") && (
           <div className="field">
@@ -605,7 +697,6 @@ export default function Simulation() {
         </div>
       </div>
 
-      {/* Ba kịch bản */}
       <div className="card">
         <p className="section-title" style={{ marginTop: 0 }}>
           Lợi nhuận / năm (sửa được)
@@ -624,7 +715,6 @@ export default function Simulation() {
         ))}
       </div>
 
-      {/* Lạm phát & thuế */}
       <div className="card">
         <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
           <span>Hiện theo sức mua hôm nay</span>
@@ -658,14 +748,12 @@ export default function Simulation() {
         </label>
       </div>
 
-      {/* Kết quả chế độ C không đạt */}
       {mode === "C" && !yearsC.reached && (
         <div className="banner" style={{ margin: 0 }}>
           Không đạt được trong {MAX_YEARS} năm với mức góp và lợi nhuận hiện tại.
         </div>
       )}
 
-      {/* Bốn số lớn — kịch bản cơ sở */}
       {primary && (
         <div className="card">
           <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
@@ -681,6 +769,13 @@ export default function Simulation() {
               <div className="metric-label">Tổng đã góp</div>
               <div className="metric-value">{formatMoney(primary.out.contributed)}</div>
             </div>
+            {/* [2] Chỉ hiện khi có số dư xuất phát — để bốn số cộng khớp */}
+            {initialBalance > 0 && (
+              <div>
+                <div className="metric-label">Số dư xuất phát</div>
+                <div className="metric-value">{formatMoney(initialBalance)}</div>
+              </div>
+            )}
             <div>
               <div className="metric-label">Phần lãi</div>
               <div className="metric-value">{formatMoney(Math.max(0, primary.out.interest))}</div>
@@ -709,7 +804,6 @@ export default function Simulation() {
         </div>
       )}
 
-      {/* Biểu đồ SVG ba kịch bản */}
       <div className="card">
         <p className="section-title" style={{ marginTop: 0 }}>
           Diễn biến theo năm
@@ -734,7 +828,6 @@ export default function Simulation() {
         </div>
       </div>
 
-      {/* Bảng theo năm — thu gọn */}
       <details className="card">
         <summary style={{ minHeight: 44, cursor: "pointer" }}>Bảng theo năm</summary>
         <div style={{ overflowX: "auto" }}>
@@ -773,9 +866,96 @@ export default function Simulation() {
         Ước tính, không phải tư vấn đầu tư hay thuế.
       </p>
 
-      <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={() => void persistPlan()}>
+      <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={openSaveConfirm}>
         Lưu mức góp & lợi nhuận cơ sở vào kế hoạch
       </button>
+
+      {undoVisible && undoSnap && (
+        <div className="banner" style={{ margin: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span>Đã lưu vào kế hoạch.</span>
+          <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={() => void undoPersist()}>
+            Hoàn tác
+          </button>
+        </div>
+      )}
+
+      {saveOpen && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal">
+            <div className="sheet-handle" aria-hidden />
+            <h2>Xác nhận lưu vào kế hoạch</h2>
+            <p className="muted" style={{ fontSize: 13 }}>
+              Chọn trường nào được ghi. Giá trị cũ → mới:
+            </p>
+            <ul style={{ fontSize: 14, paddingLeft: 18, margin: "8px 0 16px" }}>
+              <li>
+                Đóng góp năm 1: {formatMoney(oldY1)} → {formatMoney(monthlyForProject)}
+              </li>
+              <li>
+                Đóng góp từ năm 2: {formatMoney(oldY2)} → {formatMoney(monthlyForProject)}
+              </li>
+              <li>
+                Lợi nhuận VWCE: {(oldVwce * 100).toFixed(2)}% → {(baseRateNew * 100).toFixed(2)}%
+              </li>
+              <li>
+                Lạm phát: {(oldInf * 100).toFixed(2)}% → {(inflationN * 100).toFixed(2)}%
+              </li>
+            </ul>
+
+            <p className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+              Phạm vi đóng góp
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+              {(
+                [
+                  ["y1", "Chỉ năm 1"],
+                  ["y2", "Chỉ từ năm 2"],
+                  ["both", "Cả hai"],
+                ] as const
+              ).map(([id, label]) => (
+                <label key={id} className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
+                  <span>{label}</span>
+                  <input
+                    type="radio"
+                    name="contrib-scope"
+                    checked={contribScope === id}
+                    onChange={() => setContribScope(id)}
+                    style={{ width: 22, height: 22 }}
+                  />
+                </label>
+              ))}
+            </div>
+
+            <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
+              <span>Ghi lợi nhuận VWCE (cơ sở)</span>
+              <input
+                type="checkbox"
+                checked={writeVwceReturn}
+                onChange={(e) => setWriteVwceReturn(e.target.checked)}
+                style={{ width: 24, height: 24 }}
+              />
+            </label>
+            <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
+              <span>Ghi tỷ lệ lạm phát</span>
+              <input
+                type="checkbox"
+                checked={writeInflation}
+                onChange={(e) => setWriteInflation(e.target.checked)}
+                style={{ width: 24, height: 24 }}
+              />
+            </label>
+
+            <div className="stack" style={{ marginTop: 16 }}>
+              <button type="button" style={{ minHeight: 44 }} onClick={() => void confirmPersist()}>
+                Xác nhận lưu
+              </button>
+              <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={() => setSaveOpen(false)}>
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -871,7 +1051,6 @@ function ScenarioChart({
       aria-label="Biểu đồ tài sản theo năm, ba kịch bản"
       style={{ display: "block" }}
     >
-      {/* Vùng kịch bản thuận lợi (nhạt) rồi cơ sở rồi thận trọng */}
       {[...results].reverse().map((r) => (
         <path
           key={`a-${r.sc.id}`}
