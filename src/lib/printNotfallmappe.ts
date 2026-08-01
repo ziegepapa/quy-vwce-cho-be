@@ -22,8 +22,8 @@ const REMOVE_SELECTORS = [
 
 /**
  * CSS chỉ dùng trong iframe in — không lấy CSS app.
- * Trình bày kiểu biểu mẫu: chỉ đường kẻ ngang.
- * Không dùng viền dọc — khi mục chia trang, cạnh dọc sẽ chạy hụt mép giấy.
+ * Thẩm mỹ tài liệu hiện đại: thứ bậc bằng khoảng trắng và chữ, không chồng đường kẻ.
+ * Cấm border-left / border-right — đường dọc bị cắt khi chẻ trang.
  */
 const PRINT_CSS = `
   @page { size: A4 portrait; margin: 14mm; }
@@ -34,7 +34,7 @@ const PRINT_CSS = `
     margin: 0;
     padding: 0;
     background: #ffffff;
-    color: #000000;
+    color: #1a1a1a;
     font-family: -apple-system, "SF Pro Text", system-ui, "Segoe UI", sans-serif;
     font-size: 11pt;
     line-height: 1.45;
@@ -47,43 +47,41 @@ const PRINT_CSS = `
     width: 100%;
   }
 
-  /* Mục: chỉ kẻ ngang trên/dưới, không khung hộp, không cạnh dọc */
+  /* Mục: không khung, không đường trên/dưới — chỉ khoảng trắng giữa các mục */
   .nfm-sec,
   .nfm-sec-static {
     display: block;
-    margin: 0 0 14pt;
+    margin: 0 0 20pt;
     padding: 0;
     background: #ffffff;
     border: none;
-    border-top: 1.5pt solid #222222;
-    border-bottom: 1.5pt solid #222222;
-    border-left: none;
-    border-right: none;
     border-radius: 0;
     break-inside: auto;
     page-break-inside: auto;
   }
 
-  /* Tiêu đề: dải xám nhạt hết bề ngang; không bỏ lại một mình cuối trang */
+  /* Tiêu đề: đúng một đường kẻ dưới; không nền xám; không bỏ lại cuối trang */
   .print-head,
+  .sheet-sec-head,
   .nfm-sec-static > h2 {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 0;
-    padding: 7pt 0;
+    margin: 0 0 6pt;
+    padding: 0 0 6pt;
     border: none;
+    border-bottom: 0.75pt solid #1a1a1a;
     font-size: 12pt;
     font-weight: 600;
-    color: #000000;
-    background: #eeeeee;
+    color: #1a1a1a;
+    background: transparent;
     break-after: avoid;
     page-break-after: avoid;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  /* Số mục: chữ thường, không ô viền (viền sẽ tạo cạnh dọc) */
+  /* Số mục: chữ nhạt, không ô viền */
   .nfm-sec-num {
     display: inline;
     min-width: 0;
@@ -91,14 +89,17 @@ const PRINT_CSS = `
     padding: 0;
     border: none;
     background: transparent;
-    font-size: 12pt;
-    font-weight: 700;
+    font-size: 11pt;
+    font-weight: 500;
+    color: #9a9a9a;
+    font-variant-numeric: tabular-nums;
   }
 
   .nfm-sec-title {
     flex: 1;
     font-size: 12pt;
     font-weight: 600;
+    color: #1a1a1a;
   }
 
   .nfm-box {
@@ -106,119 +107,128 @@ const PRINT_CSS = `
     border: none;
   }
 
-  /* Mỗi ô: kẻ mảnh dưới; ô cuối mục không kẻ */
+  /* Ô: không vách ngăn giữa các ô — chỉ dòng viết tay trên .print-value */
   .nfm-field {
     display: block;
-    padding: 7pt 0;
+    padding: 8pt 0 4pt;
     border: none;
-    border-bottom: 0.5pt solid #cccccc;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   .nfm-field:last-child {
-    border-bottom: none;
-  }
-
-  .nfm-field > span {
-    display: block;
-    font-size: 9pt;
-    font-weight: 500;
-    color: #333333;
-    margin-bottom: 3pt;
-  }
-
-  /* Hai cột: chỉ khoảng trống, không viền dọc */
-  .nfm-row-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 16pt;
     border: none;
   }
 
-  .nfm-row-grid .nfm-field {
-    border-right: none;
+  /* Nhãn ô: viết hoa, nhỏ, xám */
+  .nfm-field > span {
+    display: block;
+    font-size: 7pt;
+    font-weight: 600;
+    letter-spacing: 0.55pt;
+    text-transform: uppercase;
+    color: #9a9a9a;
+    margin-bottom: 3pt;
   }
 
+  /* Hai cột: khoảng trống, không viền */
+  .nfm-row-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 18pt;
+    border: none;
+  }
+
+  .nfm-row-grid .nfm-field,
   .nfm-row-grid .nfm-field:first-child {
-    border-right: none;
+    border: none;
   }
 
   .nfm-item {
     display: block;
-    padding: 7pt 0;
+    padding: 8pt 0 4pt;
     border: none;
-    border-bottom: 0.5pt solid #cccccc;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   .nfm-item:last-child {
-    border-bottom: none;
+    border: none;
   }
 
   .nfm-item-top {
     display: block;
-    margin-bottom: 3pt;
+    margin-bottom: 4pt;
     border: none;
   }
 
-  /* Giá trị tĩnh: có chữ in chữ; trống chỉ đường chấm */
-  .print-value {
+  /*
+   * Đúng một đường viết tay dưới giá trị.
+   * Không đường chấm + đường liền chồng nhau.
+   */
+  .print-value,
+  .pv,
+  .pv-multi {
     display: block;
     white-space: pre-wrap;
     word-break: break-word;
-    color: #000000;
+    color: #1a1a1a;
     font-size: 11pt;
     min-height: 14pt;
-    padding-bottom: 2pt;
+    padding: 0 0 3pt;
+    margin: 0 0 2pt;
     border: none;
-    border-bottom: 1pt dotted #aaaaaa;
+    border-bottom: 0.5pt solid #dcdcdc;
+    font-variant-numeric: tabular-nums;
   }
 
-  .print-value.print-empty {
+  .print-value.print-empty,
+  .pv-empty {
     min-height: 16pt;
     color: transparent;
   }
 
+  /* Mục 6: flex hai cột, số liệu nổi */
   .nfm-snap {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 16pt;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10pt 24pt;
     border: none;
+    padding: 4pt 0 0;
   }
 
   .nfm-snap-cell {
-    padding: 7pt 0;
+    flex: 1 1 40%;
+    min-width: 35%;
+    padding: 4pt 0;
     border: none;
-    border-bottom: 0.5pt solid #cccccc;
   }
 
   .nfm-snap-cell:nth-child(odd) {
-    border-right: none;
+    border: none;
   }
 
   .nfm-snap-k {
     display: block;
-    font-size: 8pt;
+    font-size: 7pt;
     font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.55pt;
     text-transform: uppercase;
-    color: #555555;
+    color: #9a9a9a;
     margin-bottom: 2pt;
   }
 
   .nfm-snap-v {
     display: block;
-    font-size: 12pt;
+    font-size: 13pt;
     font-weight: 600;
-    color: #000000;
+    color: #1a1a1a;
     font-variant-numeric: tabular-nums;
   }
 
   .nfm-goals {
     list-style: none;
-    margin: 0;
+    margin: 8pt 0 0;
     padding: 0;
     border: none;
   }
@@ -227,11 +237,11 @@ const PRINT_CSS = `
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    padding: 7pt 0;
+    padding: 5pt 0;
     border: none;
-    border-bottom: 0.5pt solid #cccccc;
+    border-bottom: 0.5pt solid #dcdcdc;
     font-size: 10pt;
-    color: #000000;
+    color: #1a1a1a;
   }
 
   .nfm-goals li:last-child {
@@ -239,8 +249,15 @@ const PRINT_CSS = `
   }
 
   .nfm-goals span {
-    color: #333333;
+    color: #5a5a5a;
     font-variant-numeric: tabular-nums;
+  }
+
+  .sheet-head,
+  .sheet-foot {
+    border: none;
+    color: #9a9a9a;
+    font-size: 8pt;
   }
 `;
 
@@ -271,7 +288,7 @@ function replaceFieldsWithStaticText(
     if (value.trim()) {
       div.textContent = value;
     } else {
-      // Ô trống: chỉ đường chấm (CSS border-bottom), không chữ
+      // Ô trống: chỉ đường kẻ để viết tay, không chữ
       div.textContent = "\u00a0";
     }
     clone.replaceWith(div);
