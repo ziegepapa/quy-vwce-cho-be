@@ -22,8 +22,9 @@ const REMOVE_SELECTORS = [
 
 /**
  * CSS chỉ dùng trong iframe in — không lấy CSS app.
- * Thẩm mỹ tài liệu hiện đại: thứ bậc bằng khoảng trắng và chữ, không chồng đường kẻ.
+ * Ưu tiên dễ đọc (tiếng Việt có dấu, người lớn tuổi) hơn trang trí.
  * Cấm border-left / border-right — đường dọc bị cắt khi chẻ trang.
+ * Cấm text-transform: uppercase — dấu thanh bị ép, 7pt gần như không đọc được.
  */
 const PRINT_CSS = `
   @page { size: A4 portrait; margin: 14mm; }
@@ -47,7 +48,7 @@ const PRINT_CSS = `
     width: 100%;
   }
 
-  /* Mục: không khung, không đường trên/dưới — chỉ khoảng trắng giữa các mục */
+  /* Mục: không khung — chỉ khoảng trắng giữa các mục */
   .nfm-sec,
   .nfm-sec-static {
     display: block;
@@ -60,7 +61,7 @@ const PRINT_CSS = `
     page-break-inside: auto;
   }
 
-  /* Tiêu đề: đúng một đường kẻ dưới; không nền xám; không bỏ lại cuối trang */
+  /* Tiêu đề: đúng một đường kẻ dưới; không nền xám */
   .print-head,
   .sheet-sec-head,
   .nfm-sec-static > h2 {
@@ -81,7 +82,7 @@ const PRINT_CSS = `
     page-break-inside: avoid;
   }
 
-  /* Số mục: chữ nhạt, không ô viền */
+  /* Số mục: đủ đậm để nhìn thấy, không ô viền */
   .nfm-sec-num {
     display: inline;
     min-width: 0;
@@ -90,8 +91,8 @@ const PRINT_CSS = `
     border: none;
     background: transparent;
     font-size: 11pt;
-    font-weight: 500;
-    color: #9a9a9a;
+    font-weight: 600;
+    color: #8a8a8a;
     font-variant-numeric: tabular-nums;
   }
 
@@ -107,10 +108,13 @@ const PRINT_CSS = `
     border: none;
   }
 
-  /* Ô: không vách ngăn giữa các ô — chỉ dòng viết tay trên .print-value */
+  /*
+   * Ô: padding-bottom lớn hơn margin nhãn,
+   * để mắt phân biệt rõ khoảng trong ô và khoảng giữa hai ô.
+   */
   .nfm-field {
     display: block;
-    padding: 8pt 0 4pt;
+    padding: 8pt 0 15pt;
     border: none;
     break-inside: avoid;
     page-break-inside: avoid;
@@ -120,14 +124,21 @@ const PRINT_CSS = `
     border: none;
   }
 
-  /* Nhãn ô: viết hoa, nhỏ, xám */
-  .nfm-field > span {
+  /*
+   * Nhãn tiếng Việt: không viết hoa (dấu thanh bị ép),
+   * cỡ 8pt, màu đủ đậm để in ra giấy.
+   */
+  .nfm-field > span,
+  .nfm-field > span:first-child,
+  .nfm-item-top,
+  .pv-label,
+  .nfm-snap-k {
     display: block;
-    font-size: 7pt;
+    font-size: 8pt;
     font-weight: 600;
-    letter-spacing: 0.55pt;
-    text-transform: uppercase;
-    color: #9a9a9a;
+    letter-spacing: 0.1pt;
+    text-transform: none;
+    color: #6b6b6b;
     margin-bottom: 3pt;
   }
 
@@ -146,7 +157,7 @@ const PRINT_CSS = `
 
   .nfm-item {
     display: block;
-    padding: 8pt 0 4pt;
+    padding: 8pt 0 15pt;
     border: none;
     break-inside: avoid;
     page-break-inside: avoid;
@@ -157,15 +168,11 @@ const PRINT_CSS = `
   }
 
   .nfm-item-top {
-    display: block;
-    margin-bottom: 4pt;
+    margin-bottom: 3pt;
     border: none;
   }
 
-  /*
-   * Đúng một đường viết tay dưới giá trị.
-   * Không đường chấm + đường liền chồng nhau.
-   */
+  /* Đúng một đường viết tay dưới giá trị */
   .print-value,
   .pv,
   .pv-multi {
@@ -208,16 +215,6 @@ const PRINT_CSS = `
     border: none;
   }
 
-  .nfm-snap-k {
-    display: block;
-    font-size: 7pt;
-    font-weight: 600;
-    letter-spacing: 0.55pt;
-    text-transform: uppercase;
-    color: #9a9a9a;
-    margin-bottom: 2pt;
-  }
-
   .nfm-snap-v {
     display: block;
     font-size: 13pt;
@@ -256,7 +253,7 @@ const PRINT_CSS = `
   .sheet-head,
   .sheet-foot {
     border: none;
-    color: #9a9a9a;
+    color: #6b6b6b;
     font-size: 8pt;
   }
 `;
