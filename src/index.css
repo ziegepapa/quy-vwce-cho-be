@@ -723,3 +723,38 @@ code {
   --border: var(--color-border);
   --shadow: var(--shadow-md);
 }
+
+/* ===== Print shell — luôn trong bundle chính (chống SW cache CSS route cũ) ===== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100% !important;
+    max-width: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .app-layout,
+  .app-shell {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .collapse-nav,
+  .bottom-dock,
+  .sidebar,
+  .bottom-nav {
+    display: none !important;
+  }
+}
