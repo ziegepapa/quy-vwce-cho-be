@@ -20,7 +20,11 @@ const REMOVE_SELECTORS = [
   ".nfm-chev",
 ] as const;
 
-/** CSS chỉ dùng trong iframe in — không lấy CSS app. */
+/**
+ * CSS chỉ dùng trong iframe in — không lấy CSS app.
+ * Trình bày kiểu biểu mẫu: chỉ đường kẻ ngang.
+ * Không dùng viền dọc — khi mục chia trang, cạnh dọc sẽ chạy hụt mép giấy.
+ */
 const PRINT_CSS = `
   @page { size: A4 portrait; margin: 14mm; }
 
@@ -43,42 +47,52 @@ const PRINT_CSS = `
     width: 100%;
   }
 
+  /* Mục: chỉ kẻ ngang trên/dưới, không khung hộp, không cạnh dọc */
   .nfm-sec,
   .nfm-sec-static {
     display: block;
-    border: 1px solid #999999;
-    margin: 0 0 10pt;
+    margin: 0 0 14pt;
+    padding: 0;
     background: #ffffff;
+    border: none;
+    border-top: 1.5pt solid #222222;
+    border-bottom: 1.5pt solid #222222;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
     break-inside: auto;
     page-break-inside: auto;
   }
 
+  /* Tiêu đề: dải xám nhạt hết bề ngang; không bỏ lại một mình cuối trang */
   .print-head,
   .nfm-sec-static > h2 {
     display: flex;
     align-items: center;
     gap: 8px;
     margin: 0;
-    padding: 8pt 10pt;
-    border-bottom: 1px solid #999999;
+    padding: 7pt 0;
+    border: none;
     font-size: 12pt;
     font-weight: 600;
     color: #000000;
-    background: #ffffff;
+    background: #eeeeee;
     break-after: avoid;
     page-break-after: avoid;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
+  /* Số mục: chữ thường, không ô viền (viền sẽ tạo cạnh dọc) */
   .nfm-sec-num {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 4px;
-    border: 1px solid #999999;
-    font-size: 9pt;
-    font-weight: 600;
+    display: inline;
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-size: 12pt;
+    font-weight: 700;
   }
 
   .nfm-sec-title {
@@ -89,12 +103,15 @@ const PRINT_CSS = `
 
   .nfm-box {
     display: block;
+    border: none;
   }
 
+  /* Mỗi ô: kẻ mảnh dưới; ô cuối mục không kẻ */
   .nfm-field {
     display: block;
-    padding: 8pt 10pt;
-    border-bottom: 1px solid #dddddd;
+    padding: 7pt 0;
+    border: none;
+    border-bottom: 0.5pt solid #cccccc;
     break-inside: avoid;
     page-break-inside: avoid;
   }
@@ -108,22 +125,30 @@ const PRINT_CSS = `
     font-size: 9pt;
     font-weight: 500;
     color: #333333;
-    margin-bottom: 4pt;
+    margin-bottom: 3pt;
   }
 
+  /* Hai cột: chỉ khoảng trống, không viền dọc */
   .nfm-row-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 0 16pt;
+    border: none;
+  }
+
+  .nfm-row-grid .nfm-field {
+    border-right: none;
   }
 
   .nfm-row-grid .nfm-field:first-child {
-    border-right: 1px solid #dddddd;
+    border-right: none;
   }
 
   .nfm-item {
     display: block;
-    padding: 8pt 10pt;
-    border-bottom: 1px solid #dddddd;
+    padding: 7pt 0;
+    border: none;
+    border-bottom: 0.5pt solid #cccccc;
     break-inside: avoid;
     page-break-inside: avoid;
   }
@@ -134,9 +159,11 @@ const PRINT_CSS = `
 
   .nfm-item-top {
     display: block;
-    margin-bottom: 4pt;
+    margin-bottom: 3pt;
+    border: none;
   }
 
+  /* Giá trị tĩnh: có chữ in chữ; trống chỉ đường chấm */
   .print-value {
     display: block;
     white-space: pre-wrap;
@@ -145,7 +172,8 @@ const PRINT_CSS = `
     font-size: 11pt;
     min-height: 14pt;
     padding-bottom: 2pt;
-    border-bottom: 1px dotted #bbbbbb;
+    border: none;
+    border-bottom: 1pt dotted #aaaaaa;
   }
 
   .print-value.print-empty {
@@ -156,15 +184,18 @@ const PRINT_CSS = `
   .nfm-snap {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 0 16pt;
+    border: none;
   }
 
   .nfm-snap-cell {
-    padding: 8pt 10pt;
-    border-bottom: 1px solid #dddddd;
+    padding: 7pt 0;
+    border: none;
+    border-bottom: 0.5pt solid #cccccc;
   }
 
   .nfm-snap-cell:nth-child(odd) {
-    border-right: 1px solid #dddddd;
+    border-right: none;
   }
 
   .nfm-snap-k {
@@ -189,14 +220,16 @@ const PRINT_CSS = `
     list-style: none;
     margin: 0;
     padding: 0;
+    border: none;
   }
 
   .nfm-goals li {
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    padding: 8pt 10pt;
-    border-bottom: 1px solid #dddddd;
+    padding: 7pt 0;
+    border: none;
+    border-bottom: 0.5pt solid #cccccc;
     font-size: 10pt;
     color: #000000;
   }
