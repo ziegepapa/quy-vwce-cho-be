@@ -4,6 +4,10 @@
  * iOS Safari phóng bố cục màn hình lên A4. Ô input/textarea do trình duyệt
  * tự vẽ — CSS không kiểm soát được — nên khi phóng lớn (máy dọc) sinh vệt đen.
  * Cách đúng: không in giao diện app; dựng khung in riêng chỉ có chữ tĩnh.
+ *
+ * Giá trị ô: cloneNode không mang value. Phải ghi data-print-value lên bản sao
+ * NGAY sau clone, khi hai cây còn giống hệt — không ghép theo chỉ số sau khi
+ * đã xóa nút/lọc phần tử (sẽ lệch và trượt giá trị sang ô kế).
  */
 
 const REMOVE_SELECTORS = [
@@ -19,6 +23,8 @@ const REMOVE_SELECTORS = [
   ".nfm-sec-state",
   ".nfm-chev",
 ] as const;
+
+const FIELD_SELECTOR = "input, textarea, select";
 
 /**
  * CSS chỉ dùng trong iframe in — không lấy CSS app.
@@ -48,7 +54,6 @@ const PRINT_CSS = `
     width: 100%;
   }
 
-  /* Mục: không khung — chỉ khoảng trắng giữa các mục */
   .nfm-sec,
   .nfm-sec-static {
     display: block;
@@ -61,7 +66,6 @@ const PRINT_CSS = `
     page-break-inside: auto;
   }
 
-  /* Tiêu đề: đúng một đường kẻ dưới; không nền xám */
   .print-head,
   .sheet-sec-head,
   .nfm-sec-static > h2 {
@@ -82,7 +86,6 @@ const PRINT_CSS = `
     page-break-inside: avoid;
   }
 
-  /* Số mục: đủ đậm để nhìn thấy, không ô viền */
   .nfm-sec-num {
     display: inline;
     min-width: 0;
@@ -108,10 +111,6 @@ const PRINT_CSS = `
     border: none;
   }
 
-  /*
-   * Ô: padding-bottom lớn hơn margin nhãn,
-   * để mắt phân biệt rõ khoảng trong ô và khoảng giữa hai ô.
-   */
   .nfm-field {
     display: block;
     padding: 8pt 0 15pt;
@@ -124,13 +123,8 @@ const PRINT_CSS = `
     border: none;
   }
 
-  /*
-   * Nhãn tiếng Việt: không viết hoa (dấu thanh bị ép),
-   * cỡ 8pt, màu đủ đậm để in ra giấy.
-   */
   .nfm-field > span,
   .nfm-field > span:first-child,
-  .nfm-item-top,
   .pv-label,
   .nfm-snap-k {
     display: block;
@@ -142,7 +136,7 @@ const PRINT_CSS = `
     margin-bottom: 3pt;
   }
 
-  /* Hai cột: khoảng trống, không viền */
+  /* Hai cột — phải còn sau khi làm phẳng, không chồng dọc */
   .nfm-row-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -157,7 +151,7 @@ const PRINT_CSS = `
 
   .nfm-item {
     display: block;
-    padding: 8pt 0 15pt;
+    padding: 6pt 0 10pt;
     border: none;
     break-inside: avoid;
     page-break-inside: avoid;
@@ -167,12 +161,25 @@ const PRINT_CSS = `
     border: none;
   }
 
+  /* Hàng tiêu đề giấy tờ: tên đậm, không kiểu nhãn */
   .nfm-item-top {
-    margin-bottom: 3pt;
+    display: block;
+    margin: 0 0 4pt;
+    padding: 0;
     border: none;
   }
 
-  /* Đúng một đường viết tay dưới giá trị */
+  /* Tên giấy tờ in đậm — tiêu đề khối, không phải giá trị ô */
+  .print-doc-title {
+    display: block;
+    font-size: 11pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 2pt;
+    padding: 0;
+    border: none;
+  }
+
   .print-value,
   .pv,
   .pv-multi {
@@ -195,7 +202,6 @@ const PRINT_CSS = `
     color: transparent;
   }
 
-  /* Mục 6: flex hai cột, số liệu nổi */
   .nfm-snap {
     display: flex;
     flex-wrap: wrap;
@@ -258,46 +264,77 @@ const PRINT_CSS = `
   }
 `;
 
-/** Đổi input/textarea thành div chữ tĩnh; lấy value từ phần tử gốc tương ứng. */
-function replaceFieldsWithStaticText(
-  sourceRoot: HTMLElement,
-  cloneRoot: HTMLElement,
-): void {
+/** Đọc giá trị đang hiển thị từ ô gốc (value / checked / option text). */
+function readFieldDisplayValue(el: Element): string {
+  if (el instanceof HTMLInputElement) {
+    const type = el.type.toLowerCase();
+    if (type === "checkbox" || type === "radio") {
+      return el.checked ? "x" : "";
+    }
+    return el.value;
+  }
+  if (el instanceof HTMLTextAreaElement) {
+    return el.value;
+  }
+  if (el instanceof HTMLSelectElement) {
+    const opt = el.selectedOptions[0];
+    return opt ? opt.textContent ?? "" : el.value;
+  }
+  return "";
+}
+
+/**
+ * Bước 2 — ghi data-print-value lên từng ô bản sao.
+ * Hai cây còn giống hệt (chưa xóa nút, chưa làm phẳng).
+ */
+function stampPrintValues(sourceRoot: HTMLElement, cloneRoot: HTMLElement): void {
   const sourceFields = Array.from(
-    sourceRoot.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-      "input, textarea",
-    ),
+    sourceRoot.querySelectorAll<HTMLElement>(FIELD_SELECTOR),
   );
   const cloneFields = Array.from(
-    cloneRoot.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-      "input, textarea",
-    ),
+    cloneRoot.querySelectorAll<HTMLElement>(FIELD_SELECTOR),
   );
 
   const count = Math.min(sourceFields.length, cloneFields.length);
   for (let i = 0; i < count; i++) {
-    const src = sourceFields[i];
-    const clone = cloneFields[i];
-    const value = src.value;
-
-    const div = cloneRoot.ownerDocument.createElement("div");
-    div.className = value.trim() ? "print-value" : "print-value print-empty";
-    if (value.trim()) {
-      div.textContent = value;
-    } else {
-      // Ô trống: chỉ đường kẻ để viết tay, không chữ
-      div.textContent = "\u00a0";
-    }
-    clone.replaceWith(div);
+    const text = readFieldDisplayValue(sourceFields[i]);
+    cloneFields[i].dataset.printValue = text;
   }
-
-  // Phòng trường hợp số lượng không khớp: gỡ hết input còn sót trên bản sao
-  cloneRoot
-    .querySelectorAll("input, textarea")
-    .forEach((el) => el.remove());
 }
 
-/** Đổi details thành div thường; chỉ giữ số thứ tự và tiêu đề. */
+/**
+ * Bước 4 — thay ô nhập bằng div tĩnh, lấy chữ từ data-print-value
+ * của CHÍNH phần tử đó (không ghép lại theo chỉ số).
+ *
+ * Ô trong .nfm-item-top (tên giấy tờ, không nhãn) → tiêu đề đậm.
+ * Các ô khác → .print-value dưới nhãn span của label.nfm-field.
+ */
+function replaceFieldsFromDataAttr(cloneRoot: HTMLElement): void {
+  const fields = Array.from(
+    cloneRoot.querySelectorAll<HTMLElement>(FIELD_SELECTOR),
+  );
+
+  for (const el of fields) {
+    const raw = el.dataset.printValue ?? "";
+    const value = raw.trim();
+    const inItemTop = Boolean(el.closest(".nfm-item-top"));
+
+    const div = cloneRoot.ownerDocument.createElement("div");
+
+    if (inItemTop) {
+      // Tên giấy tờ: tiêu đề khối, không phải giá trị dưới nhãn
+      div.className = "print-doc-title";
+      div.textContent = value || "\u00a0";
+    } else {
+      div.className = value ? "print-value" : "print-value print-empty";
+      div.textContent = value || "\u00a0";
+    }
+
+    el.replaceWith(div);
+  }
+}
+
+/** Đổi details thành div; giữ nguyên .nfm-box (và .nfm-row-grid bên trong). */
 function flattenDetails(cloneRoot: HTMLElement): void {
   const detailsList = Array.from(
     cloneRoot.querySelectorAll<HTMLDetailsElement>("details.nfm-sec"),
@@ -321,13 +358,13 @@ function flattenDetails(cloneRoot: HTMLElement): void {
 
     const box = details.querySelector(".nfm-box");
     if (box) {
-      wrapper.appendChild(box.cloneNode(true));
+      // moveNode — không clone lại, giữ data-print-value đã ghi
+      wrapper.appendChild(box);
     }
 
     details.replaceWith(wrapper);
   }
 
-  // Mục 6: chuẩn hóa h2 thành print-head cho đồng nhất
   cloneRoot.querySelectorAll(".nfm-sec-static > h2").forEach((h2) => {
     const head = cloneRoot.ownerDocument.createElement("div");
     head.className = "print-head";
@@ -350,16 +387,18 @@ function stripChrome(cloneRoot: HTMLElement): void {
  * Không đụng trạng thái gấp/mở của trang gốc.
  */
 export function printNotfallmappe(sourceRoot: HTMLElement): void {
+  // 1) Clone khi cây còn nguyên
   const clone = sourceRoot.cloneNode(true) as HTMLElement;
 
-  // 1) Gắn value từ gốc sang bản sao rồi thay input bằng div
-  replaceFieldsWithStaticText(sourceRoot, clone);
+  // 2) Ghi data-print-value ngay — hai danh sách còn khớp chỉ số
+  stampPrintValues(sourceRoot, clone);
 
-  // 2) Đổi details → div (sau khi đã thay field, vì box nằm trong details)
+  // 3) Chỉ sau khi đã ghi xong mới được xóa / làm phẳng
+  stripChrome(clone);
   flattenDetails(clone);
 
-  // 3) Gỡ nút, cảnh báo, tiến độ…
-  stripChrome(clone);
+  // 4) Thay ô bằng div, đọc data-print-value trên chính phần tử
+  replaceFieldsFromDataAttr(clone);
 
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
@@ -387,7 +426,6 @@ export function printNotfallmappe(sourceRoot: HTMLElement): void {
   );
   idoc.close();
 
-  // Đưa bản sao vào body của iframe (không dùng innerHTML để giữ node đã xử lý)
   idoc.body.appendChild(idoc.importNode(clone, true));
 
   const cleanup = () => {
@@ -400,11 +438,8 @@ export function printNotfallmappe(sourceRoot: HTMLElement): void {
   };
 
   iwin.addEventListener("afterprint", onAfterPrint);
-
-  // iOS đôi khi không phát afterprint — dọn sau vài giây
   window.setTimeout(cleanup, 60_000);
 
-  // Cho layout iframe ổn định rồi in
   const runPrint = () => {
     try {
       iwin.focus();
@@ -414,7 +449,6 @@ export function printNotfallmappe(sourceRoot: HTMLElement): void {
     }
   };
 
-  // requestAnimationFrame kép: chờ style + layout trong iframe
   requestAnimationFrame(() => {
     requestAnimationFrame(runPrint);
   });
