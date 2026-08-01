@@ -10,10 +10,11 @@ import type {
 } from "../lib/types";
 import { defaultNotfallmappe, nowIso, uid } from "../lib/defaults";
 import { buildEquitySeries, formatDateVN, formatMoney } from "../lib/calc";
+import { printNotfallmappe } from "../lib/printNotfallmappe";
 import "../styles/notfallmappe.css";
 
 /**
- * V10-A6 — Hồ sơ khẩn cấp.
+ * V10-A7 — Hồ sơ khẩn cấp.
  *
  * Nguyên tắc không thương lượng:
  *  1. Không có ô nhập mật khẩu / PIN / TAN.
@@ -21,10 +22,8 @@ import "../styles/notfallmappe.css";
  *  3. Nội dung có đồng bộ lên máy chủ — nói rõ, không giấu.
  *  4. Máy tự đọc lại nội dung và cảnh báo nếu thấy bí mật lọt vào.
  *
- * Bản in trên iPhone là ca khó. Safari không phát sự kiện beforeprint, và nó
- * tự vẽ nền cho các ô nhập theo giao diện tối của app, khiến chữ đen nằm
- * trên nền đen. CSS không với tới chỗ đó, nên ở đây ta đặt thẳng kiểu lên
- * từng phần tử trước khi in rồi gỡ ra sau khi in xong.
+ * Bản in: không in giao diện app. Dựng iframe riêng, thay input/textarea
+ * bằng chữ tĩnh, rồi in iframe. Tránh vệt đen do iOS Safari phóng ô nhập.
  */
 
 const SECRET_RE =
@@ -36,122 +35,6 @@ const IBAN_RE = /\b[A-Z]{2}\s?\d{2}(?:\s?[A-Z0-9]{4}){3,7}\b/;
 /** Ngừng gõ bao lâu thì tự lưu. */
 const AUTOSAVE_MS = 900;
 
-type PrintableField = HTMLInputElement | HTMLTextAreaElement;
-
-/** Nhớ lại thuộc tính style cũ để còn trả về nguyên trạng. */
-function rememberStyle(el: HTMLElement) {
-  if (el.dataset.prevStyle === undefined) {
-    el.dataset.prevStyle = el.getAttribute("style") ?? "";
-  }
-}
-
-function restoreStyle(el: HTMLElement) {
-  const prev = el.dataset.prevStyle;
-  if (prev === undefined) return;
-  if (prev === "") el.removeAttribute("style");
-  else el.setAttribute("style", prev);
-  delete el.dataset.prevStyle;
-}
-
-/** Dọn trang trước khi in. Gọi tay, vì iOS không phát beforeprint. */
-function openAllSections() {
-  // Bỏ con trỏ ra khỏi ô đang gõ. Ô đang được chọn hay in ra nền đen.
-  const active = document.activeElement;
-  if (active instanceof HTMLElement) active.blur();
-
-  // Ép toàn trang sang giao diện sáng, nếu không Safari vẽ nền tối cho ô nhập.
-  const root = document.documentElement;
-  rememberStyle(root);
-  root.style.setProperty("color-scheme", "light", "important");
-
-  document
-    .querySelectorAll<HTMLDetailsElement>("details.nfm-sec")
-    .forEach((el) => {
-      if (!el.open) {
-        el.dataset.reopen = "1";
-        el.open = true;
-      }
-    });
-
-  // Các khung chứa: dập nền, bóng đổ, hiệu ứng làm mờ.
-  document
-    .querySelectorAll<HTMLElement>(
-      ".nfm, .nfm-box, .nfm-item, .nfm-item-top, .nfm-field, .nfm-row-grid, details.nfm-sec, .nfm-sec-static",
-    )
-    .forEach((el) => {
-      rememberStyle(el);
-      el.style.setProperty("background-color", "#ffffff", "important");
-      el.style.setProperty("background-image", "none", "important");
-      el.style.setProperty("box-shadow", "none", "important");
-      el.style.setProperty("filter", "none", "important");
-      el.style.setProperty("backdrop-filter", "none", "important");
-      el.style.setProperty("-webkit-backdrop-filter", "none", "important");
-      el.style.setProperty("opacity", "1", "important");
-    });
-
-  // Từng ô nhập: nền trắng, chữ đen, không chữ gợi ý, hiện đủ chiều cao.
-  document
-    .querySelectorAll<PrintableField>(".nfm input, .nfm textarea")
-    .forEach((el) => {
-      rememberStyle(el);
-
-      if (el.placeholder) {
-        el.dataset.prevPlaceholder = el.placeholder;
-        el.placeholder = "";
-      }
-
-      el.style.setProperty("background-color", "#ffffff", "important");
-      el.style.setProperty("background-image", "none", "important");
-      el.style.setProperty("color", "#000000", "important");
-      el.style.setProperty("-webkit-text-fill-color", "#000000", "important");
-      el.style.setProperty("caret-color", "transparent", "important");
-      el.style.setProperty("box-shadow", "none", "important");
-      el.style.setProperty("filter", "none", "important");
-      el.style.setProperty("opacity", "1", "important");
-      el.style.setProperty("-webkit-appearance", "none", "important");
-      el.style.setProperty("appearance", "none", "important");
-      el.style.setProperty("border", "none", "important");
-      el.style.setProperty("border-bottom", "1px dotted #bbbbbb", "important");
-
-      // Trên màn hình ô dài có thanh cuộn riêng. Giấy thì không cuộn được.
-      if (el instanceof HTMLTextAreaElement) {
-        el.style.setProperty("height", "auto", "important");
-        el.style.setProperty("height", `${el.scrollHeight}px`, "important");
-        el.style.setProperty("overflow", "visible", "important");
-      }
-    });
-}
-
-/** Trả trang về nguyên trạng sau khi in xong. */
-function restoreSections() {
-  restoreStyle(document.documentElement);
-
-  document
-    .querySelectorAll<HTMLDetailsElement>("details.nfm-sec")
-    .forEach((el) => {
-      if (el.dataset.reopen === "1") {
-        el.open = false;
-        delete el.dataset.reopen;
-      }
-    });
-
-  document
-    .querySelectorAll<HTMLElement>(
-      ".nfm, .nfm-box, .nfm-item, .nfm-item-top, .nfm-field, .nfm-row-grid, details.nfm-sec, .nfm-sec-static",
-    )
-    .forEach(restoreStyle);
-
-  document
-    .querySelectorAll<PrintableField>(".nfm input, .nfm textarea")
-    .forEach((el) => {
-      restoreStyle(el);
-      if (el.dataset.prevPlaceholder !== undefined) {
-        el.placeholder = el.dataset.prevPlaceholder;
-        delete el.dataset.prevPlaceholder;
-      }
-    });
-}
-
 export default function NotfallmappePage() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [data, setData] = useState<NotfallmappeData | null>(null);
@@ -160,7 +43,7 @@ export default function NotfallmappePage() {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Bản sao mới nhất, để lúc rời trang còn lưu kịp.
+  const rootRef = useRef<HTMLDivElement>(null);
   const dataRef = useRef<NotfallmappeData | null>(null);
   const dirtyRef = useRef(false);
 
@@ -179,7 +62,6 @@ export default function NotfallmappePage() {
     })();
   }, []);
 
-  // Tự lưu sau khi ngừng gõ.
   useEffect(() => {
     if (!dirty) return;
     const t = window.setTimeout(() => {
@@ -188,7 +70,6 @@ export default function NotfallmappePage() {
     return () => window.clearTimeout(t);
   }, [data, dirty]);
 
-  // Đóng tab hoặc tải lại trang khi chưa lưu.
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!dirtyRef.current) return;
@@ -199,7 +80,6 @@ export default function NotfallmappePage() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
 
-  // Chuyển sang màn khác trong app: lưu nốt, không hỏi han.
   useEffect(() => {
     return () => {
       if (dirtyRef.current && dataRef.current) {
@@ -207,16 +87,6 @@ export default function NotfallmappePage() {
           notfallmappe: { ...dataRef.current, updatedAt: nowIso() },
         });
       }
-    };
-  }, []);
-
-  // In bằng phím tắt trên máy tính. Trên iPhone dùng nút, xem handlePrint.
-  useEffect(() => {
-    window.addEventListener("beforeprint", openAllSections);
-    window.addEventListener("afterprint", restoreSections);
-    return () => {
-      window.removeEventListener("beforeprint", openAllSections);
-      window.removeEventListener("afterprint", restoreSections);
     };
   }, []);
 
@@ -248,10 +118,6 @@ export default function NotfallmappePage() {
 
   const filledCount = filled.filter(Boolean).length;
 
-  /**
-   * Quét bí mật lọt vào. Chạy hoàn toàn trong máy, không gửi đi đâu.
-   * Ô điện thoại được loại khỏi phép quét IBAN để tránh báo động giả.
-   */
   const risks = useMemo(() => {
     if (!data) return [] as string[];
     const parts: { label: string; text: string }[] = [
@@ -318,14 +184,10 @@ export default function NotfallmappePage() {
   }
 
   async function handlePrint() {
-    // iOS Safari không phát sự kiện beforeprint, nên dọn tay trước khi in.
-    openAllSections();
     await persist({ lastPrintedAt: nowIso() });
-    // Cho Safari kịp dựng lại bố cục sau khi đặt kiểu và nong ô nội dung.
-    await new Promise<void>((r) => requestAnimationFrame(() => r()));
-    await new Promise<void>((r) => requestAnimationFrame(() => r()));
-    window.print();
-    window.setTimeout(restoreSections, 1500);
+    const root = rootRef.current;
+    if (!root) return;
+    printNotfallmappe(root);
   }
 
   const childLabel = settings?.childName?.trim() || "bé";
@@ -345,7 +207,7 @@ export default function NotfallmappePage() {
       : "nfm-status";
 
   return (
-    <div className="nfm">
+    <div className="nfm" ref={rootRef}>
       <p className="nfm-warn">
         <strong>Lưu ý</strong>
         <span>
