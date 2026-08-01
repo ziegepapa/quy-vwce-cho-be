@@ -13,7 +13,7 @@ import { buildEquitySeries, formatDateVN, formatMoney } from "../lib/calc";
 import "../styles/notfallmappe.css";
 
 /**
- * V10-A4 — Hồ sơ khẩn cấp.
+ * V10-A5 — Hồ sơ khẩn cấp.
  *
  * Nguyên tắc không thương lượng:
  *  1. Không có ô nhập mật khẩu / PIN / TAN.
@@ -24,7 +24,9 @@ import "../styles/notfallmappe.css";
  * V10-A3 bỏ hẳn nút Lưu: tự lưu sau khi ngừng gõ, tự lưu khi rời màn,
  * hỏi khi đóng tab lúc còn dở. Chân trang chỉ còn một nút In / Lưu PDF.
  *
- * V10-A4 sửa bản in: mở hết mục gấp VÀ nong ô nội dung dài trước khi in.
+ * V10-A5 dọn bản in. Safari trên iPhone không phát sự kiện beforeprint,
+ * nên trước khi in phải tự tay: mở hết mục gấp, nong ô nội dung dài cho
+ * hiện đủ chữ, và xóa tạm chữ gợi ý để giấy không in ra chúng.
  */
 
 const SECRET_RE =
@@ -36,13 +38,9 @@ const IBAN_RE = /\b[A-Z]{2}\s?\d{2}(?:\s?[A-Z0-9]{4}){3,7}\b/;
 /** Ngừng gõ bao lâu thì tự lưu. */
 const AUTOSAVE_MS = 900;
 
-/**
- * Trước khi in: mở hết mục gấp và nong ô nội dung dài.
- *
- * Textarea trên web có thanh cuộn riêng. Giấy thì không cuộn được, nên chữ
- * vượt quá chiều cao sẽ bị cắt cụt. Phải đo chiều cao thật rồi gán vào,
- * in xong thì trả lại nguyên trạng.
- */
+type PrintableField = HTMLInputElement | HTMLTextAreaElement;
+
+/** Dọn trang trước khi in. Gọi tay, vì iOS không phát beforeprint. */
 function openAllSections() {
   document
     .querySelectorAll<HTMLDetailsElement>("details.nfm-sec")
@@ -53,13 +51,29 @@ function openAllSections() {
       }
     });
 
-  document.querySelectorAll<HTMLTextAreaElement>(".nfm textarea").forEach((el) => {
-    el.dataset.prevHeight = el.style.height;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  });
+  // Trên màn hình, ô nội dung dài có thanh cuộn riêng. Giấy thì không cuộn được.
+  document
+    .querySelectorAll<HTMLTextAreaElement>(".nfm textarea")
+    .forEach((el) => {
+      el.dataset.prevHeight = el.style.height;
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    });
+
+  // Chữ gợi ý là để hướng dẫn lúc gõ, không phải để in ra giấy.
+  document
+    .querySelectorAll<PrintableField>(
+      ".nfm input[placeholder], .nfm textarea[placeholder]",
+    )
+    .forEach((el) => {
+      if (el.placeholder) {
+        el.dataset.prevPlaceholder = el.placeholder;
+        el.placeholder = "";
+      }
+    });
 }
 
+/** Trả trang về nguyên trạng sau khi in xong. */
 function restoreSections() {
   document
     .querySelectorAll<HTMLDetailsElement>("details.nfm-sec")
@@ -70,12 +84,23 @@ function restoreSections() {
       }
     });
 
-  document.querySelectorAll<HTMLTextAreaElement>(".nfm textarea").forEach((el) => {
-    if (el.dataset.prevHeight !== undefined) {
-      el.style.height = el.dataset.prevHeight;
-      delete el.dataset.prevHeight;
-    }
-  });
+  document
+    .querySelectorAll<HTMLTextAreaElement>(".nfm textarea")
+    .forEach((el) => {
+      if (el.dataset.prevHeight !== undefined) {
+        el.style.height = el.dataset.prevHeight;
+        delete el.dataset.prevHeight;
+      }
+    });
+
+  document
+    .querySelectorAll<PrintableField>(".nfm input, .nfm textarea")
+    .forEach((el) => {
+      if (el.dataset.prevPlaceholder !== undefined) {
+        el.placeholder = el.dataset.prevPlaceholder;
+        delete el.dataset.prevPlaceholder;
+      }
+    });
 }
 
 export default function NotfallmappePage() {
@@ -244,11 +269,13 @@ export default function NotfallmappePage() {
   }
 
   async function handlePrint() {
-    // iOS Safari không phát sự kiện beforeprint, nên mở tay trước khi in.
+    // iOS Safari không phát sự kiện beforeprint, nên dọn tay trước khi in.
     openAllSections();
     await persist({ lastPrintedAt: nowIso() });
+    // Cho Safari kịp dựng lại bố cục sau khi mở mục và nong ô nội dung.
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
     window.print();
-    window.setTimeout(restoreSections, 1000);
+    window.setTimeout(restoreSections, 1500);
   }
 
   const childLabel = settings?.childName?.trim() || "bé";
