@@ -1,4 +1,4 @@
-/** Shared sync status — UI giai đoạn 3 sẽ tái sử dụng */
+/** Shared sync status — UI đoạn 3 sẽ tái sử dụng */
 export type SyncStatus = "synced" | "syncing" | "offline" | "conflict";
 
 export const SYNC_STATUS_LABEL: Record<SyncStatus, string> = {
