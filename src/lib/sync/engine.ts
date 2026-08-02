@@ -95,7 +95,7 @@ export async function pushOutbox(
   let errors = 0;
   let dead = 0;
   for (const item of items) {
-    // Bỏ qua mục đã chết — không chặn hàng đợi phía sau
+    // Bỏ qua mục đã chết — không chặn các mục xếp sau
     if (item.dead) {
       dead += 1;
       continue;
@@ -107,19 +107,40 @@ export async function pushOutbox(
     } catch (e) {
       errors += 1;
       const attempts = item.attempts + 1;
-      const markDead = attempts >= 8;
+      const isDead = attempts >= 8;
       await db.outbox.put({
         ...item,
         attempts,
         lastError: e instanceof Error ? e.message : String(e),
-        dead: markDead ? true : item.dead,
+        dead: isDead ? true : item.dead,
       });
-      if (markDead) dead += 1;
-      // continue — thử các mục tiếp theo
+      if (isDead) dead += 1;
+      // continue: thử mục tiếp theo, không break cả hàng đợi
+      continue;
     }
   }
   if (pushed > 0) await saveSyncMeta({ userId, lastPushedAt: nowIso() });
   return { pushed, errors, dead };
+}
+
+/** Danh sách mục outbox đã chết (thất bại ≥ 8 lần). */
+export async function listDeadOutbox(): Promise<OutboxItem[]> {
+  const all = await db.outbox.toArray();
+  return all.filter((i) => i.dead === true);
+}
+
+/** Đặt lại dead/attempts để thử đẩy lại toàn bộ mục chết. */
+export async function retryDeadOutbox(): Promise<number> {
+  const deadItems = await listDeadOutbox();
+  for (const item of deadItems) {
+    await db.outbox.put({
+      ...item,
+      dead: false,
+      attempts: 0,
+      lastError: undefined,
+    });
+  }
+  return deadItems.length;
 }
 
 function localVersion(row: unknown): number {
@@ -276,7 +297,7 @@ export async function resolveConflict(
   if (choice === "local") {
     await enqueueOutbox(c.table, c.entityId, "upsert", c.local, localVersion(c.local) + 1);
   } else {
-    // Xóa outbox đang chờ của cùng thực thể — tránh lần đẩy sau ghi đè bản remote
+    // Chọn remote: xóa outbox trùng entity trước khi ghi local, tránh lần đẩy sau ghi đè lại
     const pending = await db.outbox.where("entityId").equals(c.entityId).toArray();
     for (const p of pending) {
       if (p.table === c.table) await db.outbox.delete(p.id);
@@ -293,19 +314,4 @@ export async function resolveConflict(
   if (typeof navigator !== "undefined" && navigator.onLine) {
     await pushOutbox(userId);
   }
-}
-
-/** Mục outbox đã chết (thử ≥ 8 lần). */
-export async function listDeadOutbox(): Promise<OutboxItem[]> {
-  const all = await db.outbox.toArray();
-  return all.filter((i) => i.dead === true);
-}
-
-/** Đặt lại dead/attempts để thử đồng bộ lại. */
-export async function reviveDeadOutbox(): Promise<number> {
-  const dead = await listDeadOutbox();
-  for (const item of dead) {
-    await db.outbox.put({ ...item, dead: false, attempts: 0, lastError: undefined });
-  }
-  return dead.length;
 }
