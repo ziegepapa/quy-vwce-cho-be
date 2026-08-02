@@ -98,7 +98,6 @@ function projectEnd(input: ProjectInput): ProjectOutput {
         balance *= 1 - ter;
       }
       if (growth !== 0) {
-        // Không để mức góp âm khi tăng trưởng âm kéo dài
         monthly = Math.max(0, monthly * (1 + growth));
       }
       yearEnds.push({
@@ -152,7 +151,6 @@ function findMonthlyForTarget(
     hi *= 2;
     if (hi > 1e7) break;
   }
-  // Tăng trưởng âm mạnh: dù góp rất lớn vẫn không đủ
   if (!reached) {
     const atMax = projectEnd({ ...base, monthlyContribution: hi });
     if (atMax.terminal < target) return -1;
@@ -193,7 +191,17 @@ function purchasingPower(nominal: number, inflation: number, years: number): num
   return round2(nominal / Math.pow(1 + inflation, years));
 }
 
-const QUICK_YEARS = [5, 10, 15, 20, 25, 30] as const;
+/** Hiển thị tròn euro, không thập phân (UI). */
+function formatMoneyRounded(n: number): string {
+  const v = Math.round(n);
+  const abs = Math.abs(v);
+  const s = abs.toLocaleString("de-DE", { maximumFractionDigits: 0 });
+  return (v < 0 ? "−" : "") + s + " €";
+}
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
+}
 
 const DEFAULT_SCENARIOS: Scenario[] = [
   { id: "cautious", label: "Thận trọng", rate: 0.04 },
@@ -214,10 +222,13 @@ export default function Simulation() {
   const [growthPct, setGrowthPct] = useState("2");
   const [lumpSum, setLumpSum] = useState("0");
   const [balanceOverride, setBalanceOverride] = useState("");
-  const [scenarios, setScenarios] = useState<Scenario[]>(DEFAULT_SCENARIOS);
+  const [rateInput, setRateInput] = useState("6,5");
+  const [bandInput, setBandInput] = useState("2");
   const [inflationOn, setInflationOn] = useState(true);
   const [inflationPct, setInflationPct] = useState("2");
   const [taxOn, setTaxOn] = useState(true);
+  const [showAfterTax, setShowAfterTax] = useState(true);
+  const [showPP, setShowPP] = useState(false);
   const [targetAmount, setTargetAmount] = useState("50000");
   const [targetYear, setTargetYear] = useState(String(new Date().getFullYear() + 15));
 
@@ -283,13 +294,10 @@ export default function Simulation() {
     return Math.max(0, realBalance);
   }, [balanceOverride, realBalance]);
 
-  // Ghi đè số dư: giả định, coi toàn bộ là vốn (không có lãi tiềm ẩn).
-  // Không ghi đè: dùng giá vốn thật (vwceCostBasis + cash).
   const initialCostBasis =
     balanceOverride.trim() !== "" ? initialBalance : realCostBasis;
 
   const monthlyN = Math.max(0, parseDecimal(monthly));
-  // Cho phép giảm dần: kẹp [-20%, +20%]/năm
   const growthN = growthOn
     ? Math.max(-0.2, Math.min(0.2, parseDecimal(growthPct) / 100))
     : 0;
@@ -297,6 +305,17 @@ export default function Simulation() {
   const inflationN = inflationOn ? Math.max(0, parseDecimal(inflationPct) / 100) : 0;
   const targetN = Math.max(0, parseDecimal(targetAmount));
   const ter = taxOn ? DEFAULT_TER : 0;
+
+  const baseRate = clamp(parseDecimal(rateInput) / 100, 0, 0.5);
+  const band = clamp(parseDecimal(bandInput) / 100, 0, 0.1);
+  const scenarios = useMemo(
+    () => [
+      { id: "cautious", label: "Thận trọng", rate: Math.max(0, baseRate - band) },
+      { id: "base", label: "Cơ sở", rate: baseRate },
+      { id: "bull", label: "Thuận lợi", rate: baseRate + band },
+    ],
+    [baseRate, band],
+  );
 
   const yearsB = useMemo(() => {
     const ty = Number(targetYear) || new Date().getFullYear();
@@ -317,23 +336,24 @@ export default function Simulation() {
 
   const requiredMonthlyBase = useMemo(() => {
     if (mode !== "B") return monthlyN;
-    const baseRate = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
+    const br = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
     return findMonthlyForTarget(targetN, {
       ...baseCommon,
       years: yearsB,
-      annualReturn: baseRate,
+      annualReturn: br,
     });
   }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN]);
 
   const monthlyForProject = mode === "B" ? Math.max(0, requiredMonthlyBase) : monthlyN;
+  const planUnreachable = mode === "B" && requiredMonthlyBase < 0;
 
   const yearsC = useMemo(() => {
     if (mode !== "C") return { years: effectiveYears, reached: true };
-    const baseRate = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
+    const br = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
     return findYearsForTarget(targetN, {
       ...baseCommon,
       monthlyContribution: monthlyN,
-      annualReturn: baseRate,
+      annualReturn: br,
     });
   }, [mode, targetN, baseCommon, monthlyN, scenarios, effectiveYears]);
 
@@ -382,11 +402,6 @@ export default function Simulation() {
       .filter((m) => m.yearIndex >= 0 && m.yearIndex <= MAX_YEARS);
   }, [goals]);
 
-  function setScenarioRate(id: string, pctStr: string) {
-    const rate = Math.max(0, parseDecimal(pctStr) / 100);
-    setScenarios((prev) => prev.map((s) => (s.id === id ? { ...s, rate } : s)));
-  }
-
   function applyYearsFromGoal(g: Goal) {
     const due = parseDate(g.dueDate);
     const y = Math.max(1, Math.min(MAX_YEARS, due.getFullYear() - new Date().getFullYear()));
@@ -403,7 +418,6 @@ export default function Simulation() {
     return Math.abs(a - b) < 1e-4;
   }
 
-  /** Ghi partial + băng hoàn tác. Snapshot CHỈ các khóa đã ghi. */
   async function applyPersist(
     partial: Partial<Pick<AppSettings, "contributionY1" | "contributionY2" | "vwceReturn">>,
     message: string,
@@ -423,7 +437,6 @@ export default function Simulation() {
     setSettings(await getSettings());
     setSaveOpen(false);
 
-    // D3: hai băng loại trừ nhau
     setMatchMsg(false);
     if (matchTimerRef.current != null) {
       window.clearTimeout(matchTimerRef.current);
@@ -441,6 +454,8 @@ export default function Simulation() {
   }
 
   function openSaveConfirm() {
+    if (planUnreachable) return;
+
     const o1 = settings?.contributionY1 ?? 0;
     const o2 = settings?.contributionY2 ?? 0;
     const oR = settings?.vwceReturn ?? 0;
@@ -451,7 +466,6 @@ export default function Simulation() {
     const retDiff = !rateEq(oR, nR);
     const diffCount = (y1Diff ? 1 : 0) + (y2Diff ? 1 : 0) + (retDiff ? 1 : 0);
 
-    // 0 khác biệt
     if (diffCount === 0) {
       setUndoVisible(false);
       setUndoSnap(null);
@@ -468,7 +482,6 @@ export default function Simulation() {
       return;
     }
 
-    // Đúng 1 khác biệt → ghi luôn, không mở sheet
     if (diffCount === 1) {
       if (y1Diff) {
         void applyPersist(
@@ -489,7 +502,6 @@ export default function Simulation() {
       return;
     }
 
-    // ≥ 2 → mở sheet, mặc định tích năm 1 nếu khác
     setWriteY1(y1Diff);
     setWriteY2(false);
     setWriteReturn(false);
@@ -547,16 +559,6 @@ export default function Simulation() {
     return <p className="muted">Đang tải…</p>;
   }
 
-  const summaryText = buildSummary({
-    mode,
-    monthly: monthlyForProject,
-    years: yearsForProject,
-    reached: mode === "C" ? yearsC.reached : true,
-    terminal: primary?.out.terminal ?? 0,
-    pp: primary?.pp ?? 0,
-    inflationOn,
-  });
-
   const baseRateNew = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
   const oldY1 = settings?.contributionY1 ?? 0;
   const oldY2 = settings?.contributionY2 ?? 0;
@@ -573,8 +575,35 @@ export default function Simulation() {
         ? "Lưu 1 thay đổi"
         : `Lưu ${selectedCount} thay đổi`;
 
+  const useTax = taxOn && showAfterTax;
+  const usePP = inflationOn && showPP;
+  let headlineValue = primary?.out.terminal ?? 0;
+  if (primary) {
+    if (useTax && usePP) headlineValue = primary.ppAfter;
+    else if (useTax) headlineValue = primary.tax.afterTax;
+    else if (usePP) headlineValue = primary.pp;
+    else headlineValue = primary.out.terminal;
+  }
+  const headlineNoteParts: string[] = [];
+  if (useTax) headlineNoteParts.push("sau thuế");
+  if (usePP) headlineNoteParts.push("giá hôm nay");
+  const headlineNote =
+    headlineNoteParts.length > 0 ? headlineNoteParts.join(" · ") : "trước thuế · danh nghĩa";
+
+  const cautiousRate = scenarios.find((s) => s.id === "cautious")?.rate ?? baseRate;
+  const bullRate = scenarios.find((s) => s.id === "bull")?.rate ?? baseRate;
+  const bandPctLabel = `${round2(cautiousRate * 100).toLocaleString("de-DE")} % – ${round2(bullRate * 100).toLocaleString("de-DE")} %`;
+
+  const advParts: string[] = [];
+  advParts.push(`biên độ ±${round2(band * 100).toLocaleString("de-DE")}`);
+  if (inflationOn) advParts.push(`lạm phát ${inflationPct}%`);
+  if (taxOn) advParts.push("có thuế");
+  else advParts.push("không thuế");
+  if (growthOn) advParts.push(`góp ${growthPct}%/năm`);
+  const advSummary = `Tùy chọn nâng cao · ${advParts.join(" · ")}`;
+
   return (
-    <div className="stack" style={{ gap: 16 }}>
+    <div className="stack" style={{ gap: 16, paddingBottom: 96 }}>
       <div
         role="tablist"
         aria-label="Chế độ mô phỏng"
@@ -608,6 +637,37 @@ export default function Simulation() {
         ))}
       </div>
 
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 5,
+          background: "var(--bg, rgba(255,255,255,.82))",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          padding: "10px 0 12px",
+          marginBottom: 4,
+        }}
+      >
+        {planUnreachable ? (
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 600, lineHeight: 1.35 }}>
+            Chưa có mức góp khả thi cho mục tiêu này.
+          </p>
+        ) : (
+          <>
+            <div style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.02em" }}>
+              {formatMoneyRounded(headlineValue)}
+            </div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+              sau {yearsForProject} năm · {formatMoneyRounded(monthlyForProject)}/tháng
+            </div>
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+              {headlineNote}
+            </div>
+          </>
+        )}
+      </div>
+
       <p className="muted" style={{ fontSize: 13, margin: 0 }}>
         {mode === "A" && "Góp cố định mỗi tháng — xem tài sản sau N năm."}
         {mode === "B" && "Nhập mục tiêu và năm — máy tính số cần góp mỗi tháng."}
@@ -629,19 +689,6 @@ export default function Simulation() {
               onChange={(e) => setYears(Number(e.target.value))}
               style={{ width: "100%", minHeight: 44 }}
             />
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {QUICK_YEARS.map((y) => (
-              <button
-                key={y}
-                type="button"
-                className={years === y ? "btn" : "secondary"}
-                style={{ minHeight: 44, minWidth: 52 }}
-                onClick={() => setYears(y)}
-              >
-                {y}n
-              </button>
-            ))}
           </div>
           {goals.length > 0 && (
             <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -748,107 +795,124 @@ export default function Simulation() {
           </p>
         )}
 
-        <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-          <span>Góp thay đổi theo năm</span>
+        <div className="field">
+          <label htmlFor="sim-rate">Lợi nhuận / năm (%)</label>
           <input
-            type="checkbox"
-            checked={growthOn}
-            onChange={(e) => setGrowthOn(e.target.checked)}
-            style={{ width: 24, height: 24 }}
+            id="sim-rate"
+            inputMode="decimal"
+            value={rateInput}
+            onChange={(e) => setRateInput(e.target.value)}
+            style={{ minHeight: 44 }}
           />
-        </label>
-        {growthOn && (
-          <div className="field">
-            <label htmlFor="sim-growth">Thay đổi góp mỗi năm (%)</label>
-            <input
-              id="sim-growth"
-              inputMode="decimal"
-              value={growthPct}
-              onChange={(e) => setGrowthPct(e.target.value)}
-              style={{ minHeight: 44 }}
-            />
+          {band > 0 && (
             <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
-              Số âm = giảm dần. Ví dụ: −5
+              khoảng {bandPctLabel}
             </p>
-          </div>
-        )}
-
-        <div className="field">
-          <label htmlFor="sim-lump">Khoản lớn ban đầu (EUR)</label>
-          <input
-            id="sim-lump"
-            inputMode="decimal"
-            value={lumpSum}
-            onChange={(e) => setLumpSum(e.target.value)}
-            style={{ minHeight: 44 }}
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="sim-bal">
-            Số dư xuất phát — mặc định từ danh mục ({formatMoney(realBalance)})
-          </label>
-          <input
-            id="sim-bal"
-            inputMode="decimal"
-            placeholder={String(realBalance)}
-            value={balanceOverride}
-            onChange={(e) => setBalanceOverride(e.target.value)}
-            style={{ minHeight: 44 }}
-          />
+          )}
         </div>
       </div>
 
-      <div className="card">
-        <p className="section-title" style={{ marginTop: 0 }}>
-          Lợi nhuận / năm (sửa được)
-        </p>
-        {scenarios.map((sc) => (
-          <div key={sc.id} className="field">
-            <label htmlFor={`rate-${sc.id}`}>{sc.label}</label>
-            <input
-              id={`rate-${sc.id}`}
-              inputMode="decimal"
-              value={String(round2(sc.rate * 100))}
-              onChange={(e) => setScenarioRate(sc.id, e.target.value)}
-              style={{ minHeight: 44 }}
-            />
-          </div>
-        ))}
-      </div>
-
-      <div className="card">
-        <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-          <span>Hiện theo sức mua hôm nay</span>
-          <input
-            type="checkbox"
-            checked={inflationOn}
-            onChange={(e) => setInflationOn(e.target.checked)}
-            style={{ width: 24, height: 24 }}
-          />
-        </label>
-        {inflationOn && (
+      <details className="card">
+        <summary style={{ minHeight: 44, cursor: "pointer", fontSize: 14 }}>{advSummary}</summary>
+        <div style={{ marginTop: 12 }}>
           <div className="field">
-            <label htmlFor="sim-inf">Lạm phát %/năm</label>
+            <label htmlFor="sim-band">Biên độ dao động (± %)</label>
             <input
-              id="sim-inf"
+              id="sim-band"
               inputMode="decimal"
-              value={inflationPct}
-              onChange={(e) => setInflationPct(e.target.value)}
+              value={bandInput}
+              onChange={(e) => setBandInput(e.target.value)}
               style={{ minHeight: 44 }}
             />
           </div>
-        )}
-        <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-          <span>Chi phí & thuế Đức (TER 0,22% + thuế khi bán)</span>
-          <input
-            type="checkbox"
-            checked={taxOn}
-            onChange={(e) => setTaxOn(e.target.checked)}
-            style={{ width: 24, height: 24 }}
-          />
-        </label>
-      </div>
+
+          <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
+            <span>Góp thay đổi theo năm</span>
+            <input
+              type="checkbox"
+              checked={growthOn}
+              onChange={(e) => setGrowthOn(e.target.checked)}
+              style={{ width: 24, height: 24 }}
+            />
+          </label>
+          {growthOn && (
+            <div className="field">
+              <label htmlFor="sim-growth">Thay đổi góp mỗi năm (%)</label>
+              <input
+                id="sim-growth"
+                inputMode="decimal"
+                value={growthPct}
+                onChange={(e) => setGrowthPct(e.target.value)}
+                style={{ minHeight: 44 }}
+              />
+              <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
+                Số âm = giảm dần. Ví dụ: −5
+              </p>
+            </div>
+          )}
+
+          <div className="field">
+            <label htmlFor="sim-lump">Khoản lớn ban đầu (EUR)</label>
+            <input
+              id="sim-lump"
+              inputMode="decimal"
+              value={lumpSum}
+              onChange={(e) => setLumpSum(e.target.value)}
+              style={{ minHeight: 44 }}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="sim-bal">
+              Số dư xuất phát — mặc định từ danh mục ({formatMoney(Math.max(0, realBalance))})
+            </label>
+            <input
+              id="sim-bal"
+              inputMode="decimal"
+              placeholder={String(Math.max(0, realBalance))}
+              value={balanceOverride}
+              onChange={(e) => setBalanceOverride(e.target.value)}
+              style={{ minHeight: 44 }}
+            />
+            {realBalance < 0 && (
+              <p style={{ fontSize: 12, color: "#c47a2c", margin: "4px 0 0" }}>
+                Danh mục đang âm — tạm tính từ 0 €.
+              </p>
+            )}
+          </div>
+
+          <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
+            <span>Hiện theo sức mua hôm nay</span>
+            <input
+              type="checkbox"
+              checked={inflationOn}
+              onChange={(e) => setInflationOn(e.target.checked)}
+              style={{ width: 24, height: 24 }}
+            />
+          </label>
+          {inflationOn && (
+            <div className="field">
+              <label htmlFor="sim-inf">Lạm phát %/năm</label>
+              <input
+                id="sim-inf"
+                inputMode="decimal"
+                value={inflationPct}
+                onChange={(e) => setInflationPct(e.target.value)}
+                style={{ minHeight: 44 }}
+              />
+            </div>
+          )}
+          <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
+            <span>Chi phí & thuế Đức (TER 0,22% + thuế khi bán)</span>
+            <input
+              type="checkbox"
+              checked={taxOn}
+              onChange={(e) => setTaxOn(e.target.checked)}
+              style={{ width: 24, height: 24 }}
+            />
+          </label>
+        </div>
+      </details>
 
       {mode === "C" && !yearsC.reached && (
         <div className="banner" style={{ margin: 0 }}>
@@ -856,52 +920,80 @@ export default function Simulation() {
         </div>
       )}
 
-      {primary && (
+      {primary && !planUnreachable && (
         <div className="card">
-          <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
-            Kịch bản {primary.sc.label} · {yearsForProject} năm
-            {mode === "B" && requiredMonthlyBase >= 0 && ` · góp ${formatMoney(monthlyForProject)}/tháng`}
-          </p>
-          <div className="grid2" style={{ gap: 12 }}>
-            <div>
-              <div className="metric-label">Tổng cuối kỳ</div>
-              <div className="metric-value">{formatMoney(primary.out.terminal)}</div>
-            </div>
-            <div>
-              <div className="metric-label">Tổng đã góp</div>
-              <div className="metric-value">{formatMoney(primary.out.contributed)}</div>
-            </div>
-            {initialBalance > 0 && (
-              <div>
-                <div className="metric-label">Số dư xuất phát</div>
-                <div className="metric-value">{formatMoney(initialBalance)}</div>
-              </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+            {taxOn && (
+              <button
+                type="button"
+                aria-pressed={showAfterTax}
+                onClick={() => setShowAfterTax((v) => !v)}
+                style={{
+                  minHeight: 36,
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  border: showAfterTax ? "1px solid transparent" : "1px solid var(--border, rgba(16,24,40,.18))",
+                  background: showAfterTax ? "var(--primary-600, #3b6ef5)" : "transparent",
+                  color: showAfterTax ? "var(--on-primary, #fff)" : "var(--muted, rgba(16,24,40,.55))",
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                Sau thuế
+              </button>
             )}
-            <div>
-              <div className="metric-label">Phần lãi</div>
-              <div className="metric-value">{formatMoney(Math.max(0, primary.out.interest))}</div>
-            </div>
-            <div>
-              <div className="metric-label">Sức mua hôm nay</div>
-              <div className="metric-value">{formatMoney(primary.pp)}</div>
-            </div>
-          </div>
-          <div style={{ marginTop: 12, fontSize: 14 }}>
-            <div className="row-between">
-              <span className="muted">Trước thuế</span>
-              <strong>{formatMoney(primary.out.terminal)}</strong>
-            </div>
-            <div className="row-between">
-              <span className="muted">Sau thuế (ước lượng)</span>
-              <strong>{formatMoney(primary.tax.afterTax)}</strong>
-            </div>
             {inflationOn && (
-              <div className="row-between">
-                <span className="muted">Sau thuế · sức mua hôm nay</span>
-                <strong>{formatMoney(primary.ppAfter)}</strong>
-              </div>
+              <button
+                type="button"
+                aria-pressed={showPP}
+                onClick={() => setShowPP((v) => !v)}
+                style={{
+                  minHeight: 36,
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  border: showPP ? "1px solid transparent" : "1px solid var(--border, rgba(16,24,40,.18))",
+                  background: showPP ? "var(--primary-600, #3b6ef5)" : "transparent",
+                  color: showPP ? "var(--on-primary, #fff)" : "var(--muted, rgba(16,24,40,.55))",
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                Giá hôm nay
+              </button>
             )}
           </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 8,
+              textAlign: "center",
+            }}
+          >
+            <div>
+              <div className="metric-label">Cuối kỳ</div>
+              <div className="metric-value" style={{ fontSize: 16 }}>
+                {formatMoneyRounded(headlineValue)}
+              </div>
+            </div>
+            <div>
+              <div className="metric-label">Đã góp</div>
+              <div className="metric-value" style={{ fontSize: 16 }}>
+                {formatMoneyRounded(primary.out.contributed)}
+              </div>
+            </div>
+            <div>
+              <div className="metric-label">Lãi</div>
+              <div className="metric-value" style={{ fontSize: 16 }}>
+                {formatMoneyRounded(Math.max(0, primary.out.interest))}
+              </div>
+            </div>
+          </div>
+          {initialBalance > 0 && (
+            <p className="muted" style={{ fontSize: 12, margin: "10px 0 0" }}>
+              Số dư xuất phát: {formatMoney(initialBalance)}
+            </p>
+          )}
         </div>
       )}
 
@@ -909,24 +1001,13 @@ export default function Simulation() {
         <p className="section-title" style={{ marginTop: 0 }}>
           Diễn biến theo năm
         </p>
-        <ScenarioChart results={results} markers={goalMarkers} years={yearsForProject} />
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 8, fontSize: 12 }}>
-          {results.map((r) => (
-            <span key={r.sc.id} className="muted">
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 10,
-                  height: 10,
-                  borderRadius: 2,
-                  background: scenarioColor(r.sc.id),
-                  marginRight: 4,
-                }}
-              />
-              {r.sc.label}: {formatMoney(r.out.terminal)}
-            </span>
-          ))}
-        </div>
+        <ScenarioChart
+          results={results}
+          markers={goalMarkers}
+          years={yearsForProject}
+          band={band}
+          baseRate={baseRate}
+        />
       </div>
 
       <details className="card">
@@ -951,7 +1032,7 @@ export default function Simulation() {
                     const pt = r.out.yearEnds.find((p) => p.yearIndex === yi);
                     return (
                       <td key={r.sc.id} style={{ textAlign: "right", padding: 6 }}>
-                        {formatMoney(pt?.total ?? 0)}
+                        {formatMoneyRounded(pt?.total ?? 0)}
                       </td>
                     );
                   })}
@@ -962,12 +1043,17 @@ export default function Simulation() {
         </div>
       </details>
 
-      <p style={{ fontSize: 15, lineHeight: 1.45, margin: 0 }}>{summaryText}</p>
       <p className="muted" style={{ fontSize: 12, margin: 0 }}>
         Ước tính, không phải tư vấn đầu tư hay thuế.
       </p>
 
-      <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={openSaveConfirm}>
+      <button
+        type="button"
+        className="secondary"
+        style={{ minHeight: 44, opacity: planUnreachable ? 0.45 : 1 }}
+        disabled={planUnreachable}
+        onClick={openSaveConfirm}
+      >
         Lưu mức góp & lợi nhuận cơ sở vào kế hoạch
       </button>
 
@@ -1160,7 +1246,11 @@ function buildSummary(opts: {
   terminal: number;
   pp: number;
   inflationOn: boolean;
+  unreachable?: boolean;
 }): string {
+  if (opts.unreachable) {
+    return "Chưa có mức góp khả thi cho mục tiêu này.";
+  }
   if (opts.mode === "C" && !opts.reached) {
     return `Với mức góp ${formatMoney(opts.monthly)} mỗi tháng, khả năng cao không đạt mục tiêu trong 40 năm.`;
   }
@@ -1183,6 +1273,8 @@ function ScenarioChart({
   results,
   markers,
   years,
+  band,
+  baseRate,
 }: {
   results: {
     sc: Scenario;
@@ -1190,11 +1282,13 @@ function ScenarioChart({
   }[];
   markers: { name: string; yearIndex: number; amount: number }[];
   years: number;
+  band: number;
+  baseRate: number;
 }) {
   const W = 320;
-  const H = 160;
+  const H = 168;
   const padL = 8;
-  const padR = 8;
+  const padR = 52;
   const padT = 12;
   const padB = 24;
   const innerW = W - padL - padR;
@@ -1218,15 +1312,27 @@ function ScenarioChart({
       .join(" ");
   }
 
-  function areaFor(points: YearPoint[]): string {
-    if (points.length === 0) return "";
-    const line = points
+  function bandArea(low: YearPoint[], high: YearPoint[]): string {
+    if (low.length === 0 || high.length === 0) return "";
+    const forward = high
       .map((p, i) => `${i === 0 ? "M" : "L"}${x(p.yearIndex).toFixed(1)},${y(p.total).toFixed(1)}`)
       .join(" ");
-    const last = points[points.length - 1];
-    const first = points[0];
-    return `${line} L${x(last.yearIndex).toFixed(1)},${(padT + innerH).toFixed(1)} L${x(first.yearIndex).toFixed(1)},${(padT + innerH).toFixed(1)} Z`;
+    const back = [...low]
+      .reverse()
+      .map((p) => `L${x(p.yearIndex).toFixed(1)},${y(p.total).toFixed(1)}`)
+      .join(" ");
+    return `${forward} ${back} Z`;
   }
+
+  const cautious = results.find((r) => r.sc.id === "cautious");
+  const base = results.find((r) => r.sc.id === "base");
+  const bull = results.find((r) => r.sc.id === "bull");
+  const showBand = band > 0 && !!cautious && !!bull;
+
+  const baseEnd = base?.out.yearEnds[base.out.yearEnds.length - 1];
+  const loPct = round2(Math.max(0, baseRate - band) * 100);
+  const hiPct = round2((baseRate + band) * 100);
+  const bandPctText = `${loPct.toLocaleString("de-DE")}% – ${hiPct.toLocaleString("de-DE")}%`;
 
   return (
     <svg
@@ -1234,27 +1340,25 @@ function ScenarioChart({
       width="100%"
       height={H}
       role="img"
-      aria-label="Biểu đồ tài sản theo năm, ba kịch bản"
+      aria-label="Biểu đồ tài sản theo năm"
       style={{ display: "block" }}
     >
-      {[...results].reverse().map((r) => (
+      {showBand && cautious && bull && (
         <path
-          key={`a-${r.sc.id}`}
-          d={areaFor(r.out.yearEnds)}
-          fill={scenarioColor(r.sc.id)}
-          opacity={0.12}
+          d={bandArea(cautious.out.yearEnds, bull.out.yearEnds)}
+          fill={scenarioColor("base")}
+          opacity={0.14}
         />
-      ))}
-      {results.map((r) => (
+      )}
+      {base && (
         <path
-          key={`l-${r.sc.id}`}
-          d={pathFor(r.out.yearEnds)}
+          d={pathFor(base.out.yearEnds)}
           fill="none"
-          stroke={scenarioColor(r.sc.id)}
-          strokeWidth={r.sc.id === "base" ? 2.5 : 1.5}
+          stroke={scenarioColor("base")}
+          strokeWidth={2.5}
           strokeLinejoin="round"
         />
-      ))}
+      )}
       {markers.map((m) => (
         <g key={m.name + m.yearIndex}>
           <line
@@ -1268,6 +1372,23 @@ function ScenarioChart({
           <circle cx={x(m.yearIndex)} cy={y(m.amount)} r={3} fill="rgba(16,24,40,.55)" />
         </g>
       ))}
+      {baseEnd && (
+        <text
+          x={W - 4}
+          y={y(baseEnd.total)}
+          fontSize={10}
+          fill={scenarioColor("base")}
+          textAnchor="end"
+          dominantBaseline="middle"
+        >
+          {formatMoneyRounded(baseEnd.total)}
+        </text>
+      )}
+      {showBand && (
+        <text x={W - 4} y={padT + 10} fontSize={9} fill="rgba(16,24,40,.45)" textAnchor="end">
+          {bandPctText}
+        </text>
+      )}
       <text x={padL} y={H - 6} fontSize={10} fill="rgba(16,24,40,.45)">
         0
       </text>
