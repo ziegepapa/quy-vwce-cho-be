@@ -1,41 +1,45 @@
+/** Pure calculation helpers — no side effects */
+
 export function monthlyRate(annualRate: number): number {
+  if (!Number.isFinite(annualRate) || annualRate <= -1) return 0;
   return Math.pow(1 + annualRate, 1 / 12) - 1;
 }
 
-/** Present → future value with annual compounding. */
 export function inflate(presentValue: number, inflationRate: number, years: number): number {
-  if (years <= 0) return presentValue;
-  return presentValue * Math.pow(1 + inflationRate, years);
+  if (!Number.isFinite(presentValue) || !Number.isFinite(inflationRate)) return presentValue;
+  const y = Math.max(0, years);
+  return presentValue * Math.pow(1 + inflationRate, y);
 }
 
-/** Calendar months between two dates (approximate, day-of-month aware). */
 export function monthsBetween(from: Date, to: Date): number {
   return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
 }
 
-/** Parse ISO date string as local calendar date (avoids UTC shift). */
+/** Parse YYYY-MM-DD as local calendar date (no UTC shift). */
 export function parseDate(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
 export function formatDateVN(iso: string): string {
-  if (!iso || iso.length < 10) return iso;
-  const [y, m, d] = iso.slice(0, 10).split("-");
-  return `${d}.${m}.${y}`;
+  if (!iso) return "—";
+  const parts = iso.slice(0, 10).split("-");
+  if (parts.length < 3) return iso;
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y}`;
 }
 
-/** German-style money: 1.234,56 € */
 export function formatMoney(n: number, currency = "EUR"): string {
-  const v = Number.isFinite(n) ? n : 0;
-  return (
-    v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
-    (currency === "EUR" ? " €" : ` ${currency}`)
-  );
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(n);
 }
 
 export function round2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return Math.round(n * 100) / 100;
 }
 
 export function isValidNumber(n: unknown): n is number {
@@ -61,39 +65,45 @@ export function goalProgressStatus(opts: {
   const { targetAdjusted, protectedAmount, monthsRemaining } = opts;
   if (targetAdjusted <= 0) return "green";
   const ratio = protectedAmount / targetAdjusted;
+  if (monthsRemaining < 12 && ratio < 1) return "red";
   if (ratio >= 1) return "green";
-  if (monthsRemaining <= 0) return ratio >= 0.95 ? "yellow" : "red";
   if (ratio >= 0.9) return "yellow";
   return "red";
 }
 
 export function statusLabel(s: ProgressStatus): string {
   if (s === "green") return "Đúng tiến độ";
-  if (s === "yellow") return "Cần theo dõi";
-  return "Thiếu";
+  if (s === "yellow") return "Cần chú ý";
+  return "Nguy cơ thiếu";
 }
 
-/** Required safe (cash) amount for hard goals within horizon months. */
 export function requiredSafeAmount(opts: {
-  goals: { dueDate: string; amount: number; mode: string; baseYear: number; inflationRate: number; bufferPct: number; protectedAmount: number; urgency: string }[];
-  asOf: Date;
-  horizonMonths: number;
+  targetAmount: number;
+  inflationRate: number;
+  baseYear: number;
+  targetYear: number;
+  useInflation: boolean;
+  bufferPct: number;
+  estimatedTax?: number;
+  estimatedFees?: number;
 }): number {
-  const { goals, asOf, horizonMonths } = opts;
-  let need = 0;
-  for (const g of goals) {
-    if (g.urgency !== "hard") continue;
-    const due = parseDate(g.dueDate);
-    const months = monthsBetween(asOf, due);
-    if (months < 0 || months > horizonMonths) continue;
-    const years = Math.max(0, due.getFullYear() - g.baseYear);
-    const adj =
-      g.mode === "purchasing_power"
-        ? inflate(g.amount, g.inflationRate, years) * (1 + g.bufferPct)
-        : g.amount * (1 + g.bufferPct);
-    need += Math.max(0, adj - (g.protectedAmount || 0));
+  let amount = opts.targetAmount;
+  if (opts.useInflation) {
+    const years = Math.max(0, opts.targetYear - opts.baseYear);
+    amount = amount * Math.pow(1 + opts.inflationRate, years);
   }
-  return need;
+  amount *= 1 + opts.bufferPct;
+  amount += opts.estimatedTax ?? 0;
+  amount += opts.estimatedFees ?? 0;
+  return amount;
+}
+
+export function cashGap(opts: {
+  requiredSafe: number;
+  currentSafe: number;
+  expectedFutureCash: number;
+}): number {
+  return Math.max(0, opts.requiredSafe - opts.currentSafe - opts.expectedFutureCash);
 }
 
 export function etfToSell(opts: {
@@ -211,35 +221,29 @@ export function avgCost(state: PortfolioState): number {
   return state.vwceCostBasis / state.vwceQty;
 }
 
-/** Build equity time series from chronological transactions + current price. */
-export function buildEquitySeries(
-  transactions: { date: string; type: string; amount: number; unitPrice?: number; quantity?: number; fee?: number; tax?: number }[],
-  currentPrice: number,
-): { date: string; value: number }[] {
-  const sorted = [...transactions].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-  let s = emptyPortfolio();
-  const out: { date: string; value: number }[] = [];
-  for (const t of sorted) {
-    s = applyTransaction(s, t);
-    const price = t.unitPrice && t.unitPrice > 0 ? t.unitPrice : currentPrice;
-    const total = s.vwceQty * (price || 0) + s.cashBalance;
-    out.push({ date: t.date, value: round2(total) });
-  }
-  return out;
+export function portfolioValue(state: PortfolioState, unitPrice: number): number {
+  return state.vwceQty * (unitPrice || 0) + state.cashBalance;
 }
 
 export type SimParams = {
+  startYear: number;
+  startMonth: number;
   months: number;
-  monthlyContribution: number;
-  annualReturn: number;
-  initialBalance: number;
+  contribution: number;
+  contributionFromYear2: number;
+  contributionGrowth: number;
+  vwceAnnualReturn: number;
+  safeAnnualReturn: number;
+  initialVwce: number;
   initialCash: number;
-  contributionGrowth?: number;
-  withdrawals?: { monthIndex: number; amount: number }[];
+  contributionTiming?: "start" | "end";
+  withdrawals?: { year: number; month: number; amount: number }[];
+  transfers?: { year: number; month: number; amount: number }[];
 };
 
 export type SimMonth = {
-  monthIndex: number;
+  year: number;
+  month: number;
   vwce: number;
   cash: number;
   total: number;
@@ -248,69 +252,98 @@ export type SimMonth = {
 };
 
 export function simulateMonthly(params: SimParams): SimMonth[] {
-  const {
-    months,
-    monthlyContribution,
-    annualReturn,
-    initialBalance,
-    initialCash,
-    contributionGrowth = 0,
-    withdrawals = [],
-  } = params;
-  const r = monthlyRate(annualReturn);
-  let vwce = Math.max(0, initialBalance);
-  let cash = Math.max(0, initialCash);
+  const rVwce = monthlyRate(params.vwceAnnualReturn);
+  const rSafe = monthlyRate(params.safeAnnualReturn);
+  let vwce = Math.max(0, params.initialVwce);
+  let cash = Math.max(0, params.initialCash);
   let contributed = 0;
   let withdrawn = 0;
-  const wdMap = new Map<number, number>();
-  for (const w of withdrawals) {
-    wdMap.set(w.monthIndex, (wdMap.get(w.monthIndex) || 0) + w.amount);
-  }
   const out: SimMonth[] = [];
-  for (let m = 1; m <= months; m++) {
-    const growthFactor = contributionGrowth
-      ? Math.pow(1 + contributionGrowth, Math.floor((m - 1) / 12))
-      : 1;
-    const contrib = monthlyContribution * growthFactor;
-    if (contrib > 0) {
+  let y = params.startYear;
+  let m = params.startMonth;
+  const atEnd = params.contributionTiming === "end";
+
+  for (let i = 0; i < params.months; i++) {
+    vwce *= 1 + rVwce;
+    cash *= 1 + rSafe;
+
+    const yearsSinceStart =
+      y - params.startYear + (m >= params.startMonth ? 0 : -1);
+    let contrib = yearsSinceStart < 1 ? params.contribution : params.contributionFromYear2;
+    const growth = params.contributionGrowth;
+    if (yearsSinceStart >= 2 && growth !== 0) {
+      contrib = params.contributionFromYear2 * Math.pow(1 + growth, yearsSinceStart - 1);
+    }
+
+    if (!atEnd && contrib > 0) {
       vwce += contrib;
       contributed += contrib;
     }
-    vwce *= 1 + r;
-    const wd = wdMap.get(m) || 0;
-    if (wd > 0) {
-      if (cash >= wd) {
-        cash -= wd;
-      } else {
-        const fromVwce = wd - cash;
-        cash = 0;
-        vwce = Math.max(0, vwce - fromVwce);
+
+    for (const t of params.transfers ?? []) {
+      if (t.year === y && t.month === m && t.amount > 0) {
+        const move = Math.min(vwce, t.amount);
+        vwce -= move;
+        cash += move;
       }
-      withdrawn += wd;
     }
+
+    for (const w of params.withdrawals ?? []) {
+      if (w.year === y && w.month === m && w.amount > 0) {
+        let need = w.amount;
+        const fromCash = Math.min(cash, need);
+        cash -= fromCash;
+        need -= fromCash;
+        if (need > 0) {
+          const fromVwce = Math.min(vwce, need);
+          vwce -= fromVwce;
+          need -= fromVwce;
+        }
+        withdrawn += w.amount - need;
+      }
+    }
+
+    if (atEnd && contrib > 0) {
+      vwce += contrib;
+      contributed += contrib;
+    }
+
     out.push({
-      monthIndex: m,
+      year: y,
+      month: m,
       vwce: round2(vwce),
       cash: round2(cash),
       total: round2(vwce + cash),
       contributed: round2(contributed),
       withdrawn: round2(withdrawn),
     });
+
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
   }
   return out;
 }
 
 export function yearEndSnapshots(months: SimMonth[]): SimMonth[] {
-  return months.filter((m) => m.monthIndex % 12 === 0);
+  const map = new Map<number, SimMonth>();
+  for (const row of months) map.set(row.year, row);
+  return [...map.values()].sort((a, b) => a.year - b.year);
 }
 
 export function csvEscape(value: string | number): string {
-  const s = String(value);
+  const s = String(value ?? "");
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
 
-/** Accept DE/EN decimal strings: 1.234,56 or 1,234.56 or 1234.56 */
+/**
+ * Đọc số người dùng gõ tay, chấp nhận dấu phẩy thập phân kiểu VN/DE.
+ * Quy tắc: dấu phân cách thập phân là dấu xuất hiện SAU CÙNG.
+ * "123,446" -> 123.446 · "1.234,56" -> 1234.56 · "1,234.56" -> 1234.56 · "12 €" -> 12
+ */
 export function parseDecimal(input: string | number | null | undefined): number {
   if (typeof input === "number") return Number.isFinite(input) ? input : 0;
   const raw = String(input ?? "").replace(/[\s\u00A0€%]/g, "");
