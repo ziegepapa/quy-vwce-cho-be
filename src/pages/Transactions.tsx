@@ -37,6 +37,7 @@ export default function Transactions() {
   const [yearFilter, setYearFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState<"all" | TxType>("all");
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [qtyError, setQtyError] = useState("");
 
   async function reload() {
     setTxs(await listTransactions());
@@ -74,6 +75,7 @@ export default function Transactions() {
       : 0;
 
   async function save() {
+    setQtyError("");
     if (!form.date || !form.amount.trim()) {
       alert("Ngày và số tiền bắt buộc");
       return;
@@ -82,13 +84,22 @@ export default function Transactions() {
       alert("Điều chỉnh bắt buộc có ghi chú");
       return;
     }
+    // S1: bán bắt buộc có số lượng — không tự suy từ tiền
+    if (form.type === "sell_vwce") {
+      const qRaw = form.quantity.trim();
+      const q = qRaw ? parseDecimal(qRaw) : 0;
+      if (!qRaw || q <= 0) {
+        setQtyError("Giao dịch bán cần số lượng chứng chỉ quỹ.");
+        return;
+      }
+    }
     if ((form.type === "buy_vwce" || form.type === "sell_vwce") && unitPrice <= 0 && !form.quantity) {
       alert("Cần giá hoặc số lượng");
       return;
     }
     let quantity: number | undefined = form.quantity ? parseDecimal(form.quantity) : undefined;
     if (
-      (form.type === "buy_vwce" || form.type === "sell_vwce") &&
+      form.type === "buy_vwce" &&
       unitPrice &&
       !form.quantity
     ) {
@@ -114,6 +125,7 @@ export default function Transactions() {
     setShow(false);
     setForm(emptyForm());
     setEditId(null);
+    setQtyError("");
     await reload();
   }
 
@@ -337,14 +349,32 @@ export default function Transactions() {
                   />
                 </div>
                 <div className="field">
-                  <label htmlFor="f-qty">Số lượng (để trống = tự tính)</label>
+                  <label htmlFor="f-qty">
+                    {form.type === "sell_vwce"
+                      ? "Số lượng (bắt buộc khi bán)"
+                      : "Số lượng (để trống = tự tính)"}
+                  </label>
                   <input
                     id="f-qty"
                     inputMode="decimal"
                     value={form.quantity}
-                    onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                    placeholder={autoQty ? autoQty.toFixed(4) : ""}
+                    onChange={(e) => {
+                      setQtyError("");
+                      setForm({ ...form, quantity: e.target.value });
+                    }}
+                    placeholder={
+                      form.type === "sell_vwce"
+                        ? ""
+                        : autoQty
+                          ? autoQty.toFixed(4)
+                          : ""
+                    }
                   />
+                  {qtyError && (
+                    <p style={{ color: "var(--danger-600, #E0455F)", fontSize: 13, margin: "6px 0 0" }}>
+                      {qtyError}
+                    </p>
+                  )}
                 </div>
                 <div className="grid2">
                   <div className="field">
