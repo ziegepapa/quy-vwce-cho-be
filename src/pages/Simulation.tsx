@@ -49,8 +49,6 @@ type ProjectOutput = {
   interest: number;
 };
 
-type ContribScope = "y1" | "y2" | "both";
-
 type SnapshotSettings = {
   contributionY1: number;
   contributionY2: number;
@@ -215,16 +213,20 @@ export default function Simulation() {
   const [targetYear, setTargetYear] = useState(String(new Date().getFullYear() + 15));
 
   const [saveOpen, setSaveOpen] = useState(false);
-  const [contribScope, setContribScope] = useState<ContribScope>("y1");
-  const [writeVwceReturn, setWriteVwceReturn] = useState(false);
-  const [writeInflation, setWriteInflation] = useState(false);
+  const [writeY1, setWriteY1] = useState(true);
+  const [writeY2, setWriteY2] = useState(false);
+  const [writeReturn, setWriteReturn] = useState(false);
   const [undoSnap, setUndoSnap] = useState<SnapshotSettings | null>(null);
   const [undoVisible, setUndoVisible] = useState(false);
+  const [undoCount, setUndoCount] = useState(0);
+  const [matchMsg, setMatchMsg] = useState(false);
   const undoTimerRef = useRef<number | null>(null);
+  const matchTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
       if (undoTimerRef.current != null) window.clearTimeout(undoTimerRef.current);
+      if (matchTimerRef.current != null) window.clearTimeout(matchTimerRef.current);
     };
   }, []);
 
@@ -382,10 +384,37 @@ export default function Simulation() {
     if (g.amount > 0) setTargetAmount(String(g.amount));
   }
 
+  function moneyEq(a: number, b: number): boolean {
+    return round2(a) === round2(b);
+  }
+
+  function rateEq(a: number, b: number): boolean {
+    return Math.abs(a - b) < 1e-4;
+  }
+
   function openSaveConfirm() {
-    setContribScope("y1");
-    setWriteVwceReturn(false);
-    setWriteInflation(false);
+    const o1 = settings?.contributionY1 ?? 0;
+    const o2 = settings?.contributionY2 ?? 0;
+    const oR = settings?.vwceReturn ?? 0;
+    const nR = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
+    const y1Diff = !moneyEq(o1, monthlyForProject);
+    const y2Diff = !moneyEq(o2, monthlyForProject);
+    const retDiff = !rateEq(oR, nR);
+
+    if (!y1Diff && !y2Diff && !retDiff) {
+      setMatchMsg(true);
+      if (matchTimerRef.current != null) window.clearTimeout(matchTimerRef.current);
+      matchTimerRef.current = window.setTimeout(() => {
+        setMatchMsg(false);
+        matchTimerRef.current = null;
+      }, 4000);
+      return;
+    }
+
+    // Mặc định: tích dòng năm 1 nếu khác; các dòng khác tắt
+    setWriteY1(y1Diff);
+    setWriteY2(false);
+    setWriteReturn(false);
     setSaveOpen(true);
   }
 
@@ -398,21 +427,27 @@ export default function Simulation() {
       inflationRate: current.inflationRate,
     };
 
+    const nR = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
+    const y1Diff = !moneyEq(current.contributionY1, monthlyForProject);
+    const y2Diff = !moneyEq(current.contributionY2, monthlyForProject);
+    const retDiff = !rateEq(current.vwceReturn, nR);
+
     const partial: Partial<AppSettings> = {};
-    if (contribScope === "y1" || contribScope === "both") {
+    let n = 0;
+    if (writeY1 && y1Diff) {
       partial.contributionY1 = monthlyForProject;
+      n += 1;
     }
-    if (contribScope === "y2" || contribScope === "both") {
+    if (writeY2 && y2Diff) {
       partial.contributionY2 = monthlyForProject;
+      n += 1;
     }
-    if (writeVwceReturn) {
-      partial.vwceReturn = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
-    }
-    if (writeInflation) {
-      partial.inflationRate = inflationN;
+    if (writeReturn && retDiff) {
+      partial.vwceReturn = nR;
+      n += 1;
     }
 
-    if (Object.keys(partial).length === 0) {
+    if (n === 0) {
       setSaveOpen(false);
       return;
     }
@@ -422,11 +457,13 @@ export default function Simulation() {
     setSaveOpen(false);
 
     setUndoSnap(snap);
+    setUndoCount(n);
     setUndoVisible(true);
     if (undoTimerRef.current != null) window.clearTimeout(undoTimerRef.current);
     undoTimerRef.current = window.setTimeout(() => {
       setUndoVisible(false);
       setUndoSnap(null);
+      setUndoCount(0);
       undoTimerRef.current = null;
     }, UNDO_MS);
   }
@@ -442,6 +479,7 @@ export default function Simulation() {
     setSettings(await getSettings());
     setUndoVisible(false);
     setUndoSnap(null);
+    setUndoCount(0);
     if (undoTimerRef.current != null) {
       window.clearTimeout(undoTimerRef.current);
       undoTimerRef.current = null;
@@ -466,7 +504,17 @@ export default function Simulation() {
   const oldY1 = settings?.contributionY1 ?? 0;
   const oldY2 = settings?.contributionY2 ?? 0;
   const oldVwce = settings?.vwceReturn ?? 0;
-  const oldInf = settings?.inflationRate ?? 0;
+  const y1Diff = !moneyEq(oldY1, monthlyForProject);
+  const y2Diff = !moneyEq(oldY2, monthlyForProject);
+  const retDiff = !rateEq(oldVwce, baseRateNew);
+  const selectedCount =
+    (writeY1 && y1Diff ? 1 : 0) + (writeY2 && y2Diff ? 1 : 0) + (writeReturn && retDiff ? 1 : 0);
+  const saveLabel =
+    selectedCount === 0
+      ? "Chưa chọn gì"
+      : selectedCount === 1
+        ? "Lưu 1 thay đổi"
+        : `Lưu ${selectedCount} thay đổi`;
 
   return (
     <div className="stack" style={{ gap: 16 }}>
@@ -858,9 +906,15 @@ export default function Simulation() {
         Lưu mức góp & lợi nhuận cơ sở vào kế hoạch
       </button>
 
+      {matchMsg && (
+        <div className="banner" style={{ margin: 0 }}>
+          Kế hoạch đã khớp với mô phỏng — không có gì để lưu.
+        </div>
+      )}
+
       {undoVisible && undoSnap && (
         <div className="banner" style={{ margin: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span>Đã lưu vào kế hoạch.</span>
+          <span>Đã lưu {undoCount} thay đổi.</span>
           <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={() => void undoPersist()}>
             Hoàn tác
           </button>
@@ -871,71 +925,94 @@ export default function Simulation() {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="sheet-handle" aria-hidden />
-            <h2>Xác nhận lưu vào kế hoạch</h2>
-            <p className="muted" style={{ fontSize: 13 }}>
-              Chọn trường nào được ghi. Giá trị cũ → mới:
+            <h2>Lưu vào kế hoạch</h2>
+            <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+              Chọn những gì muốn ghi đè.
             </p>
-            <ul style={{ fontSize: 14, paddingLeft: 18, margin: "8px 0 16px" }}>
-              <li>
-                Đóng góp năm 1: {formatMoney(oldY1)} → {formatMoney(monthlyForProject)}
-              </li>
-              <li>
-                Đóng góp từ năm 2: {formatMoney(oldY2)} → {formatMoney(monthlyForProject)}
-              </li>
-              <li>
-                Lợi nhuận VWCE: {(oldVwce * 100).toFixed(2)}% → {(baseRateNew * 100).toFixed(2)}%
-              </li>
-              <li>
-                Lạm phát: {(oldInf * 100).toFixed(2)}% → {(inflationN * 100).toFixed(2)}%
-              </li>
-            </ul>
 
-            <p className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Phạm vi đóng góp
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-              {(
-                [
-                  ["y1", "Chỉ năm 1"],
-                  ["y2", "Chỉ từ năm 2"],
-                  ["both", "Cả hai"],
-                ] as const
-              ).map(([id, label]) => (
-                <label key={id} className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-                  <span>{label}</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, margin: "12px 0 16px" }}>
+              {y1Diff && (
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    minHeight: 44,
+                    cursor: "pointer",
+                  }}
+                >
                   <input
-                    type="radio"
-                    name="contrib-scope"
-                    checked={contribScope === id}
-                    onChange={() => setContribScope(id)}
-                    style={{ width: 22, height: 22 }}
+                    type="checkbox"
+                    checked={writeY1}
+                    onChange={(e) => setWriteY1(e.target.checked)}
+                    style={{ width: 24, height: 24, flexShrink: 0 }}
                   />
+                  <span style={{ flex: 1 }}>Góp năm 1</span>
+                  <span style={{ fontSize: 13, whiteSpace: "nowrap" }}>
+                    <span className="muted">{formatMoney(oldY1)}</span>
+                    {" → "}
+                    <strong>{formatMoney(monthlyForProject)}</strong>
+                  </span>
                 </label>
-              ))}
+              )}
+              {y2Diff && (
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    minHeight: 44,
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={writeY2}
+                    onChange={(e) => setWriteY2(e.target.checked)}
+                    style={{ width: 24, height: 24, flexShrink: 0 }}
+                  />
+                  <span style={{ flex: 1 }}>Góp từ năm 2</span>
+                  <span style={{ fontSize: 13, whiteSpace: "nowrap" }}>
+                    <span className="muted">{formatMoney(oldY2)}</span>
+                    {" → "}
+                    <strong>{formatMoney(monthlyForProject)}</strong>
+                  </span>
+                </label>
+              )}
+              {retDiff && (
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    minHeight: 44,
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={writeReturn}
+                    onChange={(e) => setWriteReturn(e.target.checked)}
+                    style={{ width: 24, height: 24, flexShrink: 0 }}
+                  />
+                  <span style={{ flex: 1 }}>Lợi nhuận VWCE</span>
+                  <span style={{ fontSize: 13, whiteSpace: "nowrap" }}>
+                    <span className="muted">{(oldVwce * 100).toFixed(2)}%</span>
+                    {" → "}
+                    <strong>{(baseRateNew * 100).toFixed(2)}%</strong>
+                  </span>
+                </label>
+              )}
             </div>
 
-            <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-              <span>Ghi lợi nhuận VWCE (cơ sở)</span>
-              <input
-                type="checkbox"
-                checked={writeVwceReturn}
-                onChange={(e) => setWriteVwceReturn(e.target.checked)}
-                style={{ width: 24, height: 24 }}
-              />
-            </label>
-            <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-              <span>Ghi tỷ lệ lạm phát</span>
-              <input
-                type="checkbox"
-                checked={writeInflation}
-                onChange={(e) => setWriteInflation(e.target.checked)}
-                style={{ width: 24, height: 24 }}
-              />
-            </label>
-
-            <div className="stack" style={{ marginTop: 16 }}>
-              <button type="button" style={{ minHeight: 44 }} onClick={() => void confirmPersist()}>
-                Xác nhận lưu
+            <div className="stack" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                style={{ minHeight: 44 }}
+                disabled={selectedCount === 0}
+                onClick={() => void confirmPersist()}
+              >
+                {saveLabel}
               </button>
               <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={() => setSaveOpen(false)}>
                 Hủy
