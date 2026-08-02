@@ -1,4 +1,4 @@
-0.085 import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   applyTransaction,
   emptyPortfolio,
@@ -47,7 +47,6 @@ function formatMoneyRounded(n: number): string {
   const s = abs.toLocaleString("de-DE", { maximumFractionDigits: 0 });
   return (v < 0 ? "−" : "") + s + " €";
 }
-];
 
 export default function Simulation() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
