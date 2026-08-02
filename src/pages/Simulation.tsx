@@ -23,11 +23,11 @@ type Mode = "A" | "B" | "C";
 type Scenario = {
   id: string;
   label: string;
-  rate: number; // lợi nhuận danh nghĩa trước TER
+  rate: number;
 };
 
 type YearPoint = {
-  yearIndex: number; // 0 = hiện tại, 1 = sau 1 năm…
+  yearIndex: number;
   total: number;
   contributed: number;
 };
@@ -58,17 +58,13 @@ type SnapshotSettings = {
   inflationRate: number;
 };
 
-const TAX_RATE = 0.26375; // Abgeltungsteuer + Soli
-const TEILFREISTELLUNG = 0.3; // quỹ cổ phiếu
-const SPARERPAUSCH = 1000; // EUR/năm — áp một lần khi bán cuối kỳ
+const TAX_RATE = 0.26375;
+const TEILFREISTELLUNG = 0.3;
+const SPARERPAUSCH = 1000;
 const DEFAULT_TER = 0.0022;
 const MAX_YEARS = 40;
 const UNDO_MS = 12_000;
 
-/**
- * Hàm tính cuối kỳ DUY NHẤT — A/B/C đều gọi hàm này.
- * Góp cuối tháng, lợi nhuận cộng dồn hàng tháng, TER trừ một lần/năm trên tổng.
- */
 function projectEnd(input: ProjectInput): ProjectOutput {
   const years = Math.max(0, Math.min(MAX_YEARS, Math.floor(input.years)));
   const months = years * 12;
@@ -100,7 +96,6 @@ function projectEnd(input: ProjectInput): ProjectOutput {
       balance += monthly;
       contributed += monthly;
     }
-    // Cuối mỗi năm: trừ TER trên tổng tài sản; tăng góp theo %/năm
     if (m % 12 === 0) {
       if (ter > 0 && balance > 0) {
         balance *= 1 - ter;
@@ -126,10 +121,6 @@ function projectEnd(input: ProjectInput): ProjectOutput {
   };
 }
 
-/**
- * Thuế lãi vốn Đức ước lượng khi bán cuối kỳ (không mô phỏng Vorabpauschale).
- * initialCostBasis = giá vốn danh mục hiện tại (vwceCostBasis + cash), KHÔNG phải giá thị trường.
- */
 function estimateGermanExitTax(
   terminal: number,
   contributed: number,
@@ -143,7 +134,6 @@ function estimateGermanExitTax(
   return { tax, afterTax: round2(terminal - tax) };
 }
 
-/** Chế độ B: tìm monthly sao cho terminal ≈ target (cùng projectEnd). */
 function findMonthlyForTarget(
   target: number,
   base: Omit<ProjectInput, "monthlyContribution">,
@@ -169,7 +159,6 @@ function findMonthlyForTarget(
   return round2(hi);
 }
 
-/** Chế độ C: tìm số năm (1..40) sao cho terminal >= target. */
 function findYearsForTarget(
   target: number,
   base: Omit<ProjectInput, "years">,
@@ -225,7 +214,6 @@ export default function Simulation() {
   const [targetAmount, setTargetAmount] = useState("50000");
   const [targetYear, setTargetYear] = useState(String(new Date().getFullYear() + 15));
 
-  // [1] Lưu kế hoạch — xác nhận + hoàn tác
   const [saveOpen, setSaveOpen] = useState(false);
   const [contribScope, setContribScope] = useState<ContribScope>("y1");
   const [writeVwceReturn, setWriteVwceReturn] = useState(false);
@@ -275,7 +263,6 @@ export default function Simulation() {
     return round2(portfolio.vwceQty * price + portfolio.cashBalance);
   }, [portfolio, settings]);
 
-  // Giá vốn danh mục (vwceCostBasis + tiền mặt mệnh giá) — dùng cho thuế, không dùng giá thị trường
   const realCostBasis = useMemo(
     () => round2(Math.max(0, portfolio.vwceCostBasis) + Math.max(0, portfolio.cashBalance)),
     [portfolio],
@@ -286,8 +273,10 @@ export default function Simulation() {
     return Math.max(0, realBalance);
   }, [balanceOverride, realBalance]);
 
-  // Khi ghi đè số dư thị trường, không suy diễn giá vốn — giữ giá vốn thật nếu còn danh mục
-  const initialCostBasis = realCostBasis;
+  // Ghi đè số dư: giả định, coi toàn bộ là vốn (không có lãi tiềm ẩn).
+  // Không ghi đè: dùng giá vốn thật (vwceCostBasis + cash).
+  const initialCostBasis =
+    balanceOverride.trim() !== "" ? initialBalance : realCostBasis;
 
   const monthlyN = Math.max(0, parseDecimal(monthly));
   const growthN = growthOn ? Math.max(0, parseDecimal(growthPct) / 100) : 0;
@@ -769,7 +758,6 @@ export default function Simulation() {
               <div className="metric-label">Tổng đã góp</div>
               <div className="metric-value">{formatMoney(primary.out.contributed)}</div>
             </div>
-            {/* [2] Chỉ hiện khi có số dư xuất phát — để bốn số cộng khớp */}
             {initialBalance > 0 && (
               <div>
                 <div className="metric-label">Số dư xuất phát</div>
