@@ -49,11 +49,10 @@ type ProjectOutput = {
   interest: number;
 };
 
-type SnapshotSettings = {
-  contributionY1: number;
-  contributionY2: number;
-  vwceReturn: number;
-  inflationRate: number;
+/** Chỉ các khóa đã ghi — hoàn tác không đụng trường khác. */
+type UndoSnap = {
+  values: Partial<Pick<AppSettings, "contributionY1" | "contributionY2" | "vwceReturn">>;
+  message: string;
 };
 
 const TAX_RATE = 0.26375;
@@ -99,7 +98,8 @@ function projectEnd(input: ProjectInput): ProjectOutput {
         balance *= 1 - ter;
       }
       if (growth !== 0) {
-        monthly *= 1 + growth;
+        // Không để mức góp âm khi tăng trưởng âm kéo dài
+        monthly = Math.max(0, monthly * (1 + growth));
       }
       yearEnds.push({
         yearIndex: m / 12,
@@ -142,11 +142,20 @@ function findMonthlyForTarget(
 
   let lo = 0;
   let hi = Math.max(target, 1);
+  let reached = false;
   for (let i = 0; i < 20; i++) {
     const r = projectEnd({ ...base, monthlyContribution: hi });
-    if (r.terminal >= target) break;
+    if (r.terminal >= target) {
+      reached = true;
+      break;
+    }
     hi *= 2;
     if (hi > 1e7) break;
+  }
+  // Tăng trưởng âm mạnh: dù góp rất lớn vẫn không đủ
+  if (!reached) {
+    const atMax = projectEnd({ ...base, monthlyContribution: hi });
+    if (atMax.terminal < target) return -1;
   }
   for (let i = 0; i < 48; i++) {
     const mid = (lo + hi) / 2;
@@ -216,9 +225,8 @@ export default function Simulation() {
   const [writeY1, setWriteY1] = useState(true);
   const [writeY2, setWriteY2] = useState(false);
   const [writeReturn, setWriteReturn] = useState(false);
-  const [undoSnap, setUndoSnap] = useState<SnapshotSettings | null>(null);
+  const [undoSnap, setUndoSnap] = useState<UndoSnap | null>(null);
   const [undoVisible, setUndoVisible] = useState(false);
-  const [undoCount, setUndoCount] = useState(0);
   const [matchMsg, setMatchMsg] = useState(false);
   const undoTimerRef = useRef<number | null>(null);
   const matchTimerRef = useRef<number | null>(null);
@@ -281,7 +289,10 @@ export default function Simulation() {
     balanceOverride.trim() !== "" ? initialBalance : realCostBasis;
 
   const monthlyN = Math.max(0, parseDecimal(monthly));
-  const growthN = growthOn ? Math.max(0, parseDecimal(growthPct) / 100) : 0;
+  // Cho phép giảm dần: kẹp [-20%, +20%]/năm
+  const growthN = growthOn
+    ? Math.max(-0.2, Math.min(0.2, parseDecimal(growthPct) / 100))
+    : 0;
   const lumpN = Math.max(0, parseDecimal(lumpSum));
   const inflationN = inflationOn ? Math.max(0, parseDecimal(inflationPct) / 100) : 0;
   const targetN = Math.max(0, parseDecimal(targetAmount));
@@ -314,7 +325,7 @@ export default function Simulation() {
     });
   }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN]);
 
-  const monthlyForProject = mode === "B" ? requiredMonthlyBase : monthlyN;
+  const monthlyForProject = mode === "B" ? Math.max(0, requiredMonthlyBase) : monthlyN;
 
   const yearsC = useMemo(() => {
     if (mode !== "C") return { years: effectiveYears, reached: true };
@@ -392,16 +403,62 @@ export default function Simulation() {
     return Math.abs(a - b) < 1e-4;
   }
 
+  /** Ghi partial + băng hoàn tác. Snapshot CHỈ các khóa đã ghi. */
+  async function applyPersist(
+    partial: Partial<Pick<AppSettings, "contributionY1" | "contributionY2" | "vwceReturn">>,
+    message: string,
+  ) {
+    const keys = Object.keys(partial) as (keyof typeof partial)[];
+    if (keys.length === 0) return;
+
+    const current = settings ?? (await getSettings());
+    const snapValues: UndoSnap["values"] = {};
+    for (const k of keys) {
+      if (k === "contributionY1") snapValues.contributionY1 = current.contributionY1;
+      if (k === "contributionY2") snapValues.contributionY2 = current.contributionY2;
+      if (k === "vwceReturn") snapValues.vwceReturn = current.vwceReturn;
+    }
+
+    await saveSettings(partial);
+    setSettings(await getSettings());
+    setSaveOpen(false);
+
+    // D3: hai băng loại trừ nhau
+    setMatchMsg(false);
+    if (matchTimerRef.current != null) {
+      window.clearTimeout(matchTimerRef.current);
+      matchTimerRef.current = null;
+    }
+
+    setUndoSnap({ values: snapValues, message });
+    setUndoVisible(true);
+    if (undoTimerRef.current != null) window.clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = window.setTimeout(() => {
+      setUndoVisible(false);
+      setUndoSnap(null);
+      undoTimerRef.current = null;
+    }, UNDO_MS);
+  }
+
   function openSaveConfirm() {
     const o1 = settings?.contributionY1 ?? 0;
     const o2 = settings?.contributionY2 ?? 0;
     const oR = settings?.vwceReturn ?? 0;
     const nR = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
-    const y1Diff = !moneyEq(o1, monthlyForProject);
-    const y2Diff = !moneyEq(o2, monthlyForProject);
+    const monthlyR = round2(monthlyForProject);
+    const y1Diff = !moneyEq(o1, monthlyR);
+    const y2Diff = !moneyEq(o2, monthlyR);
     const retDiff = !rateEq(oR, nR);
+    const diffCount = (y1Diff ? 1 : 0) + (y2Diff ? 1 : 0) + (retDiff ? 1 : 0);
 
-    if (!y1Diff && !y2Diff && !retDiff) {
+    // 0 khác biệt
+    if (diffCount === 0) {
+      setUndoVisible(false);
+      setUndoSnap(null);
+      if (undoTimerRef.current != null) {
+        window.clearTimeout(undoTimerRef.current);
+        undoTimerRef.current = null;
+      }
       setMatchMsg(true);
       if (matchTimerRef.current != null) window.clearTimeout(matchTimerRef.current);
       matchTimerRef.current = window.setTimeout(() => {
@@ -411,7 +468,28 @@ export default function Simulation() {
       return;
     }
 
-    // Mặc định: tích dòng năm 1 nếu khác; các dòng khác tắt
+    // Đúng 1 khác biệt → ghi luôn, không mở sheet
+    if (diffCount === 1) {
+      if (y1Diff) {
+        void applyPersist(
+          { contributionY1: monthlyR },
+          `Đã đặt Góp năm 1 = ${formatMoney(monthlyR)}`,
+        );
+      } else if (y2Diff) {
+        void applyPersist(
+          { contributionY2: monthlyR },
+          `Đã đặt Góp từ năm 2 = ${formatMoney(monthlyR)}`,
+        );
+      } else {
+        void applyPersist(
+          { vwceReturn: nR },
+          `Đã đặt Lợi nhuận VWCE = ${(nR * 100).toFixed(2)}%`,
+        );
+      }
+      return;
+    }
+
+    // ≥ 2 → mở sheet, mặc định tích năm 1 nếu khác
     setWriteY1(y1Diff);
     setWriteY2(false);
     setWriteReturn(false);
@@ -420,66 +498,45 @@ export default function Simulation() {
 
   async function confirmPersist() {
     const current = settings ?? (await getSettings());
-    const snap: SnapshotSettings = {
-      contributionY1: current.contributionY1,
-      contributionY2: current.contributionY2,
-      vwceReturn: current.vwceReturn,
-      inflationRate: current.inflationRate,
-    };
-
     const nR = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
-    const y1Diff = !moneyEq(current.contributionY1, monthlyForProject);
-    const y2Diff = !moneyEq(current.contributionY2, monthlyForProject);
-    const retDiff = !rateEq(current.vwceReturn, nR);
+    const monthlyR = round2(monthlyForProject);
+    const y1D = !moneyEq(current.contributionY1, monthlyR);
+    const y2D = !moneyEq(current.contributionY2, monthlyR);
+    const retD = !rateEq(current.vwceReturn, nR);
 
-    const partial: Partial<AppSettings> = {};
-    let n = 0;
-    if (writeY1 && y1Diff) {
-      partial.contributionY1 = monthlyForProject;
-      n += 1;
+    const partial: Partial<Pick<AppSettings, "contributionY1" | "contributionY2" | "vwceReturn">> = {};
+    const parts: string[] = [];
+    if (writeY1 && y1D) {
+      partial.contributionY1 = monthlyR;
+      parts.push(`Góp năm 1 = ${formatMoney(monthlyR)}`);
     }
-    if (writeY2 && y2Diff) {
-      partial.contributionY2 = monthlyForProject;
-      n += 1;
+    if (writeY2 && y2D) {
+      partial.contributionY2 = monthlyR;
+      parts.push(`Góp từ năm 2 = ${formatMoney(monthlyR)}`);
     }
-    if (writeReturn && retDiff) {
+    if (writeReturn && retD) {
       partial.vwceReturn = nR;
-      n += 1;
+      parts.push(`Lợi nhuận VWCE = ${(nR * 100).toFixed(2)}%`);
     }
 
-    if (n === 0) {
+    if (parts.length === 0) {
       setSaveOpen(false);
       return;
     }
 
-    await saveSettings(partial);
-    setSettings(await getSettings());
-    setSaveOpen(false);
-
-    setUndoSnap(snap);
-    setUndoCount(n);
-    setUndoVisible(true);
-    if (undoTimerRef.current != null) window.clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = window.setTimeout(() => {
-      setUndoVisible(false);
-      setUndoSnap(null);
-      setUndoCount(0);
-      undoTimerRef.current = null;
-    }, UNDO_MS);
+    const message =
+      parts.length === 1
+        ? `Đã đặt ${parts[0]}`
+        : `Đã lưu ${parts.length} thay đổi`;
+    await applyPersist(partial, message);
   }
 
   async function undoPersist() {
     if (!undoSnap) return;
-    await saveSettings({
-      contributionY1: undoSnap.contributionY1,
-      contributionY2: undoSnap.contributionY2,
-      vwceReturn: undoSnap.vwceReturn,
-      inflationRate: undoSnap.inflationRate,
-    });
+    await saveSettings(undoSnap.values);
     setSettings(await getSettings());
     setUndoVisible(false);
     setUndoSnap(null);
-    setUndoCount(0);
     if (undoTimerRef.current != null) {
       window.clearTimeout(undoTimerRef.current);
       undoTimerRef.current = null;
@@ -678,7 +735,12 @@ export default function Simulation() {
             />
           </div>
         )}
-        {mode === "B" && (
+        {mode === "B" && requiredMonthlyBase < 0 && (
+          <div className="banner" style={{ margin: "0 0 12px" }}>
+            Không đạt được mục tiêu với mức giảm này.
+          </div>
+        )}
+        {mode === "B" && requiredMonthlyBase >= 0 && (
           <p style={{ margin: "0 0 12px" }}>
             Cần góp khoảng{" "}
             <strong className="metric-value">{formatMoney(requiredMonthlyBase)}</strong>/tháng
@@ -687,7 +749,7 @@ export default function Simulation() {
         )}
 
         <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-          <span>Tăng góp mỗi năm</span>
+          <span>Góp thay đổi theo năm</span>
           <input
             type="checkbox"
             checked={growthOn}
@@ -697,7 +759,7 @@ export default function Simulation() {
         </label>
         {growthOn && (
           <div className="field">
-            <label htmlFor="sim-growth">% tăng / năm</label>
+            <label htmlFor="sim-growth">Thay đổi góp mỗi năm (%)</label>
             <input
               id="sim-growth"
               inputMode="decimal"
@@ -705,6 +767,9 @@ export default function Simulation() {
               onChange={(e) => setGrowthPct(e.target.value)}
               style={{ minHeight: 44 }}
             />
+            <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
+              Số âm = giảm dần. Ví dụ: −5
+            </p>
           </div>
         )}
 
@@ -795,7 +860,7 @@ export default function Simulation() {
         <div className="card">
           <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
             Kịch bản {primary.sc.label} · {yearsForProject} năm
-            {mode === "B" && ` · góp ${formatMoney(monthlyForProject)}/tháng`}
+            {mode === "B" && requiredMonthlyBase >= 0 && ` · góp ${formatMoney(monthlyForProject)}/tháng`}
           </p>
           <div className="grid2" style={{ gap: 12 }}>
             <div>
@@ -906,7 +971,7 @@ export default function Simulation() {
         Lưu mức góp & lợi nhuận cơ sở vào kế hoạch
       </button>
 
-      {matchMsg && (
+      {matchMsg && !undoVisible && (
         <div className="banner" style={{ margin: 0 }}>
           Kế hoạch đã khớp với mô phỏng — không có gì để lưu.
         </div>
@@ -914,7 +979,7 @@ export default function Simulation() {
 
       {undoVisible && undoSnap && (
         <div className="banner" style={{ margin: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span>Đã lưu {undoCount} thay đổi.</span>
+          <span>{undoSnap.message}</span>
           <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={() => void undoPersist()}>
             Hoàn tác
           </button>
@@ -927,83 +992,139 @@ export default function Simulation() {
             <div className="sheet-handle" aria-hidden />
             <h2>Lưu vào kế hoạch</h2>
             <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
-              Chọn những gì muốn ghi đè.
+              Chạm để chọn mục muốn ghi.
             </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, margin: "12px 0 16px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0 8px" }}>
               {y1Diff && (
-                <label
+                <button
+                  type="button"
+                  aria-pressed={writeY1}
+                  onClick={() => setWriteY1((v) => !v)}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
                     minHeight: 44,
+                    padding: "8px 12px",
+                    borderRadius: 12,
+                    border: writeY1 ? "1px solid transparent" : "1px solid var(--border, rgba(16,24,40,.18))",
+                    background: writeY1 ? "var(--primary-600, #3b6ef5)" : "transparent",
+                    color: writeY1 ? "var(--on-primary, #fff)" : "var(--muted, rgba(16,24,40,.55))",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 2,
                     cursor: "pointer",
+                    textAlign: "left",
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={writeY1}
-                    onChange={(e) => setWriteY1(e.target.checked)}
-                    style={{ width: 24, height: 24, flexShrink: 0 }}
-                  />
-                  <span style={{ flex: 1 }}>Góp năm 1</span>
-                  <span style={{ fontSize: 13, whiteSpace: "nowrap" }}>
-                    <span className="muted">{formatMoney(oldY1)}</span>
-                    {" → "}
-                    <strong>{formatMoney(monthlyForProject)}</strong>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>Năm 1</span>
+                  <strong style={{ fontSize: 14 }}>{formatMoney(round2(monthlyForProject))}</strong>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: writeY1
+                        ? "inherit"
+                        : round2(monthlyForProject) - round2(oldY1) >= 0
+                          ? "#2f9e6b"
+                          : "#c47a2c",
+                      opacity: writeY1 ? 0.9 : 1,
+                    }}
+                  >
+                    {round2(monthlyForProject) - round2(oldY1) >= 0 ? "↑ +" : "↓ −"}
+                    {formatMoney(Math.abs(round2(monthlyForProject) - round2(oldY1))).replace(" EUR", "")}
                   </span>
-                </label>
+                </button>
               )}
               {y2Diff && (
-                <label
+                <button
+                  type="button"
+                  aria-pressed={writeY2}
+                  onClick={() => setWriteY2((v) => !v)}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
                     minHeight: 44,
+                    padding: "8px 12px",
+                    borderRadius: 12,
+                    border: writeY2 ? "1px solid transparent" : "1px solid var(--border, rgba(16,24,40,.18))",
+                    background: writeY2 ? "var(--primary-600, #3b6ef5)" : "transparent",
+                    color: writeY2 ? "var(--on-primary, #fff)" : "var(--muted, rgba(16,24,40,.55))",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 2,
                     cursor: "pointer",
+                    textAlign: "left",
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={writeY2}
-                    onChange={(e) => setWriteY2(e.target.checked)}
-                    style={{ width: 24, height: 24, flexShrink: 0 }}
-                  />
-                  <span style={{ flex: 1 }}>Góp từ năm 2</span>
-                  <span style={{ fontSize: 13, whiteSpace: "nowrap" }}>
-                    <span className="muted">{formatMoney(oldY2)}</span>
-                    {" → "}
-                    <strong>{formatMoney(monthlyForProject)}</strong>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>Từ năm 2</span>
+                  <strong style={{ fontSize: 14 }}>{formatMoney(round2(monthlyForProject))}</strong>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: writeY2
+                        ? "inherit"
+                        : round2(monthlyForProject) - round2(oldY2) >= 0
+                          ? "#2f9e6b"
+                          : "#c47a2c",
+                      opacity: writeY2 ? 0.9 : 1,
+                    }}
+                  >
+                    {round2(monthlyForProject) - round2(oldY2) >= 0 ? "↑ +" : "↓ −"}
+                    {formatMoney(Math.abs(round2(monthlyForProject) - round2(oldY2))).replace(" EUR", "")}
                   </span>
-                </label>
+                </button>
               )}
               {retDiff && (
-                <label
+                <button
+                  type="button"
+                  aria-pressed={writeReturn}
+                  onClick={() => setWriteReturn((v) => !v)}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
                     minHeight: 44,
+                    padding: "8px 12px",
+                    borderRadius: 12,
+                    border: writeReturn ? "1px solid transparent" : "1px solid var(--border, rgba(16,24,40,.18))",
+                    background: writeReturn ? "var(--primary-600, #3b6ef5)" : "transparent",
+                    color: writeReturn ? "var(--on-primary, #fff)" : "var(--muted, rgba(16,24,40,.55))",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 2,
                     cursor: "pointer",
+                    textAlign: "left",
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={writeReturn}
-                    onChange={(e) => setWriteReturn(e.target.checked)}
-                    style={{ width: 24, height: 24, flexShrink: 0 }}
-                  />
-                  <span style={{ flex: 1 }}>Lợi nhuận VWCE</span>
-                  <span style={{ fontSize: 13, whiteSpace: "nowrap" }}>
-                    <span className="muted">{(oldVwce * 100).toFixed(2)}%</span>
-                    {" → "}
-                    <strong>{(baseRateNew * 100).toFixed(2)}%</strong>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>Lợi nhuận</span>
+                  <strong style={{ fontSize: 14 }}>{(baseRateNew * 100).toFixed(2)}%</strong>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: writeReturn
+                        ? "inherit"
+                        : baseRateNew - oldVwce >= 0
+                          ? "#2f9e6b"
+                          : "#c47a2c",
+                      opacity: writeReturn ? 0.9 : 1,
+                    }}
+                  >
+                    {baseRateNew - oldVwce >= 0 ? "↑ +" : "↓ −"}
+                    {Math.abs((baseRateNew - oldVwce) * 100).toFixed(2)}
                   </span>
-                </label>
+                </button>
               )}
             </div>
+
+            {selectedCount > 0 && (
+              <p className="muted" style={{ fontSize: 12, margin: "0 0 12px" }}>
+                Từ{" "}
+                {[
+                  writeY1 && y1Diff ? formatMoney(oldY1) : null,
+                  writeY2 && y2Diff ? formatMoney(oldY2) : null,
+                  writeReturn && retDiff ? `${(oldVwce * 100).toFixed(2)}%` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                {" · hoàn tác được trong 12 giây"}
+              </p>
+            )}
 
             <div className="stack" style={{ marginTop: 8 }}>
               <button
