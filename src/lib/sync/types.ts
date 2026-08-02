@@ -1,4 +1,4 @@
-/** Shared sync status — UI đoạn 3 sẽ tái sử dụng */
+/** Shared sync status — UI giai đoạn 3 sẽ tái sử dụng */
 export type SyncStatus = "synced" | "syncing" | "offline" | "conflict";
 
 export const SYNC_STATUS_LABEL: Record<SyncStatus, string> = {
@@ -27,7 +27,7 @@ export type OutboxItem = {
   createdAt: string;
   attempts: number;
   lastError?: string;
-  /** true khi đã thử đủ lần và bỏ qua trong push — bản ghi cũ không có field này vẫn hợp lệ */
+  /** true khi đã thất bại ≥ 8 lần — bỏ qua khi đẩy, có thể thử lại từ Cài đặt */
   dead?: boolean;
 };
 
