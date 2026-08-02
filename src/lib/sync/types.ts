@@ -27,6 +27,8 @@ export type OutboxItem = {
   createdAt: string;
   attempts: number;
   lastError?: string;
+  /** true khi đã thử đủ lần và bỏ qua trong push — bản ghi cũ không có field này vẫn hợp lệ */
+  dead?: boolean;
 };
 
 export type ConflictRecord = {
