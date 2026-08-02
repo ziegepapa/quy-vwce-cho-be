@@ -107,6 +107,47 @@ describe("tx cash flow rules", () => {
     expect(s.totalTax).toBe(5);
   });
 
+  it("sell without quantity still credits cash", () => {
+    let s = emptyPortfolio();
+    s = applyTransaction(s, { type: "cash_in", amount: 100 });
+    s = applyTransaction(s, {
+      type: "sell_vwce",
+      amount: 500,
+      fee: 10,
+      tax: 5,
+      // quantity intentionally omitted
+    });
+    expect(s.cashBalance).toBe(585); // 100 + 500 - 10 - 5
+    expect(s.totalSold).toBe(500);
+    expect(s.totalFees).toBe(10);
+    expect(s.totalTax).toBe(5);
+    expect(s.vwceQty).toBe(0);
+  });
+
+  it("sell with valid quantity reduces holdings", () => {
+    let s = emptyPortfolio();
+    s = applyTransaction(s, { type: "cash_in", amount: 200 });
+    s = applyTransaction(s, { type: "buy_vwce", amount: 100, unitPrice: 50 });
+    expect(s.vwceQty).toBe(2);
+    s = applyTransaction(s, { type: "sell_vwce", amount: 60, quantity: 1, fee: 0, tax: 0 });
+    expect(s.vwceQty).toBe(1);
+    expect(s.cashBalance).toBe(160); // 100 + 60
+  });
+
+  it("sell when qty held is zero still credits cash, qty not negative", () => {
+    let s = emptyPortfolio();
+    s = applyTransaction(s, {
+      type: "sell_vwce",
+      amount: 100,
+      quantity: 5,
+      fee: 2,
+      tax: 3,
+    });
+    expect(s.vwceQty).toBe(0);
+    expect(s.cashBalance).toBe(95); // 100 - 2 - 3
+    expect(s.totalSold).toBe(100);
+  });
+
   it("zero buy", () =>
     expect(applyTransaction(emptyPortfolio(), { type: "buy_vwce", amount: 0, unitPrice: 10 }).vwceQty).toBe(0));
 });
