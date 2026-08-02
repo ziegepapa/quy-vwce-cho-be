@@ -325,14 +325,10 @@ export default function Simulation() {
     });
   }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN]);
 
-  // Chế độ B không hội tụ: requiredMonthlyBase = -1
+  const monthlyForProject =
+    mode === "B" ? Math.max(0, requiredMonthlyBase) : monthlyN;
+  // Chế độ B không hội tụ: requiredMonthlyBase = -1 — chặn lưu / tóm tắt
   const planUnreachable = mode === "B" && requiredMonthlyBase < 0;
-  // Không bao giờ để số âm chảy vào tính toán / lưu / tóm tắt
-  const monthlyForProject = planUnreachable
-    ? 0
-    : mode === "B"
-      ? requiredMonthlyBase
-      : monthlyN;
 
   const yearsC = useMemo(() => {
     if (mode !== "C") return { years: effectiveYears, reached: true };
@@ -1179,11 +1175,11 @@ function buildSummary(opts: {
   inflationOn: boolean;
   unreachable?: boolean;
 }): string {
-  if (opts.unreachable) {
-    return "Chưa có mức góp khả thi cho mục tiêu này.";
-  }
   if (opts.mode === "C" && !opts.reached) {
     return `Với mức góp ${formatMoney(opts.monthly)} mỗi tháng, khả năng cao không đạt mục tiêu trong 40 năm.`;
+  }
+  if (opts.mode === "B" && opts.unreachable) {
+    return "Chưa có mức góp khả thi cho mục tiêu này.";
   }
   if (opts.mode === "B") {
     return `Để đạt mục tiêu, cần góp khoảng ${formatMoney(opts.monthly)} mỗi tháng trong ${opts.years} năm — khả năng cao nhận khoảng ${formatMoney(opts.terminal)}${
