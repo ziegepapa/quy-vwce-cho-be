@@ -325,7 +325,14 @@ export default function Simulation() {
     });
   }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN]);
 
-  const monthlyForProject = mode === "B" ? Math.max(0, requiredMonthlyBase) : monthlyN;
+  // Chế độ B không hội tụ: requiredMonthlyBase = -1
+  const planUnreachable = mode === "B" && requiredMonthlyBase < 0;
+  // Không bao giờ để số âm chảy vào tính toán / lưu / tóm tắt
+  const monthlyForProject = planUnreachable
+    ? 0
+    : mode === "B"
+      ? requiredMonthlyBase
+      : monthlyN;
 
   const yearsC = useMemo(() => {
     if (mode !== "C") return { years: effectiveYears, reached: true };
@@ -441,6 +448,9 @@ export default function Simulation() {
   }
 
   function openSaveConfirm() {
+    // Không ghi khi chế độ B không có mức góp khả thi
+    if (planUnreachable) return;
+
     const o1 = settings?.contributionY1 ?? 0;
     const o2 = settings?.contributionY2 ?? 0;
     const oR = settings?.vwceReturn ?? 0;
@@ -555,6 +565,7 @@ export default function Simulation() {
     terminal: primary?.out.terminal ?? 0,
     pp: primary?.pp ?? 0,
     inflationOn,
+    unreachable: planUnreachable,
   });
 
   const baseRateNew = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
@@ -967,7 +978,13 @@ export default function Simulation() {
         Ước tính, không phải tư vấn đầu tư hay thuế.
       </p>
 
-      <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={openSaveConfirm}>
+      <button
+        type="button"
+        className="secondary"
+        style={{ minHeight: 44, opacity: planUnreachable ? 0.45 : 1 }}
+        disabled={planUnreachable}
+        onClick={openSaveConfirm}
+      >
         Lưu mức góp & lợi nhuận cơ sở vào kế hoạch
       </button>
 
@@ -1160,7 +1177,11 @@ function buildSummary(opts: {
   terminal: number;
   pp: number;
   inflationOn: boolean;
+  unreachable?: boolean;
 }): string {
+  if (opts.unreachable) {
+    return "Chưa có mức góp khả thi cho mục tiêu này.";
+  }
   if (opts.mode === "C" && !opts.reached) {
     return `Với mức góp ${formatMoney(opts.monthly)} mỗi tháng, khả năng cao không đạt mục tiêu trong 40 năm.`;
   }
