@@ -201,7 +201,10 @@ export default function Overview(_props: { displayName?: string }) {
     }
   }
 
-  const ratio = total > 0 ? Math.round((vwceValue / total) * 100) : 0;
+  const cashNegative = portfolio.cashBalance < 0;
+  const ratio = total > 0
+    ? Math.min(100, Math.max(0, Math.round((vwceValue / total) * 100)))
+    : 0;
   const pnlPct =
     portfolio.vwceCostBasis > 0 ? ((pnl / portfolio.vwceCostBasis) * 100).toFixed(1) : null;
 
@@ -255,14 +258,22 @@ export default function Overview(_props: { displayName?: string }) {
               </span>
             )}
             <Sparkline points={series} />
-            <div className="alloc-v8" role="img" aria-label={`VWCE ${ratio}%, an toàn ${100 - ratio}%`}>
-              <div className="alloc-seg-v8 vwce" style={{ flex: Math.max(ratio, 1) }} />
-              <div className="alloc-seg-v8 cash" style={{ flex: Math.max(100 - ratio, 1) }} />
-            </div>
-            <div className="alloc-legend-v8">
-              <span>VWCE {ratio}%</span>
-              <span>An toàn {100 - ratio}%</span>
-            </div>
+            {cashNegative ? (
+              <div className="alloc-legend-v8">
+                <span className="neg">Tỉ lệ chưa tính được — số dư âm</span>
+              </div>
+            ) : (
+              <>
+                <div className="alloc-v8" role="img" aria-label={`VWCE ${ratio}%, an toàn ${100 - ratio}%`}>
+                  <div className="alloc-seg-v8 vwce" style={{ flex: Math.max(ratio, 1) }} />
+                  <div className="alloc-seg-v8 cash" style={{ flex: Math.max(100 - ratio, 1) }} />
+                </div>
+                <div className="alloc-legend-v8">
+                  <span>VWCE {ratio}%</span>
+                  <span>An toàn {100 - ratio}%</span>
+                </div>
+              </>
+            )}
             {mode === "early" && (
               <p className="hero-early">Còn {Math.max(0, 3 - txs.length)} bước để hoàn tất thiết lập · · ·</p>
             )}
@@ -280,7 +291,9 @@ export default function Overview(_props: { displayName?: string }) {
           <div className="stat-rule" aria-hidden />
           <div className="stat-col">
             <span className="stat-label">An toàn</span>
-            <span className="stat-val">{formatMoney(portfolio.cashBalance)}</span>
+            <span className={`stat-val${cashNegative ? " neg" : ""}`}>
+              {formatMoney(portfolio.cashBalance)}
+            </span>
           </div>
           <div className="stat-rule" aria-hidden />
           <div className="stat-col">
@@ -319,6 +332,19 @@ export default function Overview(_props: { displayName?: string }) {
               </div>
             </dl>
           )}
+        </section>
+      )}
+
+      {cashNegative && (
+        <section className="card" style={{ marginTop: 12 }}>
+          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Số dư an toàn đang âm</p>
+          <p className="muted" style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.45 }}>
+            Nghĩa là có giao dịch mua hoặc chi nhiều hơn số tiền đã nạp. Hãy kiểm tra xem có thiếu
+            giao dịch nạp tiền nào không.
+          </p>
+          <Link to="/transactions" className="action-item" style={{ minHeight: 44 }}>
+            Xem giao dịch
+          </Link>
         </section>
       )}
 

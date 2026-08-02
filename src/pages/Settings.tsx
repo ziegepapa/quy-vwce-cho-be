@@ -14,6 +14,9 @@ import { APP_VERSION, SCHEMA_VERSION } from "../lib/types";
 import { csvEscape, formatDateVN, parseDecimal } from "../lib/calc";
 import type { ThemeChoice } from "../lib/theme";
 import { THEME_OPTIONS, persistTheme, readTheme } from "../lib/theme";
+import { useAuth } from "../lib/auth";
+import { listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
+import type { OutboxItem } from "../lib/sync/types";
 
 function pctDisplay(decimal: number): string {
   if (!Number.isFinite(decimal)) return "—";
@@ -131,12 +134,21 @@ export default function SettingsPage({
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
+  const auth = useAuth();
+  const [dead, setDead] = useState<OutboxItem[]>([]);
+  const [deadRetrying, setDeadRetrying] = useState(false);
+  const [deadSyncedMsg, setDeadSyncedMsg] = useState(false);
 
   useEffect(() => {
     (async () => {
       setS(await getSettings());
       setMetaBackup((await db.appMetadata.get("meta"))?.lastBackupAt ?? "");
       setChecklist(await getOrCreateChecklist(checklistYear));
+      if (auth.user?.id) {
+        setDead(await listDeadOutbox());
+      } else {
+        setDead([]);
+      }
     })();
     const on = () => setOnline(true);
     const off = () => setOnline(false);
@@ -146,7 +158,7 @@ export default function SettingsPage({
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };
-  }, [checklistYear]);
+  }, [checklistYear, auth.user?.id]);
 
   function pickTheme(t: ThemeChoice) {
     setTheme(t);
@@ -406,6 +418,58 @@ export default function SettingsPage({
           </label>
         ))}
       </div>
+
+      {auth.user?.id && (dead.length > 0 || deadSyncedMsg) ? (
+        <>
+          <p className="group-label">Đồng bộ</p>
+          <div className="group-box">
+            {deadSyncedMsg && dead.length === 0 ? (
+              <p style={{ margin: 0, color: "var(--success-600)", fontSize: 14 }}>
+                Đã đồng bộ xong.
+              </p>
+            ) : (
+              <>
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    color: "var(--warning-600)",
+                    fontSize: 14,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {dead.length} thay đổi chưa đồng bộ được lên máy chủ sau nhiều lần thử. Dữ liệu
+                  vẫn an toàn trên máy này.
+                </p>
+                <button
+                  type="button"
+                  className="group-action"
+                  style={{ minHeight: 44 }}
+                  disabled={deadRetrying}
+                  onClick={async () => {
+                    if (!auth.user?.id) return;
+                    setDeadRetrying(true);
+                    setDeadSyncedMsg(false);
+                    try {
+                      await reviveDeadOutbox();
+                      await pushOutbox(auth.user.id);
+                      const next = await listDeadOutbox();
+                      setDead(next);
+                      if (next.length === 0) {
+                        setDeadSyncedMsg(true);
+                        window.setTimeout(() => setDeadSyncedMsg(false), 4000);
+                      }
+                    } finally {
+                      setDeadRetrying(false);
+                    }
+                  }}
+                >
+                  {deadRetrying ? "Đang thử lại…" : "Thử lại đồng bộ"}
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      ) : null}
 
       <p className="group-label">Dữ liệu</p>
       <div className="group-box">
