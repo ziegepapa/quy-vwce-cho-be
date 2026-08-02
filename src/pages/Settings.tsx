@@ -270,7 +270,7 @@ export default function SettingsPage({
         <div className="group-row">
           <label htmlFor="s-plan">Tên kế hoạch</label>
           <input
-            id={s-plan}
+            id="s-plan"
             value={s.planName ?? ""}
             onChange={(e) => setS({ ...s, planName: e.target.value })}
             onBlur={() => persist({ planName: s.planName })}
