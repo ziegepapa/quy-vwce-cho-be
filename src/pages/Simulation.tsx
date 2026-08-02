@@ -229,6 +229,7 @@ export default function Simulation() {
   const [taxOn, setTaxOn] = useState(true);
   const [showAfterTax, setShowAfterTax] = useState(true);
   const [showPP, setShowPP] = useState(false);
+  const [showAllYears, setShowAllYears] = useState(false);
   const [targetAmount, setTargetAmount] = useState("50000");
   const [targetYear, setTargetYear] = useState(String(new Date().getFullYear() + 15));
 
@@ -555,6 +556,47 @@ export default function Simulation() {
     }
   }
 
+  const nowY = new Date().getFullYear();
+  const baseMap = useMemo(() => {
+    const base = results.find((r) => r.sc.id === "base");
+    return new Map((base?.out.yearEnds ?? []).map((p) => [p.yearIndex, p]));
+  }, [results]);
+  const cautiousMap = useMemo(() => {
+    const r = results.find((x) => x.sc.id === "cautious");
+    return new Map((r?.out.yearEnds ?? []).map((p) => [p.yearIndex, p]));
+  }, [results]);
+  const bullMap = useMemo(() => {
+    const r = results.find((x) => x.sc.id === "bull");
+    return new Map((r?.out.yearEnds ?? []).map((p) => [p.yearIndex, p]));
+  }, [results]);
+
+  const goalYearSet = useMemo(() => {
+    const s = new Set<number>();
+    for (const m of goalMarkers) s.add(m.yearIndex);
+    return s;
+  }, [goalMarkers]);
+
+  const goalNameByYear = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const g of goalMarkers) {
+      const prev = m.get(g.yearIndex);
+      m.set(g.yearIndex, prev ? `${prev}, ${g.name}` : g.name);
+    }
+    return m;
+  }, [goalMarkers]);
+
+  const yearRows = useMemo(() => {
+    const milestones = new Set<number>([1, 3, 5, 10, 15, yearsForProject]);
+    for (const yi of goalYearSet) milestones.add(yi);
+    if (initialBalance > 0) milestones.add(0);
+    const all: number[] = [];
+    for (let yi = 0; yi <= yearsForProject; yi++) {
+      if (yi === 0 && initialBalance <= 0) continue;
+      if (showAllYears || milestones.has(yi)) all.push(yi);
+    }
+    return all;
+  }, [yearsForProject, goalYearSet, initialBalance, showAllYears]);
+
   if (loading) {
     return <p className="muted">Đang tải…</p>;
   }
@@ -589,6 +631,11 @@ export default function Simulation() {
   if (usePP) headlineNoteParts.push("giá hôm nay");
   const headlineNote =
     headlineNoteParts.length > 0 ? headlineNoteParts.join(" · ") : "trước thuế · danh nghĩa";
+
+  // L3: lãi suy từ số đang hiện — ba ô cộng khớp
+  const shownInterest = primary
+    ? Math.max(0, headlineValue - primary.out.contributed - initialBalance)
+    : 0;
 
   const cautiousRate = scenarios.find((s) => s.id === "cautious")?.rate ?? baseRate;
   const bullRate = scenarios.find((s) => s.id === "bull")?.rate ?? baseRate;
@@ -981,11 +1028,17 @@ export default function Simulation() {
               <div className="metric-value" style={{ fontSize: 16 }}>
                 {formatMoneyRounded(primary.out.contributed)}
               </div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+                tiền thực bỏ ra
+              </div>
             </div>
             <div>
               <div className="metric-label">Lãi</div>
               <div className="metric-value" style={{ fontSize: 16 }}>
-                {formatMoneyRounded(Math.max(0, primary.out.interest))}
+                {formatMoneyRounded(shownInterest)}
+              </div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+                {headlineNote}
               </div>
             </div>
           </div>
@@ -1012,35 +1065,82 @@ export default function Simulation() {
 
       <details className="card">
         <summary style={{ minHeight: 44, cursor: "pointer" }}>Bảng theo năm</summary>
+        <p className="muted" style={{ fontSize: 12, margin: "8px 0" }}>
+          Trước thuế · danh nghĩa
+        </p>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
             <thead>
               <tr>
                 <th style={{ textAlign: "left", padding: 6 }}>Năm</th>
-                {results.map((r) => (
-                  <th key={r.sc.id} style={{ textAlign: "right", padding: 6 }}>
-                    {r.sc.label}
-                  </th>
-                ))}
+                <th style={{ textAlign: "right", padding: 6 }}>Đã góp</th>
+                <th style={{ textAlign: "right", padding: 6 }}>Số dư</th>
+                {band > 0 && (
+                  <th style={{ textAlign: "right", padding: 6 }}>Khoảng</th>
+                )}
               </tr>
             </thead>
             <tbody>
-              {Array.from({ length: yearsForProject + 1 }, (_, yi) => (
-                <tr key={yi}>
-                  <td style={{ padding: 6 }}>{yi === 0 ? "Hiện tại" : `+${yi}`}</td>
-                  {results.map((r) => {
-                    const pt = r.out.yearEnds.find((p) => p.yearIndex === yi);
-                    return (
-                      <td key={r.sc.id} style={{ textAlign: "right", padding: 6 }}>
-                        {formatMoneyRounded(pt?.total ?? 0)}
+              {yearRows.map((yi) => {
+                const basePt = baseMap.get(yi);
+                const loPt = cautiousMap.get(yi);
+                const hiPt = bullMap.get(yi);
+                const isGoal = goalYearSet.has(yi);
+                const isLast = yi === yearsForProject;
+                const calYear = nowY + yi;
+                return (
+                  <tr
+                    key={yi}
+                    style={{
+                      fontWeight: isLast ? 600 : undefined,
+                      background: isGoal ? "var(--surface-2, rgba(16,24,40,.04))" : undefined,
+                    }}
+                  >
+                    <td style={{ padding: 6 }}>
+                      {yi === 0 ? (
+                        "Hiện tại"
+                      ) : (
+                        <>
+                          {calYear}
+                          <span className="muted" style={{ fontSize: 11, marginLeft: 4 }}>
+                            +{yi}
+                          </span>
+                        </>
+                      )}
+                      {isGoal && (
+                        <span style={{ marginLeft: 6, fontSize: 11 }}>
+                          <span aria-hidden style={{ color: "var(--primary-600, #3b6ef5)" }}>
+                            ●
+                          </span>{" "}
+                          <span className="muted">{goalNameByYear.get(yi)}</span>
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "right", padding: 6 }}>
+                      {formatMoneyRounded(basePt?.contributed ?? 0)}
+                    </td>
+                    <td style={{ textAlign: "right", padding: 6 }}>
+                      {formatMoneyRounded(basePt?.total ?? 0)}
+                    </td>
+                    {band > 0 && (
+                      <td style={{ textAlign: "right", padding: 6, whiteSpace: "nowrap" }}>
+                        {formatMoneyRounded(loPt?.total ?? 0)} – {formatMoneyRounded(hiPt?.total ?? 0)}
                       </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+        <button
+          type="button"
+          className="secondary"
+          style={{ minHeight: 44, marginTop: 10, width: "100%" }}
+          onClick={() => setShowAllYears((v) => !v)}
+        >
+          {showAllYears ? "Thu gọn" : "Hiện tất cả các năm"}
+        </button>
       </details>
 
       <p className="muted" style={{ fontSize: 12, margin: 0 }}>
