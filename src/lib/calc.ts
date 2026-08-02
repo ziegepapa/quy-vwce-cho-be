@@ -90,17 +90,30 @@ export function requiredSafeAmount(opts: {
   let amount = opts.targetAmount;
   if (opts.useInflation) {
     const years = Math.max(0, opts.targetYear - opts.baseYear);
-    amount = inflate(amount, opts.inflationRate, years);
+    amount = amount * Math.pow(1 + opts.inflationRate, years);
   }
-  return amount + amount * opts.bufferPct + (opts.estimatedTax ?? 0) + (opts.estimatedFees ?? 0);
+  amount *= 1 + opts.bufferPct;
+  amount += opts.estimatedTax ?? 0;
+  amount += opts.estimatedFees ?? 0;
+  return amount;
 }
 
-export function etfToSell(opts: {
+export function cashGap(opts: {
   requiredSafe: number;
   currentSafe: number;
   expectedFutureCash: number;
 }): number {
   return Math.max(0, opts.requiredSafe - opts.currentSafe - opts.expectedFutureCash);
+}
+
+export function etfToSell(opts: {
+  cashNeeded: number;
+  cashAvailable: number;
+  unitPrice: number;
+}): { sellCash: number; sellQty: number } {
+  const gap = Math.max(0, opts.cashNeeded - opts.cashAvailable);
+  if (gap <= 0 || opts.unitPrice <= 0) return { sellCash: 0, sellQty: 0 };
+  return { sellCash: gap, sellQty: gap / opts.unitPrice };
 }
 
 export type PortfolioState = {
@@ -162,6 +175,11 @@ export function applyTransaction(state: PortfolioState, tx: TxInput): PortfolioS
       break;
     }
     case "sell_vwce": {
+      // Tiền bán / phí / thuế luôn ghi nhận — độc lập với số lượng trừ được
+      s.totalSold += amount;
+      s.cashBalance += amount - fee - tax;
+      s.totalFees += fee;
+      s.totalTax += tax;
       let qty = tx.quantity ?? 0;
       if (!isValidNumber(qty) || qty < 0) qty = 0;
       if (qty > s.vwceQty) qty = s.vwceQty;
@@ -169,10 +187,6 @@ export function applyTransaction(state: PortfolioState, tx: TxInput): PortfolioS
         const avg = s.vwceCostBasis / s.vwceQty;
         s.vwceCostBasis = Math.max(0, s.vwceCostBasis - avg * qty);
         s.vwceQty = Math.max(0, s.vwceQty - qty);
-        s.totalSold += amount;
-        s.cashBalance += amount - fee - tax;
-        s.totalFees += fee;
-        s.totalTax += tax;
       }
       break;
     }
@@ -207,23 +221,25 @@ export function avgCost(state: PortfolioState): number {
   return state.vwceCostBasis / state.vwceQty;
 }
 
-/** Build equity time series from chronological transactions + current price. */
-export function buildEquitySeries(
-  transactions: { date: string; type: string; amount: number; unitPrice?: number; quantity?: number; fee?: number; tax?: number }[],
-  currentPrice: number,
-): { date: string; value: number }[] {
-  const sorted = [...transactions].sort((a, b) => (a.date < b.date ? -1 : 1));
-  if (sorted.length === 0) return [];
-  let s = emptyPortfolio();
-  const out: { date: string; value: number }[] = [];
-  for (const t of sorted) {
-    s = applyTransaction(s, t);
-    const price = t.unitPrice && t.unitPrice > 0 ? t.unitPrice : currentPrice;
-    const total = s.vwceQty * (price || 0) + s.cashBalance;
-    out.push({ date: t.date, value: round2(total) });
-  }
-  return out;
+export function portfolioValue(state: PortfolioState, unitPrice: number): number {
+  return state.vwceQty * (unitPrice || 0) + state.cashBalance;
 }
+
+export type SimParams = {
+  startYear: number;
+  startMonth: number;
+  months: number;
+  contribution: number;
+  contributionFromYear2: number;
+  contributionGrowth: number;
+  vwceAnnualReturn: number;
+  safeAnnualReturn: number;
+  initialVwce: number;
+  initialCash: number;
+  contributionTiming?: "start" | "end";
+  withdrawals?: { year: number; month: number; amount: number }[];
+  transfers?: { year: number; month: number; amount: number }[];
+};
 
 export type SimMonth = {
   year: number;
@@ -235,47 +251,26 @@ export type SimMonth = {
   withdrawn: number;
 };
 
-export type SimWithdrawal = { year: number; month: number; amount: number };
-export type SimTransfer = { year: number; month: number; amount: number };
-
-export type SimParams = {
-  startYear: number;
-  startMonth: number;
-  endYear: number;
-  endMonth: number;
-  initialVwce: number;
-  initialCash: number;
-  contributionYear1: number;
-  contributionFromYear2: number;
-  vwceAnnualReturn: number;
-  safeAnnualReturn: number;
-  contributionAtEndOfMonth?: boolean;
-  contributionGrowthPct?: number;
-  withdrawals?: SimWithdrawal[];
-  transfers?: SimTransfer[];
-};
-
 export function simulateMonthly(params: SimParams): SimMonth[] {
   const rVwce = monthlyRate(params.vwceAnnualReturn);
   const rSafe = monthlyRate(params.safeAnnualReturn);
-  let vwce = params.initialVwce;
-  let cash = params.initialCash;
+  let vwce = Math.max(0, params.initialVwce);
+  let cash = Math.max(0, params.initialCash);
   let contributed = 0;
   let withdrawn = 0;
   const out: SimMonth[] = [];
   let y = params.startYear;
   let m = params.startMonth;
-  const atEnd = params.contributionAtEndOfMonth !== false;
-  const growth = params.contributionGrowthPct ?? 0;
+  const atEnd = params.contributionTiming === "end";
 
-  while (y < params.endYear || (y === params.endYear && m <= params.endMonth)) {
+  for (let i = 0; i < params.months; i++) {
     vwce *= 1 + rVwce;
     cash *= 1 + rSafe;
 
-    const yearIndex = (y - params.startYear) * 12 + (m - params.startMonth);
-    const yearsSinceStart = Math.floor(Math.max(0, yearIndex) / 12);
-    let contrib =
-      yearsSinceStart <= 0 ? params.contributionYear1 : params.contributionFromYear2;
+    const yearsSinceStart =
+      y - params.startYear + (m >= params.startMonth ? 0 : -1);
+    let contrib = yearsSinceStart < 1 ? params.contribution : params.contributionFromYear2;
+    const growth = params.contributionGrowth;
     if (yearsSinceStart >= 2 && growth !== 0) {
       contrib = params.contributionFromYear2 * Math.pow(1 + growth, yearsSinceStart - 1);
     }

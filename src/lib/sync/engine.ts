@@ -86,12 +86,20 @@ async function pushOne(userId: string, item: OutboxItem): Promise<void> {
   if (error) throw error;
 }
 
-export async function pushOutbox(userId: string): Promise<{ pushed: number; errors: number }> {
-  if (!supabase) return { pushed: 0, errors: 0 };
+export async function pushOutbox(
+  userId: string,
+): Promise<{ pushed: number; errors: number; dead: number }> {
+  if (!supabase) return { pushed: 0, errors: 0, dead: 0 };
   const items = await db.outbox.orderBy("createdAt").toArray();
   let pushed = 0;
   let errors = 0;
+  let dead = 0;
   for (const item of items) {
+    // Bỏ qua mục đã chết — không chặn hàng đợi phía sau
+    if (item.dead) {
+      dead += 1;
+      continue;
+    }
     try {
       await pushOne(userId, item);
       await db.outbox.delete(item.id);
@@ -99,16 +107,19 @@ export async function pushOutbox(userId: string): Promise<{ pushed: number; erro
     } catch (e) {
       errors += 1;
       const attempts = item.attempts + 1;
+      const markDead = attempts >= 8;
       await db.outbox.put({
         ...item,
         attempts,
         lastError: e instanceof Error ? e.message : String(e),
+        dead: markDead ? true : item.dead,
       });
-      if (attempts >= 8) break;
+      if (markDead) dead += 1;
+      // continue — thử các mục tiếp theo
     }
   }
   if (pushed > 0) await saveSyncMeta({ userId, lastPushedAt: nowIso() });
-  return { pushed, errors };
+  return { pushed, errors, dead };
 }
 
 function localVersion(row: unknown): number {
@@ -265,6 +276,11 @@ export async function resolveConflict(
   if (choice === "local") {
     await enqueueOutbox(c.table, c.entityId, "upsert", c.local, localVersion(c.local) + 1);
   } else {
+    // Xóa outbox đang chờ của cùng thực thể — tránh lần đẩy sau ghi đè bản remote
+    const pending = await db.outbox.where("entityId").equals(c.entityId).toArray();
+    for (const p of pending) {
+      if (p.table === c.table) await db.outbox.delete(p.id);
+    }
     const payload = c.remote as Record<string, unknown>;
     const withMeta = { ...payload, id: c.entityId };
     if (c.table === "settings") await db.settings.put(withMeta as never);
@@ -277,4 +293,19 @@ export async function resolveConflict(
   if (typeof navigator !== "undefined" && navigator.onLine) {
     await pushOutbox(userId);
   }
+}
+
+/** Mục outbox đã chết (thử ≥ 8 lần). */
+export async function listDeadOutbox(): Promise<OutboxItem[]> {
+  const all = await db.outbox.toArray();
+  return all.filter((i) => i.dead === true);
+}
+
+/** Đặt lại dead/attempts để thử đồng bộ lại. */
+export async function reviveDeadOutbox(): Promise<number> {
+  const dead = await listDeadOutbox();
+  for (const item of dead) {
+    await db.outbox.put({ ...item, dead: false, attempts: 0, lastError: undefined });
+  }
+  return dead.length;
 }
