@@ -1,10 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
-import { deleteTransaction, listTransactions, uid, upsertTransaction } from "../lib/db";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  deleteTransaction,
+  findTransactionByExternalRef,
+  listTransactions,
+  uid,
+  upsertTransaction,
+} from "../lib/db";
 import type { Transaction, TxType } from "../lib/types";
 import { calcQuantity, formatDateVN, formatMoney, parseDecimal } from "../lib/calc";
 import { nowIso } from "../lib/defaults";
 import ActionMenu from "../components/ActionMenu";
 import { IconPlus } from "../components/Icons";
+import { parseTrPdf } from "../lib/tr/readPdf";
+import {
+  trExecutionToDraft,
+  validateTrImportDraft,
+  draftToTransaction,
+  type TrImportDraft,
+} from "../lib/tr/toTransaction";
 
 const TYPES: { value: TxType; label: string; sign: "+" | "-" | "~" }[] = [
   { value: "buy_vwce", label: "Mua VWCE", sign: "~" },
@@ -38,6 +51,23 @@ export default function Transactions() {
   const [typeFilter, setTypeFilter] = useState<"all" | TxType>("all");
   const [rulesOpen, setRulesOpen] = useState(false);
   const [qtyError, setQtyError] = useState("");
+
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const [pdfReading, setPdfReading] = useState(false);
+  const [pdfError, setPdfError] = useState("");
+  const [pdfDraft, setPdfDraft] = useState<TrImportDraft | null>(null);
+  const [pdfWarnings, setPdfWarnings] = useState<string[]>([]);
+  const [pdfSaving, setPdfSaving] = useState(false);
+  const [pdfToast, setPdfToast] = useState("");
+  const [pdfForm, setPdfForm] = useState({
+    date: "",
+    amount: "",
+    unitPrice: "",
+    quantity: "",
+    fee: "",
+    tax: "",
+    notes: "",
+  });
 
   async function reload() {
     setTxs(await listTransactions());
@@ -84,7 +114,6 @@ export default function Transactions() {
       alert("Điều chỉnh bắt buộc có ghi chú");
       return;
     }
-    // S1: bán bắt buộc có số lượng — không tự suy từ tiền
     if (form.type === "sell_vwce") {
       const qRaw = form.quantity.trim();
       const q = qRaw ? parseDecimal(qRaw) : 0;
@@ -144,23 +173,145 @@ export default function Transactions() {
     setShow(true);
   }
 
+  function fmtDec(n: number): string {
+    if (!Number.isFinite(n)) return "";
+    return String(n).replace(".", ",");
+  }
+
+  async function onPdfPicked(file: File | null) {
+    if (!file) return;
+    setPdfError("");
+    setPdfDraft(null);
+    setPdfWarnings([]);
+    setPdfReading(true);
+    try {
+      const result = await parseTrPdf(file);
+      if (!result.ok) {
+        setPdfError(result.error);
+        return;
+      }
+      const draft = trExecutionToDraft(result.value, 0);
+      setPdfDraft(draft);
+      setPdfWarnings(result.warnings ?? []);
+      setPdfForm({
+        date: draft.date,
+        amount: fmtDec(draft.amount),
+        unitPrice: fmtDec(draft.unitPrice),
+        quantity: fmtDec(draft.quantity),
+        fee: fmtDec(draft.fee),
+        tax: fmtDec(draft.tax),
+        notes: draft.notes,
+      });
+    } catch {
+      setPdfError("Không đọc được tệp PDF.");
+    } finally {
+      setPdfReading(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
+    }
+  }
+
+  function closePdfSheet() {
+    setPdfDraft(null);
+    setPdfWarnings([]);
+    setPdfError("");
+    setPdfForm({ date: "", amount: "", unitPrice: "", quantity: "", fee: "", tax: "", notes: "" });
+  }
+
+  function currentPdfDraft(): TrImportDraft | null {
+    if (!pdfDraft) return null;
+    return {
+      ...pdfDraft,
+      date: pdfForm.date,
+      amount: parseDecimal(pdfForm.amount),
+      unitPrice: parseDecimal(pdfForm.unitPrice),
+      quantity: parseDecimal(pdfForm.quantity),
+      fee: parseDecimal(pdfForm.fee),
+      tax: parseDecimal(pdfForm.tax),
+      notes: pdfForm.notes,
+    };
+  }
+
+  async function confirmPdfImport() {
+    const draft = currentPdfDraft();
+    if (!draft) return;
+    const v = validateTrImportDraft(draft);
+    if (!v.ok) {
+      setPdfError(v.error);
+      return;
+    }
+    const existing = await findTransactionByExternalRef(draft.externalRef!);
+    if (existing) {
+      setPdfError("Hóa đơn này đã được nhập trước đó.");
+      return;
+    }
+    setPdfSaving(true);
+    setPdfError("");
+    try {
+      const t = nowIso();
+      const tx = draftToTransaction(draft, { id: uid("tx"), createdAt: t, updatedAt: t });
+      const race = await findTransactionByExternalRef(draft.externalRef!);
+      if (race) {
+        setPdfError("Hóa đơn này đã được nhập trước đó.");
+        return;
+      }
+      await upsertTransaction(tx);
+      closePdfSheet();
+      setPdfToast("Đã nhập hóa đơn Trade Republic.");
+      await reload();
+      window.setTimeout(() => setPdfToast(""), 4000);
+    } finally {
+      setPdfSaving(false);
+    }
+  }
+
   return (
     <div>
       <div className="row-between">
         <h1 className="page-title">Giao dịch</h1>
-        <button
-          type="button"
-          className="fab"
-          aria-label="Thêm giao dịch"
-          onClick={() => {
-            setEditId(null);
-            setForm(emptyForm());
-            setShow(true);
-          }}
-        >
-          <IconPlus />
-        </button>
+        <div className="row" style={{ gap: 8, alignItems: "center" }}>
+          <button
+            type="button"
+            className="secondary"
+            style={{ minHeight: 44, padding: "0 14px" }}
+            disabled={pdfReading}
+            onClick={() => pdfInputRef.current?.click()}
+          >
+            {pdfReading ? "Đang đọc PDF…" : "Nhập PDF"}
+          </button>
+          <button
+            type="button"
+            className="fab"
+            aria-label="Thêm giao dịch"
+            onClick={() => {
+              setEditId(null);
+              setForm(emptyForm());
+              setShow(true);
+            }}
+          >
+            <IconPlus />
+          </button>
+        </div>
       </div>
+      <input
+        ref={pdfInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          void onPdfPicked(f);
+        }}
+      />
+      {pdfError && !pdfDraft && (
+        <div className="banner error" role="alert" style={{ marginTop: 8 }}>
+          {pdfError}
+        </div>
+      )}
+      {pdfToast && (
+        <div className="banner success" role="status" style={{ marginTop: 8 }}>
+          {pdfToast}
+        </div>
+      )}
 
       <button
         type="button"
@@ -270,6 +421,7 @@ export default function Transactions() {
                   <div className="row-between">
                     <span className="muted">
                       {formatDateVN(t.date)}
+                      {t.source === "trade_republic_pdf" ? " · TR PDF" : ""}
                       {t.notes ? ` · ${t.notes}` : ""}
                       {t.quantity != null ? ` · SL ${t.quantity.toFixed(4)}` : ""}
                     </span>
@@ -418,6 +570,144 @@ export default function Transactions() {
                 Lưu
               </button>
               <button type="button" className="secondary" onClick={() => setShow(false)}>
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pdfDraft && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Xem trước hóa đơn Trade Republic">
+          <div className="modal" style={{ maxHeight: "min(90vh, 720px)", overflowY: "auto", paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))" }}>
+            <div className="sheet-handle" aria-hidden />
+            <h2>Nhập hóa đơn Trade Republic</h2>
+            {pdfWarnings.length > 0 && (
+              <div className="banner info" role="status">
+                {pdfWarnings.map((w, i) => (
+                  <div key={i}>{w}</div>
+                ))}
+              </div>
+            )}
+            {pdfError && (
+              <div className="banner error" role="alert">
+                {pdfError}
+              </div>
+            )}
+            {pdfDraft.isin.trim().toUpperCase() !== "IE00BK5BQT80" && (
+              <div className="banner error" role="alert">
+                ISIN không phải VWCE (IE00BK5BQT80). Không thể lưu hóa đơn này.
+              </div>
+            )}
+            <div className="field">
+              <label>Loại</label>
+              <input
+                readOnly
+                value={pdfDraft.type === "sell_vwce" ? "Bán VWCE" : "Mua VWCE"}
+                style={{ minHeight: 44 }}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="pdf-date">Ngày</label>
+              <input
+                id="pdf-date"
+                type="date"
+                value={pdfForm.date}
+                onChange={(e) => setPdfForm({ ...pdfForm, date: e.target.value })}
+                style={{ minHeight: 44 }}
+              />
+            </div>
+            <div className="field">
+              <label>ISIN</label>
+              <input readOnly value={pdfDraft.isin} style={{ minHeight: 44 }} />
+            </div>
+            <div className="grid2">
+              <div className="field">
+                <label htmlFor="pdf-qty">Số lượng</label>
+                <input
+                  id="pdf-qty"
+                  inputMode="decimal"
+                  value={pdfForm.quantity}
+                  onChange={(e) => setPdfForm({ ...pdfForm, quantity: e.target.value })}
+                  style={{ minHeight: 44 }}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="pdf-price">Giá 1 VWCE</label>
+                <input
+                  id="pdf-price"
+                  inputMode="decimal"
+                  value={pdfForm.unitPrice}
+                  onChange={(e) => setPdfForm({ ...pdfForm, unitPrice: e.target.value })}
+                  style={{ minHeight: 44 }}
+                />
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="pdf-amount">Tổng tiền</label>
+              <input
+                id="pdf-amount"
+                inputMode="decimal"
+                value={pdfForm.amount}
+                onChange={(e) => setPdfForm({ ...pdfForm, amount: e.target.value })}
+                style={{ minHeight: 44 }}
+              />
+            </div>
+            <div className="grid2">
+              <div className="field">
+                <label htmlFor="pdf-fee">Phí</label>
+                <input
+                  id="pdf-fee"
+                  inputMode="decimal"
+                  value={pdfForm.fee}
+                  onChange={(e) => setPdfForm({ ...pdfForm, fee: e.target.value })}
+                  style={{ minHeight: 44 }}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="pdf-tax">Thuế</label>
+                <input
+                  id="pdf-tax"
+                  inputMode="decimal"
+                  value={pdfForm.tax}
+                  onChange={(e) => setPdfForm({ ...pdfForm, tax: e.target.value })}
+                  style={{ minHeight: 44 }}
+                />
+              </div>
+            </div>
+            <div className="field">
+              <label>Số hóa đơn</label>
+              <input readOnly value={pdfDraft.docNumber || "—"} style={{ minHeight: 44 }} />
+            </div>
+            <div className="field">
+              <label htmlFor="pdf-notes">Ghi chú</label>
+              <textarea
+                id="pdf-notes"
+                rows={2}
+                value={pdfForm.notes}
+                onChange={(e) => setPdfForm({ ...pdfForm, notes: e.target.value })}
+              />
+            </div>
+            <div className="stack">
+              <button
+                type="button"
+                style={{ minHeight: 44 }}
+                disabled={
+                  pdfSaving ||
+                  !pdfDraft.docNumber.trim() ||
+                  pdfDraft.isin.trim().toUpperCase() !== "IE00BK5BQT80"
+                }
+                onClick={() => void confirmPdfImport()}
+              >
+                {pdfSaving ? "Đang lưu…" : "Xác nhận lưu"}
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                style={{ minHeight: 44 }}
+                disabled={pdfSaving}
+                onClick={closePdfSheet}
+              >
                 Hủy
               </button>
             </div>
