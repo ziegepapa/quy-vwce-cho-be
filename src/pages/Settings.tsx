@@ -185,10 +185,9 @@ export default function SettingsPage({
 
   /**
    * Legacy "Giá VWCE gần nhất" → atomic saveManualQuoteForIsin (quote + mirror).
-   * Failures surface to caller; no silent split-brain.
+   * Policy A: reject price <= 0 — never create settings/quote split-brain.
    */
   async function persistLegacyVwcePrice(price: number) {
-    // Policy A: reject price <= 0 — never create settings/quote split-brain
     if (!(price > 0)) {
       alert("Giá phải > 0");
       setS(await getSettings());
@@ -352,9 +351,367 @@ export default function SettingsPage({
         <div className="group-row">
           <label htmlFor="s-plan">Tên kế hoạch</label>
           <input
-            id={s-plan}
+            id="s-plan"
             value={s.planName ?? ""}
             onChange={(e) => setS({ ...s, planName: e.target.value })}
             onBlur={() => persist({ planName: s.planName })}
           />
         </div>
+        <div className="group-row">
+          <label htmlFor="s-child">Tên bé</label>
+          <input
+            id="s-child"
+            value={s.childName ?? ""}
+            onChange={(e) => setS({ ...s, childName: e.target.value })}
+            onBlur={() => persist({ childName: s.childName })}
+          />
+        </div>
+        <div className="group-row">
+          <span className="group-row-label">Tài khoản đứng tên</span>
+          <Segmented
+            value={s.accountType}
+            options={[
+              { value: "parent", label: "Cha/mẹ" },
+              { value: "child", label: "Bé" },
+            ]}
+            onChange={(v) => persist({ accountType: v as "child" | "parent" })}
+          />
+        </div>
+      </div>
+
+      <p className="group-label">Giả định</p>
+      <div className="group-box">
+        <div className="group-row row-between-inline">
+          <span className="group-row-label">Lạm phát</span>
+          <NumField
+            value={s.inflationRate * 100}
+            minFrac={1}
+            maxFrac={1}
+            suffix="%"
+            ariaLabel={`Lạm phát ${pctDisplay(s.inflationRate)}`}
+            onCommit={(pct) => persist({ inflationRate: pctToRate(pct) })}
+          />
+        </div>
+        <div className="group-row row-between-inline">
+          <span className="group-row-label">Buffer</span>
+          <NumField
+            value={s.bufferPct * 100}
+            minFrac={1}
+            maxFrac={1}
+            suffix="%"
+            ariaLabel={`Buffer ${pctDisplay(s.bufferPct)}`}
+            onCommit={(pct) => persist({ bufferPct: pctToRate(pct) })}
+          />
+        </div>
+        <div className="group-row row-between-inline">
+          <span className="group-row-label">Lợi suất VWCE</span>
+          <NumField
+            value={s.vwceReturn * 100}
+            minFrac={1}
+            maxFrac={1}
+            suffix="%"
+            ariaLabel={`Lợi suất VWCE ${pctDisplay(s.vwceReturn)}`}
+            onCommit={(pct) => persist({ vwceReturn: pctToRate(pct) })}
+          />
+        </div>
+        <div className="group-row row-between-inline">
+          <span className="group-row-label">Lợi suất an toàn</span>
+          <NumField
+            value={s.safeReturn * 100}
+            minFrac={1}
+            maxFrac={1}
+            suffix="%"
+            ariaLabel={`Lợi suất an toàn ${pctDisplay(s.safeReturn)}`}
+            onCommit={(pct) => persist({ safeReturn: pctToRate(pct) })}
+          />
+        </div>
+      </div>
+
+      <p className="group-label">Tài sản / mã (ISIN)</p>
+      <div className="group-box">
+        {/* @deprecated legacy field — synced intentionally to VWCE quote */}
+        <div className="group-row row-between-inline">
+          <span className="group-row-label">Giá VWCE gần nhất (legacy)</span>
+          <NumField
+            className="pct-input wide"
+            value={s.latestVwcePrice}
+            minFrac={0}
+            maxFrac={4}
+            suffix="€"
+            ariaLabel="Giá VWCE gần nhất"
+            onCommit={(price) => void persistLegacyVwcePrice(price)}
+          />
+        </div>
+        {s.latestPriceDate && (
+          <p className="group-hint">Legacy cập nhật {formatDateVN(s.latestPriceDate)} · đồng bộ quote VWCE</p>
+        )}
+
+        {instruments.length === 0 ? (
+          <p className="group-hint">Chưa có instrument — migration sẽ seed VWCE khi mở app.</p>
+        ) : (
+          <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0" }}>
+            {instruments.map((inst) => {
+              const q = quoteFor(inst.isin);
+              return (
+                <li
+                  key={inst.isin}
+                  style={{
+                    borderTop: "1px solid var(--border, #e5e7eb)",
+                    padding: "12px 0",
+                    fontSize: 14,
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>
+                    {inst.name || inst.isin}
+                    {inst.ticker ? ` · ${inst.ticker}` : ""}
+                  </div>
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    {inst.isin}
+                    {inst.currency ? ` · ${inst.currency}` : ""}
+                    {inst.venue ? ` · ${inst.venue}` : ""}
+                  </div>
+                  {q ? (
+                    <div style={{ marginTop: 4 }}>
+                      {formatMoney(q.price, q.currency)} · asOf {formatDateVN(q.asOf)} · {q.source}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 4, color: "var(--warning-600, #b45309)" }}>Thiếu giá</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <p className="group-hint" style={{ marginTop: 12 }}>
+          Quote thủ công (local-only, chưa đồng bộ Supabase). Mỗi ISIN một giá — không ghi đè chéo.
+        </p>
+        <div className="group-row">
+          <label htmlFor="q-isin">ISIN</label>
+          <input
+            id="q-isin"
+            value={quoteIsin}
+            onChange={(e) => setQuoteIsin(e.target.value)}
+            autoCapitalize="characters"
+            style={{ minHeight: 44 }}
+          />
+        </div>
+        <div className="group-row">
+          <label htmlFor="q-price">Giá (€)</label>
+          <input
+            id="q-price"
+            inputMode="decimal"
+            value={quotePrice}
+            onChange={(e) => setQuotePrice(e.target.value)}
+            style={{ minHeight: 44 }}
+          />
+        </div>
+        <div className="group-row">
+          <label htmlFor="q-asof">asOf (YYYY-MM-DD)</label>
+          <input
+            id="q-asof"
+            value={quoteAsOf}
+            onChange={(e) => setQuoteAsOf(e.target.value)}
+            style={{ minHeight: 44 }}
+          />
+        </div>
+        {quoteErr && (
+          <p role="alert" style={{ color: "var(--danger-600, #b91c1c)", fontSize: 13 }}>
+            {quoteErr}
+          </p>
+        )}
+        <button
+          type="button"
+          className="group-action"
+          style={{ minHeight: 44 }}
+          disabled={quoteSaving}
+          onClick={() => void saveManualQuote()}
+        >
+          {quoteSaving ? "Đang lưu…" : "Lưu quote thủ công"}
+        </button>
+      </div>
+
+      <p className="group-label">Hạn</p>
+      <div className="group-box">
+        <div className="group-row">
+          <span className="group-row-label">Hạn 2042</span>
+          <Segmented
+            value={s.endMode}
+            options={[
+              { value: "hard", label: "Hạn cứng" },
+              { value: "flexible", label: "Linh hoạt" },
+            ]}
+            onChange={(v) => persist({ endMode: v as "hard" | "flexible" })}
+          />
+        </div>
+      </div>
+
+      <p className="group-label">Checklist {checklistYear}</p>
+      <div className="group-box">
+        <div className="group-row">
+          <label htmlFor="cl-year">Năm</label>
+          <input
+            id="cl-year"
+            type="number"
+            value={checklistYear}
+            onChange={(e) => {
+              const y = Number(e.target.value);
+              if (y >= 2000 && y <= 2100) setChecklistYear(y);
+            }}
+          />
+        </div>
+        {checklist?.items.map((item) => (
+          <label key={item.key} className="switch-row">
+            <span>{item.label}</span>
+            <input
+              type="checkbox"
+              className="ios-switch"
+              checked={item.done}
+              onChange={async () => {
+                const items = checklist.items.map((i) =>
+                  i.key === item.key ? { ...i, done: !i.done } : i,
+                );
+                const next = { ...checklist, items, updatedAt: new Date().toISOString() };
+                await db.annualChecklists.put(next);
+                setChecklist(next);
+              }}
+            />
+          </label>
+        ))}
+      </div>
+
+      {auth.user?.id && (dead.length > 0 || deadSyncedMsg) ? (
+        <>
+          <p className="group-label">Đồng bộ</p>
+          <div className="group-box">
+            {deadSyncedMsg && dead.length === 0 ? (
+              <p style={{ margin: 0, color: "var(--success-600)", fontSize: 14 }}>
+                Đã đồng bộ xong.
+              </p>
+            ) : (
+              <>
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    color: "var(--warning-600)",
+                    fontSize: 14,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {dead.length} thay đổi chưa đồng bộ được lên máy chủ sau nhiều lần thử. Dữ liệu
+                  vẫn an toàn trên máy này.
+                </p>
+                <button
+                  type="button"
+                  className="group-action"
+                  style={{ minHeight: 44 }}
+                  disabled={deadRetrying}
+                  onClick={async () => {
+                    if (!auth.user?.id) return;
+                    setDeadRetrying(true);
+                    setDeadSyncedMsg(false);
+                    try {
+                      await reviveDeadOutbox();
+                      await pushOutbox(auth.user.id);
+                      const next = await listDeadOutbox();
+                      setDead(next);
+                      if (next.length === 0) {
+                        setDeadSyncedMsg(true);
+                        window.setTimeout(() => setDeadSyncedMsg(false), 4000);
+                      }
+                    } finally {
+                      setDeadRetrying(false);
+                    }
+                  }}
+                >
+                  {deadRetrying ? "Đang thử lại…" : "Thử lại đồng bộ"}
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      ) : null}
+
+      <p className="group-label">Dữ liệu</p>
+      <div className="group-box">
+        <button type="button" className="group-action" onClick={doExport}>
+          Xuất JSON
+        </button>
+        <label className="group-action">
+          Nhập JSON
+          <input
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) doImport(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        <button type="button" className="group-action" onClick={exportCsv}>
+          Xuất CSV giao dịch
+        </button>
+        {onOpenMigrate && (
+          <button type="button" className="group-action" onClick={onOpenMigrate}>
+            Nhập dữ liệu local vào tài khoản
+          </button>
+        )}
+      </div>
+
+      <p className="group-label">Vùng nguy hiểm</p>
+      <div className="group-box">
+        {deleteStep === 0 ? (
+          <button
+            type="button"
+            className="group-action danger-text"
+            onClick={() => setDeleteStep(1)}
+          >
+            Xóa toàn bộ dữ liệu
+          </button>
+        ) : (
+          <div className="delete-confirm">
+            <p className="muted" style={{ fontSize: 13 }}>
+              Gõ <strong>XOA</strong> để xác nhận. Không hoàn tác được.
+            </p>
+            <input
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder="XOA"
+              autoCapitalize="characters"
+            />
+            <div className="stack" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="danger"
+                disabled={deleteConfirm.trim().toUpperCase() !== "XOA"}
+                onClick={async () => {
+                  await clearAllData();
+                  window.location.reload();
+                }}
+              >
+                Xác nhận xóa
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setDeleteStep(0);
+                  setDeleteConfirm("");
+                }}
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <p className="settings-foot">
+        v{APP_VERSION} · {online ? "Online" : "Offline"} · Sao lưu:{" "}
+        {metaBackup ? formatDateVN(metaBackup.slice(0, 10)) : "chưa có"}
+      </p>
+    </div>
+  );
+}
