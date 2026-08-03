@@ -7,19 +7,37 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadRegistry, quoteKey } from "./registry.mjs";
 import {
-  ContractError,
   readExistingQuotes,
-  sameDocumentEconomics,
   validateQuotesDocument,
-  writeJsonAtomic,
-  quoteRowToLegacyV1,
   quotesToMap,
+  sameQuoteEconomics,
+  sameDocumentEconomics,
+  quoteRowToLegacyV1,
+  writeJsonAtomic,
+  ContractError,
 } from "./contract.mjs";
-import { fetchYahooChart, parseYahooChart } from "./providers/yahoo.mjs";
-import { crossCheckWithOnvista } from "./providers/onvista.mjs";
-import { hourInTz, dateStringInTz } from "./time.mjs";
+import { loadRegistry, quoteKey } from "./registry.mjs";
+import { parseYahooChart } from "./providers/yahoo.mjs";
+import {
+  parseOnvistaSnapshot,
+  crossCheckWithOnvista,
+} from "./providers/onvista.mjs";
+import { hourInTz } from "./time.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(__dirname, "../..");
+export const QUOTES_PATH = path.join(REPO_ROOT, "public", "data", "quotes.json");
+export const LEGACY_VWCE_PATH = path.join(
+  REPO_ROOT,
+  "public",
+  "data",
+  "vwce-price.json",
+);
+export const VWCE_ISIN = "IE00BK5BQT80";
+
+const UA =
+  "quy-vwce-cho-be/1.0 (+https://github.com/ziegepapa/quy-vwce-cho-be; price-bot)";
 
 export class OrchestratorError extends Error {
   constructor(message) {
@@ -28,196 +46,283 @@ export class OrchestratorError extends Error {
   }
 }
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "../..");
-
-/**
- * Decide whether to accept a candidate quote for one instrument.
- * Policies are per-instrument (from registry).
- */
-export function decideQuoteWrite(prev, candidate, instrument, now = new Date()) {
-  if (!candidate) {
-    return { action: "keep", reason: "no_candidate", quote: prev || null };
-  }
-  if (!prev) {
-    return { action: "write", reason: "first", quote: candidate };
-  }
-  // Stale regression: never go backwards on asOf
-  if (candidate.asOf < prev.asOf) {
-    return { action: "keep", reason: "stale_regression", quote: prev };
-  }
-  const policies = instrument.policies || {};
-  const maxDayJumpPct = policies.maxDayJumpPct ?? 8;
-  const sameDayChangeBeforeClosePct = policies.sameDayChangeBeforeClosePct ?? 3;
-  const closeHourLocal = policies.closeHourLocal ?? 17;
-  const tz = policies.timezone || "Europe/Berlin";
-
-  if (candidate.asOf === prev.asOf) {
-    const hour = hourInTz(now, tz);
-    const diffPct = Math.abs((candidate.price - prev.price) / prev.price) * 100;
-    if (hour < closeHourLocal && diffPct > sameDayChangeBeforeClosePct) {
-      return { action: "keep", reason: "same_day_pre_close_jump", quote: prev };
+export async function fetchJson(url, timeoutMs = 20_000) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: ac.signal,
+      headers: { "User-Agent": UA, Accept: "application/json" },
+    });
+    if (res.status !== 200) {
+      throw new OrchestratorError(`HTTP ${res.status} for ${url}`);
     }
-    // After close (or within tolerance): allow update if economics differ
-    if (candidate.price === prev.price) {
-      return { action: "keep", reason: "same_economics", quote: prev };
+    return await res.json();
+  } catch (e) {
+    if (e instanceof OrchestratorError) throw e;
+    if (e?.name === "AbortError") {
+      throw new OrchestratorError(`Timeout fetching ${url}`);
     }
-    return { action: "write", reason: "same_day_update", quote: candidate };
+    throw new OrchestratorError(`Fetch failed ${url}: ${e?.message || e}`);
+  } finally {
+    clearTimeout(timer);
   }
-
-  // New day: check jump vs previous close
-  const jumpPct = Math.abs((candidate.price - prev.price) / prev.price) * 100;
-  if (jumpPct > maxDayJumpPct) {
-    return { action: "keep", reason: "day_jump", quote: prev };
-  }
-  return { action: "write", reason: "new_day", quote: candidate };
 }
 
-async function resolveInstrumentQuote(instrument, fetchImpl, now) {
-  const primary = instrument.providers?.primary;
-  if (!primary || primary.kind !== "yahoo_finance_chart") {
-    throw new OrchestratorError(`Unsupported primary provider for ${instrument.isin}`);
-  }
-  const symbol = primary.symbol;
-  if (!symbol) throw new OrchestratorError(`Missing yahoo symbol for ${instrument.isin}`);
+/**
+ * Decide whether a new quote may replace existing for the same key.
+ * Throws on stale regression / jump / same-day pre-close change.
+ * Returns null if economic no-op.
+ */
+export function decideQuoteWrite(next, existing, instrument, now) {
+  if (!existing) return next;
 
-  let chart;
-  try {
-    chart = await fetchYahooChart(symbol, fetchImpl);
-  } catch (e) {
-    throw new OrchestratorError(`Yahoo fetch failed for ${instrument.isin}: ${e.message}`);
+  if (
+    typeof next.asOf === "string" &&
+    typeof existing.asOf === "string" &&
+    next.asOf < existing.asOf
+  ) {
+    throw new OrchestratorError(
+      `Refusing stale regression for ${next.instrumentIsin}: ${next.asOf} < ${existing.asOf}`,
+    );
   }
-  const parsed = parseYahooChart(chart, {
-    symbol,
-    isin: instrument.isin,
-    currency: instrument.currency,
-    venue: instrument.venue,
-    now,
-  });
-  if (!parsed) {
-    throw new OrchestratorError(`Yahoo parse empty for ${instrument.isin}`);
+
+  if (sameQuoteEconomics(next, existing)) {
+    return null;
   }
+
+  const maxPct = instrument.maxDayChangePct ?? 20;
+  if (
+    typeof existing.price === "number" &&
+    existing.price > 0 &&
+    typeof next.price === "number"
+  ) {
+    const pct = (Math.abs(next.price - existing.price) / existing.price) * 100;
+    if (pct > maxPct) {
+      throw new OrchestratorError(
+        `Refusing jump ${pct.toFixed(2)}% > ${maxPct}% for ${next.instrumentIsin}`,
+      );
+    }
+  }
+
+  // Same calendar day: block large change before local close
+  if (next.asOf === existing.asOf) {
+    const tz = instrument.timezone || "Europe/Berlin";
+    const closeHour = instrument.closeHourLocal ?? 18;
+    const hour = hourInTz(now, tz);
+    if (hour < closeHour) {
+      const pct =
+        existing.price > 0
+          ? (Math.abs(next.price - existing.price) / existing.price) * 100
+          : 0;
+      const sameDayMax = Math.min(maxPct, 3);
+      if (pct > sameDayMax) {
+        throw new OrchestratorError(
+          `Refusing same-day pre-close change ${pct.toFixed(2)}% for ${next.instrumentIsin}`,
+        );
+      }
+    }
+  }
+
+  return next;
+}
+
+/**
+ * Resolve one instrument quote via primary + optional cross-check.
+ */
+export async function resolveInstrumentQuote(instrument, options = {}) {
+  const now = options.now instanceof Date ? options.now : new Date();
+  const fetchedAt =
+    options.fetchedAt instanceof Date ? options.fetchedAt : new Date();
+
+  if (!instrument.primaryProvider?.symbol) {
+    throw new OrchestratorError(
+      `No verified primaryProvider.symbol for ${instrument.isin}`,
+    );
+  }
+
+  let yahooBody = options.yahooBody;
+  if (!yahooBody) {
+    const url =
+      instrument.primaryProvider.chartUrl ||
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+        instrument.primaryProvider.symbol,
+      )}?interval=1d&range=10d`;
+    yahooBody = await fetchJson(url);
+  }
+
+  const primary = parseYahooChart(yahooBody, now, instrument);
 
   let crossCheckedWith;
   let crossCheckDifferencePct;
-  const cross = instrument.providers?.crossCheck;
-  if (cross && cross.kind === "onvista" && cross.symbol) {
-    try {
-      const cc = await crossCheckWithOnvista(cross.symbol, parsed.price, fetchImpl);
-      if (cc) {
-        crossCheckedWith = "onvista";
-        crossCheckDifferencePct = cc.differencePct;
-      }
-    } catch {
-      // cross-check is best-effort; do not fail the primary quote
+  if (instrument.crossCheckProvider?.kind === "onvista") {
+    let onvistaBody = options.onvistaBody;
+    if (!onvistaBody) {
+      const url =
+        instrument.crossCheckProvider.snapshotUrl ||
+        `https://api.onvista.de/api/v1/stocks/ISIN:${instrument.isin}/snapshot`;
+      onvistaBody = await fetchJson(url);
     }
+    const onvista = parseOnvistaSnapshot(onvistaBody, instrument);
+    const cc = crossCheckWithOnvista(primary, onvista, instrument);
+    crossCheckedWith = "onvista";
+    crossCheckDifferencePct = cc.differencePct;
   }
 
   return {
     instrumentIsin: instrument.isin,
     currency: instrument.currency,
-    venue: instrument.venue,
-    price: parsed.price,
-    asOf: parsed.asOf,
-    fetchedAt: now.toISOString(),
+    venue: instrument.venue || primary.meta?.venue,
+    price: primary.price,
+    asOf: primary.asOf,
+    fetchedAt: fetchedAt.toISOString(),
     source: "auto",
     provider: "yahoo_finance_chart",
-    providerUrl: primary.url || `https://finance.yahoo.com/quote/${symbol}`,
+    providerUrl:
+      instrument.primaryProvider.pageUrl ||
+      `https://finance.yahoo.com/quote/${instrument.primaryProvider.symbol}`,
     crossCheckedWith,
     crossCheckDifferencePct,
   };
 }
 
 /**
- * Run multi-asset update.
- * @param {object} opts
- * @param {string} [opts.quotesPath]
- * @param {string} [opts.legacyPath]
- * @param {string} [opts.registryPath]
- * @param {Function} [opts.fetchImpl]
- * @param {Date} [opts.now]
- * @param {boolean} [opts.dryRun]
- * @param {boolean} [opts.includeTestOnly]
+ * Run multi-asset update across registry instruments.
+ * @param {object} [options]
+ * @param {string} [options.quotesPath]
+ * @param {string} [options.legacyPath]
+ * @param {string} [options.registryPath]
+ * @param {Date} [options.now]
+ * @param {Date} [options.fetchedAt]
+ * @param {boolean} [options.dryRun]
+ * @param {boolean} [options.includeTestOnly]
+ * @param {Record<string,{yahooBody?:unknown,onvistaBody?:unknown}>} [options.bodiesByIsin]
  */
-export async function runMultiAssetUpdate(opts = {}) {
-  const now = opts.now || new Date();
-  const quotesPath = opts.quotesPath || path.join(ROOT, "public/data/quotes.json");
-  const legacyPath = opts.legacyPath || path.join(ROOT, "public/data/vwce-price.json");
-  const registryPath = opts.registryPath || path.join(ROOT, "scripts/price-instruments.json");
-  const fetchImpl = opts.fetchImpl || globalThis.fetch;
-  const dryRun = !!opts.dryRun;
+export async function runMultiAssetUpdate(options = {}) {
+  const now = options.now instanceof Date ? options.now : new Date();
+  const quotesPath = options.quotesPath || QUOTES_PATH;
+  const legacyPath = options.legacyPath || LEGACY_VWCE_PATH;
+  const registryPath =
+    options.registryPath ||
+    path.join(REPO_ROOT, "scripts", "price-instruments.json");
 
-  const registry = loadRegistry(registryPath, { includeTestOnly: !!opts.includeTestOnly });
-  const live = registry.instruments.filter((i) => !i.testOnly || opts.includeTestOnly);
+  const registry = loadRegistry(registryPath, {
+    includeTestOnly: !!options.includeTestOnly,
+  });
 
-  let existing;
+  /** @type {import("./contract.mjs").validateQuotesDocument extends Function ? any : any} */
+  let existingDoc = null;
   try {
-    existing = readExistingQuotes(quotesPath, now);
+    existingDoc = readExistingQuotes(quotesPath, now);
   } catch (e) {
     if (e instanceof ContractError) throw e;
-    throw new ContractError(`Cannot read existing quotes: ${e.message}`);
+    throw new ContractError(`Cannot read existing quotes: ${e?.message || e}`);
   }
-  const prevMap = quotesToMap(existing);
 
-  const nextQuotes = [];
-  const decisions = [];
+  const existingMap = quotesToMap(existingDoc);
+  const nextMap = new Map(existingMap);
+  const errors = [];
+  let anyEconomicChange = false;
 
-  for (const instrument of live) {
-    const key = quoteKey(instrument.isin, instrument.currency);
-    const prev = prevMap.get(key) || null;
-    let candidate = null;
-    let errMsg = null;
+  const worklist = options.includeTestOnly
+    ? registry.all.filter((i) => i.enabled)
+    : registry.liveEnabled;
+
+  for (const inst of worklist) {
+    if (!inst.enabled) continue;
+    // Live path requires verified primary mapping
+    if (inst.live && !inst.primaryProvider?.symbol) {
+      errors.push({
+        isin: inst.isin,
+        message: "skip live instrument without verified provider symbol",
+      });
+      continue;
+    }
+
+    const key = quoteKey(inst.isin, inst.currency);
+    const bodies = options.bodiesByIsin?.[inst.isin] || {};
+
     try {
-      candidate = await resolveInstrumentQuote(instrument, fetchImpl, now);
+      const resolved = await resolveInstrumentQuote(inst, {
+        now,
+        fetchedAt: options.fetchedAt,
+        yahooBody: bodies.yahooBody,
+        onvistaBody: bodies.onvistaBody,
+      });
+      const decided = decideQuoteWrite(
+        resolved,
+        existingMap.get(key) || null,
+        inst,
+        now,
+      );
+      if (decided) {
+        nextMap.set(key, decided);
+        anyEconomicChange = true;
+      }
+      // economic no-op: keep existing row (preserves fetchedAt)
     } catch (e) {
-      errMsg = e.message;
-    }
-    const decision = decideQuoteWrite(prev, candidate, instrument, now);
-    decisions.push({
-      key,
-      action: decision.action,
-      reason: decision.reason,
-      error: errMsg,
-    });
-    if (decision.quote) {
-      nextQuotes.push(decision.quote);
+      errors.push({ isin: inst.isin, message: e?.message || String(e) });
+      // Keep prior valid quote for this key; never delete others
     }
   }
 
-  // Preserve any previously valid quotes for instruments no longer in live set? No — only live.
-  // But if an instrument failed and had no prev, it is simply absent (fail-closed for that key).
+  const quotes = [...nextMap.values()].sort((a, b) => {
+    if (a.instrumentIsin !== b.instrumentIsin) {
+      return a.instrumentIsin < b.instrumentIsin ? -1 : 1;
+    }
+    return a.currency < b.currency ? -1 : a.currency > b.currency ? 1 : 0;
+  });
 
   const generatedAt =
-    existing && sameDocumentEconomics(
-      { schemaVersion: 2, generatedAt: existing.generatedAt, quotes: nextQuotes },
-      existing
-    )
-      ? existing.generatedAt
-      : now.toISOString();
+    anyEconomicChange || !existingDoc
+      ? (options.fetchedAt instanceof Date
+          ? options.fetchedAt
+          : new Date()
+        ).toISOString()
+      : existingDoc.generatedAt;
 
-  const doc = validateQuotesDocument(
-    { schemaVersion: 2, generatedAt, quotes: nextQuotes },
-    now
+  const quotesDoc = validateQuotesDocument(
+    { schemaVersion: 2, generatedAt, quotes },
+    now,
   );
 
-  const economicChange = !existing || !sameDocumentEconomics(doc, existing);
+  if (!anyEconomicChange && existingDoc && sameDocumentEconomics(existingDoc, quotesDoc)) {
+    return {
+      wrote: false,
+      reason: "No economic change",
+      quotesDoc: existingDoc,
+      errors,
+      legacyWrote: false,
+    };
+  }
 
-  if (!dryRun && economicChange) {
-    writeJsonAtomic(doc, quotesPath);
-    // Legacy mirror for VWCE
-    const vwce = doc.quotes.find((q) => q.instrumentIsin === "IE00BK5BQT80" && q.currency === "EUR");
-    if (vwce) {
-      const legacy = quoteRowToLegacyV1(vwce, "VWCE");
-      writeJsonAtomic(legacy, legacyPath);
-    }
+  if (options.dryRun) {
+    return {
+      wrote: false,
+      reason: "dry-run",
+      quotesDoc,
+      errors,
+      legacyWrote: false,
+    };
+  }
+
+  writeJsonAtomic(quotesDoc, quotesPath);
+
+  // Legacy VWCE mirror from resolved VWCE quote
+  let legacyWrote = false;
+  const vwceQuote = quotesDoc.quotes.find(
+    (q) => q.instrumentIsin === VWCE_ISIN && q.currency === "EUR",
+  );
+  if (vwceQuote) {
+    const legacy = quoteRowToLegacyV1(vwceQuote, "VWCE");
+    writeJsonAtomic(legacy, legacyPath);
+    legacyWrote = true;
   }
 
   return {
-    economicChange,
-    dryRun,
-    document: doc,
-    decisions,
-    quotesPath,
-    legacyPath,
+    wrote: true,
+    quotesDoc,
+    errors,
+    legacyWrote,
   };
 }
