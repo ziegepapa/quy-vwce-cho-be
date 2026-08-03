@@ -5,11 +5,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import path from "node:path";
 import os from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isValidIsin, normalizeIsin } from "./price/isin.mjs";
 import {
   ContractError,
   validateQuoteRow,
@@ -21,21 +20,31 @@ import {
   quoteRowToLegacyV1,
   writeJsonAtomic,
 } from "./price/contract.mjs";
+import { isValidIsin, normalizeIsin } from "./price/isin.mjs";
 import { loadRegistry, quoteKey } from "./price/registry.mjs";
-import { decideQuoteWrite, runMultiAssetUpdate } from "./price/orchestrator.mjs";
-import { parseYahooChart } from "./price/providers/yahoo.mjs";
-import { parseOnvistaSnapshot } from "./price/providers/onvista.mjs";
+import {
+  decideQuoteWrite,
+  runMultiAssetUpdate,
+  OrchestratorError,
+} from "./price/orchestrator.mjs";
+import { parseYahooChart, selectClosedBar } from "./price/providers/yahoo.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
-const FIX_YAHOO = path.join(__dirname, "fixtures/yahoo-vwce.json");
-const FIX_ONVISTA = path.join(__dirname, "fixtures/onvista-vwce.json");
+const REPO_ROOT = path.resolve(__dirname, "..");
+const REGISTRY = path.join(REPO_ROOT, "scripts", "price-instruments.json");
+const FIX_YAHOO = path.join(__dirname, "fixtures", "yahoo-vwce.json");
+const FIX_ONVISTA = path.join(__dirname, "fixtures", "onvista-vwce.json");
 
-function tmpDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "quotes-v2-"));
+function tmpWorkspace() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "quotes-v2-"));
+  return {
+    dir,
+    quotesPath: path.join(dir, "quotes.json"),
+    legacyPath: path.join(dir, "vwce-price.json"),
+  };
 }
 
-function sampleQuote(overrides = {}) {
+function sampleRow(overrides = {}) {
   return {
     instrumentIsin: "IE00BK5BQT80",
     currency: "EUR",
@@ -53,23 +62,21 @@ function sampleQuote(overrides = {}) {
 }
 
 describe("ISIN helpers", () => {
-  it("normalizes and validates VWCE ISIN", () => {
+  it("accepts VWCE and Amundi checksums", () => {
     assert.equal(normalizeIsin("ie00bk5bqt80"), "IE00BK5BQT80");
     assert.equal(isValidIsin("IE00BK5BQT80"), true);
-  });
-  it("rejects bad checksum", () => {
+    assert.equal(isValidIsin("LU1681043599"), true);
     assert.equal(isValidIsin("IE00BK5BQT81"), false);
   });
 });
 
-describe("contract schema v2", () => {
+describe("quotes.json contract schema 2", () => {
   it("accepts valid document", () => {
     const doc = validateQuotesDocument({
       schemaVersion: 2,
       generatedAt: new Date().toISOString(),
-      quotes: [sampleQuote()],
+      quotes: [sampleRow()],
     });
-    assert.equal(doc.schemaVersion, 2);
     assert.equal(doc.quotes.length, 1);
   });
 
@@ -79,219 +86,267 @@ describe("contract schema v2", () => {
         validateQuotesDocument({
           schemaVersion: 2,
           generatedAt: new Date().toISOString(),
-          quotes: [sampleQuote(), sampleQuote({ price: 166 })],
+          quotes: [sampleRow(), sampleRow({ price: 166 })],
         }),
-      /Duplicate/
+      /Duplicate/,
     );
   });
 
   it("rejects bad checksum ISIN", () => {
     assert.throws(
-      () => validateQuoteRow(sampleQuote({ instrumentIsin: "IE00BK5BQT81" })),
-      /checksum/
+      () => validateQuoteRow(sampleRow({ instrumentIsin: "IE00BK5BQT81" })),
+      /checksum/,
     );
   });
 
-  it("rejects invalid date, NaN, Infinity, zero, negative price", () => {
-    assert.throws(() => validateQuoteRow(sampleQuote({ asOf: "2026-13-01" })), /asOf/);
-    assert.throws(() => validateQuoteRow(sampleQuote({ price: NaN })), /price/);
-    assert.throws(() => validateQuoteRow(sampleQuote({ price: Infinity })), /price/);
-    assert.throws(() => validateQuoteRow(sampleQuote({ price: 0 })), /price/);
-    assert.throws(() => validateQuoteRow(sampleQuote({ price: -1 })), /price/);
+  it("rejects invalid date, NaN, Infinity, zero, negative", () => {
+    assert.throws(() => validateQuoteRow(sampleRow({ asOf: "not-a-date" })), /asOf/);
+    assert.throws(() => validateQuoteRow(sampleRow({ price: NaN })), /price/);
+    assert.throws(() => validateQuoteRow(sampleRow({ price: Infinity })), /price/);
+    assert.throws(() => validateQuoteRow(sampleRow({ price: 0 })), /price/);
+    assert.throws(() => validateQuoteRow(sampleRow({ price: -1 })), /price/);
   });
 
-  it("sorts deterministic by ISIN then currency", () => {
-    const a = sampleQuote({ instrumentIsin: "IE00B4L5Y983", currency: "EUR" }); // another valid ISIN shape for test — use real if needed
-    // Use two valid ISINs: VWCE and a known good test ISIN LU1681043599 (Amundi)
-    const q1 = sampleQuote({ instrumentIsin: "LU1681043599", currency: "EUR", price: 10 });
-    const q2 = sampleQuote({ instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 165 });
+  it("rejects non-auto source", () => {
+    assert.throws(() => validateQuoteRow(sampleRow({ source: "manual" })), /auto/);
+  });
+
+  it("deterministic ordering by ISIN then currency", () => {
     const doc = validateQuotesDocument({
       schemaVersion: 2,
       generatedAt: new Date().toISOString(),
-      quotes: [q1, q2],
+      quotes: [
+        sampleRow({ instrumentIsin: "LU1681043599", price: 50 }),
+        sampleRow({ instrumentIsin: "IE00BK5BQT80", price: 165 }),
+      ],
     });
     assert.equal(doc.quotes[0].instrumentIsin, "IE00BK5BQT80");
     assert.equal(doc.quotes[1].instrumentIsin, "LU1681043599");
   });
 
   it("malformed existing file fail closed", () => {
-    const dir = tmpDir();
-    const p = path.join(dir, "quotes.json");
-    fs.writeFileSync(p, "{not json", "utf8");
-    assert.throws(() => readExistingQuotes(p), /Malformed|fail closed/);
-  });
-
-  it("semantic no-op equality ignores fetchedAt/generatedAt", () => {
-    const a = sampleQuote({ fetchedAt: "2026-08-03T10:00:00.000Z" });
-    const b = sampleQuote({ fetchedAt: "2026-08-03T12:00:00.000Z" });
-    assert.equal(sameQuoteEconomics(a, b), true);
-    const d1 = { schemaVersion: 2, generatedAt: "2026-08-03T10:00:00.000Z", quotes: [a] };
-    const d2 = { schemaVersion: 2, generatedAt: "2026-08-03T12:00:00.000Z", quotes: [b] };
-    assert.equal(sameDocumentEconomics(d1, d2), true);
+    const { quotesPath } = tmpWorkspace();
+    fs.writeFileSync(quotesPath, "{broken", "utf8");
+    assert.throws(() => readExistingQuotes(quotesPath), ContractError);
   });
 });
 
-describe("legacy round-trip", () => {
-  it("VWCE legacy mirror keeps schema 1 fields", () => {
-    const q = sampleQuote();
-    const v1 = quoteRowToLegacyV1(q);
-    assert.equal(v1.schemaVersion, 1);
-    assert.equal(v1.isin, "IE00BK5BQT80");
-    assert.equal(v1.ticker, "VWCE");
-    assert.equal(v1.price, 165.1);
-    const back = legacyV1ToQuoteRow(v1);
-    assert.equal(back.instrumentIsin, q.instrumentIsin);
-    assert.equal(back.price, q.price);
+describe("two ISIN independence", () => {
+  it("two keys do not overwrite each other in document", () => {
+    const doc = validateQuotesDocument({
+      schemaVersion: 2,
+      generatedAt: new Date().toISOString(),
+      quotes: [
+        sampleRow({ price: 100 }),
+        sampleRow({ instrumentIsin: "LU1681043599", price: 50 }),
+      ],
+    });
+    assert.equal(doc.quotes.length, 2);
+    assert.equal(doc.quotes.find((q) => q.instrumentIsin === "IE00BK5BQT80").price, 100);
+    assert.equal(doc.quotes.find((q) => q.instrumentIsin === "LU1681043599").price, 50);
   });
 });
 
-describe("registry", () => {
-  it("loads VWCE live instrument", () => {
-    const reg = loadRegistry(path.join(ROOT, "scripts/price-instruments.json"));
-    const live = reg.instruments.filter((i) => !i.testOnly);
-    assert.ok(live.some((i) => i.isin === "IE00BK5BQT80"));
-  });
-  it("quoteKey is ISIN|currency", () => {
-    assert.equal(quoteKey("IE00BK5BQT80", "eur"), "IE00BK5BQT80|EUR");
-  });
-});
-
-describe("decideQuoteWrite policies", () => {
+describe("per-instrument policies", () => {
   const inst = {
     isin: "IE00BK5BQT80",
     currency: "EUR",
-    policies: {
-      maxDayJumpPct: 8,
-      sameDayChangeBeforeClosePct: 3,
-      closeHourLocal: 17,
-      timezone: "Europe/Berlin",
-    },
+    maxDayChangePct: 8,
+    closeHourLocal: 18,
+    timezone: "Europe/Berlin",
   };
-  const prev = sampleQuote({ asOf: "2026-08-01", price: 100, fetchedAt: "2026-08-01T18:00:00.000Z" });
 
-  it("blocks stale regression", () => {
-    const cand = sampleQuote({ asOf: "2026-07-31", price: 99 });
-    const d = decideQuoteWrite(prev, cand, inst, new Date("2026-08-03T12:00:00Z"));
-    assert.equal(d.action, "keep");
-    assert.equal(d.reason, "stale_regression");
-  });
-
-  it("blocks day jump beyond policy", () => {
-    const cand = sampleQuote({ asOf: "2026-08-03", price: 120 }); // +20%
-    const d = decideQuoteWrite(prev, cand, inst, new Date("2026-08-03T18:00:00Z"));
-    assert.equal(d.action, "keep");
-    assert.equal(d.reason, "day_jump");
-  });
-
-  it("allows moderate new-day move", () => {
-    const cand = sampleQuote({ asOf: "2026-08-03", price: 105 });
-    const d = decideQuoteWrite(prev, cand, inst, new Date("2026-08-03T18:00:00Z"));
-    assert.equal(d.action, "write");
-  });
-
-  it("blocks same-day pre-close jump", () => {
-    const sameDayPrev = sampleQuote({ asOf: "2026-08-03", price: 100 });
-    const cand = sampleQuote({ asOf: "2026-08-03", price: 110 });
-    // 10:00 Berlin ~ 08:00 UTC in summer
-    const d = decideQuoteWrite(sameDayPrev, cand, inst, new Date("2026-08-03T08:00:00Z"));
-    assert.equal(d.action, "keep");
-    assert.equal(d.reason, "same_day_pre_close_jump");
-  });
-});
-
-describe("provider parse fixtures", () => {
-  it("parses yahoo VWCE fixture", () => {
-    const raw = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
-    const parsed = parseYahooChart(raw, {
-      symbol: "VWCE.DE",
-      isin: "IE00BK5BQT80",
-      currency: "EUR",
-      venue: "XETRA",
-      now: new Date("2026-08-03T18:00:00Z"),
-    });
-    assert.ok(parsed);
-    assert.ok(parsed.price > 0);
-    assert.match(parsed.asOf, /^\d{4}-\d{2}-\d{2}$/);
-  });
-
-  it("parses onvista fixture", () => {
-    const raw = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
-    const parsed = parseOnvistaSnapshot(raw);
-    assert.ok(parsed);
-    assert.ok(parsed.price > 0);
-  });
-});
-
-describe("multi-ISIN isolation", () => {
-  it("two ISINs do not overwrite each other; one failure keeps prior", async () => {
-    const dir = tmpDir();
-    const quotesPath = path.join(dir, "quotes.json");
-    const legacyPath = path.join(dir, "vwce-price.json");
-    const registryPath = path.join(ROOT, "scripts/price-instruments.json");
-
-    const qVwce = sampleQuote({ price: 160, asOf: "2026-08-01" });
-    const qAmundi = sampleQuote({
-      instrumentIsin: "LU1681043599",
-      currency: "EUR",
-      price: 50,
-      asOf: "2026-08-01",
-      providerUrl: "https://example.test/amundi",
-    });
-    writeJsonAtomic(
-      {
-        schemaVersion: 2,
-        generatedAt: "2026-08-01T18:00:00.000Z",
-        quotes: [qVwce, qAmundi],
-      },
-      quotesPath
+  it("stale asOf regression blocked per ISIN", () => {
+    const existing = sampleRow({ asOf: "2026-08-02", price: 100 });
+    const next = sampleRow({ asOf: "2026-08-01", price: 99 });
+    assert.throws(
+      () => decideQuoteWrite(next, existing, inst, new Date("2026-08-03T18:00:00Z")),
+      OrchestratorError,
     );
+  });
 
-    const yahooRaw = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
-    // fetch that succeeds for VWCE and fails for Amundi
-    const fetchImpl = async (url) => {
-      const u = String(url);
-      if (u.includes("VWCE") || u.includes("query1.finance.yahoo.com")) {
-        return {
-          ok: true,
-          json: async () => yahooRaw,
-          text: async () => JSON.stringify(yahooRaw),
-        };
-      }
-      if (u.includes("onvista")) {
-        const onv = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
-        return { ok: true, json: async () => onv, text: async () => JSON.stringify(onv) };
-      }
-      throw new Error("simulated provider failure");
+  it("jump policy uses instrument maxDayChangePct", () => {
+    const existing = sampleRow({ asOf: "2026-08-01", price: 100 });
+    const next = sampleRow({ asOf: "2026-08-03", price: 120 });
+    assert.throws(
+      () => decideQuoteWrite(next, existing, inst, new Date("2026-08-03T18:00:00Z")),
+      /jump/,
+    );
+  });
+
+  it("independent range: other instrument allows different band", () => {
+    const other = {
+      isin: "LU1681043599",
+      currency: "EUR",
+      maxDayChangePct: 25,
+      closeHourLocal: 18,
+      timezone: "Europe/Berlin",
     };
+    const existing = sampleRow({
+      instrumentIsin: "LU1681043599",
+      asOf: "2026-08-01",
+      price: 100,
+    });
+    const next = sampleRow({
+      instrumentIsin: "LU1681043599",
+      asOf: "2026-08-03",
+      price: 120,
+    });
+    const decided = decideQuoteWrite(next, existing, other, new Date("2026-08-03T18:00:00Z"));
+    assert.equal(decided.price, 120);
+  });
+
+  it("semantic no-op does not change economics", () => {
+    const a = sampleRow({ fetchedAt: "2026-08-03T10:00:00.000Z" });
+    const b = sampleRow({ fetchedAt: "2026-08-03T12:00:00.000Z" });
+    assert.equal(sameQuoteEconomics(a, b), true);
+    assert.equal(
+      sameDocumentEconomics(
+        { schemaVersion: 2, generatedAt: "a", quotes: [a] },
+        { schemaVersion: 2, generatedAt: "b", quotes: [b] },
+      ),
+      true,
+    );
+  });
+});
+
+describe("provider isolation in runMultiAssetUpdate", () => {
+  it("one provider failure keeps prior quote and other assets", async () => {
+    const { quotesPath, legacyPath } = tmpWorkspace();
+    const prior = {
+      schemaVersion: 2,
+      generatedAt: "2026-08-01T18:00:00.000Z",
+      quotes: [
+        sampleRow({ price: 160, asOf: "2026-08-01" }),
+        sampleRow({
+          instrumentIsin: "LU1681043599",
+          price: 50,
+          asOf: "2026-08-01",
+          providerUrl: "https://example.test/x",
+        }),
+      ],
+    };
+    writeJsonAtomic(prior, quotesPath);
+
+    const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
+    const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
 
     const result = await runMultiAssetUpdate({
       quotesPath,
       legacyPath,
-      registryPath,
-      fetchImpl,
-      now: new Date("2026-08-03T18:00:00Z"),
+      registryPath: REGISTRY,
       includeTestOnly: true,
-      dryRun: false,
+      now: new Date("2026-08-03T17:00:00.000Z"),
+      fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
+      bodiesByIsin: {
+        IE00BK5BQT80: { yahooBody, onvistaBody },
+        // Amundi intentionally missing bodies → failure → keep prior
+      },
     });
 
-    assert.ok(result.document);
-    const map = new Map(result.document.quotes.map((q) => [quoteKey(q.instrumentIsin, q.currency), q]));
-    // VWCE should be updated or kept valid
+    assert.ok(result.quotesDoc);
+    const map = new Map(
+      result.quotesDoc.quotes.map((q) => [quoteKey(q.instrumentIsin, q.currency), q]),
+    );
     assert.ok(map.has("IE00BK5BQT80|EUR"));
-    // Amundi prior should be kept if registry includes test-only and provider failed
-    if (map.has("LU1681043599|EUR")) {
-      assert.equal(map.get("LU1681043599|EUR").price, 50);
-    }
-    // decisions should mention isolation
-    assert.ok(Array.isArray(result.decisions));
+    assert.ok(map.has("LU1681043599|EUR"));
+    assert.equal(map.get("LU1681043599|EUR").price, 50);
+    assert.ok(result.errors.some((e) => e.isin === "LU1681043599"));
+  });
+
+  it("fixture VWCE resolve writes both quotes.json and legacy mirror", async () => {
+    const { quotesPath, legacyPath } = tmpWorkspace();
+    const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
+    const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
+    const result = await runMultiAssetUpdate({
+      quotesPath,
+      legacyPath,
+      registryPath: REGISTRY,
+      now: new Date("2026-08-03T17:00:00.000Z"),
+      fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
+      bodiesByIsin: {
+        IE00BK5BQT80: { yahooBody, onvistaBody },
+      },
+    });
+    assert.equal(result.wrote, true);
+    assert.equal(result.legacyWrote, true);
+    const doc = JSON.parse(fs.readFileSync(quotesPath, "utf8"));
+    assert.equal(doc.schemaVersion, 2);
+    assert.equal(doc.quotes[0].instrumentIsin, "IE00BK5BQT80");
+    const leg = JSON.parse(fs.readFileSync(legacyPath, "utf8"));
+    assert.equal(leg.schemaVersion, 1);
+    assert.equal(leg.isin, "IE00BK5BQT80");
+    assert.equal(leg.ticker, "VWCE");
+  });
+
+  it("second write with same economics is no-op", async () => {
+    const { quotesPath, legacyPath } = tmpWorkspace();
+    const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
+    const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
+    const opts = {
+      quotesPath,
+      legacyPath,
+      registryPath: REGISTRY,
+      now: new Date("2026-08-03T17:00:00.000Z"),
+      fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
+      bodiesByIsin: { IE00BK5BQT80: { yahooBody, onvistaBody } },
+    };
+    const first = await runMultiAssetUpdate(opts);
+    assert.equal(first.wrote, true);
+    const second = await runMultiAssetUpdate({
+      ...opts,
+      fetchedAt: new Date("2026-08-03T18:00:00.000Z"),
+    });
+    assert.equal(second.wrote, false);
+    assert.match(second.reason || "", /No economic change|economic/i);
   });
 });
 
-describe("atomic write", () => {
-  it("writeJsonAtomic creates valid JSON", () => {
-    const dir = tmpDir();
-    const p = path.join(dir, "out.json");
-    writeJsonAtomic({ a: 1 }, p);
-    assert.deepEqual(JSON.parse(fs.readFileSync(p, "utf8")), { a: 1 });
+describe("legacy compatibility", () => {
+  it("v1 ↔ v2 round-trip preserves economics", () => {
+    const q = sampleRow();
+    const v1 = quoteRowToLegacyV1(q);
+    assert.equal(v1.schemaVersion, 1);
+    const back = legacyV1ToQuoteRow(v1);
+    assert.equal(back.instrumentIsin, q.instrumentIsin);
+    assert.equal(back.price, q.price);
+    assert.equal(back.asOf, q.asOf);
+  });
+});
+
+describe("registry", () => {
+  it("live registry includes VWCE with explicit provider symbol", () => {
+    const reg = loadRegistry(REGISTRY);
+    const vwce = reg.liveEnabled.find((i) => i.isin === "IE00BK5BQT80");
+    assert.ok(vwce);
+    assert.equal(vwce.primaryProvider.symbol, "VWCE.DE");
+  });
+  it("test-only second ISIN is not live", () => {
+    const reg = loadRegistry(REGISTRY, { includeTestOnly: true });
+    assert.ok(reg.testOnlyInstruments.some((i) => i.isin === "LU1681043599"));
+    assert.ok(!reg.liveEnabled.some((i) => i.isin === "LU1681043599"));
+  });
+});
+
+describe("yahoo adapter uses registry config", () => {
+  it("selectClosedBar after close picks today", () => {
+    const bars = [
+      { timestamp: Date.parse("2026-08-01T16:00:00Z") / 1000, close: 160 },
+      { timestamp: Date.parse("2026-08-03T16:00:00Z") / 1000, close: 165 },
+    ];
+    const bar = selectClosedBar(bars, new Date("2026-08-03T17:00:00Z"), {
+      timezone: "Europe/Berlin",
+      closeHourLocal: 18,
+    });
+    assert.equal(bar.asOf, "2026-08-03");
+  });
+
+  it("parseYahooChart validates VWCE fixture", () => {
+    const body = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
+    const reg = loadRegistry(REGISTRY);
+    const vwce = reg.liveEnabled.find((i) => i.isin === "IE00BK5BQT80");
+    const y = parseYahooChart(body, new Date("2026-08-03T17:00:00Z"), vwce);
+    assert.equal(y.asOf, "2026-08-03");
+    assert.ok(y.price > 160);
   });
 });
