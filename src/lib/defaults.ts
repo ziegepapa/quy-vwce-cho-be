@@ -1,5 +1,37 @@
-import type { AnnualChecklist, AppSettings, Goal, Notfallmappe } from "./types";
-export const ETF = { name: "Vanguard FTSE All-World UCITS ETF (USD) Accumulating", ticker: "VWCE", isin: "IE00BK5BQT80", type: "Accumulating" as const };
+import type { AnnualChecklist, AppSettings, Goal, Instrument, Notfallmappe, Quote } from "./types";
+import { VWCE_ISIN } from "./types";
+import { quoteId } from "./instrument";
+export const ETF = { name: "Vanguard FTSE All-World UCITS ETF (USD) Accumulating", ticker: "VWCE", isin: VWCE_ISIN, type: "Accumulating" as const };
+
+export function defaultVwceInstrument(): Instrument {
+  const t = nowIso();
+  return {
+    isin: VWCE_ISIN,
+    name: ETF.name,
+    ticker: ETF.ticker,
+    currency: "EUR",
+    venue: "XETRA",
+    providerSymbols: { yahoo: "VWCE.DE" },
+    createdAt: t,
+    updatedAt: t,
+  };
+}
+
+export function manualQuoteFromSettings(price: number, asOf: string): Quote | null {
+  if (!(price > 0) || !asOf) return null;
+  const t = nowIso();
+  return {
+    id: quoteId(VWCE_ISIN, "EUR"),
+    instrumentIsin: VWCE_ISIN,
+    currency: "EUR",
+    venue: "XETRA",
+    price,
+    asOf,
+    source: "manual",
+    createdAt: t,
+    updatedAt: t,
+  };
+}
 export function nowIso(): string { return new Date().toISOString(); }
 export function uid(prefix = "id"): string { return `${prefix}_${crypto.randomUUID()}`; }
 
