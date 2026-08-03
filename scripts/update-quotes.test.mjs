@@ -65,7 +65,7 @@ describe("ISIN helpers", () => {
   it("accepts VWCE and Amundi checksums", () => {
     assert.equal(normalizeIsin("ie00bk5bqt80"), "IE00BK5BQT80");
     assert.equal(isValidIsin("IE00BK5BQT80"), true);
-    assert.equal(isValidIsin("LU1681043599"), true);
+    assert.equal(isValidIsin("FR0010315770"), true);
     assert.equal(isValidIsin("IE00BK5BQT81"), false);
   });
 });
@@ -116,12 +116,12 @@ describe("quotes.json contract schema 2", () => {
       schemaVersion: 2,
       generatedAt: new Date().toISOString(),
       quotes: [
-        sampleRow({ instrumentIsin: "LU1681043599", price: 50 }),
+        sampleRow({ instrumentIsin: "FR0010315770", price: 50 }),
         sampleRow({ instrumentIsin: "IE00BK5BQT80", price: 165 }),
       ],
     });
-    assert.equal(doc.quotes[0].instrumentIsin, "IE00BK5BQT80");
-    assert.equal(doc.quotes[1].instrumentIsin, "LU1681043599");
+    assert.equal(doc.quotes[0].instrumentIsin, "FR0010315770");
+    assert.equal(doc.quotes[1].instrumentIsin, "IE00BK5BQT80");
   });
 
   it("malformed existing file fail closed", () => {
@@ -138,12 +138,12 @@ describe("two ISIN independence", () => {
       generatedAt: new Date().toISOString(),
       quotes: [
         sampleRow({ price: 100 }),
-        sampleRow({ instrumentIsin: "LU1681043599", price: 50 }),
+        sampleRow({ instrumentIsin: "FR0010315770", price: 50 }),
       ],
     });
     assert.equal(doc.quotes.length, 2);
     assert.equal(doc.quotes.find((q) => q.instrumentIsin === "IE00BK5BQT80").price, 100);
-    assert.equal(doc.quotes.find((q) => q.instrumentIsin === "LU1681043599").price, 50);
+    assert.equal(doc.quotes.find((q) => q.instrumentIsin === "FR0010315770").price, 50);
   });
 });
 
@@ -176,19 +176,19 @@ describe("per-instrument policies", () => {
 
   it("independent range: other instrument allows different band", () => {
     const other = {
-      isin: "LU1681043599",
+      isin: "FR0010315770",
       currency: "EUR",
       maxDayChangePct: 25,
       closeHourLocal: 18,
       timezone: "Europe/Berlin",
     };
     const existing = sampleRow({
-      instrumentIsin: "LU1681043599",
+      instrumentIsin: "FR0010315770",
       asOf: "2026-08-01",
       price: 100,
     });
     const next = sampleRow({
-      instrumentIsin: "LU1681043599",
+      instrumentIsin: "FR0010315770",
       asOf: "2026-08-03",
       price: 120,
     });
@@ -219,7 +219,7 @@ describe("provider isolation in runMultiAssetUpdate", () => {
       quotes: [
         sampleRow({ price: 160, asOf: "2026-08-01" }),
         sampleRow({
-          instrumentIsin: "LU1681043599",
+          instrumentIsin: "FR0010315770",
           price: 50,
           asOf: "2026-08-01",
           providerUrl: "https://example.test/x",
@@ -240,7 +240,7 @@ describe("provider isolation in runMultiAssetUpdate", () => {
       fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
       bodiesByIsin: {
         IE00BK5BQT80: { yahooBody, onvistaBody },
-        // Amundi intentionally missing bodies → failure → keep prior
+        // test-only intentionally missing bodies → failure → keep prior
       },
     });
 
@@ -249,9 +249,9 @@ describe("provider isolation in runMultiAssetUpdate", () => {
       result.quotesDoc.quotes.map((q) => [quoteKey(q.instrumentIsin, q.currency), q]),
     );
     assert.ok(map.has("IE00BK5BQT80|EUR"));
-    assert.ok(map.has("LU1681043599|EUR"));
-    assert.equal(map.get("LU1681043599|EUR").price, 50);
-    assert.ok(result.errors.some((e) => e.isin === "LU1681043599"));
+    assert.ok(map.has("FR0010315770|EUR"));
+    assert.equal(map.get("FR0010315770|EUR").price, 50);
+    assert.ok(result.errors.some((e) => e.isin === "FR0010315770"));
   });
 
   it("fixture VWCE resolve writes both quotes.json and legacy mirror", async () => {
@@ -323,8 +323,8 @@ describe("registry", () => {
   });
   it("test-only second ISIN is not live", () => {
     const reg = loadRegistry(REGISTRY, { includeTestOnly: true });
-    assert.ok(reg.testOnlyInstruments.some((i) => i.isin === "LU1681043599"));
-    assert.ok(!reg.liveEnabled.some((i) => i.isin === "LU1681043599"));
+    assert.ok(reg.testOnlyInstruments.some((i) => i.isin === "FR0010315770"));
+    assert.ok(!reg.liveEnabled.some((i) => i.isin === "FR0010315770"));
   });
 });
 
