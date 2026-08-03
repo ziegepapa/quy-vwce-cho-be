@@ -1,5 +1,8 @@
 /** Pure calculation helpers — no side effects */
 
+import { resolveInstrumentIsin, isSecurityBuy, isSecuritySell } from "./instrument";
+import { VWCE_ISIN } from "./types";
+
 export function monthlyRate(annualRate: number): number {
   if (!Number.isFinite(annualRate) || annualRate <= -1) return 0;
   return Math.pow(1 + annualRate, 1 / 12) - 1;
@@ -103,7 +106,20 @@ export function etfToSell(opts: {
   return Math.max(0, opts.requiredSafe - opts.currentSafe - opts.expectedFutureCash);
 }
 
+export type PositionState = {
+  qty: number;
+  costBasis: number;
+  totalBought: number;
+  totalSold: number;
+};
+
 export type PortfolioState = {
+  /** Holdings keyed by normalized ISIN. */
+  positions: Record<string, PositionState>;
+  /**
+   * Legacy convenience mirrors of VWCE position (IE00BK5BQT80).
+   * Kept so existing UI/tests reading vwceQty continue to work.
+   */
   vwceQty: number;
   vwceCostBasis: number;
   totalBought: number;
@@ -122,10 +138,31 @@ export type TxInput = {
   quantity?: number;
   fee?: number;
   tax?: number;
+  /** Multi-asset: ISIN for buy/sell security. */
+  instrumentIsin?: string;
 };
+
+function emptyPosition(): PositionState {
+  return { qty: 0, costBasis: 0, totalBought: 0, totalSold: 0 };
+}
+
+function syncVwceMirror(s: PortfolioState): void {
+  const p = s.positions[VWCE_ISIN];
+  s.vwceQty = p?.qty ?? 0;
+  s.vwceCostBasis = p?.costBasis ?? 0;
+  let bought = 0;
+  let sold = 0;
+  for (const pos of Object.values(s.positions)) {
+    bought += pos.totalBought;
+    sold += pos.totalSold;
+  }
+  s.totalBought = bought;
+  s.totalSold = sold;
+}
 
 export function emptyPortfolio(): PortfolioState {
   return {
+    positions: {},
     vwceQty: 0,
     vwceCostBasis: 0,
     totalBought: 0,
@@ -138,45 +175,82 @@ export function emptyPortfolio(): PortfolioState {
   };
 }
 
+export function getPosition(state: PortfolioState, isin: string): PositionState {
+  const key = isin.trim().toUpperCase();
+  return state.positions[key] ?? emptyPosition();
+}
+
 export function applyTransaction(state: PortfolioState, tx: TxInput): PortfolioState {
-  const s = { ...state };
+  const s: PortfolioState = {
+    ...state,
+    positions: { ...state.positions },
+  };
   const fee = isValidNumber(tx.fee) ? tx.fee : 0;
   const tax = isValidNumber(tx.tax) ? tx.tax : 0;
   const amount = isValidNumber(tx.amount) ? tx.amount : 0;
 
-  switch (tx.type) {
-    case "buy_vwce": {
-      const unitPrice = tx.unitPrice ?? 0;
-      let qty =
-        tx.quantity != null && isValidNumber(tx.quantity) && tx.quantity > 0
-          ? tx.quantity
-          : calcQuantity(amount, unitPrice, fee, tax);
-      if (!isValidNumber(qty) || qty < 0) qty = 0;
-      const securitiesValue = Math.max(0, amount - fee - tax);
-      s.vwceCostBasis += securitiesValue;
-      s.vwceQty += qty;
-      s.totalBought += securitiesValue;
-      s.totalFees += fee;
-      s.totalTax += tax;
+  if (isSecurityBuy(tx.type)) {
+    const isin = resolveInstrumentIsin(tx);
+    if (!isin) {
       s.cashBalance -= amount;
-      break;
-    }
-    case "sell_vwce": {
-      // Tiền bán luôn ghi nhận; chỉ trừ chứng chỉ khi có số lượng hợp lệ.
-      let qty = tx.quantity ?? 0;
-      if (!isValidNumber(qty) || qty < 0) qty = 0;
-      if (qty > s.vwceQty) qty = s.vwceQty;
-      if (qty > 0 && s.vwceQty > 0) {
-        const avg = s.vwceCostBasis / s.vwceQty;
-        s.vwceCostBasis = Math.max(0, s.vwceCostBasis - avg * qty);
-        s.vwceQty = Math.max(0, s.vwceQty - qty);
-      }
-      s.totalSold += amount;
-      s.cashBalance += amount - fee - tax;
       s.totalFees += fee;
       s.totalTax += tax;
-      break;
+      syncVwceMirror(s);
+      return s;
     }
+    const unitPrice = tx.unitPrice ?? 0;
+    let qty =
+      tx.quantity != null && isValidNumber(tx.quantity) && tx.quantity > 0
+        ? tx.quantity
+        : calcQuantity(amount, unitPrice, fee, tax);
+    if (!isValidNumber(qty) || qty < 0) qty = 0;
+    const securitiesValue = Math.max(0, amount - fee - tax);
+    const prev = s.positions[isin] ?? emptyPosition();
+    const next: PositionState = {
+      qty: prev.qty + qty,
+      costBasis: prev.costBasis + securitiesValue,
+      totalBought: prev.totalBought + securitiesValue,
+      totalSold: prev.totalSold,
+    };
+    s.positions[isin] = next;
+    s.totalFees += fee;
+    s.totalTax += tax;
+    s.cashBalance -= amount;
+    syncVwceMirror(s);
+    return s;
+  }
+
+  if (isSecuritySell(tx.type)) {
+    const isin = resolveInstrumentIsin(tx);
+    let qty = tx.quantity ?? 0;
+    if (!isValidNumber(qty) || qty < 0) qty = 0;
+    if (isin) {
+      const prev = s.positions[isin] ?? emptyPosition();
+      if (qty > prev.qty) qty = prev.qty;
+      if (qty > 0 && prev.qty > 0) {
+        const avg = prev.costBasis / prev.qty;
+        const next: PositionState = {
+          qty: Math.max(0, prev.qty - qty),
+          costBasis: Math.max(0, prev.costBasis - avg * qty),
+          totalBought: prev.totalBought,
+          totalSold: prev.totalSold + amount,
+        };
+        s.positions[isin] = next;
+      } else {
+        s.positions[isin] = {
+          ...prev,
+          totalSold: prev.totalSold + amount,
+        };
+      }
+    }
+    s.cashBalance += amount - fee - tax;
+    s.totalFees += fee;
+    s.totalTax += tax;
+    syncVwceMirror(s);
+    return s;
+  }
+
+  switch (tx.type) {
     case "cash_in":
       s.cashBalance += amount;
       s.totalContributed += amount;
@@ -203,15 +277,64 @@ export function applyTransaction(state: PortfolioState, tx: TxInput): PortfolioS
   return s;
 }
 
-export function avgCost(state: PortfolioState): number {
-  if (state.vwceQty <= 0) return 0;
-  return state.vwceCostBasis / state.vwceQty;
+export function avgCost(state: PortfolioState, isin: string = VWCE_ISIN): number {
+  const p = getPosition(state, isin);
+  if (p.qty <= 0) return 0;
+  return p.costBasis / p.qty;
+}
+
+/**
+ * Mark-to-market portfolio value.
+ * prices: map ISIN → price. Missing price → position counted as missing (not 0 in detail).
+ */
+export function portfolioMarketValue(
+  state: PortfolioState,
+  prices: Record<string, number | undefined>,
+): {
+  total: number;
+  cash: number;
+  securities: number;
+  missingIsins: string[];
+  byIsin: Record<string, { qty: number; price: number | null; value: number | null }>;
+} {
+  const byIsin: Record<string, { qty: number; price: number | null; value: number | null }> = {};
+  const missingIsins: string[] = [];
+  let securities = 0;
+  for (const [isin, pos] of Object.entries(state.positions)) {
+    if (pos.qty <= 0) continue;
+    const price = prices[isin];
+    if (typeof price === "number" && Number.isFinite(price) && price > 0) {
+      const value = pos.qty * price;
+      securities += value;
+      byIsin[isin] = { qty: pos.qty, price, value };
+    } else {
+      missingIsins.push(isin);
+      byIsin[isin] = { qty: pos.qty, price: null, value: null };
+    }
+  }
+  return {
+    total: securities + state.cashBalance,
+    cash: state.cashBalance,
+    securities,
+    missingIsins,
+    byIsin,
+  };
 }
 
 /** Build equity time series from chronological transactions + current price. */
 export function buildEquitySeries(
-  transactions: { date: string; type: string; amount: number; unitPrice?: number; quantity?: number; fee?: number; tax?: number }[],
+  transactions: {
+    date: string;
+    type: string;
+    amount: number;
+    unitPrice?: number;
+    quantity?: number;
+    fee?: number;
+    tax?: number;
+    instrumentIsin?: string;
+  }[],
   currentPrice: number,
+  pricesByIsin?: Record<string, number>,
 ): { date: string; value: number }[] {
   const sorted = [...transactions].sort((a, b) => (a.date < b.date ? -1 : 1));
   if (sorted.length === 0) return [];
@@ -219,9 +342,12 @@ export function buildEquitySeries(
   const out: { date: string; value: number }[] = [];
   for (const t of sorted) {
     s = applyTransaction(s, t);
-    const price = t.unitPrice && t.unitPrice > 0 ? t.unitPrice : currentPrice;
-    const total = s.vwceQty * (price || 0) + s.cashBalance;
-    out.push({ date: t.date, value: round2(total) });
+    const prices: Record<string, number | undefined> = { ...(pricesByIsin ?? {}) };
+    if (prices[VWCE_ISIN] == null && currentPrice > 0) prices[VWCE_ISIN] = currentPrice;
+    const isin = resolveInstrumentIsin(t);
+    if (isin && t.unitPrice && t.unitPrice > 0) prices[isin] = t.unitPrice;
+    const mv = portfolioMarketValue(s, prices);
+    out.push({ date: t.date, value: round2(mv.total) });
   }
   return out;
 }
