@@ -8,8 +8,9 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run && npm run test:price",
-    "test:price": "node --test scripts/update-vwce-price.test.mjs",
-    "update:price": "node scripts/update-vwce-price.mjs"
+    "test:price": "node --test scripts/update-vwce-price.test.mjs scripts/update-quotes.test.mjs",
+    "update:price": "node scripts/update-quotes.mjs",
+    "update:price:legacy": "node scripts/update-vwce-price.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
