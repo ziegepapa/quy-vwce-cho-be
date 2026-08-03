@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { getSettings, listGoals, listTransactions, saveSettings } from "../lib/db";
-import type { AppSettings, Goal, Transaction } from "../lib/types";
+import {
+  getQuoteForIsin,
+  getSettings,
+  listGoals,
+  listInstruments,
+  listQuotes,
+  listTransactions,
+  saveSettings,
+  upsertQuote,
+} from "../lib/db";
+import type { AppSettings, Goal, Instrument, Quote, Transaction } from "../lib/types";
+import { VWCE_ISIN } from "../lib/types";
 import {
   applyTransaction,
   avgCost,
@@ -9,13 +19,15 @@ import {
   emptyPortfolio,
   formatDateVN,
   formatMoney,
-  goalProgressStatus,
   inflate,
   monthsBetween,
   parseDate,
   parseDecimal,
+  portfolioMarketValue,
 } from "../lib/calc";
+import { isValidAsOfDate, quoteId } from "../lib/instrument";
 import { useNavAction } from "../lib/navActions";
+import { nowIso } from "../lib/defaults";
 
 type Insight = {
   id: string;
@@ -91,10 +103,11 @@ export default function Overview(_props: { displayName?: string }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [txs, setTxs] = useState<Transaction[]>([]);
+  const [instruments, setInstruments] = useState<Instrument[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailOpen, setDetailOpen] = useState(false);
   const [moreActions, setMoreActions] = useState(false);
-  // V9 B2: sheet cập nhật giá nhanh, mở từ icon refresh trên top bar
   const [priceOpen, setPriceOpen] = useState(false);
   const [priceInput, setPriceInput] = useState("");
 
@@ -103,6 +116,8 @@ export default function Overview(_props: { displayName?: string }) {
       setSettings(await getSettings());
       setGoals(await listGoals());
       setTxs(await listTransactions());
+      setInstruments(await listInstruments());
+      setQuotes(await listQuotes());
       setLoading(false);
     })();
   }, []);
@@ -115,30 +130,64 @@ export default function Overview(_props: { displayName?: string }) {
     return s;
   }, [txs]);
 
+  /** Prices keyed by ISIN — never borrow VWCE for another ISIN. */
+  const pricesByIsin = useMemo(() => {
+    const map: Record<string, number | undefined> = {};
+    for (const q of quotes) {
+      if (q.currency === "EUR" && q.price > 0) map[q.instrumentIsin] = q.price;
+    }
+    // Legacy fallback only for VWCE when quote table empty
+    const legacy = settings?.latestVwcePrice ?? 0;
+    if (legacy > 0 && map[VWCE_ISIN] == null) map[VWCE_ISIN] = legacy;
+    return map;
+  }, [quotes, settings?.latestVwcePrice]);
+
+  const market = useMemo(
+    () => portfolioMarketValue(portfolio, pricesByIsin),
+    [portfolio, pricesByIsin],
+  );
+
   const series = useMemo(
-    () => buildEquitySeries(txs, settings?.latestVwcePrice ?? 0),
-    [txs, settings?.latestVwcePrice],
+    () => buildEquitySeries(txs, pricesByIsin[VWCE_ISIN] ?? 0, pricesByIsin as Record<string, number>),
+    [txs, pricesByIsin],
   );
 
   function openPriceSheet() {
-    const current = settings?.latestVwcePrice ?? 0;
+    const current = pricesByIsin[VWCE_ISIN] ?? 0;
     setPriceInput(current > 0 ? String(current) : "");
     setPriceOpen(true);
   }
 
-  // V9 B2: phải gọi TRƯỚC return sớm "loading" bên dưới,
-  // nếu không thứ tự hook sẽ đổi giữa các render.
   useNavAction("updatePrice", openPriceSheet);
 
   async function savePrice() {
-    // V9: parseDecimal thay cho replace(",", ".") — bản cũ sai với "1.234,56".
     const value = parseDecimal(priceInput);
+    const asOf = new Date().toISOString().slice(0, 10);
     await saveSettings({
       latestVwcePrice: value,
-      latestPriceDate: new Date().toISOString().slice(0, 10),
+      latestPriceDate: asOf,
     });
+    if (value > 0 && isValidAsOfDate(asOf)) {
+      try {
+        const existing = await getQuoteForIsin(VWCE_ISIN, "EUR");
+        await upsertQuote({
+          id: quoteId(VWCE_ISIN, "EUR"),
+          instrumentIsin: VWCE_ISIN,
+          currency: "EUR",
+          venue: "XETRA",
+          price: value,
+          asOf,
+          source: "manual",
+          createdAt: existing?.createdAt ?? nowIso(),
+          updatedAt: nowIso(),
+        });
+      } catch {
+        /* */
+      }
+    }
     setPriceOpen(false);
     setSettings(await getSettings());
+    setQuotes(await listQuotes());
   }
 
   if (loading) {
@@ -150,16 +199,22 @@ export default function Overview(_props: { displayName?: string }) {
     );
   }
 
-  const price = settings?.latestVwcePrice ?? 0;
-  const vwceValue = portfolio.vwceQty * price;
-  const total = vwceValue + portfolio.cashBalance;
-  const pnl = vwceValue - portfolio.vwceCostBasis;
+  const hasMissingPrices = market.missingIsins.length > 0;
+  const securitiesKnown = market.securities;
+  const cash = market.cash;
+  // Total of priced parts only — do not present as complete if missingIsins
+  const totalKnown = securitiesKnown + cash;
+  const vwcePrice = pricesByIsin[VWCE_ISIN] ?? 0;
+  const vwceValue =
+    typeof pricesByIsin[VWCE_ISIN] === "number" ? portfolio.vwceQty * pricesByIsin[VWCE_ISIN]! : null;
+  const pnl =
+    vwceValue != null && portfolio.vwceCostBasis > 0 ? vwceValue - portfolio.vwceCostBasis : 0;
   const today = new Date();
   const ym = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   const hasContribThisMonth = txs.some((t) => t.type === "cash_in" && t.date.startsWith(ym));
 
   const mode: "empty" | "early" | "active" =
-    txs.length === 0 && total === 0 ? "empty" : txs.length < 3 ? "early" : "active";
+    txs.length === 0 && totalKnown === 0 && !hasMissingPrices ? "empty" : txs.length < 3 ? "early" : "active";
 
   const insights: Insight[] = [];
   if (!hasContribThisMonth && mode !== "empty") {
@@ -172,7 +227,16 @@ export default function Overview(_props: { displayName?: string }) {
       to: "/transactions",
     });
   }
-  if (!price && mode !== "empty") {
+  if (hasMissingPrices) {
+    insights.push({
+      id: "price-missing",
+      priority: "high",
+      title: `Thiếu giá cho ${market.missingIsins.length} mã`,
+      why: "Tổng tài sản chưa đầy đủ cho đến khi có giá từng ISIN.",
+      cta: "Cập nhật",
+      to: "/settings",
+    });
+  } else if (!vwcePrice && mode !== "empty" && portfolio.vwceQty > 0) {
     insights.push({
       id: "price",
       priority: "high",
@@ -202,13 +266,15 @@ export default function Overview(_props: { displayName?: string }) {
   }
 
   const cashNegative = portfolio.cashBalance < 0;
-  const ratio = total > 0
-    ? Math.min(100, Math.max(0, Math.round((vwceValue / total) * 100)))
-    : 0;
+  const ratio =
+    totalKnown > 0 && securitiesKnown >= 0
+      ? Math.min(100, Math.max(0, Math.round((securitiesKnown / totalKnown) * 100)))
+      : 0;
   const pnlPct =
-    portfolio.vwceCostBasis > 0 ? ((pnl / portfolio.vwceCostBasis) * 100).toFixed(1) : null;
+    portfolio.vwceCostBasis > 0 && vwceValue != null
+      ? ((pnl / portfolio.vwceCostBasis) * 100).toFixed(1)
+      : null;
 
-  // Nearest goal only
   let nearest: Goal | null = null;
   let nearestMonths = Infinity;
   let nearestPct = 0;
@@ -231,9 +297,15 @@ export default function Overview(_props: { displayName?: string }) {
   const primary = insights[0];
   const rest = insights.slice(1);
 
+  const instName = (isin: string) => {
+    const inst = instruments.find((i) => i.isin === isin);
+    if (inst?.ticker) return `${inst.ticker}`;
+    if (inst?.name) return inst.name;
+    return isin;
+  };
+
   return (
     <div className="ov">
-      {/* Block 1 — Hero */}
       <section className={`hero-v8 hero-${mode}`}>
         <div className="hero-noise" aria-hidden />
         {mode === "empty" ? (
@@ -246,12 +318,19 @@ export default function Overview(_props: { displayName?: string }) {
           </div>
         ) : (
           <>
-            <p className="hero-label">Tổng tài sản</p>
+            <p className="hero-label">
+              {hasMissingPrices ? "Tài sản đã định giá" : "Tổng tài sản"}
+            </p>
             <p className="hero-amount">
-              <span className="hero-num">{formatMoney(total).replace(/\s*€$/, "")}</span>
+              <span className="hero-num">{formatMoney(totalKnown).replace(/\s*€$/, "")}</span>
               <span className="hero-eur">€</span>
             </p>
-            {pnl !== 0 && price > 0 && (
+            {hasMissingPrices && (
+              <span className="hero-delta" style={{ opacity: 0.9 }}>
+                + {market.missingIsins.length} mã thiếu giá (chưa cộng vào tổng)
+              </span>
+            )}
+            {pnl !== 0 && vwceValue != null && (
               <span className="hero-delta">
                 {pnl >= 0 ? "↑" : "↓"} {formatMoney(Math.abs(pnl))}
                 {pnlPct ? ` (${pnlPct}%)` : ""}
@@ -264,12 +343,12 @@ export default function Overview(_props: { displayName?: string }) {
               </div>
             ) : (
               <>
-                <div className="alloc-v8" role="img" aria-label={`VWCE ${ratio}%, an toàn ${100 - ratio}%`}>
+                <div className="alloc-v8" role="img" aria-label={`Chứng khoán ${ratio}%, an toàn ${100 - ratio}%`}>
                   <div className="alloc-seg-v8 vwce" style={{ flex: Math.max(ratio, 1) }} />
                   <div className="alloc-seg-v8 cash" style={{ flex: Math.max(100 - ratio, 1) }} />
                 </div>
                 <div className="alloc-legend-v8">
-                  <span>VWCE {ratio}%</span>
+                  <span>Chứng khoán {ratio}%</span>
                   <span>An toàn {100 - ratio}%</span>
                 </div>
               </>
@@ -281,12 +360,11 @@ export default function Overview(_props: { displayName?: string }) {
         )}
       </section>
 
-      {/* Block 2 — StatStrip (skip zeros spam on empty) */}
       {mode !== "empty" && (
         <section className="stat-strip">
           <div className="stat-col">
-            <span className="stat-label">VWCE</span>
-            <span className="stat-val">{formatMoney(vwceValue)}</span>
+            <span className="stat-label">CK đã định giá</span>
+            <span className="stat-val">{formatMoney(securitiesKnown)}</span>
           </div>
           <div className="stat-rule" aria-hidden />
           <div className="stat-col">
@@ -297,8 +375,10 @@ export default function Overview(_props: { displayName?: string }) {
           </div>
           <div className="stat-rule" aria-hidden />
           <div className="stat-col">
-            <span className="stat-label">Lãi–lỗ</span>
-            <span className={`stat-val ${pnl >= 0 ? "pos" : "neg"}`}>{formatMoney(pnl)}</span>
+            <span className="stat-label">Lãi–lỗ VWCE</span>
+            <span className={`stat-val ${pnl >= 0 ? "pos" : "neg"}`}>
+              {vwceValue != null ? formatMoney(pnl) : "—"}
+            </span>
           </div>
           <button
             type="button"
@@ -310,12 +390,25 @@ export default function Overview(_props: { displayName?: string }) {
           </button>
           {detailOpen && (
             <dl className="stat-detail-list">
+              {Object.entries(market.byIsin).map(([isin, row]) => (
+                <div key={isin}>
+                  <dt>
+                    {instName(isin)}
+                    <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                      {isin}
+                    </span>
+                  </dt>
+                  <dd>
+                    {row.qty.toFixed(4)} ×{" "}
+                    {row.price != null ? formatMoney(row.price) : (
+                      <span style={{ color: "var(--warning-600, #b45309)" }}>Thiếu giá</span>
+                    )}
+                    {row.value != null ? ` = ${formatMoney(row.value)}` : ""}
+                  </dd>
+                </div>
+              ))}
               <div>
-                <dt>SL VWCE</dt>
-                <dd>{portfolio.vwceQty.toFixed(4)}</dd>
-              </div>
-              <div>
-                <dt>Giá vốn TB</dt>
+                <dt>Giá vốn TB VWCE</dt>
                 <dd>{formatMoney(avgCost(portfolio))}</dd>
               </div>
               <div>
@@ -348,7 +441,6 @@ export default function Overview(_props: { displayName?: string }) {
         </section>
       )}
 
-      {/* Block 3 — ActionStack */}
       {primary && (
         <section className="action-stack">
           <Link to={primary.to} className="action-item">
@@ -387,7 +479,6 @@ export default function Overview(_props: { displayName?: string }) {
         </section>
       )}
 
-      {/* Block 4 — NextGoal (1 row) */}
       {nearest && (
         <section className="next-goal">
           <Link to="/goals" className="next-goal-row">
@@ -411,10 +502,8 @@ export default function Overview(_props: { displayName?: string }) {
         </section>
       )}
 
-      {/* Block 5 — Footnote */}
       <p className="ov-foot">Không phải tư vấn đầu tư. Lãi/lỗ chỉ theo dõi nội bộ.</p>
 
-      {/* V9 B2 — Sheet cập nhật giá. Dùng lại class có sẵn, không thêm CSS. */}
       {priceOpen && (
         <div
           className="modal-backdrop"
@@ -425,6 +514,9 @@ export default function Overview(_props: { displayName?: string }) {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-handle" aria-hidden />
             <h2>Cập nhật giá VWCE</h2>
+            <p className="muted" style={{ fontSize: 13 }}>
+              Chỉ áp dụng cho {VWCE_ISIN}. Mã khác: Cài đặt → quote thủ công.
+            </p>
             <div className="field">
               <label htmlFor="ov-price">Giá gần nhất (€)</label>
               <input
