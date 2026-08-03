@@ -42,10 +42,56 @@ export type Notfallmappe = {
   updatedAt: string;
 };
 
+/**
+ * Multi-asset foundation — instrument keyed by normalized ISIN.
+ * Ticker is optional metadata; ISIN is the primary key.
+ */
+export type Instrument = {
+  /** Normalized uppercase ISIN (primary key). */
+  isin: string;
+  name: string;
+  /** Optional display/provider ticker — never required for ledger. */
+  ticker?: string;
+  currency: string;
+  venue?: string;
+  /** Explicit provider symbol map, e.g. { yahoo: "VWCE.DE" }. */
+  providerSymbols?: Record<string, string>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/**
+ * Manual or resolved quote for one ISIN.
+ * Prices are never global — always keyed by instrumentIsin.
+ */
+export type Quote = {
+  id: string;
+  instrumentIsin: string;
+  currency: string;
+  venue?: string;
+  price: number;
+  asOf: string;
+  source: "manual" | "auto";
+  provider?: string;
+  providerUrl?: string;
+  crossCheckedWith?: string;
+  crossCheckDifferencePct?: number;
+  fetchedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AppSettings = {
   id: string; planName: string; childName: string; accountType: "child" | "parent";
   currency: "EUR"; inflationRate: number; vwceReturn: number; safeReturn: number; bufferPct: number;
-  endMode: GoalUrgency; startDate: string; endDate: string; latestVwcePrice: number; latestPriceDate: string;
+  endMode: GoalUrgency; startDate: string; endDate: string;
+  /**
+   * @deprecated Prefer Quote table keyed by ISIN. Kept for backup/UI backward compat;
+   * migrate to manual quote for IE00BK5BQT80 on load.
+   */
+  latestVwcePrice: number;
+  /** @deprecated Prefer Quote.asOf for IE00BK5BQT80. */
+  latestPriceDate: string;
   contributionY1: number; contributionY2: number; disclaimerAccepted: boolean; onboardingDone: boolean;
   /** V10-A — tùy chọn, để bản ghi settings cũ vẫn hợp lệ. */
   notfallmappe?: Notfallmappe;
@@ -58,10 +104,32 @@ export type Goal = {
   /** A3 — xóa mềm; bản ghi tombstone vẫn giữ trong IndexedDB. */
   deletedAt?: string;
 };
-export type TxType = "buy_vwce" | "sell_vwce" | "cash_in" | "cash_out" | "tax" | "fee" | "safe_interest" | "adjust";
+
+/**
+ * Transaction types.
+ * - buy_vwce / sell_vwce: legacy aliases; imply VWCE when instrumentIsin missing.
+ * - buy_security / sell_security: generic multi-asset; require instrumentIsin.
+ */
+export type TxType =
+  | "buy_vwce"
+  | "sell_vwce"
+  | "buy_security"
+  | "sell_security"
+  | "cash_in"
+  | "cash_out"
+  | "tax"
+  | "fee"
+  | "safe_interest"
+  | "adjust";
+
 export type Transaction = {
   id: string; date: string; type: TxType; amount: number; unitPrice?: number; quantity?: number;
   fee?: number; tax?: number; goalId?: string; notes: string; createdAt: string; updatedAt: string;
+  /**
+   * ISIN of the security for buy/sell. Legacy rows without this field are
+   * treated as IE00BK5BQT80 (VWCE) by resolveInstrumentIsin().
+   */
+  instrumentIsin?: string;
   /** C3 — nguồn nhập; bản cũ không có field này vẫn hợp lệ. */
   source?: "manual" | "trade_republic_pdf";
   sourceVersion?: number;
@@ -80,7 +148,14 @@ export type AppMetadata = { id: string; schemaVersion: number; lastBackupAt: str
 export type BackupPayload = {
   schemaVersion: number; exportedAt: string; settings: AppSettings[]; goals: Goal[];
   transactions: Transaction[]; annualChecklists: AnnualChecklist[]; monthlySnapshots: MonthlySnapshot[];
+  /** Multi-asset foundation — optional on legacy backups. */
+  instruments?: Instrument[];
+  quotes?: Quote[];
 };
-export const SCHEMA_VERSION = 1;
+/** Local backup envelope version. v2 adds instruments + quotes. */
+export const SCHEMA_VERSION = 2;
 /** Hiển thị ở Cài đặt — đổi khi ship UI lớn */
-export const APP_VERSION = "1.6.0";
+export const APP_VERSION = "1.7.0";
+
+/** Canonical VWCE ISIN used for legacy migration. */
+export const VWCE_ISIN = "IE00BK5BQT80";

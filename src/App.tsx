@@ -6,6 +6,7 @@ import {
   countLocalData,
   ensureInitialized,
   getSettings,
+  runPendingMigrations,
 } from "./lib/db";
 import type { AppSettings } from "./lib/types";
 import { getSyncMeta, listConflicts, runSync } from "./lib/sync/engine";
@@ -61,8 +62,9 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
   const [pending, setPending] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
+  /** Fail-closed: migration must succeed before settings/sync use schema v3. */
+  const [migrationError, setMigrationError] = useState<string | null>(null);
 
-  // V9 B2: phải gọi trước mọi return sớm, nếu không thứ tự hook sẽ đổi giữa các render.
   const { api: navActionsApi, navAction } = useNavActionRegistry();
 
   const refreshSyncBadge = useCallback(async () => {
@@ -77,6 +79,15 @@ export default function App() {
   }, []);
 
   async function reload() {
+    setMigrationError(null);
+    try {
+      await runPendingMigrations();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setMigrationError(msg || "Migration failed");
+      setReady(true);
+      return;
+    }
     setSettings(await getSettings());
     setReady(true);
     await refreshSyncBadge();
@@ -89,6 +100,14 @@ export default function App() {
       return;
     }
     (async () => {
+      try {
+        await runPendingMigrations();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setMigrationError(msg || "Migration failed");
+        setReady(true);
+        return;
+      }
       const s = await getSettings();
       setSettings(s);
       setReady(true);
@@ -153,6 +172,23 @@ export default function App() {
     return (
       <div className="app-shell">
         <p className="muted">Đang tải…</p>
+      </div>
+    );
+  }
+
+  if (migrationError) {
+    return (
+      <div className="app-shell" role="alert">
+        <h1>Không thể nâng cấp dữ liệu local</h1>
+        <p className="muted">
+          Ứng dụng dừng lại để tránh dùng dữ liệu nửa migrate. Đồng bộ và ghi mới bị tạm khóa.
+        </p>
+        <p>
+          <code>{migrationError}</code>
+        </p>
+        <button type="button" className="btn primary" onClick={() => void reload()}>
+          Thử lại migration
+        </button>
       </div>
     );
   }

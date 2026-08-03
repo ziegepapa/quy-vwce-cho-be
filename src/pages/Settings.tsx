@@ -6,12 +6,17 @@ import {
   getOrCreateChecklist,
   getSettings,
   importBackup,
+  listInstruments,
+  listQuotes,
   listTransactions,
+  saveManualQuoteForIsin,
   saveSettings,
 } from "../lib/db";
-import type { AnnualChecklist, AppSettings, BackupPayload } from "../lib/types";
-import { APP_VERSION, SCHEMA_VERSION } from "../lib/types";
-import { csvEscape, formatDateVN, parseDecimal } from "../lib/calc";
+import type { AnnualChecklist, AppSettings, BackupPayload, Instrument, Quote } from "../lib/types";
+import { APP_VERSION, SCHEMA_VERSION, VWCE_ISIN } from "../lib/types";
+import { isSupportedBackupSchema } from "../lib/backupSchema";
+import { csvEscape, formatDateVN, formatMoney, parseDecimal } from "../lib/calc";
+import { isValidAsOfDate, isValidIsin, normalizeIsin } from "../lib/instrument";
 import type { ThemeChoice } from "../lib/theme";
 import { THEME_OPTIONS, persistTheme, readTheme } from "../lib/theme";
 import { useAuth } from "../lib/auth";
@@ -39,13 +44,6 @@ function formatNum(n: number, minFrac: number, maxFrac: number): string {
   });
 }
 
-/**
- * Ô số giữ bản nháp dạng chuỗi trong lúc gõ.
- * Vì sao phải làm vậy: nếu định dạng lại sau mỗi ký tự thì không ai
- * gõ được số thập phân — con trỏ bị đẩy về cuối và giá trị bị viết lại.
- * type="text" chứ không phải type="number": Safari iOS loại bỏ luôn
- * dấu phẩy thập phân trên input số.
- */
 function NumField({
   id,
   value,
@@ -139,11 +137,26 @@ export default function SettingsPage({
   const [deadRetrying, setDeadRetrying] = useState(false);
   const [deadSyncedMsg, setDeadSyncedMsg] = useState(false);
 
+  /** Multi-asset: local instruments + quotes (no outbox). */
+  const [instruments, setInstruments] = useState<Instrument[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [quoteIsin, setQuoteIsin] = useState(VWCE_ISIN);
+  const [quotePrice, setQuotePrice] = useState("");
+  const [quoteAsOf, setQuoteAsOf] = useState(() => new Date().toISOString().slice(0, 10));
+  const [quoteErr, setQuoteErr] = useState<string | null>(null);
+  const [quoteSaving, setQuoteSaving] = useState(false);
+
+  async function reloadAssets() {
+    setInstruments(await listInstruments());
+    setQuotes(await listQuotes());
+  }
+
   useEffect(() => {
     (async () => {
       setS(await getSettings());
       setMetaBackup((await db.appMetadata.get("meta"))?.lastBackupAt ?? "");
       setChecklist(await getOrCreateChecklist(checklistYear));
+      await reloadAssets();
       if (auth.user?.id) {
         setDead(await listDeadOutbox());
       } else {
@@ -168,6 +181,67 @@ export default function SettingsPage({
   async function persist(partial: Partial<AppSettings>) {
     await saveSettings(partial);
     setS(await getSettings());
+  }
+
+  /**
+   * Legacy "Giá VWCE gần nhất" → atomic saveManualQuoteForIsin (quote + mirror).
+   * Policy A: reject price <= 0 — never create settings/quote split-brain.
+   */
+  async function persistLegacyVwcePrice(price: number) {
+    if (!(price > 0)) {
+      alert("Giá phải > 0");
+      setS(await getSettings());
+      return;
+    }
+    const asOf = new Date().toISOString().slice(0, 10);
+    try {
+      await saveManualQuoteForIsin({
+        instrumentIsin: VWCE_ISIN,
+        price,
+        asOf,
+        venue: "XETRA",
+      });
+      setS(await getSettings());
+      await reloadAssets();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Không lưu được giá VWCE");
+      setS(await getSettings());
+      await reloadAssets();
+    }
+  }
+
+  async function saveManualQuote() {
+    setQuoteErr(null);
+    const isin = normalizeIsin(quoteIsin);
+    if (!isValidIsin(isin)) {
+      setQuoteErr("ISIN không hợp lệ (checksum).");
+      return;
+    }
+    const price = parseDecimal(quotePrice);
+    if (!(price > 0)) {
+      setQuoteErr("Giá phải > 0.");
+      return;
+    }
+    if (!isValidAsOfDate(quoteAsOf)) {
+      setQuoteErr("Ngày asOf phải dạng YYYY-MM-DD hợp lệ.");
+      return;
+    }
+    setQuoteSaving(true);
+    try {
+      await saveManualQuoteForIsin({
+        instrumentIsin: isin,
+        price,
+        asOf: quoteAsOf.trim(),
+        venue: instruments.find((i) => i.isin === isin)?.venue,
+      });
+      setS(await getSettings());
+      await reloadAssets();
+      setQuotePrice("");
+    } catch (e) {
+      setQuoteErr(e instanceof Error ? e.message : "Không lưu được quote");
+    } finally {
+      setQuoteSaving(false);
+    }
   }
 
   function downloadJson(payload: BackupPayload, name: string) {
@@ -197,8 +271,10 @@ export default function SettingsPage({
       alert("Cấu trúc backup không hợp lệ");
       return;
     }
-    if (data.schemaVersion !== SCHEMA_VERSION) {
-      alert(`schemaVersion không khớp (file: ${data.schemaVersion}, app: ${SCHEMA_VERSION})`);
+    if (!isSupportedBackupSchema(data.schemaVersion)) {
+      alert(
+        `schemaVersion không khớp (file: ${String(data.schemaVersion)}, app: ${SCHEMA_VERSION} hoặc 1)`,
+      );
       return;
     }
     if (!confirm("Tiếp tục nhập? (sẽ tự backup dữ liệu hiện tại trước)")) return;
@@ -222,7 +298,7 @@ export default function SettingsPage({
 
   async function exportCsv() {
     const txs = await listTransactions();
-    const header = "date,type,amount,unitPrice,quantity,fee,tax,notes\n";
+    const header = "date,type,amount,unitPrice,quantity,fee,tax,instrumentIsin,notes\n";
     const rows = txs
       .map((t) =>
         [
@@ -233,6 +309,7 @@ export default function SettingsPage({
           csvEscape(t.quantity ?? ""),
           csvEscape(t.fee ?? ""),
           csvEscape(t.tax ?? ""),
+          csvEscape(t.instrumentIsin ?? ""),
           csvEscape(t.notes ?? ""),
         ].join(","),
       )
@@ -243,6 +320,10 @@ export default function SettingsPage({
     );
     a.download = "vwce-transactions.csv";
     a.click();
+  }
+
+  function quoteFor(isin: string): Quote | undefined {
+    return quotes.find((q) => q.instrumentIsin === isin && q.currency === "EUR");
   }
 
   if (!s) return <p className="muted">Đang tải…</p>;
@@ -346,10 +427,11 @@ export default function SettingsPage({
         </div>
       </div>
 
-      <p className="group-label">Tài sản</p>
+      <p className="group-label">Tài sản / mã (ISIN)</p>
       <div className="group-box">
+        {/* @deprecated legacy field — synced intentionally to VWCE quote */}
         <div className="group-row row-between-inline">
-          <span className="group-row-label">Giá VWCE gần nhất</span>
+          <span className="group-row-label">Giá VWCE gần nhất (legacy)</span>
           <NumField
             className="pct-input wide"
             value={s.latestVwcePrice}
@@ -357,17 +439,96 @@ export default function SettingsPage({
             maxFrac={4}
             suffix="€"
             ariaLabel="Giá VWCE gần nhất"
-            onCommit={(price) =>
-              persist({
-                latestVwcePrice: price,
-                latestPriceDate: new Date().toISOString().slice(0, 10),
-              })
-            }
+            onCommit={(price) => void persistLegacyVwcePrice(price)}
           />
         </div>
         {s.latestPriceDate && (
-          <p className="group-hint">Cập nhật {formatDateVN(s.latestPriceDate)}</p>
+          <p className="group-hint">Legacy cập nhật {formatDateVN(s.latestPriceDate)} · đồng bộ quote VWCE</p>
         )}
+
+        {instruments.length === 0 ? (
+          <p className="group-hint">Chưa có instrument — migration sẽ seed VWCE khi mở app.</p>
+        ) : (
+          <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0" }}>
+            {instruments.map((inst) => {
+              const q = quoteFor(inst.isin);
+              return (
+                <li
+                  key={inst.isin}
+                  style={{
+                    borderTop: "1px solid var(--border, #e5e7eb)",
+                    padding: "12px 0",
+                    fontSize: 14,
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>
+                    {inst.name || inst.isin}
+                    {inst.ticker ? ` · ${inst.ticker}` : ""}
+                  </div>
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    {inst.isin}
+                    {inst.currency ? ` · ${inst.currency}` : ""}
+                    {inst.venue ? ` · ${inst.venue}` : ""}
+                  </div>
+                  {q ? (
+                    <div style={{ marginTop: 4 }}>
+                      {formatMoney(q.price, q.currency)} · asOf {formatDateVN(q.asOf)} · {q.source}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 4, color: "var(--warning-600, #b45309)" }}>Thiếu giá</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <p className="group-hint" style={{ marginTop: 12 }}>
+          Quote thủ công (local-only, chưa đồng bộ Supabase). Mỗi ISIN một giá — không ghi đè chéo.
+        </p>
+        <div className="group-row">
+          <label htmlFor="q-isin">ISIN</label>
+          <input
+            id="q-isin"
+            value={quoteIsin}
+            onChange={(e) => setQuoteIsin(e.target.value)}
+            autoCapitalize="characters"
+            style={{ minHeight: 44 }}
+          />
+        </div>
+        <div className="group-row">
+          <label htmlFor="q-price">Giá (€)</label>
+          <input
+            id="q-price"
+            inputMode="decimal"
+            value={quotePrice}
+            onChange={(e) => setQuotePrice(e.target.value)}
+            style={{ minHeight: 44 }}
+          />
+        </div>
+        <div className="group-row">
+          <label htmlFor="q-asof">asOf (YYYY-MM-DD)</label>
+          <input
+            id="q-asof"
+            value={quoteAsOf}
+            onChange={(e) => setQuoteAsOf(e.target.value)}
+            style={{ minHeight: 44 }}
+          />
+        </div>
+        {quoteErr && (
+          <p role="alert" style={{ color: "var(--danger-600, #b91c1c)", fontSize: 13 }}>
+            {quoteErr}
+          </p>
+        )}
+        <button
+          type="button"
+          className="group-action"
+          style={{ minHeight: 44 }}
+          disabled={quoteSaving}
+          onClick={() => void saveManualQuote()}
+        >
+          {quoteSaving ? "Đang lưu…" : "Lưu quote thủ công"}
+        </button>
       </div>
 
       <p className="group-label">Hạn</p>

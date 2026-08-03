@@ -101,6 +101,7 @@ export function draftToTransaction(
     notes: draft.notes,
     createdAt: ids.createdAt,
     updatedAt: ids.updatedAt,
+    instrumentIsin: draft.isin.trim().toUpperCase() || VWCE_ISIN,
     source: draft.source,
     sourceVersion: draft.sourceVersion,
     externalRef: draft.externalRef ?? undefined,
