@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  getQuoteForIsin,
   getSettings,
   listGoals,
   listInstruments,
   listQuotes,
   listTransactions,
-  saveSettings,
-  upsertQuote,
+  saveManualQuoteForIsin,
 } from "../lib/db";
 import type { AppSettings, Goal, Instrument, Quote, Transaction } from "../lib/types";
 import { VWCE_ISIN } from "../lib/types";
@@ -25,9 +23,7 @@ import {
   parseDecimal,
   portfolioMarketValue,
 } from "../lib/calc";
-import { isValidAsOfDate, quoteId } from "../lib/instrument";
 import { useNavAction } from "../lib/navActions";
-import { nowIso } from "../lib/defaults";
 
 type Insight = {
   id: string;
@@ -110,6 +106,7 @@ export default function Overview(_props: { displayName?: string }) {
   const [moreActions, setMoreActions] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
   const [priceInput, setPriceInput] = useState("");
+  const [priceErr, setPriceErr] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -155,39 +152,36 @@ export default function Overview(_props: { displayName?: string }) {
   function openPriceSheet() {
     const current = pricesByIsin[VWCE_ISIN] ?? 0;
     setPriceInput(current > 0 ? String(current) : "");
+    setPriceErr(null);
     setPriceOpen(true);
   }
 
   useNavAction("updatePrice", openPriceSheet);
 
   async function savePrice() {
+    setPriceErr(null);
     const value = parseDecimal(priceInput);
     const asOf = new Date().toISOString().slice(0, 10);
-    await saveSettings({
-      latestVwcePrice: value,
-      latestPriceDate: asOf,
-    });
-    if (value > 0 && isValidAsOfDate(asOf)) {
-      try {
-        const existing = await getQuoteForIsin(VWCE_ISIN, "EUR");
-        await upsertQuote({
-          id: quoteId(VWCE_ISIN, "EUR"),
-          instrumentIsin: VWCE_ISIN,
-          currency: "EUR",
-          venue: "XETRA",
-          price: value,
-          asOf,
-          source: "manual",
-          createdAt: existing?.createdAt ?? nowIso(),
-          updatedAt: nowIso(),
-        });
-      } catch {
-        /* */
-      }
+    if (!(value > 0)) {
+      setPriceErr("Giá phải > 0.");
+      return;
     }
-    setPriceOpen(false);
-    setSettings(await getSettings());
-    setQuotes(await listQuotes());
+    try {
+      await saveManualQuoteForIsin({
+        instrumentIsin: VWCE_ISIN,
+        price: value,
+        asOf,
+        venue: "XETRA",
+      });
+      setPriceOpen(false);
+      setSettings(await getSettings());
+      setQuotes(await listQuotes());
+      setInstruments(await listInstruments());
+    } catch (e) {
+      setPriceErr(e instanceof Error ? e.message : "Không lưu được giá");
+      setSettings(await getSettings());
+      setQuotes(await listQuotes());
+    }
   }
 
   if (loading) {
@@ -532,6 +526,11 @@ export default function Overview(_props: { displayName?: string }) {
                 </p>
               ) : null}
             </div>
+            {priceErr && (
+              <p role="alert" style={{ color: "var(--danger-600, #b91c1c)", fontSize: 13 }}>
+                {priceErr}
+              </p>
+            )}
             <div className="stack">
               <button type="button" onClick={savePrice}>
                 Lưu
