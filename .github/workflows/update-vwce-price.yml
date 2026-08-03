@@ -1,0 +1,76 @@
+name: Update VWCE price
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 18:30 UTC Mon–Fri ≈ after Xetra close in summer; still after 18:00 Berlin in winter
+    - cron: "30 18 * * 1-5"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-vwce-price
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install
+        run: npm install
+
+      - name: Price unit tests
+        run: npm run test:price
+
+      - name: Fetch and update price file
+        run: node scripts/update-vwce-price.mjs
+
+      - name: Commit and push if price changed
+        run: |
+          set -euo pipefail
+          PRICE_PATH="public/data/vwce-price.json"
+          if [ ! -f "$PRICE_PATH" ]; then
+            echo "Price file missing after update script"
+            exit 1
+          fi
+
+          # Snapshot generated JSON outside the worktree before any git reset/rebase
+          cp "$PRICE_PATH" "$RUNNER_TEMP/vwce-price.json"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Clean index/worktree so pull --rebase cannot conflict with staged changes
+          git reset --hard HEAD
+          git pull --rebase origin main
+
+          # Restore generated file after rebase
+          mkdir -p public/data
+          cp "$RUNNER_TEMP/vwce-price.json" "$PRICE_PATH"
+
+          git add -- "$PRICE_PATH"
+          if git diff --cached --quiet; then
+            echo "No new closed Xetra price"
+            exit 0
+          fi
+
+          STAGED=$(git diff --cached --name-only)
+          if [ "$STAGED" != "$PRICE_PATH" ]; then
+            echo "Unexpected staged files:"
+            echo "$STAGED"
+            exit 1
+          fi
+
+          git commit -m "chore(data): update VWCE Xetra closed price"
+          git push origin HEAD:main

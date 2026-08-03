@@ -1,0 +1,49 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "currency": "EUR",
+          "symbol": "VWCE.DE",
+          "exchangeName": "GER",
+          "fullExchangeName": "XETRA",
+          "instrumentType": "ETF",
+          "longName": "Vanguard FTSE All-World UCITS ETF USD Accumulation",
+          "regularMarketPrice": 164.36,
+          "chartPreviousClose": 164.18
+        },
+        "timestamp": [
+          1784617200,
+          1784703600,
+          1784790000,
+          1784876400,
+          1785135600,
+          1785222000,
+          1785308400,
+          1785394800,
+          1785481200,
+          1785740400
+        ],
+        "indicators": {
+          "quote": [
+            {
+              "close": [
+                165.13999938964844,
+                165.39999389648438,
+                163.36000061035156,
+                164.27999877929688,
+                163.36000061035156,
+                163.77999877929688,
+                162.39999389648438,
+                162.02000427246094,
+                162.9600067138672,
+                164.36000061035156
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "error": null
+  }
+}

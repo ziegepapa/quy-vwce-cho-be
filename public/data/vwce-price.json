@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "isin": "IE00BK5BQT80",
+  "ticker": "VWCE",
+  "venue": "XETRA",
+  "currency": "EUR",
+  "price": 162.96,
+  "asOf": "2026-07-31",
+  "fetchedAt": "2026-08-03T09:15:44.514Z",
+  "provider": "yahoo_finance_chart",
+  "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
+  "crossCheckedWith": "onvista",
+  "crossCheckDifferencePct": 0
+}
