@@ -243,6 +243,124 @@ export async function getQuoteForIsin(
   return db.quotes.get(quoteId(isin, currency));
 }
 
+export type ManualQuoteInput = {
+  instrumentIsin: string;
+  price: number;
+  asOf: string;
+  currency?: string;
+  venue?: string;
+  /** Optional display name for newly created minimal instrument (defaults to ISIN). */
+  name?: string;
+};
+
+/**
+ * Policy A — single entry point for manual quotes:
+ * 1. Validate ISIN/price/asOf.
+ * 2. In one Dexie transaction: ensure minimal Instrument exists, put Quote,
+ *    and if ISIN is VWCE also mirror latestVwcePrice/latestPriceDate.
+ * 3. After commit, enqueue settings outbox for VWCE only (local quote/instrument never outbox).
+ *
+ * Fails closed: validation or transaction errors leave prior state intact (no empty catch).
+ */
+export async function saveManualQuoteForIsin(
+  input: ManualQuoteInput,
+  opts?: { syncSettings?: boolean },
+): Promise<{ quote: Quote; instrument: Instrument }> {
+  const isin = normalizeIsin(input.instrumentIsin);
+  if (!isValidIsin(isin)) {
+    throw new Error(`Invalid ISIN: ${input.instrumentIsin}`);
+  }
+  const currency = String(input.currency || "EUR").toUpperCase();
+  if (!currency || currency.length < 3) {
+    throw new Error(`Invalid quote currency: ${input.currency}`);
+  }
+  if (typeof input.price !== "number" || !Number.isFinite(input.price) || input.price <= 0) {
+    throw new Error(`Invalid quote price: ${input.price}`);
+  }
+  if (!isValidAsOfDate(input.asOf)) {
+    throw new Error(`Invalid quote asOf (need YYYY-MM-DD): ${input.asOf}`);
+  }
+
+  const asOf = String(input.asOf).trim();
+  const t = nowIso();
+  const id = quoteId(isin, currency);
+  let resultInstrument!: Instrument;
+  let resultQuote!: Quote;
+  let settingsNext: (AppSettings & { version?: number }) | null = null;
+
+  await db.transaction(
+    "rw",
+    [db.instruments, db.quotes, db.settings],
+    async () => {
+      const existingInst = await db.instruments.get(isin);
+      if (existingInst) {
+        resultInstrument = existingInst;
+      } else {
+        // Minimal local instrument — no ticker inference from ISIN
+        const name =
+          String(input.name ?? "").trim() ||
+          (isin === VWCE_ISIN
+            ? "Vanguard FTSE All-World UCITS ETF (USD) Accumulating"
+            : isin);
+        resultInstrument = {
+          isin,
+          name,
+          currency,
+          venue: input.venue,
+          createdAt: t,
+          updatedAt: t,
+        };
+        if (isin === VWCE_ISIN) {
+          resultInstrument = {
+            ...resultInstrument,
+            ticker: "VWCE",
+            venue: input.venue || "XETRA",
+            providerSymbols: { yahoo: "VWCE.DE" },
+          };
+        }
+        await db.instruments.put(resultInstrument);
+      }
+
+      const existingQ = await db.quotes.get(id);
+      resultQuote = {
+        id,
+        instrumentIsin: isin,
+        currency,
+        venue: input.venue ?? existingQ?.venue ?? resultInstrument.venue,
+        price: input.price,
+        asOf,
+        source: "manual",
+        createdAt: existingQ?.createdAt ?? t,
+        updatedAt: t,
+      };
+      await db.quotes.put(resultQuote);
+
+      // VWCE legacy mirror in the same transaction — quote is source of truth for price/asOf
+      if (isin === VWCE_ISIN) {
+        const current = (await db.settings.get("settings")) ?? defaultSettings();
+        const base = current;
+        const ver = ((base as AppSettings & { version?: number }).version ?? 0) + 1;
+        settingsNext = {
+          ...base,
+          id: "settings",
+          latestVwcePrice: input.price,
+          latestPriceDate: asOf,
+          updatedAt: t,
+          version: ver,
+        };
+        await db.settings.put(settingsNext as AppSettings);
+      }
+    },
+  );
+
+  // Outbox only after local tables are consistent
+  if (settingsNext && opts?.syncSettings !== false) {
+    await enqueueOutbox("settings", "settings", "upsert", settingsNext, settingsNext.version ?? 1);
+  }
+
+  return { quote: resultQuote, instrument: resultInstrument };
+}
+
 export async function ensureInitialized(seedSample: boolean): Promise<void> {
   const existing = await db.settings.get("settings");
   if (existing?.onboardingDone) {
