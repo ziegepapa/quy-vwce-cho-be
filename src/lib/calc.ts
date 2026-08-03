@@ -1,6 +1,6 @@
 /** Pure calculation helpers — no side effects */
 
-import { resolveInstrumentIsin, isSecurityBuy, isSecuritySell } from "./instrument";
+import { resolveInstrumentIsin, isSecurityBuy, isSecuritySell, hasResolvableInstrumentIsin, isValidIsin } from "./instrument";
 import { VWCE_ISIN } from "./types";
 
 export function monthlyRate(annualRate: number): number {
@@ -190,13 +190,13 @@ export function applyTransaction(state: PortfolioState, tx: TxInput): PortfolioS
   const amount = isValidNumber(tx.amount) ? tx.amount : 0;
 
   if (isSecurityBuy(tx.type)) {
+    // Fail-safe: missing/invalid instrument ISIN → no state change
+    if (!hasResolvableInstrumentIsin(tx)) {
+      return state;
+    }
     const isin = resolveInstrumentIsin(tx);
-    if (!isin) {
-      s.cashBalance -= amount;
-      s.totalFees += fee;
-      s.totalTax += tax;
-      syncVwceMirror(s);
-      return s;
+    if (!isin || !isValidIsin(isin)) {
+      return state;
     }
     const unitPrice = tx.unitPrice ?? 0;
     let qty =
@@ -221,27 +221,33 @@ export function applyTransaction(state: PortfolioState, tx: TxInput): PortfolioS
   }
 
   if (isSecuritySell(tx.type)) {
+    // Fail-safe: missing/invalid instrument ISIN → no state change
+    if (!hasResolvableInstrumentIsin(tx)) {
+      return state;
+    }
     const isin = resolveInstrumentIsin(tx);
+    if (!isin || !isValidIsin(isin)) {
+      return state;
+    }
     let qty = tx.quantity ?? 0;
     if (!isValidNumber(qty) || qty < 0) qty = 0;
-    if (isin) {
-      const prev = s.positions[isin] ?? emptyPosition();
-      if (qty > prev.qty) qty = prev.qty;
-      if (qty > 0 && prev.qty > 0) {
-        const avg = prev.costBasis / prev.qty;
-        const next: PositionState = {
-          qty: Math.max(0, prev.qty - qty),
-          costBasis: Math.max(0, prev.costBasis - avg * qty),
-          totalBought: prev.totalBought,
-          totalSold: prev.totalSold + amount,
-        };
-        s.positions[isin] = next;
-      } else {
-        s.positions[isin] = {
-          ...prev,
-          totalSold: prev.totalSold + amount,
-        };
-      }
+    const prev = s.positions[isin] ?? emptyPosition();
+    if (qty > prev.qty) qty = prev.qty;
+    if (qty > 0 && prev.qty > 0) {
+      const avg = prev.costBasis / prev.qty;
+      const next: PositionState = {
+        qty: Math.max(0, prev.qty - qty),
+        costBasis: Math.max(0, prev.costBasis - avg * qty),
+        totalBought: prev.totalBought,
+        totalSold: prev.totalSold + amount,
+      };
+      s.positions[isin] = next;
+    } else {
+      // Still credit cash only when ISIN is known; qty may be 0
+      s.positions[isin] = {
+        ...prev,
+        totalSold: prev.totalSold + amount,
+      };
     }
     s.cashBalance += amount - fee - tax;
     s.totalFees += fee;
