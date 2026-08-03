@@ -6,12 +6,16 @@ import {
   csvEscape,
   emptyPortfolio,
   etfToSell,
+  getPosition,
   goalProgressStatus,
   inflate,
   monthlyRate,
+  portfolioMarketValue,
   requiredSafeAmount,
   simulateMonthly,
 } from "./calc";
+import { resolveInstrumentIsin, normalizeIsin, quoteId } from "./instrument";
+import { VWCE_ISIN } from "./types";
 
 describe("monthlyRate", () => {
   it("5%", () => {
@@ -45,7 +49,7 @@ describe("tx cash flow rules", () => {
     expect(s.totalContributed).toBe(200);
     expect(s.cashBalance).toBe(200);
     s = applyTransaction(s, { type: "buy_vwce", amount: 100, unitPrice: 50 });
-    expect(s.totalContributed).toBe(200); // not 300
+    expect(s.totalContributed).toBe(200);
     expect(s.vwceQty).toBe(2);
     expect(s.cashBalance).toBe(100);
     expect(s.vwceCostBasis).toBe(100);
@@ -90,7 +94,7 @@ describe("tx cash flow rules", () => {
     s = applyTransaction(s, { type: "sell_vwce", amount: 110, quantity: 2, fee: 5, tax: 5 });
     expect(s.vwceQty).toBe(0);
     expect(s.vwceCostBasis).toBe(0);
-    expect(s.cashBalance).toBe(100); // 0 + 110 - 5 - 5
+    expect(s.cashBalance).toBe(100);
   });
 
   it("cash out / fee / tax / interest / adjust", () => {
@@ -115,9 +119,8 @@ describe("tx cash flow rules", () => {
       amount: 500,
       fee: 10,
       tax: 5,
-      // quantity intentionally omitted
     });
-    expect(s.cashBalance).toBe(585); // 100 + 500 - 10 - 5
+    expect(s.cashBalance).toBe(585);
     expect(s.totalSold).toBe(500);
     expect(s.totalFees).toBe(10);
     expect(s.totalTax).toBe(5);
@@ -131,7 +134,7 @@ describe("tx cash flow rules", () => {
     expect(s.vwceQty).toBe(2);
     s = applyTransaction(s, { type: "sell_vwce", amount: 60, quantity: 1, fee: 0, tax: 0 });
     expect(s.vwceQty).toBe(1);
-    expect(s.cashBalance).toBe(160); // 100 + 60
+    expect(s.cashBalance).toBe(160);
   });
 
   it("sell when qty held is zero still credits cash, qty not negative", () => {
@@ -144,7 +147,7 @@ describe("tx cash flow rules", () => {
       tax: 3,
     });
     expect(s.vwceQty).toBe(0);
-    expect(s.cashBalance).toBe(95); // 100 - 2 - 3
+    expect(s.cashBalance).toBe(95);
     expect(s.totalSold).toBe(100);
   });
 
@@ -249,4 +252,145 @@ describe("csvEscape", () => {
   it("comma", () => expect(csvEscape("a,b")).toBe('"a,b"'));
   it("quote", () => expect(csvEscape('say "hi"')).toBe('"say ""hi"""'));
   it("newline", () => expect(csvEscape("a\nb")).toBe('"a\nb"'));
+});
+
+describe("multi-asset portfolio", () => {
+  const OTHER = "IE00B4L5Y983";
+
+  it("two ISINs keep separate quantities", () => {
+    let s = emptyPortfolio();
+    s = applyTransaction(s, { type: "cash_in", amount: 500 });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 200,
+      unitPrice: 100,
+      instrumentIsin: VWCE_ISIN,
+    });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 150,
+      unitPrice: 50,
+      instrumentIsin: OTHER,
+    });
+    expect(getPosition(s, VWCE_ISIN).qty).toBe(2);
+    expect(getPosition(s, OTHER).qty).toBe(3);
+    expect(s.vwceQty).toBe(2);
+    expect(s.cashBalance).toBe(150);
+  });
+
+  it("buy/sell one ISIN does not change the other", () => {
+    let s = emptyPortfolio();
+    s = applyTransaction(s, { type: "cash_in", amount: 1000 });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 200,
+      unitPrice: 100,
+      instrumentIsin: VWCE_ISIN,
+    });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 300,
+      unitPrice: 50,
+      instrumentIsin: OTHER,
+    });
+    s = applyTransaction(s, {
+      type: "sell_security",
+      amount: 100,
+      quantity: 1,
+      instrumentIsin: VWCE_ISIN,
+    });
+    expect(getPosition(s, VWCE_ISIN).qty).toBe(1);
+    expect(getPosition(s, OTHER).qty).toBe(6);
+  });
+
+  it("legacy buy_vwce without instrumentIsin resolves to VWCE", () => {
+    expect(resolveInstrumentIsin({ type: "buy_vwce" })).toBe(VWCE_ISIN);
+    expect(resolveInstrumentIsin({ type: "sell_vwce" })).toBe(VWCE_ISIN);
+    let s = emptyPortfolio();
+    s = applyTransaction(s, { type: "cash_in", amount: 100 });
+    s = applyTransaction(s, { type: "buy_vwce", amount: 100, unitPrice: 50 });
+    expect(s.vwceQty).toBe(2);
+    expect(getPosition(s, VWCE_ISIN).qty).toBe(2);
+  });
+
+  it("price of ISIN A does not resolve for ISIN B", () => {
+    let s = emptyPortfolio();
+    s = applyTransaction(s, { type: "cash_in", amount: 500 });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 200,
+      unitPrice: 100,
+      instrumentIsin: VWCE_ISIN,
+    });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 150,
+      unitPrice: 50,
+      instrumentIsin: OTHER,
+    });
+    const mv = portfolioMarketValue(s, { [VWCE_ISIN]: 110 });
+    expect(mv.missingIsins).toContain(OTHER);
+    expect(mv.byIsin[VWCE_ISIN]?.value).toBeCloseTo(220, 5);
+    expect(mv.byIsin[OTHER]?.value).toBeNull();
+    expect(mv.securities).toBeCloseTo(220, 5);
+  });
+
+  it("instrument without ticker still works via ISIN", () => {
+    let s = emptyPortfolio();
+    s = applyTransaction(s, { type: "cash_in", amount: 100 });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 100,
+      unitPrice: 25,
+      instrumentIsin: "LU1234567890",
+    });
+    expect(getPosition(s, "LU1234567890").qty).toBe(4);
+    expect(normalizeIsin(" lu1234567890 ")).toBe("LU1234567890");
+    expect(quoteId("LU1234567890")).toBe("quote_LU1234567890_EUR");
+  });
+
+  it("portfolio market value multi-ISIN total", () => {
+    let s = emptyPortfolio();
+    s = applyTransaction(s, { type: "cash_in", amount: 500 });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 200,
+      unitPrice: 100,
+      instrumentIsin: VWCE_ISIN,
+    });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 150,
+      unitPrice: 50,
+      instrumentIsin: OTHER,
+    });
+    const mv = portfolioMarketValue(s, {
+      [VWCE_ISIN]: 120,
+      [OTHER]: 55,
+    });
+    expect(mv.missingIsins).toEqual([]);
+    expect(mv.securities).toBeCloseTo(2 * 120 + 3 * 55, 5);
+    expect(mv.cash).toBe(150);
+    expect(mv.total).toBeCloseTo(150 + 240 + 165, 5);
+  });
+
+  it("avgCost per ISIN", () => {
+    let s = emptyPortfolio();
+    s = applyTransaction(s, { type: "cash_in", amount: 300 });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 100,
+      unitPrice: 50,
+      instrumentIsin: VWCE_ISIN,
+    });
+    s = applyTransaction(s, {
+      type: "buy_security",
+      amount: 200,
+      unitPrice: 100,
+      instrumentIsin: OTHER,
+    });
+    expect(avgCost(s, VWCE_ISIN)).toBeCloseTo(50, 5);
+    expect(avgCost(s, OTHER)).toBeCloseTo(100, 5);
+    expect(avgCost(s)).toBeCloseTo(50, 5);
+  });
 });
