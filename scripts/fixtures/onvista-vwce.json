@@ -1,0 +1,66 @@
+{
+  "instrument": {
+    "isin": "IE00BK5BQT80",
+    "symbol": "VWCE",
+    "name": "Vanguard FTSE All-World UCITS ETF USD Acc.",
+    "wkn": "A2PKXG"
+  },
+  "quote": {
+    "isoCurrency": "EUR",
+    "last": 164.2,
+    "datetimeLast": "2026-08-03T09:12:00.866+00:00",
+    "previousLast": 163.68,
+    "datetimePreviousLast": "2026-07-31T20:02:55.834+00:00",
+    "market": {
+      "name": "Tradegate BSX",
+      "codeMarket": "_GAT",
+      "nameExchange": "Tradegate BSX",
+      "codeExchange": "GAT",
+      "idNotation": 264715168,
+      "isoCountry": "DE"
+    }
+  },
+  "quoteList": {
+    "list": [
+      {
+        "idInstrument": "156424987",
+        "entityType": "FUND",
+        "entityValue": "156424987",
+        "market": {
+          "name": "Xetra",
+          "codeMarket": "_GER",
+          "nameExchange": "Xetra",
+          "codeExchange": "GER",
+          "idNotation": 262733170,
+          "isoCountry": "DE",
+          "codeExchangeGoogle": "ETR"
+        },
+        "isoCurrency": "EUR",
+        "previousLast": 162.96,
+        "last": 164.36,
+        "datetimeLast": "2026-08-03T08:56:47.180+00:00",
+        "datetimePreviousLast": "2026-07-31T15:36:06.660+00:00",
+        "displayUnit": "EUR"
+      },
+      {
+        "idInstrument": "156424987",
+        "entityType": "FUND",
+        "entityValue": "156424987",
+        "market": {
+          "name": "Tradegate BSX",
+          "codeMarket": "_GAT",
+          "nameExchange": "Tradegate BSX",
+          "codeExchange": "GAT",
+          "idNotation": 264715168,
+          "isoCountry": "DE"
+        },
+        "isoCurrency": "EUR",
+        "previousLast": 163.68,
+        "last": 164.2,
+        "datetimeLast": "2026-08-03T09:12:00.866+00:00",
+        "datetimePreviousLast": "2026-07-31T20:02:55.834+00:00",
+        "displayUnit": "EUR"
+      }
+    ]
+  }
+}
