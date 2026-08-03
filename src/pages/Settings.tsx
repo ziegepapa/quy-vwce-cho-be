@@ -4,26 +4,24 @@ import {
   db,
   exportBackup,
   getOrCreateChecklist,
-  getQuoteForIsin,
   getSettings,
   importBackup,
   listInstruments,
   listQuotes,
   listTransactions,
+  saveManualQuoteForIsin,
   saveSettings,
-  upsertQuote,
 } from "../lib/db";
 import type { AnnualChecklist, AppSettings, BackupPayload, Instrument, Quote } from "../lib/types";
 import { APP_VERSION, SCHEMA_VERSION, VWCE_ISIN } from "../lib/types";
 import { isSupportedBackupSchema } from "../lib/backupSchema";
 import { csvEscape, formatDateVN, formatMoney, parseDecimal } from "../lib/calc";
-import { isValidAsOfDate, isValidIsin, normalizeIsin, quoteId } from "../lib/instrument";
+import { isValidAsOfDate, isValidIsin, normalizeIsin } from "../lib/instrument";
 import type { ThemeChoice } from "../lib/theme";
 import { THEME_OPTIONS, persistTheme, readTheme } from "../lib/theme";
 import { useAuth } from "../lib/auth";
 import { listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
 import type { OutboxItem } from "../lib/sync/types";
-import { nowIso } from "../lib/defaults";
 
 function pctDisplay(decimal: number): string {
   if (!Number.isFinite(decimal)) return "—";
@@ -186,32 +184,31 @@ export default function SettingsPage({
   }
 
   /**
-   * Legacy "Giá VWCE gần nhất" → write settings + intentional VWCE quote (single source after migrate).
-   * instruments/quotes remain local-only (upsertQuote does not enqueue outbox).
+   * Legacy "Giá VWCE gần nhất" → atomic saveManualQuoteForIsin (quote + mirror).
+   * Failures surface to caller; no silent split-brain.
    */
   async function persistLegacyVwcePrice(price: number) {
     const asOf = new Date().toISOString().slice(0, 10);
-    await saveSettings({ latestVwcePrice: price, latestPriceDate: asOf });
-    if (price > 0 && isValidAsOfDate(asOf)) {
-      try {
-        const existing = await getQuoteForIsin(VWCE_ISIN, "EUR");
-        await upsertQuote({
-          id: quoteId(VWCE_ISIN, "EUR"),
-          instrumentIsin: VWCE_ISIN,
-          currency: "EUR",
-          venue: "XETRA",
-          price,
-          asOf,
-          source: "manual",
-          createdAt: existing?.createdAt ?? nowIso(),
-          updatedAt: nowIso(),
-        });
-      } catch {
-        /* validation failed — settings still saved for legacy UI */
-      }
+    if (!(price > 0)) {
+      // Allow clearing via 0 only on settings field without touching quote table
+      await saveSettings({ latestVwcePrice: price, latestPriceDate: asOf });
+      setS(await getSettings());
+      return;
     }
-    setS(await getSettings());
-    await reloadAssets();
+    try {
+      await saveManualQuoteForIsin({
+        instrumentIsin: VWCE_ISIN,
+        price,
+        asOf,
+        venue: "XETRA",
+      });
+      setS(await getSettings());
+      await reloadAssets();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Không lưu được giá VWCE");
+      setS(await getSettings());
+      await reloadAssets();
+    }
   }
 
   async function saveManualQuote() {
@@ -232,23 +229,13 @@ export default function SettingsPage({
     }
     setQuoteSaving(true);
     try {
-      const existing = await getQuoteForIsin(isin, "EUR");
-      await upsertQuote({
-        id: quoteId(isin, "EUR"),
+      await saveManualQuoteForIsin({
         instrumentIsin: isin,
-        currency: "EUR",
-        venue: instruments.find((i) => i.isin === isin)?.venue,
         price,
         asOf: quoteAsOf.trim(),
-        source: "manual",
-        createdAt: existing?.createdAt ?? nowIso(),
-        updatedAt: nowIso(),
+        venue: instruments.find((i) => i.isin === isin)?.venue,
       });
-      // Keep legacy VWCE fields in sync when editing VWCE quote
-      if (isin === VWCE_ISIN) {
-        await saveSettings({ latestVwcePrice: price, latestPriceDate: quoteAsOf.trim() });
-        setS(await getSettings());
-      }
+      setS(await getSettings());
       await reloadAssets();
       setQuotePrice("");
     } catch (e) {
