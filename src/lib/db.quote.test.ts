@@ -116,6 +116,28 @@ describe("saveManualQuoteForIsin — VWCE legacy atomic mirror", () => {
     expect(s.latestPriceDate).toBe("2026-07-01");
     expect(await listQuotes()).toHaveLength(0);
   });
+
+  it("rejects price 0 without changing quote or settings", async () => {
+    await saveSettings({ latestVwcePrice: 100, latestPriceDate: "2026-07-01" }, { sync: false });
+    await saveManualQuoteForIsin({
+      instrumentIsin: VWCE_ISIN,
+      price: 111,
+      asOf: "2026-07-31",
+    });
+    await expect(
+      saveManualQuoteForIsin({
+        instrumentIsin: VWCE_ISIN,
+        price: 0,
+        asOf: "2026-08-03",
+      }),
+    ).rejects.toThrow(/price/);
+    const s = await getSettings();
+    const q = await getQuoteForIsin(VWCE_ISIN);
+    expect(s.latestVwcePrice).toBe(111);
+    expect(s.latestPriceDate).toBe("2026-07-31");
+    expect(q?.price).toBe(111);
+  });
+
 });
 
 describe("importBackup rollback", () => {
