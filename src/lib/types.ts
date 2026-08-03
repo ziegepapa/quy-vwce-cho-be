@@ -55,11 +55,20 @@ export type Goal = {
   id: string; name: string; dueDate: string; amount: number; mode: GoalMode; baseYear: number;
   inflationRate: number; bufferPct: number; urgency: GoalUrgency; protectedAmount: number; notes: string;
   createdAt: string; updatedAt: string;
+  /** A3 — xóa mềm; bản ghi tombstone vẫn giữ trong IndexedDB. */
+  deletedAt?: string;
 };
 export type TxType = "buy_vwce" | "sell_vwce" | "cash_in" | "cash_out" | "tax" | "fee" | "safe_interest" | "adjust";
 export type Transaction = {
   id: string; date: string; type: TxType; amount: number; unitPrice?: number; quantity?: number;
   fee?: number; tax?: number; goalId?: string; notes: string; createdAt: string; updatedAt: string;
+  /** C3 — nguồn nhập; bản cũ không có field này vẫn hợp lệ. */
+  source?: "manual" | "trade_republic_pdf";
+  sourceVersion?: number;
+  /** C3 — khóa chống trùng, ví dụ trade_republic:<docNumber>. */
+  externalRef?: string;
+  /** A3 — xóa mềm; bản ghi tombstone vẫn giữ trong IndexedDB. */
+  deletedAt?: string;
 };
 export type ChecklistItem = { key: string; label: string; done: boolean };
 export type AnnualChecklist = { id: string; year: number; items: ChecklistItem[]; createdAt: string; updatedAt: string };

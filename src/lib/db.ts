@@ -77,17 +77,35 @@ export async function saveSettings(partial: Partial<AppSettings>, opts?: { sync?
 }
 
 export async function listGoals(): Promise<Goal[]> {
-  return db.goals.orderBy("dueDate").toArray();
+  const all = await db.goals.orderBy("dueDate").toArray();
+  return all.filter((g) => !(g as Goal & { deletedAt?: string }).deletedAt);
 }
 
 export async function listTransactions(): Promise<Transaction[]> {
   const all = await db.transactions.toArray();
-  return all.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return all
+    .filter((t) => !(t as Transaction & { deletedAt?: string }).deletedAt)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+
+/** C3 — tìm giao dịch theo externalRef, bỏ qua tombstone đã xóa. */
+export async function findTransactionByExternalRef(
+  externalRef: string,
+): Promise<Transaction | undefined> {
+  if (!externalRef) return undefined;
+  const all = await db.transactions.toArray();
+  return all.find(
+    (t) =>
+      !(t as Transaction & { deletedAt?: string }).deletedAt &&
+      (t as Transaction & { externalRef?: string }).externalRef === externalRef,
+  );
 }
 
 export async function upsertTransaction(tx: Transaction, opts?: { sync?: boolean }): Promise<void> {
   const ver = ((tx as Transaction & { version?: number }).version ?? 0) + 1;
-  const next = { ...tx, updatedAt: nowIso(), version: ver };
+  const { deletedAt: _drop, ...rest } = tx as Transaction & { deletedAt?: string; version?: number };
+  const next = { ...rest, updatedAt: nowIso(), version: ver } as Transaction & { version: number };
+  delete (next as { deletedAt?: string }).deletedAt;
   await db.transactions.put(next as Transaction);
   if (opts?.sync !== false) {
     await enqueueOutbox("transactions", next.id, "upsert", next, ver);
@@ -95,15 +113,31 @@ export async function upsertTransaction(tx: Transaction, opts?: { sync?: boolean
 }
 
 export async function deleteTransaction(id: string, opts?: { sync?: boolean }): Promise<void> {
-  await db.transactions.delete(id);
+  const existing = await db.transactions.get(id);
+  if (!existing) {
+    if (opts?.sync !== false) {
+      await enqueueOutbox("transactions", id, "delete", null, 1);
+    }
+    return;
+  }
+  const ver = ((existing as Transaction & { version?: number }).version ?? 0) + 1;
+  const tombstone: Transaction & { version: number } = {
+    ...existing,
+    deletedAt: nowIso(),
+    updatedAt: nowIso(),
+    version: ver,
+  };
+  await db.transactions.put(tombstone as Transaction);
   if (opts?.sync !== false) {
-    await enqueueOutbox("transactions", id, "delete", null, 1);
+    await enqueueOutbox("transactions", id, "delete", null, ver);
   }
 }
 
 export async function upsertGoal(g: Goal, opts?: { sync?: boolean }): Promise<void> {
   const ver = ((g as Goal & { version?: number }).version ?? 0) + 1;
-  const next = { ...g, updatedAt: nowIso(), version: ver };
+  const { deletedAt: _drop, ...rest } = g as Goal & { deletedAt?: string; version?: number };
+  const next = { ...rest, updatedAt: nowIso(), version: ver } as Goal & { version: number };
+  delete (next as { deletedAt?: string }).deletedAt;
   await db.goals.put(next as Goal);
   if (opts?.sync !== false) {
     await enqueueOutbox("goals", next.id, "upsert", next, ver);
@@ -111,20 +145,38 @@ export async function upsertGoal(g: Goal, opts?: { sync?: boolean }): Promise<vo
 }
 
 export async function deleteGoal(id: string, opts?: { sync?: boolean }): Promise<void> {
-  await db.goals.delete(id);
+  const existing = await db.goals.get(id);
+  if (!existing) {
+    if (opts?.sync !== false) {
+      await enqueueOutbox("goals", id, "delete", null, 1);
+    }
+    return;
+  }
+  const ver = ((existing as Goal & { version?: number }).version ?? 0) + 1;
+  const tombstone: Goal & { version: number } = {
+    ...existing,
+    deletedAt: nowIso(),
+    updatedAt: nowIso(),
+    version: ver,
+  };
+  await db.goals.put(tombstone as Goal);
   if (opts?.sync !== false) {
-    await enqueueOutbox("goals", id, "delete", null, 1);
+    await enqueueOutbox("goals", id, "delete", null, ver);
   }
 }
 
 export async function exportBackup(): Promise<BackupPayload> {
-  const [settings, goals, transactions, annualChecklists, monthlySnapshots] = await Promise.all([
+  const [settings, goalsRaw, transactionsRaw, annualChecklists, monthlySnapshots] = await Promise.all([
     db.settings.toArray(),
     db.goals.toArray(),
     db.transactions.toArray(),
     db.annualChecklists.toArray(),
     db.monthlySnapshots.toArray(),
   ]);
+  const goals = goalsRaw.filter((g) => !(g as Goal & { deletedAt?: string }).deletedAt);
+  const transactions = transactionsRaw.filter(
+    (t) => !(t as Transaction & { deletedAt?: string }).deletedAt,
+  );
   const payload: BackupPayload = {
     schemaVersion: SCHEMA_VERSION,
     exportedAt: nowIso(),
@@ -233,13 +285,17 @@ export async function countLocalData(): Promise<{
   annualChecklists: number;
   monthlySnapshots: number;
 }> {
-  const [settings, goals, transactions, annualChecklists, monthlySnapshots] = await Promise.all([
+  const [settings, goalsRaw, transactionsRaw, annualChecklists, monthlySnapshots] = await Promise.all([
     db.settings.count(),
-    db.goals.count(),
-    db.transactions.count(),
+    db.goals.toArray(),
+    db.transactions.toArray(),
     db.annualChecklists.count(),
     db.monthlySnapshots.count(),
   ]);
+  const goals = goalsRaw.filter((g) => !(g as Goal & { deletedAt?: string }).deletedAt).length;
+  const transactions = transactionsRaw.filter(
+    (t) => !(t as Transaction & { deletedAt?: string }).deletedAt,
+  ).length;
   return { settings, goals, transactions, annualChecklists, monthlySnapshots };
 }
 

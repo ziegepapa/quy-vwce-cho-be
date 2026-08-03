@@ -95,7 +95,6 @@ export async function pushOutbox(
   let errors = 0;
   let dead = 0;
   for (const item of items) {
-    // Bỏ qua mục đã chết — không chặn hàng đợi phía sau
     if (item.dead) {
       dead += 1;
       continue;
@@ -115,7 +114,6 @@ export async function pushOutbox(
         dead: markDead ? true : item.dead,
       });
       if (markDead) dead += 1;
-      // continue — thử các mục tiếp theo
     }
   }
   if (pushed > 0) await saveSyncMeta({ userId, lastPushedAt: nowIso() });
@@ -157,11 +155,34 @@ export async function pullDelta(userId: string): Promise<{ pulled: number; confl
     for (const row of data) {
       const entityId = row.id as string;
       if (row.deleted_at) {
-        if (table === "settings") await db.settings.delete(entityId);
-        else if (table === "goals") await db.goals.delete(entityId);
-        else if (table === "transactions") await db.transactions.delete(entityId);
-        else if (table === "annualChecklists") await db.annualChecklists.delete(entityId);
-        else if (table === "monthlySnapshots") await db.monthlySnapshots.delete(entityId);
+        const pendingOutbox = await db.outbox
+          .filter((o) => o.table === table && o.entityId === entityId)
+          .toArray();
+        for (const o of pendingOutbox) await db.outbox.delete(o.id);
+
+        if (table === "transactions" || table === "goals") {
+          let local: Record<string, unknown> | undefined;
+          if (table === "transactions") {
+            local = (await db.transactions.get(entityId)) as Record<string, unknown> | undefined;
+          } else {
+            local = (await db.goals.get(entityId)) as Record<string, unknown> | undefined;
+          }
+          const tombstone = {
+            ...(local ?? { id: entityId }),
+            id: entityId,
+            deletedAt: row.deleted_at as string,
+            updatedAt: (row.updated_at as string) || (row.deleted_at as string),
+            version: (row.version as number) ?? 1,
+          };
+          if (table === "transactions") await db.transactions.put(tombstone as never);
+          else await db.goals.put(tombstone as never);
+        } else if (table === "settings") {
+          await db.settings.delete(entityId);
+        } else if (table === "annualChecklists") {
+          await db.annualChecklists.delete(entityId);
+        } else if (table === "monthlySnapshots") {
+          await db.monthlySnapshots.delete(entityId);
+        }
         pulled += 1;
         continue;
       }
@@ -276,7 +297,6 @@ export async function resolveConflict(
   if (choice === "local") {
     await enqueueOutbox(c.table, c.entityId, "upsert", c.local, localVersion(c.local) + 1);
   } else {
-    // Xóa outbox đang chờ của cùng thực thể — tránh lần đẩy sau ghi đè bản remote
     const pending = await db.outbox.where("entityId").equals(c.entityId).toArray();
     for (const p of pending) {
       if (p.table === c.table) await db.outbox.delete(p.id);
@@ -295,13 +315,11 @@ export async function resolveConflict(
   }
 }
 
-/** Mục outbox đã chết (thử ≥ 8 lần). */
 export async function listDeadOutbox(): Promise<OutboxItem[]> {
   const all = await db.outbox.toArray();
   return all.filter((i) => i.dead === true);
 }
 
-/** Đặt lại dead/attempts để thử đồng bộ lại. */
 export async function reviveDeadOutbox(): Promise<number> {
   const dead = await listDeadOutbox();
   for (const item of dead) {
