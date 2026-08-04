@@ -1,19 +1,13 @@
+export { VwceDB, db } from "./db.m01a";
 export {
-  VwceDB,
-  db,
   migrateTransactionIsin,
   ensureMultiAssetMigrated,
-} from "./db.schema";
-
-export {
   runPendingMigrations,
+  QUOTE_MIGRATION_META_ID,
   isQuoteMigrationComplete,
   assertQuoteWritesUnlocked,
-  ensureQuoteFoundationMigrated,
-  applyResolvedEffective,
-  listInstruments,
-  upsertInstrument,
-  QUOTE_MIGRATION_META_ID,
   coerceQuoteSource,
   validateQuoteRowForMigration,
-} from "./db.migration";
+} from "./db.m01b";
+export { ensureQuoteFoundationMigrated } from "./db.m02";
+export { applyResolvedEffective, listInstruments, upsertInstrument } from "./db.m03";
