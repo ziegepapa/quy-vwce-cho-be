@@ -3,8 +3,12 @@ import { BACKUP_SCHEMA_VERSION } from "./types";
 import { nowIso } from "./defaults";
 import { db } from "./db.m01a";
 
+function isLive<T extends { deletedAt?: string }>(row: T): boolean {
+  return !row.deletedAt;
+}
+
 export async function exportBackup(): Promise<BackupPayload> {
-  const [settings, goals, transactions, annualChecklists, monthlySnapshots, instruments, quotes, quoteCandidates, quotePreferences] =
+  const [settings, goalsAll, transactionsAll, annualChecklists, monthlySnapshots, instruments, quotes, quoteCandidates, quotePreferences] =
     await Promise.all([
       db.settings.toArray(),
       db.goals.toArray(),
@@ -17,6 +21,8 @@ export async function exportBackup(): Promise<BackupPayload> {
       db.quotePreferences.toArray(),
     ]);
 
+  const goals = goalsAll.filter(isLive);
+  const transactions = transactionsAll.filter(isLive);
   const exportedAt = nowIso();
   const payload: BackupPayload = {
     schemaVersion: BACKUP_SCHEMA_VERSION,
