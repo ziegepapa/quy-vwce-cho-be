@@ -21,11 +21,13 @@ import {
   writeJsonAtomic,
 } from "./price/contract.mjs";
 import { isValidIsin, normalizeIsin } from "./price/isin.mjs";
-import { loadRegistry, quoteKey } from "./price/registry.mjs";
+import { loadRegistry, quoteKey, RegistryError } from "./price/registry.mjs";
 import {
   decideQuoteWrite,
   runMultiAssetUpdate,
+  resolveInstrumentQuote,
   OrchestratorError,
+  fetchJson,
 } from "./price/orchestrator.mjs";
 import { parseYahooChart, selectClosedBar } from "./price/providers/yahoo.mjs";
 
@@ -348,5 +350,154 @@ describe("yahoo adapter uses registry config", () => {
     const y = parseYahooChart(body, new Date("2026-08-03T17:00:00Z"), vwce);
     assert.equal(y.asOf, "2026-08-03");
     assert.ok(y.price > 160);
+  });
+});
+
+describe("provider contract B1/B2 — cross-check + URL", () => {
+  it("fixture VWCE Yahoo+onvista sets crossCheckedWith and finite differencePct", async () => {
+    const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
+    const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
+    const reg = loadRegistry(REGISTRY);
+    const vwce = reg.liveEnabled.find((i) => i.isin === "IE00BK5BQT80");
+    assert.ok(vwce);
+    assert.equal(vwce.crossCheckProvider?.id, "onvista");
+    assert.ok(vwce.crossCheckProvider?.url);
+    assert.ok(vwce.primaryProvider?.url);
+
+    const resolved = await resolveInstrumentQuote(vwce, {
+      now: new Date("2026-08-03T17:00:00.000Z"),
+      fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
+      yahooBody,
+      onvistaBody,
+    });
+    assert.equal(resolved.crossCheckedWith, "onvista");
+    assert.equal(typeof resolved.crossCheckDifferencePct, "number");
+    assert.ok(Number.isFinite(resolved.crossCheckDifferencePct));
+    // Fixture economics: Yahoo ~164.36 vs onvista aligned ~164.34 → ~0.0122%
+    assert.ok(resolved.crossCheckDifferencePct >= 0);
+    assert.ok(resolved.crossCheckDifferencePct < 1);
+    assert.equal(resolved.provider, "yahoo_finance_chart");
+    assert.equal(
+      resolved.providerUrl,
+      "https://finance.yahoo.com/quote/VWCE.DE",
+    );
+  });
+
+  it("fetch uses exact primary.url and crossCheck.url from registry", async () => {
+    const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
+    const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
+    const reg = loadRegistry(REGISTRY);
+    const vwce = reg.liveEnabled.find((i) => i.isin === "IE00BK5BQT80");
+    const primaryUrl = vwce.primaryProvider.url;
+    const crossUrl = vwce.crossCheckProvider.url;
+    assert.match(primaryUrl, /finance\.yahoo\.com/);
+    assert.match(crossUrl, /api\.onvista\.de\/api\/v1\/funds\//);
+
+    const called = [];
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      called.push(String(url));
+      const u = String(url);
+      if (u === primaryUrl) {
+        return {
+          status: 200,
+          json: async () => yahooBody,
+        };
+      }
+      if (u === crossUrl) {
+        return {
+          status: 200,
+          json: async () => onvistaBody,
+        };
+      }
+      throw new Error(`Unexpected fetch URL: ${u}`);
+    };
+    try {
+      const resolved = await resolveInstrumentQuote(vwce, {
+        now: new Date("2026-08-03T17:00:00.000Z"),
+        fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
+        // no bodies → must hit fetch with registry URLs
+      });
+      assert.equal(resolved.crossCheckedWith, "onvista");
+      assert.ok(Number.isFinite(resolved.crossCheckDifferencePct));
+      assert.deepEqual(called, [primaryUrl, crossUrl]);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it("unknown provider id rejected at registry boundary", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "reg-bad-"));
+    const badPath = path.join(dir, "bad.json");
+    fs.writeFileSync(
+      badPath,
+      JSON.stringify({
+        schemaVersion: 1,
+        instruments: [
+          {
+            isin: "IE00BK5BQT80",
+            currency: "EUR",
+            live: true,
+            enabled: true,
+            primaryProvider: {
+              id: "not_a_real_provider",
+              symbol: "VWCE.DE",
+              url: "https://example.test/chart",
+            },
+          },
+        ],
+      }),
+      "utf8",
+    );
+    assert.throws(() => loadRegistry(badPath), /unsupported provider id/i);
+  });
+
+  it("live provider missing request url rejected at registry", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "reg-nourl-"));
+    const badPath = path.join(dir, "bad.json");
+    fs.writeFileSync(
+      badPath,
+      JSON.stringify({
+        schemaVersion: 1,
+        instruments: [
+          {
+            isin: "IE00BK5BQT80",
+            currency: "EUR",
+            live: true,
+            enabled: true,
+            primaryProvider: {
+              id: "yahoo_finance_chart",
+              symbol: "VWCE.DE",
+            },
+          },
+        ],
+      }),
+      "utf8",
+    );
+    assert.throws(() => loadRegistry(badPath), /missing required url|missing primaryProvider\.url/i);
+  });
+
+  it("runMultiAssetUpdate VWCE row carries crossCheckedWith onvista", async () => {
+    const { quotesPath, legacyPath } = tmpWorkspace();
+    const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
+    const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
+    const result = await runMultiAssetUpdate({
+      quotesPath,
+      legacyPath,
+      registryPath: REGISTRY,
+      now: new Date("2026-08-03T17:00:00.000Z"),
+      fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
+      bodiesByIsin: {
+        IE00BK5BQT80: { yahooBody, onvistaBody },
+      },
+    });
+    assert.equal(result.wrote, true);
+    const row = result.quotesDoc.quotes.find(
+      (q) => q.instrumentIsin === "IE00BK5BQT80",
+    );
+    assert.ok(row);
+    assert.equal(row.crossCheckedWith, "onvista");
+    assert.equal(typeof row.crossCheckDifferencePct, "number");
+    assert.ok(Number.isFinite(row.crossCheckDifferencePct));
   });
 });

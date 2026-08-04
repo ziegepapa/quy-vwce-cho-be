@@ -135,38 +135,59 @@ export async function resolveInstrumentQuote(instrument, options = {}) {
   const fetchedAt =
     options.fetchedAt instanceof Date ? options.fetchedAt : new Date();
 
-  if (!instrument.primaryProvider?.symbol) {
+  const primaryCfg = instrument.primaryProvider;
+  if (!primaryCfg?.id) {
+    throw new OrchestratorError(
+      `No primaryProvider.id for ${instrument.isin}`,
+    );
+  }
+  if (primaryCfg.id !== "yahoo_finance_chart") {
+    throw new OrchestratorError(
+      `Unsupported primaryProvider.id "${primaryCfg.id}" for ${instrument.isin}`,
+    );
+  }
+  if (!primaryCfg.symbol) {
     throw new OrchestratorError(
       `No verified primaryProvider.symbol for ${instrument.isin}`,
+    );
+  }
+  if (!primaryCfg.url) {
+    throw new OrchestratorError(
+      `No primaryProvider.url for ${instrument.isin}`,
     );
   }
 
   let yahooBody = options.yahooBody;
   if (!yahooBody) {
-    const url =
-      instrument.primaryProvider.chartUrl ||
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-        instrument.primaryProvider.symbol,
-      )}?interval=1d&range=10d`;
-    yahooBody = await fetchJson(url);
+    // Canonical contract: request URL must come from registry primaryProvider.url
+    yahooBody = await fetchJson(primaryCfg.url);
   }
 
   const primary = parseYahooChart(yahooBody, now, instrument);
 
   let crossCheckedWith;
   let crossCheckDifferencePct;
-  if (instrument.crossCheckProvider?.kind === "onvista") {
+  const ccCfg = instrument.crossCheckProvider;
+  // Canonical discriminator is provider.id (never kind)
+  if (ccCfg?.id === "onvista") {
+    if (!ccCfg.url) {
+      throw new OrchestratorError(
+        `crossCheckProvider.onvista missing url for ${instrument.isin}`,
+      );
+    }
     let onvistaBody = options.onvistaBody;
     if (!onvistaBody) {
-      const url =
-        instrument.crossCheckProvider.snapshotUrl ||
-        `https://api.onvista.de/api/v1/stocks/ISIN:${instrument.isin}/snapshot`;
-      onvistaBody = await fetchJson(url);
+      // Canonical contract: use configured funds/stocks endpoint; no silent fallback
+      onvistaBody = await fetchJson(ccCfg.url);
     }
     const onvista = parseOnvistaSnapshot(onvistaBody, instrument);
     const cc = crossCheckWithOnvista(primary, onvista, instrument);
     crossCheckedWith = "onvista";
     crossCheckDifferencePct = cc.differencePct;
+  } else if (ccCfg?.id) {
+    throw new OrchestratorError(
+      `Unsupported crossCheckProvider.id "${ccCfg.id}" for ${instrument.isin}`,
+    );
   }
 
   return {
@@ -177,10 +198,10 @@ export async function resolveInstrumentQuote(instrument, options = {}) {
     asOf: primary.asOf,
     fetchedAt: fetchedAt.toISOString(),
     source: "auto",
-    provider: "yahoo_finance_chart",
+    provider: primaryCfg.id,
     providerUrl:
-      instrument.primaryProvider.pageUrl ||
-      `https://finance.yahoo.com/quote/${instrument.primaryProvider.symbol}`,
+      primaryCfg.providerUrl ||
+      `https://finance.yahoo.com/quote/${primaryCfg.symbol}`,
     crossCheckedWith,
     crossCheckDifferencePct,
   };
