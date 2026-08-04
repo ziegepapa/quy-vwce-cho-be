@@ -60,9 +60,51 @@ export type Instrument = {
   updatedAt: string;
 };
 
+/** Candidate source kind — manual and auto coexist without overwrite. */
+export type QuoteSourceKind = "manual" | "auto";
+
 /**
- * Manual or resolved quote for one ISIN.
- * Prices are never global — always keyed by instrumentIsin.
+ * Raw quote candidate — one row per (ISIN, currency, source).
+ * Never overwritten across sources. Local-only (not in EntityTable/outbox).
+ */
+export type QuoteCandidate = {
+  id: string; // qc_<ISIN>_<CCY>_<manual|auto>
+  instrumentIsin: string;
+  currency: string;
+  source: QuoteSourceKind;
+  price: number; // > 0 finite
+  asOf: string; // YYYY-MM-DD calendar date
+  venue?: string;
+  provider?: string;
+  providerUrl?: string;
+  crossCheckedWith?: string;
+  crossCheckDifferencePct?: number;
+  /** Wall-clock ISO; metadata only — never economics key. */
+  fetchedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** User preference: auto (default) or explicit manual override. */
+export type QuotePreferenceMode = "auto" | "manual";
+
+/**
+ * Preference per (ISIN, currency). Absent row ≡ mode auto.
+ * Local-only (not in EntityTable/outbox).
+ */
+export type QuoteSelectionPreference = {
+  id: string; // pref_<ISIN>_<CCY>
+  instrumentIsin: string;
+  currency: string;
+  mode: QuotePreferenceMode;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/**
+ * Effective/materialized quote for one ISIN+currency.
+ * Derived cache of the winning candidate; UI/calc read this table only.
+ * id = quote_<ISIN>_<CCY> (unchanged from pre-2B).
  */
 export type Quote = {
   id: string;
@@ -150,10 +192,50 @@ export type BackupPayload = {
   transactions: Transaction[]; annualChecklists: AnnualChecklist[]; monthlySnapshots: MonthlySnapshot[];
   /** Multi-asset foundation — optional on legacy backups. */
   instruments?: Instrument[];
+  /**
+   * Effective quotes — in BACKUP_SCHEMA_VERSION 3 this is a non-authoritative
+   * diagnostic snapshot only. Import always recomputes from candidates+preferences.
+   */
   quotes?: Quote[];
+  /** Authoritative on v3. */
+  quoteCandidates?: QuoteCandidate[];
+  /** Authoritative on v3. */
+  quotePreferences?: QuoteSelectionPreference[];
 };
-/** Local backup envelope version. v2 adds instruments + quotes. */
-export const SCHEMA_VERSION = 2;
+
+/**
+ * Local backup envelope version.
+ * - 1: legacy (pre multi-asset)
+ * - 2: instruments + effective quotes
+ * - 3: candidates + preferences authoritative; quotes derived
+ */
+export const BACKUP_SCHEMA_VERSION = 3;
+/** @deprecated Use BACKUP_SCHEMA_VERSION for export; kept as alias for older imports. */
+export const SCHEMA_VERSION = BACKUP_SCHEMA_VERSION;
+
+/**
+ * IndexedDB Dexie schema version (forward-only).
+ * v4 adds quoteCandidates + quotePreferences empty stores; data migration is app-level.
+ * Emergency/revert builds that ship after any client has opened v4 MUST still declare 4.
+ */
+export const DEXIE_DB_VERSION = 4;
+
+/** Calendar-day stale threshold for auto candidates (economics asOf, not fetchedAt). */
+export const STALE_DAYS = 7;
+
+/**
+ * Migration marker for app-level candidate seed after Dexie v4 open.
+ * Stored in appMetadata id = "quoteMigration".
+ */
+export type QuoteMigrationState = "pending" | "complete" | "failed";
+
+export type QuoteMigrationMeta = {
+  id: "quoteMigration";
+  state: QuoteMigrationState;
+  updatedAt: string;
+  lastError?: string;
+};
+
 /** Hiển thị ở Cài đặt — đổi khi ship UI lớn */
 export const APP_VERSION = "1.7.0";
 

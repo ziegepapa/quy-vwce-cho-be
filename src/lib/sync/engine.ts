@@ -1,5 +1,5 @@
 import { supabase } from "../supabase";
-import { db } from "../db";
+import { db } from "../db.m01a";
 import { nowIso, uid } from "../defaults";
 import type { ConflictRecord, EntityTable, OutboxItem, SyncMeta, SyncStatus } from "./types";
 import { enqueueOutbox, outboxCount } from "./outbox";
@@ -120,19 +120,12 @@ export async function pushOutbox(
   return { pushed, errors, dead };
 }
 
-function localVersion(row: unknown): number {
-  if (row && typeof row === "object" && "version" in row) {
-    const v = (row as { version?: number }).version;
-    return typeof v === "number" ? v : 1;
+function localVersion(payload: unknown): number {
+  if (payload && typeof payload === "object" && "version" in payload) {
+    const v = (payload as { version?: unknown }).version;
+    return typeof v === "number" ? v : 0;
   }
-  return 1;
-}
-
-function localUpdated(row: unknown): string {
-  if (row && typeof row === "object" && "updatedAt" in row) {
-    return String((row as { updatedAt?: string }).updatedAt ?? "");
-  }
-  return "";
+  return 0;
 }
 
 export async function pullDelta(userId: string): Promise<{ pulled: number; conflicts: number }> {
@@ -146,100 +139,58 @@ export async function pullDelta(userId: string): Promise<{ pulled: number; confl
     const remote = REMOTE_TABLE[table];
     const { data, error } = await supabase
       .from(remote)
-      .select("id, data, version, updated_at, deleted_at")
+      .select("*")
       .eq("user_id", userId)
-      .gt("updated_at", since);
+      .gt("updated_at", since)
+      .order("updated_at", { ascending: true });
     if (error) throw error;
     if (!data?.length) continue;
 
     for (const row of data) {
-      const entityId = row.id as string;
-      if (row.deleted_at) {
-        const pendingOutbox = await db.outbox
-          .filter((o) => o.table === table && o.entityId === entityId)
-          .toArray();
-        for (const o of pendingOutbox) await db.outbox.delete(o.id);
+      const entityId = String(row.id);
+      const remoteData = row.data;
+      const remoteVersion = typeof row.version === "number" ? row.version : 0;
+      const deletedAt = row.deleted_at as string | null;
 
-        if (table === "transactions" || table === "goals") {
-          let local: Record<string, unknown> | undefined;
-          if (table === "transactions") {
-            local = (await db.transactions.get(entityId)) as Record<string, unknown> | undefined;
-          } else {
-            local = (await db.goals.get(entityId)) as Record<string, unknown> | undefined;
-          }
-          const tombstone = {
-            ...(local ?? { id: entityId }),
-            id: entityId,
-            deletedAt: row.deleted_at as string,
-            updatedAt: (row.updated_at as string) || (row.deleted_at as string),
-            version: (row.version as number) ?? 1,
-          };
-          if (table === "transactions") await db.transactions.put(tombstone as never);
-          else await db.goals.put(tombstone as never);
-        } else if (table === "settings") {
-          await db.settings.delete(entityId);
-        } else if (table === "annualChecklists") {
-          await db.annualChecklists.delete(entityId);
-        } else if (table === "monthlySnapshots") {
-          await db.monthlySnapshots.delete(entityId);
-        }
-        pulled += 1;
-        continue;
-      }
+      const pending = await db.outbox.where("entityId").equals(entityId).toArray();
+      const localPending = pending.find((p) => p.table === table);
 
-      const payload = row.data as Record<string, unknown>;
-      const remoteVer = (row.version as number) ?? 1;
-      const remoteUpdated = (row.updated_at as string) ?? "";
-
-      let local: unknown = null;
-      if (table === "settings") local = await db.settings.get(entityId);
-      else if (table === "goals") local = await db.goals.get(entityId);
-      else if (table === "transactions") local = await db.transactions.get(entityId);
-      else if (table === "annualChecklists") local = await db.annualChecklists.get(entityId);
-      else if (table === "monthlySnapshots") local = await db.monthlySnapshots.get(entityId);
-
-      const pending = await db.outbox
-        .filter((o) => o.table === table && o.entityId === entityId)
-        .count();
-
-      if (local && pending > 0) {
-        const conflict: ConflictRecord = {
-          id: uid("cf"),
-          table,
-          entityId,
-          local,
-          remote: payload,
-          detectedAt: nowIso(),
-        };
-        await db.conflicts.put(conflict);
-        conflicts += 1;
-        continue;
-      }
-
-      if (local) {
-        const lv = localVersion(local);
-        const lu = localUpdated(local);
-        if (lv > remoteVer || (lu && remoteUpdated && lu > remoteUpdated && pending > 0)) {
-          const conflict: ConflictRecord = {
-            id: uid("cf"),
+      if (localPending && localPending.op === "upsert") {
+        const lv = localPending.version;
+        if (lv !== remoteVersion) {
+          await db.conflicts.put({
+            id: uid(),
             table,
             entityId,
-            local,
-            remote: payload,
+            local: localPending.payload,
+            remote: remoteData,
             detectedAt: nowIso(),
-          };
-          await db.conflicts.put(conflict);
+          });
           conflicts += 1;
           continue;
         }
       }
 
-      const withMeta = { ...payload, id: entityId, version: remoteVer, updatedAt: remoteUpdated };
-      if (table === "settings") await db.settings.put(withMeta as never);
-      else if (table === "goals") await db.goals.put(withMeta as never);
-      else if (table === "transactions") await db.transactions.put(withMeta as never);
-      else if (table === "annualChecklists") await db.annualChecklists.put(withMeta as never);
-      else if (table === "monthlySnapshots") await db.monthlySnapshots.put(withMeta as never);
+      if (deletedAt) {
+        if (table === "settings") await db.settings.delete(entityId);
+        else if (table === "goals") {
+          const g = await db.goals.get(entityId);
+          if (g) await db.goals.put({ ...g, deletedAt, updatedAt: nowIso() } as never);
+        } else if (table === "transactions") {
+          const t = await db.transactions.get(entityId);
+          if (t) await db.transactions.put({ ...t, deletedAt, updatedAt: nowIso() } as never);
+        } else if (table === "annualChecklists") await db.annualChecklists.delete(entityId);
+        else if (table === "monthlySnapshots") await db.monthlySnapshots.delete(entityId);
+        pulled += 1;
+        continue;
+      }
+
+      const payload = { ...(remoteData as object), id: entityId } as Record<string, unknown>;
+      if (table === "settings") await db.settings.put(payload as never);
+      else if (table === "goals") await db.goals.put(payload as never);
+      else if (table === "transactions") await db.transactions.put(payload as never);
+      else if (table === "annualChecklists") await db.annualChecklists.put(payload as never);
+      else if (table === "monthlySnapshots") await db.monthlySnapshots.put(payload as never);
       pulled += 1;
     }
   }
