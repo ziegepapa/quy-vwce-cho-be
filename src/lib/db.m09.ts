@@ -12,7 +12,8 @@ import {
 } from "./instrument";
 import { db } from "./db.m01a";
 import { isSupportedBackupSchema } from "./backupSchema";
-import { ensureMultiAssetMigrated, ensureQuoteFoundationMigrated } from "./db.m01b";
+import { ensureMultiAssetMigrated } from "./db.m01b";
+import { ensureQuoteFoundationMigrated } from "./db.m02";
 import { resolveEffective } from "./quoteResolve";
 import { applyResolvedEffective } from "./db.m03";
 
