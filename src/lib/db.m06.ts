@@ -1,4 +1,4 @@
-import type { Instrument, Quote } from "./types";
+import type { Instrument, Quote, QuoteCandidate } from "./types";
 import { VWCE_ISIN } from "./types";
 import { defaultVwceInstrument, nowIso } from "./defaults";
 import {
@@ -33,6 +33,47 @@ function normalizeCurrency(raw?: string): string {
   return String(raw || "EUR").trim().toUpperCase();
 }
 
+function comparableText(raw: string | null | undefined): string | undefined {
+  const value = String(raw ?? "").trim();
+  return value || undefined;
+}
+
+/** fetchedAt/createdAt/updatedAt are metadata and intentionally excluded. */
+export function isSameAutoQuoteSemantics(
+  current: QuoteCandidate,
+  incoming: AutoQuoteInput,
+): boolean {
+  return (
+    current.source === "auto" &&
+    normalizeIsin(current.instrumentIsin) === normalizeIsin(incoming.instrumentIsin) &&
+    normalizeCurrency(current.currency) === normalizeCurrency(incoming.currency) &&
+    current.price === incoming.price &&
+    current.asOf === String(incoming.asOf).trim() &&
+    comparableText(current.venue) === comparableText(incoming.venue) &&
+    comparableText(current.provider) === comparableText(incoming.provider) &&
+    comparableText(current.providerUrl) === comparableText(incoming.providerUrl) &&
+    comparableText(current.crossCheckedWith) === comparableText(incoming.crossCheckedWith) &&
+    current.crossCheckDifferencePct === incoming.crossCheckDifferencePct
+  );
+}
+
+function isSameEffectiveSemantics(current: Quote | null, next: Quote | null): boolean {
+  if (!current || !next) return current === next;
+  return (
+    current.id === next.id &&
+    current.instrumentIsin === next.instrumentIsin &&
+    current.currency === next.currency &&
+    current.source === next.source &&
+    current.price === next.price &&
+    current.asOf === next.asOf &&
+    comparableText(current.venue) === comparableText(next.venue) &&
+    comparableText(current.provider) === comparableText(next.provider) &&
+    comparableText(current.providerUrl) === comparableText(next.providerUrl) &&
+    comparableText(current.crossCheckedWith) === comparableText(next.crossCheckedWith) &&
+    current.crossCheckDifferencePct === next.crossCheckDifferencePct
+  );
+}
+
 function buildInstrument(input: AutoQuoteInput, t: string): Instrument {
   const isin = normalizeIsin(input.instrumentIsin);
   if (isin === VWCE_ISIN) return defaultVwceInstrument();
@@ -44,14 +85,6 @@ function buildInstrument(input: AutoQuoteInput, t: string): Instrument {
     createdAt: t,
     updatedAt: t,
   };
-}
-
-async function loadCurrentCandidates(isin: string, currency: string) {
-  const [manual, existing] = await Promise.all([
-    db.quoteCandidates.get(candidateId(isin, currency, "manual")),
-    db.quotes.get(quoteId(isin, currency)),
-  ]);
-  return { manual, existing };
 }
 
 export async function putAutoCandidateAndResolve(
@@ -74,44 +107,66 @@ export async function putAutoCandidateAndResolve(
   const currency = normalizeCurrency(input.currency);
   const t = nowIso();
   const instrument = buildInstrument(input, t);
-  const candidate = {
+  const candidate: QuoteCandidate = {
     id: candidateId(isin, currency, "auto"),
     instrumentIsin: isin,
     currency,
-    source: "auto" as const,
+    source: "auto",
     price: input.price,
     asOf: String(input.asOf).trim(),
-    venue: input.venue,
-    provider: input.provider,
-    providerUrl: input.providerUrl,
-    crossCheckedWith: input.crossCheckedWith,
+    venue: comparableText(input.venue),
+    provider: comparableText(input.provider),
+    providerUrl: comparableText(input.providerUrl),
+    crossCheckedWith: comparableText(input.crossCheckedWith),
     crossCheckDifferencePct: input.crossCheckDifferencePct,
-    fetchedAt: input.fetchedAt,
+    fetchedAt: comparableText(input.fetchedAt),
     createdAt: t,
     updatedAt: t,
   };
 
-  return db.transaction("rw", [db.instruments, db.quoteCandidates, db.quotePreferences, db.quotes, db.settings, db.outbox], async () => {
-    const existingInstrument = await db.instruments.get(isin);
-    if (!existingInstrument) {
-      await db.instruments.put(instrument);
-    }
-    const prior = await db.quoteCandidates.get(candidate.id);
-    await db.quoteCandidates.put({ ...candidate, createdAt: prior?.createdAt ?? t });
+  return db.transaction(
+    "rw",
+    [db.instruments, db.quoteCandidates, db.quotePreferences, db.quotes, db.settings, db.outbox],
+    async () => {
+      const [existingInstrument, prior, manual, existing, pref] = await Promise.all([
+        db.instruments.get(isin),
+        db.quoteCandidates.get(candidate.id),
+        db.quoteCandidates.get(candidateId(isin, currency, "manual")),
+        db.quotes.get(quoteId(isin, currency)),
+        db.quotePreferences.get(preferenceId(isin, currency)),
+      ]);
 
-    const { manual, existing } = await loadCurrentCandidates(isin, currency);
-    const pref = await db.quotePreferences.get(preferenceId(isin, currency));
-    const mode = pref?.mode === "manual" ? "manual" : "auto";
-    const resolved = resolveEffective({
-      mode,
-      auto: candidate,
-      manual: manual ?? null,
-      existingEffective: existing ?? null,
-      nowDate,
-    });
-    await applyResolvedEffective(isin, currency, resolved.effective, { t, syncSettings: true });
-    return resolved.effective;
-  });
+      if (!existingInstrument) {
+        await db.instruments.put(instrument);
+      }
+
+      const candidateChanged = !prior || !isSameAutoQuoteSemantics(prior, candidate);
+      const candidateForResolution: QuoteCandidate = candidateChanged
+        ? { ...candidate, createdAt: prior?.createdAt ?? t }
+        : prior;
+      if (candidateChanged) {
+        await db.quoteCandidates.put(candidateForResolution);
+      }
+
+      const mode = pref?.mode === "manual" ? "manual" : "auto";
+      const resolved = resolveEffective({
+        mode,
+        auto: candidateForResolution,
+        manual: manual ?? null,
+        existingEffective: existing ?? null,
+        nowDate,
+      });
+      const currentEffective = existing ?? null;
+      if (!isSameEffectiveSemantics(currentEffective, resolved.effective)) {
+        await applyResolvedEffective(isin, currency, resolved.effective, {
+          t,
+          syncSettings: true,
+        });
+        return resolved.effective;
+      }
+      return currentEffective;
+    },
+  );
 }
 
 export async function setQuotePreference(
