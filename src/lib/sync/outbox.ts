@@ -1,4 +1,4 @@
-import { db } from "../db";
+import { db } from "../db.m01a";
 import { nowIso, uid } from "../defaults";
 import type { EntityTable, OutboxItem } from "./types";
 
