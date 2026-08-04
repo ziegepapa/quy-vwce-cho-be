@@ -33,20 +33,26 @@ jobs:
       - name: Price unit tests
         run: npm run test:price
 
-      - name: Fetch and update price file
-        run: node scripts/update-vwce-price.mjs
+      - name: Fetch and update multi-asset quote feed
+        run: node scripts/update-quotes.mjs
 
-      - name: Commit and push if price changed
+      - name: Commit and push if economic price data changed
         run: |
           set -euo pipefail
-          PRICE_PATH="public/data/vwce-price.json"
-          if [ ! -f "$PRICE_PATH" ]; then
-            echo "Price file missing after update script"
+          QUOTES_PATH="public/data/quotes.json"
+          LEGACY_PATH="public/data/vwce-price.json"
+          if [ ! -f "$QUOTES_PATH" ]; then
+            echo "quotes.json missing after update script"
+            exit 1
+          fi
+          if [ ! -f "$LEGACY_PATH" ]; then
+            echo "vwce-price.json missing after update script"
             exit 1
           fi
 
           # Snapshot generated JSON outside the worktree before any git reset/rebase
-          cp "$PRICE_PATH" "$RUNNER_TEMP/vwce-price.json"
+          cp "$QUOTES_PATH" "$RUNNER_TEMP/quotes.json"
+          cp "$LEGACY_PATH" "$RUNNER_TEMP/vwce-price.json"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -55,22 +61,24 @@ jobs:
           git reset --hard HEAD
           git pull --rebase origin main
 
-          # Restore generated file after rebase
+          # Restore generated files after rebase
           mkdir -p public/data
-          cp "$RUNNER_TEMP/vwce-price.json" "$PRICE_PATH"
+          cp "$RUNNER_TEMP/quotes.json" "$QUOTES_PATH"
+          cp "$RUNNER_TEMP/vwce-price.json" "$LEGACY_PATH"
 
-          git add -- "$PRICE_PATH"
+          git add -- "$QUOTES_PATH" "$LEGACY_PATH"
           if git diff --cached --quiet; then
-            echo "No new closed Xetra price"
+            echo "No economic quote changes"
             exit 0
           fi
 
-          STAGED=$(git diff --cached --name-only)
-          if [ "$STAGED" != "$PRICE_PATH" ]; then
+          STAGED=$(git diff --cached --name-only | sort)
+          EXPECTED=$(printf '%s\n' "$LEGACY_PATH" "$QUOTES_PATH" | sort)
+          if [ "$STAGED" != "$EXPECTED" ]; then
             echo "Unexpected staged files:"
             echo "$STAGED"
             exit 1
           fi
 
-          git commit -m "chore(data): update VWCE Xetra closed price"
+          git commit -m "chore(data): update quotes.json and VWCE legacy mirror"
           git push origin HEAD:main

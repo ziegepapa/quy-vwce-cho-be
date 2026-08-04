@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "instruments": [
+    {
+      "isin": "IE00BK5BQT80",
+      "ticker": "VWCE",
+      "displayName": "Vanguard FTSE All-World UCITS ETF (USD) Accumulating",
+      "currency": "EUR",
+      "venue": "XETRA",
+      "timezone": "Europe/Berlin",
+      "closeHourLocal": 18,
+      "enabled": true,
+      "live": true,
+      "priceMin": 20,
+      "priceMax": 400,
+      "maxDayChangePct": 20,
+      "maxAsOfAgeDays": 7,
+      "crossCheckMaxPct": 2,
+      "primaryProvider": {
+        "id": "yahoo_finance_chart",
+        "symbol": "VWCE.DE",
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/VWCE.DE?interval=1d&range=10d",
+        "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
+        "expectedCurrency": "EUR",
+        "expectedVenues": ["XETRA", "GER"],
+        "expectedInstrumentType": "ETF",
+        "longNameMustInclude": ["vanguard", "ftse", "all-world"]
+      },
+      "crossCheckProvider": {
+        "id": "onvista",
+        "url": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot",
+        "expectedIsin": "IE00BK5BQT80",
+        "expectedMarketNames": ["Xetra"],
+        "expectedExchangeCodes": ["GER", "_GER"],
+        "expectedCurrency": "EUR"
+      }
+    }
+  ],
+  "testOnlyInstruments": [
+    {
+      "isin": "FR0010315770",
+      "ticker": "CW8",
+      "displayName": "Amundi MSCI World UCITS ETF (test fixture only)",
+      "currency": "EUR",
+      "venue": "XETRA",
+      "timezone": "Europe/Berlin",
+      "closeHourLocal": 18,
+      "enabled": true,
+      "live": false,
+      "priceMin": 5,
+      "priceMax": 1000,
+      "maxDayChangePct": 25,
+      "maxAsOfAgeDays": 7,
+      "crossCheckMaxPct": 3,
+      "primaryProvider": {
+        "id": "yahoo_finance_chart",
+        "symbol": "CW8.PA",
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/CW8.PA?interval=1d&range=10d",
+        "providerUrl": "https://finance.yahoo.com/quote/CW8.PA",
+        "expectedCurrency": "EUR",
+        "expectedVenues": ["PAR", "Paris"],
+        "expectedInstrumentType": "ETF",
+        "longNameMustInclude": ["amundi", "msci", "world"]
+      },
+      "crossCheckProvider": null
+    }
+  ]
+}
