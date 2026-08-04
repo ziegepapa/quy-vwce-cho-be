@@ -61,13 +61,15 @@ export async function countLocalData(): Promise<{
   monthlySnapshots: number;
   quotes: number;
 }> {
-  const [settings, goals, transactions, annualChecklists, monthlySnapshots, quotes] = await Promise.all([
+  const [settings, goalsAll, transactionsAll, annualChecklists, monthlySnapshots, quotes] = await Promise.all([
     db.settings.count(),
-    db.goals.count(),
-    db.transactions.count(),
+    db.goals.toArray(),
+    db.transactions.toArray(),
     db.annualChecklists.count(),
     db.monthlySnapshots.count(),
     db.quotes.count(),
   ]);
+  const goals = goalsAll.filter((g) => !(g as { deletedAt?: string }).deletedAt).length;
+  const transactions = transactionsAll.filter((t) => !(t as { deletedAt?: string }).deletedAt).length;
   return { settings, goals, transactions, annualChecklists, monthlySnapshots, quotes };
 }
