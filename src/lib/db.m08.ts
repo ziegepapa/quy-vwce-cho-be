@@ -8,7 +8,7 @@ function isLive<T extends { deletedAt?: string }>(row: T): boolean {
 }
 
 export async function exportBackup(): Promise<BackupPayload> {
-  const [settings, goalsAll, transactionsAll, annualChecklists, monthlySnapshots, instruments, quotes, quoteCandidates, quotePreferences] =
+  const [settingsAll, goalsAll, transactionsAll, annualChecklists, monthlySnapshots, instruments, quotes, quoteCandidates, quotePreferences] =
     await Promise.all([
       db.settings.toArray(),
       db.goals.toArray(),
@@ -21,6 +21,7 @@ export async function exportBackup(): Promise<BackupPayload> {
       db.quotePreferences.toArray(),
     ]);
 
+  const settings = settingsAll.filter(isLive);
   const goals = goalsAll.filter(isLive);
   const transactions = transactionsAll.filter(isLive);
   const exportedAt = nowIso();
