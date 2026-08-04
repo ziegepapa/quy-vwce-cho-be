@@ -10,7 +10,7 @@ import {
   saveManualQuoteForIsin,
   saveSettings,
 } from "./db";
-import { SCHEMA_VERSION, VWCE_ISIN } from "./types";
+import { VWCE_ISIN } from "./types";
 import type { BackupPayload } from "./types";
 import { defaultSettings } from "./defaults";
 import { quoteId } from "./instrument";
@@ -150,7 +150,7 @@ describe("importBackup rollback", () => {
     });
 
     const bad: BackupPayload = {
-      schemaVersion: SCHEMA_VERSION,
+      schemaVersion: 2,
       exportedAt: "2026-08-03T00:00:00.000Z",
       settings: [defaultSettings()],
       goals: [],
