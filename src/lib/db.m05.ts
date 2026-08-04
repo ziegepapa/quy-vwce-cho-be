@@ -12,7 +12,8 @@ import {
   calendarDaysBetween,
 } from "./instrument";
 import { db } from "./db.m01a";
-import { ensureQuoteFoundationMigrated, assertQuoteWritesUnlocked } from "./db.m01b";
+import { ensureQuoteFoundationMigrated } from "./db.m02";
+import { assertQuoteWritesUnlocked } from "./db.m01b";
 import { resolveEffective } from "./quoteResolve";
 import { applyResolvedEffective } from "./db.m03";
 
