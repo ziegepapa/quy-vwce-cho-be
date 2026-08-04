@@ -15,7 +15,6 @@ import { db } from "./db.m01a";
 import { ensureQuoteFoundationMigrated, assertQuoteWritesUnlocked } from "./db.m01b";
 import { resolveEffective } from "./quoteResolve";
 import { applyResolvedEffective } from "./db.m03";
-import { enqueueOutbox } from "./sync/outbox";
 
 export type ManualQuoteInput = {
   instrumentIsin: string;
@@ -95,7 +94,7 @@ export async function saveManualQuoteForIsin(
     updatedAt: t,
   };
 
-  return db.transaction("rw", [db.instruments, db.quoteCandidates, db.quotePreferences, db.quotes, db.settings, db.outbox], async () => {
+  return db.transaction("rw", [db.instruments, db.quoteCandidates, db.quotePreferences, db.quotes, db.settings], async () => {
     const existingInstrument = await db.instruments.get(isin);
     if (!existingInstrument) {
       await db.instruments.put(instrument);
@@ -111,7 +110,7 @@ export async function saveManualQuoteForIsin(
     };
     await db.quotePreferences.put(pref);
 
-    const { auto, manual, existing } = await loadCurrentCandidates(isin, currency);
+    const { auto, existing } = await loadCurrentCandidates(isin, currency);
     const resolved = resolveEffective({
       mode: "manual",
       auto,
@@ -120,20 +119,6 @@ export async function saveManualQuoteForIsin(
       nowDate,
     });
     await applyResolvedEffective(isin, currency, resolved.effective, { t, syncSettings: true });
-
-    if (isin === VWCE_ISIN) {
-      const current = await db.settings.get("settings");
-      if (current) {
-        const next = {
-          ...current,
-          latestVwcePrice: input.price,
-          latestPriceDate: String(input.asOf).trim(),
-          updatedAt: t,
-        };
-        await db.settings.put(next);
-        await enqueueOutbox("settings", "settings", "upsert", next, ((current as { version?: number }).version ?? 0) + 1);
-      }
-    }
 
     const quote = (resolved.effective ?? {
       id: quoteId(isin, currency),
