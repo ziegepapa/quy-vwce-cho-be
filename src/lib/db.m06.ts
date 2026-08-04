@@ -47,13 +47,11 @@ function buildInstrument(input: AutoQuoteInput, t: string): Instrument {
 }
 
 async function loadCurrentCandidates(isin: string, currency: string) {
-  const [auto, manual, pref, existing] = await Promise.all([
-    db.quoteCandidates.get(candidateId(isin, currency, "auto")),
+  const [manual, existing] = await Promise.all([
     db.quoteCandidates.get(candidateId(isin, currency, "manual")),
-    db.quotePreferences.get(preferenceId(isin, currency)),
     db.quotes.get(quoteId(isin, currency)),
   ]);
-  return { auto, manual, pref, existing };
+  return { manual, existing };
 }
 
 export async function putAutoCandidateAndResolve(
@@ -96,7 +94,7 @@ export async function putAutoCandidateAndResolve(
     updatedAt: t,
   };
 
-  return db.transaction("rw", [db.instruments, db.quoteCandidates, db.quotePreferences, db.quotes, db.settings], async () => {
+  return db.transaction("rw", [db.instruments, db.quoteCandidates, db.quotePreferences, db.quotes, db.settings, db.outbox], async () => {
     const existingInstrument = await db.instruments.get(isin);
     if (!existingInstrument) {
       await db.instruments.put(instrument);
@@ -104,7 +102,8 @@ export async function putAutoCandidateAndResolve(
     const prior = await db.quoteCandidates.get(candidate.id);
     await db.quoteCandidates.put({ ...candidate, createdAt: prior?.createdAt ?? t });
 
-    const { manual, pref, existing } = await loadCurrentCandidates(isin, currency);
+    const { manual, existing } = await loadCurrentCandidates(isin, currency);
+    const pref = await db.quotePreferences.get(preferenceId(isin, currency));
     const mode = pref?.mode === "manual" ? "manual" : "auto";
     const resolved = resolveEffective({
       mode,
@@ -139,7 +138,7 @@ export async function setQuotePreference(
     updatedAt: t,
   };
 
-  return db.transaction("rw", [db.quotePreferences, db.quoteCandidates, db.quotes, db.settings], async () => {
+  return db.transaction("rw", [db.quotePreferences, db.quoteCandidates, db.quotes, db.settings, db.outbox], async () => {
     const existingPref = await db.quotePreferences.get(prefRow.id);
     await db.quotePreferences.put({ ...prefRow, createdAt: existingPref?.createdAt ?? t });
 
