@@ -6,6 +6,7 @@ import {
   countLocalData,
   ensureInitialized,
   getSettings,
+  ingestQuotesFeed,
   runPendingMigrations,
 } from "./lib/db";
 import type { AppSettings } from "./lib/types";
@@ -111,6 +112,18 @@ export default function App() {
       const s = await getSettings();
       setSettings(s);
       setReady(true);
+
+      // Non-blocking startup refresh. Offline/network/schema failures preserve local quotes.
+      void ingestQuotesFeed()
+        .then(async (result) => {
+          if (result.status === "ok" || result.status === "partial") {
+            setSettings(await getSettings());
+          }
+        })
+        .catch(() => {
+          /* fail-safe: local quote cache remains authoritative while offline */
+        });
+
       if (auth.user) {
         const meta = await getSyncMeta(auth.user.id);
         const counts = await countLocalData();
