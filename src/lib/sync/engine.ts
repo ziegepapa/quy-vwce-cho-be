@@ -119,3 +119,162 @@ export async function pushOutbox(
   if (pushed > 0) await saveSyncMeta({ userId, lastPushedAt: nowIso() });
   return { pushed, errors, dead };
 }
+
+function localVersion(payload: unknown): number {
+  if (payload && typeof payload === "object" && "version" in payload) {
+    const v = (payload as { version?: unknown }).version;
+    return typeof v === "number" ? v : 0;
+  }
+  return 0;
+}
+
+export async function pullDelta(userId: string): Promise<{ pulled: number; conflicts: number }> {
+  if (!supabase) return { pulled: 0, conflicts: 0 };
+  const meta = await getSyncMeta(userId);
+  let pulled = 0;
+  let conflicts = 0;
+  const since = meta.lastPulledAt || "1970-01-01T00:00:00.000Z";
+
+  for (const table of TABLES) {
+    const remote = REMOTE_TABLE[table];
+    const { data, error } = await supabase
+      .from(remote)
+      .select("*")
+      .eq("user_id", userId)
+      .gt("updated_at", since)
+      .order("updated_at", { ascending: true });
+    if (error) throw error;
+    if (!data?.length) continue;
+
+    for (const row of data) {
+      const entityId = String(row.id);
+      const remoteData = row.data;
+      const remoteVersion = typeof row.version === "number" ? row.version : 0;
+      const deletedAt = row.deleted_at as string | null;
+
+      const pending = await db.outbox.where("entityId").equals(entityId).toArray();
+      const localPending = pending.find((p) => p.table === table);
+
+      if (localPending && localPending.op === "upsert") {
+        const lv = localPending.version;
+        if (lv !== remoteVersion) {
+          await db.conflicts.put({
+            id: uid(),
+            table,
+            entityId,
+            local: localPending.payload,
+            remote: remoteData,
+            detectedAt: nowIso(),
+          });
+          conflicts += 1;
+          continue;
+        }
+      }
+
+      if (deletedAt) {
+        if (table === "settings") await db.settings.delete(entityId);
+        else if (table === "goals") {
+          const g = await db.goals.get(entityId);
+          if (g) await db.goals.put({ ...g, deletedAt, updatedAt: nowIso() } as never);
+        } else if (table === "transactions") {
+          const t = await db.transactions.get(entityId);
+          if (t) await db.transactions.put({ ...t, deletedAt, updatedAt: nowIso() } as never);
+        } else if (table === "annualChecklists") await db.annualChecklists.delete(entityId);
+        else if (table === "monthlySnapshots") await db.monthlySnapshots.delete(entityId);
+        pulled += 1;
+        continue;
+      }
+
+      const payload = { ...(remoteData as object), id: entityId } as Record<string, unknown>;
+      if (table === "settings") await db.settings.put(payload as never);
+      else if (table === "goals") await db.goals.put(payload as never);
+      else if (table === "transactions") await db.transactions.put(payload as never);
+      else if (table === "annualChecklists") await db.annualChecklists.put(payload as never);
+      else if (table === "monthlySnapshots") await db.monthlySnapshots.put(payload as never);
+      pulled += 1;
+    }
+  }
+
+  await saveSyncMeta({ userId, lastPulledAt: nowIso() });
+  return { pulled, conflicts };
+}
+
+export async function runSync(userId: string): Promise<{
+  status: SyncStatus;
+  pushed: number;
+  pulled: number;
+  conflicts: number;
+}> {
+  const online = typeof navigator === "undefined" ? true : navigator.onLine;
+  if (!online || !supabase) {
+    const pending = await outboxCount();
+    const c = (await listConflicts()).length;
+    return {
+      status: computeSyncStatus({
+        online: false,
+        syncing: false,
+        conflictCount: c,
+        pendingOutbox: pending,
+      }),
+      pushed: 0,
+      pulled: 0,
+      conflicts: c,
+    };
+  }
+  const push = await pushOutbox(userId);
+  const pull = await pullDelta(userId);
+  const pending = await outboxCount();
+  const c = (await listConflicts()).length;
+  return {
+    status: computeSyncStatus({
+      online: true,
+      syncing: false,
+      conflictCount: c,
+      pendingOutbox: pending,
+    }),
+    pushed: push.pushed,
+    pulled: pull.pulled,
+    conflicts: c + pull.conflicts,
+  };
+}
+
+export async function resolveConflict(
+  conflictId: string,
+  choice: "local" | "remote",
+  userId: string,
+): Promise<void> {
+  const c = await db.conflicts.get(conflictId);
+  if (!c) return;
+  if (choice === "local") {
+    await enqueueOutbox(c.table, c.entityId, "upsert", c.local, localVersion(c.local) + 1);
+  } else {
+    const pending = await db.outbox.where("entityId").equals(c.entityId).toArray();
+    for (const p of pending) {
+      if (p.table === c.table) await db.outbox.delete(p.id);
+    }
+    const payload = c.remote as Record<string, unknown>;
+    const withMeta = { ...payload, id: c.entityId };
+    if (c.table === "settings") await db.settings.put(withMeta as never);
+    else if (c.table === "goals") await db.goals.put(withMeta as never);
+    else if (c.table === "transactions") await db.transactions.put(withMeta as never);
+    else if (c.table === "annualChecklists") await db.annualChecklists.put(withMeta as never);
+    else if (c.table === "monthlySnapshots") await db.monthlySnapshots.put(withMeta as never);
+  }
+  await db.conflicts.put({ ...c, resolved: choice });
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    await pushOutbox(userId);
+  }
+}
+
+export async function listDeadOutbox(): Promise<OutboxItem[]> {
+  const all = await db.outbox.toArray();
+  return all.filter((i) => i.dead === true);
+}
+
+export async function reviveDeadOutbox(): Promise<number> {
+  const dead = await listDeadOutbox();
+  for (const item of dead) {
+    await db.outbox.put({ ...item, dead: false, attempts: 0, lastError: undefined });
+  }
+  return dead.length;
+}
