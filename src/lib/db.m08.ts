@@ -21,7 +21,8 @@ export async function exportBackup(): Promise<BackupPayload> {
       db.quotePreferences.toArray(),
     ]);
 
-  const settings = settingsAll.filter(isLive);
+  // settings has no soft-delete field — export as-is
+  const settings = settingsAll;
   const goals = goalsAll.filter(isLive);
   const transactions = transactionsAll.filter(isLive);
   const exportedAt = nowIso();
