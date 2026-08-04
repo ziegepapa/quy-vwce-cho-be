@@ -3,7 +3,7 @@
  * No I/O.
  */
 import { VWCE_ISIN } from "./types";
-import type { TxType } from "./types";
+import type { QuoteSourceKind, TxType } from "./types";
 
 /** Normalize ISIN: trim + uppercase. Empty → "". */
 export function normalizeIsin(raw: string | null | undefined): string {
@@ -88,9 +88,23 @@ export function hasResolvableInstrumentIsin(tx: {
   return resolveInstrumentIsin(tx).length > 0;
 }
 
-/** Quote primary key: quote_<ISIN>_<currency> (venue is metadata, not part of key). */
+/** Effective quote primary key: quote_<ISIN>_<currency>. */
 export function quoteId(instrumentIsin: string, currency = "EUR"): string {
   return `quote_${normalizeIsin(instrumentIsin)}_${String(currency || "EUR").toUpperCase()}`;
+}
+
+/** Candidate primary key: qc_<ISIN>_<CCY>_<manual|auto>. */
+export function candidateId(
+  instrumentIsin: string,
+  currency: string,
+  source: QuoteSourceKind,
+): string {
+  return `qc_${normalizeIsin(instrumentIsin)}_${String(currency || "EUR").toUpperCase()}_${source}`;
+}
+
+/** Preference primary key: pref_<ISIN>_<CCY>. */
+export function preferenceId(instrumentIsin: string, currency = "EUR"): string {
+  return `pref_${normalizeIsin(instrumentIsin)}_${String(currency || "EUR").toUpperCase()}`;
 }
 
 export function mapLegacyTxTypeToGeneric(type: TxType): TxType {
@@ -106,4 +120,21 @@ export function isValidAsOfDate(raw: string | null | undefined): boolean {
   const [y, m, d] = s.split("-").map(Number);
   const dt = new Date(y, m - 1, d);
   return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+}
+
+/** Local calendar YYYY-MM-DD from a Date (default: now). */
+export function toDateOnly(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Calendar-day difference nowDate - asOf (both YYYY-MM-DD). */
+export function calendarDaysBetween(asOf: string, nowDate: string): number {
+  const [y1, m1, d1] = asOf.split("-").map(Number);
+  const [y2, m2, d2] = nowDate.split("-").map(Number);
+  const a = Date.UTC(y1, m1 - 1, d1);
+  const b = Date.UTC(y2, m2 - 1, d2);
+  return Math.round((b - a) / 86_400_000);
 }
