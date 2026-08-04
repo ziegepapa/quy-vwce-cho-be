@@ -3,7 +3,6 @@ import { VWCE_ISIN } from "./types";
 import { defaultVwceInstrument, nowIso } from "./defaults";
 import {
   candidateId,
-  calendarDaysBetween,
   isValidAsOfDate,
   isValidIsin,
   normalizeIsin,
