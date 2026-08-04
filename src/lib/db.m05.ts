@@ -48,13 +48,11 @@ function buildInstrument(input: ManualQuoteInput, t: string): Instrument {
 }
 
 async function loadCurrentCandidates(isin: string, currency: string) {
-  const [auto, manual, pref, existing] = await Promise.all([
+  const [auto, existing] = await Promise.all([
     db.quoteCandidates.get(candidateId(isin, currency, "auto")),
-    db.quoteCandidates.get(candidateId(isin, currency, "manual")),
-    db.quotePreferences.get(preferenceId(isin, currency)),
     db.quotes.get(quoteId(isin, currency)),
   ]);
-  return { auto, manual, pref, existing };
+  return { auto, existing };
 }
 
 export async function saveManualQuoteForIsin(
@@ -94,21 +92,20 @@ export async function saveManualQuoteForIsin(
     updatedAt: t,
   };
 
-  return db.transaction("rw", [db.instruments, db.quoteCandidates, db.quotePreferences, db.quotes, db.settings], async () => {
+  return db.transaction("rw", [db.instruments, db.quoteCandidates, db.quotePreferences, db.quotes, db.settings, db.outbox], async () => {
     const existingInstrument = await db.instruments.get(isin);
     if (!existingInstrument) {
       await db.instruments.put(instrument);
     }
     await db.quoteCandidates.put(candidate);
-    const pref = {
+    await db.quotePreferences.put({
       id: preferenceId(isin, currency),
       instrumentIsin: isin,
       currency,
-      mode: "manual" as const,
+      mode: "manual",
       createdAt: t,
       updatedAt: t,
-    };
-    await db.quotePreferences.put(pref);
+    });
 
     const { auto, existing } = await loadCurrentCandidates(isin, currency);
     const resolved = resolveEffective({
