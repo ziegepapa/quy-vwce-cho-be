@@ -71,9 +71,6 @@ export async function putAutoCandidateAndResolve(
     throw new Error(`Invalid quote asOf (need YYYY-MM-DD): ${input.asOf}`);
   }
   const nowDate = opts?.nowDate ?? toDateOnly();
-  if (calendarDaysBetween(input.asOf, nowDate) < 0) {
-    throw new Error(`Invalid quote asOf is in the future: ${input.asOf}`);
-  }
 
   const currency = normalizeCurrency(input.currency);
   const t = nowIso();
