@@ -17,6 +17,8 @@ import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
 import QuoteFeedRefresh from "./components/QuoteFeedRefresh";
+import QuoteSourceControls from "./components/QuoteSourceControls";
+import QuoteStatusSummary from "./components/QuoteStatusSummary";
 import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
@@ -96,6 +98,11 @@ export default function App() {
     await refreshSyncBadge();
   }
 
+  async function handleQuotesChanged() {
+    setSettings(await getSettings());
+    setQuoteRefreshVersion((value) => value + 1);
+  }
+
   useEffect(() => {
     if (!auth.ready) return;
     if (auth.configured && !auth.user) {
@@ -119,7 +126,7 @@ export default function App() {
       void ingestQuotesFeed()
         .then(async (result) => {
           if (result.status === "ok" || result.status === "partial") {
-            setSettings(await getSettings());
+            await handleQuotesChanged();
           }
         })
         .catch(() => {
@@ -279,7 +286,15 @@ export default function App() {
         )}
         <NavActionsProvider api={navActionsApi}>
           <Routes>
-            <Route path="/" element={<Overview />} />
+            <Route
+              path="/"
+              element={
+                <>
+                  <QuoteStatusSummary refreshKey={quoteRefreshVersion} />
+                  <Overview key={quoteRefreshVersion} />
+                </>
+              }
+            />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/simulation" element={<Simulation />} />
@@ -288,11 +303,10 @@ export default function App() {
               path="/settings"
               element={
                 <>
-                  <QuoteFeedRefresh
-                    onUpdated={async () => {
-                      setSettings(await getSettings());
-                      setQuoteRefreshVersion((value) => value + 1);
-                    }}
+                  <QuoteFeedRefresh onUpdated={handleQuotesChanged} />
+                  <QuoteSourceControls
+                    refreshKey={quoteRefreshVersion}
+                    onChanged={handleQuotesChanged}
                   />
                   <SettingsPage
                     key={quoteRefreshVersion}

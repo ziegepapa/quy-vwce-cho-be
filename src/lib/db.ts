@@ -1,4 +1,4 @@
-/** PR 2B foundation + feed-ingestion public surface. */
+/** PR 2B quote foundation, feed ingestion, and UI state public surface. */
 export {
   VwceDB, db, migrateTransactionIsin, ensureMultiAssetMigrated,
   runPendingMigrations, isQuoteMigrationComplete, assertQuoteWritesUnlocked,
@@ -37,3 +37,8 @@ export type {
   QuoteFeedRowIssue,
   QuoteFeedValidationResult,
 } from "./quoteFeed";
+export {
+  candidateStatusLabel,
+  listQuoteSelectionStates,
+} from "./quoteStatus";
+export type { QuoteSelectionState } from "./quoteStatus";
