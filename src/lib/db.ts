@@ -1,51 +1,23 @@
-/**
- * PR 2B.1 foundation public surface.
- * Implementation modules: db.core (Dexie v4 + migration), db.quotesApi (dual-write),
- * db.crud (settings/goals/tx), db.backup (v3 authority).
- */
+/** PR 2B.1 foundation public surface. */
 export {
-  VwceDB,
-  db,
-  migrateTransactionIsin,
-  ensureMultiAssetMigrated,
-  runPendingMigrations,
-  isQuoteMigrationComplete,
-  assertQuoteWritesUnlocked,
-  ensureQuoteFoundationMigrated,
-  listInstruments,
-  upsertInstrument,
-} from "./db.core";
-
+  VwceDB, db, migrateTransactionIsin, ensureMultiAssetMigrated,
+  runPendingMigrations, isQuoteMigrationComplete, assertQuoteWritesUnlocked,
+  QUOTE_MIGRATION_META_ID, coerceQuoteSource, validateQuoteRowForMigration,
+} from "./db.m01";
+export { ensureQuoteFoundationMigrated } from "./db.m02";
+export { applyResolvedEffective, listInstruments, upsertInstrument } from "./db.m03";
+export { listQuotes, upsertQuote, getQuoteForIsin } from "./db.m04";
+export type { ManualQuoteInput, ManualQuoteSaveResult } from "./db.m05";
+export { saveManualQuoteForIsin } from "./db.m05";
+export { setQuotePreference, putAutoCandidateAndResolve } from "./db.m06";
 export {
-  listQuotes,
-  upsertQuote,
-  getQuoteForIsin,
-  saveManualQuoteForIsin,
-  setQuotePreference,
-  putAutoCandidateAndResolve,
-} from "./db.quotesApi";
-export type { ManualQuoteInput, ManualQuoteSaveResult } from "./db.quotesApi";
-
+  ensureInitialized, getSettings, saveSettings, listGoals, listTransactions,
+  findTransactionByExternalRef, upsertTransaction, deleteTransaction,
+  upsertGoal, deleteGoal,
+} from "./db.m07";
+export { exportBackup } from "./db.m08";
+export { importBackup } from "./db.m09";
 export {
-  ensureInitialized,
-  getSettings,
-  saveSettings,
-  listGoals,
-  listTransactions,
-  findTransactionByExternalRef,
-  upsertTransaction,
-  deleteTransaction,
-  upsertGoal,
-  deleteGoal,
-} from "./db.crud";
-
-export {
-  exportBackup,
-  importBackup,
-  clearAllData,
-  clearUserBusinessData,
-  getOrCreateChecklist,
-  countLocalData,
-} from "./db.backup";
-
+  clearAllData, clearUserBusinessData, getOrCreateChecklist, countLocalData,
+} from "./db.m10";
 export { uid } from "./defaults";
