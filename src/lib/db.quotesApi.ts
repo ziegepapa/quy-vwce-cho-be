@@ -2,11 +2,15 @@ export {
   listQuotes,
   upsertQuote,
   getQuoteForIsin,
+} from "./db.m04";
+
+export type { ManualQuoteInput, ManualQuoteSaveResult } from "./db.m05";
+
+export {
   saveManualQuoteForIsin,
-} from "./db.quotesWrite";
-export type { ManualQuoteInput, ManualQuoteSaveResult } from "./db.quotesWrite";
+} from "./db.m05";
 
 export {
   setQuotePreference,
   putAutoCandidateAndResolve,
-} from "./db.quotesPref";
+} from "./db.m06";
