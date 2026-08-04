@@ -1,11 +1,5 @@
-import type {
-  BackupPayload,
-  Quote,
-  QuoteCandidate,
-  QuoteMigrationMeta,
-  QuoteSelectionPreference,
-} from "./types";
-import { BACKUP_SCHEMA_VERSION, VWCE_ISIN } from "./types";
+import type { BackupPayload, Quote, QuoteCandidate, QuoteSelectionPreference } from "./types";
+import { BACKUP_SCHEMA_VERSION } from "./types";
 import { nowIso } from "./defaults";
 import {
   candidateId,
@@ -24,12 +18,32 @@ import { applyResolvedEffective } from "./db.m03";
 
 export { clearAllData, clearUserBusinessData, getOrCreateChecklist, countLocalData } from "./db.m10";
 
+const CLEAR_TABLES = [
+  () => db.settings,
+  () => db.goals,
+  () => db.transactions,
+  () => db.annualChecklists,
+  () => db.monthlySnapshots,
+  () => db.appMetadata,
+  () => db.outbox,
+  () => db.conflicts,
+  () => db.syncMeta,
+  () => db.instruments,
+  () => db.quotes,
+  () => db.quoteCandidates,
+  () => db.quotePreferences,
+] as const;
+
+async function clearAllTables(): Promise<void> {
+  await Promise.all(CLEAR_TABLES.map((getTable) => getTable().clear()));
+}
+
 function validateInstrument(inst: { isin: string; currency: string; name: string }): void {
   const isin = normalizeIsin(inst.isin);
   if (!isValidIsin(isin)) throw new Error(`Backup instrument has invalid ISIN: ${inst.isin}`);
   const currency = String(inst.currency || "EUR").toUpperCase();
   if (!currency || currency.length < 3) throw new Error(`Backup instrument has invalid currency: ${inst.currency}`);
-  if (!String(inst.name || "").trim()) throw new Error(`Backup instrument has invalid name`);
+  if (!String(inst.name || "").trim()) throw new Error("Backup instrument has invalid name");
 }
 
 function validateQuote(q: Quote): void {
@@ -64,8 +78,8 @@ function validatePreference(p: QuoteSelectionPreference): void {
   if (p.mode !== "auto" && p.mode !== "manual") throw new Error(`Backup quotePreference has invalid mode: ${p.mode}`);
 }
 
-function clearCollections(): Promise<void> {
-  return db.transaction(
+async function importLegacyOrV2(payload: BackupPayload): Promise<void> {
+  await db.transaction(
     "rw",
     [
       db.settings,
@@ -83,26 +97,40 @@ function clearCollections(): Promise<void> {
       db.quotePreferences,
     ],
     async () => {
-      await Promise.all([
-        db.settings.clear(),
-        db.goals.clear(),
-        db.transactions.clear(),
-        db.annualChecklists.clear(),
-        db.monthlySnapshots.clear(),
-        db.appMetadata.clear(),
-        db.outbox.clear(),
-        db.conflicts.clear(),
-        db.syncMeta.clear(),
-        db.instruments.clear(),
-        db.quotes.clear(),
-        db.quoteCandidates.clear(),
-        db.quotePreferences.clear(),
-      ]);
+      await clearAllTables();
+      if (payload.settings?.length) await db.settings.bulkPut(payload.settings);
+      if (payload.goals?.length) await db.goals.bulkPut(payload.goals);
+      if (payload.transactions?.length) await db.transactions.bulkPut(payload.transactions);
+      if (payload.annualChecklists?.length) await db.annualChecklists.bulkPut(payload.annualChecklists);
+      if (payload.monthlySnapshots?.length) await db.monthlySnapshots.bulkPut(payload.monthlySnapshots);
+      if (payload.schemaVersion === 2 && payload.instruments?.length) {
+        for (const inst of payload.instruments) {
+          validateInstrument(inst);
+          await db.instruments.put({
+            ...inst,
+            isin: normalizeIsin(inst.isin),
+            currency: String(inst.currency || "EUR").toUpperCase(),
+          });
+        }
+      }
+      if (payload.schemaVersion === 2 && payload.quotes?.length) {
+        for (const q of payload.quotes) {
+          validateQuote(q);
+          const isin = normalizeIsin(q.instrumentIsin);
+          const currency = String(q.currency || "EUR").toUpperCase();
+          await db.quotes.put({ ...q, id: quoteId(isin, currency), instrumentIsin: isin, currency });
+        }
+      }
     },
   );
+
+  if (payload.schemaVersion === 1) {
+    await ensureMultiAssetMigrated();
+  }
+  await ensureQuoteFoundationMigrated();
 }
 
-async function importV3Foundation(payload: BackupPayload): Promise<void> {
+async function importV3(payload: BackupPayload): Promise<void> {
   const t = nowIso();
   const autoByKey = new Map<string, QuoteCandidate>();
   const manualByKey = new Map<string, QuoteCandidate>();
@@ -126,7 +154,7 @@ async function importV3Foundation(payload: BackupPayload): Promise<void> {
       db.quotePreferences,
     ],
     async () => {
-      await clearCollections();
+      await clearAllTables();
       if (payload.settings?.length) await db.settings.bulkPut(payload.settings);
       if (payload.goals?.length) await db.goals.bulkPut(payload.goals);
       if (payload.transactions?.length) await db.transactions.bulkPut(payload.transactions);
@@ -147,10 +175,9 @@ async function importV3Foundation(payload: BackupPayload): Promise<void> {
           validateCandidate(c);
           const isin = normalizeIsin(c.instrumentIsin);
           const currency = String(c.currency || "EUR").toUpperCase();
-          const cid = candidateId(isin, currency, c.source);
           const next: QuoteCandidate = {
             ...c,
-            id: cid,
+            id: candidateId(isin, currency, c.source),
             instrumentIsin: isin,
             currency,
             createdAt: c.createdAt || t,
@@ -167,10 +194,9 @@ async function importV3Foundation(payload: BackupPayload): Promise<void> {
           validatePreference(p);
           const isin = normalizeIsin(p.instrumentIsin);
           const currency = String(p.currency || "EUR").toUpperCase();
-          const pid = preferenceId(isin, currency);
           const next: QuoteSelectionPreference = {
             ...p,
-            id: pid,
+            id: preferenceId(isin, currency),
             instrumentIsin: isin,
             currency,
             createdAt: p.createdAt || t,
@@ -181,32 +207,24 @@ async function importV3Foundation(payload: BackupPayload): Promise<void> {
         }
       }
 
-      const allKeys = new Set<string>([
-        ...autoByKey.keys(),
-        ...manualByKey.keys(),
-        ...prefByKey.keys(),
-      ]);
-      for (const key of allKeys) {
+      const keys = new Set<string>([...autoByKey.keys(), ...manualByKey.keys(), ...prefByKey.keys()]);
+      for (const key of keys) {
         const [isin, currency] = key.split("::");
-        const auto = autoByKey.get(key) ?? null;
-        const manual = manualByKey.get(key) ?? null;
-        const pref = prefByKey.get(key);
         const resolved = resolveEffective({
-          mode: pref?.mode === "manual" ? "manual" : "auto",
-          auto,
-          manual,
+          mode: prefByKey.get(key)?.mode === "manual" ? "manual" : "auto",
+          auto: autoByKey.get(key) ?? null,
+          manual: manualByKey.get(key) ?? null,
           nowDate: toDateOnly(),
           existingEffective: null,
         });
         await applyResolvedEffective(isin, currency, resolved.effective, { t, syncSettings: false });
       }
 
-      const done: QuoteMigrationMeta = {
+      await db.appMetadata.put({
         id: "quoteMigration",
         state: "complete",
         updatedAt: t,
-      };
-      await db.appMetadata.put(done as unknown as { id: string; schemaVersion: number; lastBackupAt: string; createdAt: string; updatedAt: string });
+      } as unknown as { id: string; schemaVersion: number; lastBackupAt: string; createdAt: string; updatedAt: string });
     },
   );
 }
@@ -216,69 +234,9 @@ export async function importBackup(payload: BackupPayload): Promise<void> {
   if (!isSupportedBackupSchema(payload.schemaVersion)) {
     throw new Error(`schemaVersion không khớp (cần 1, 2 hoặc ${BACKUP_SCHEMA_VERSION})`);
   }
-
   if (payload.schemaVersion === 3) {
-    await importV3Foundation(payload);
+    await importV3(payload);
     return;
   }
-
-  await db.transaction(
-    "rw",
-    [
-      db.settings,
-      db.goals,
-      db.transactions,
-      db.annualChecklists,
-      db.monthlySnapshots,
-      db.appMetadata,
-      db.outbox,
-      db.conflicts,
-      db.syncMeta,
-      db.instruments,
-      db.quotes,
-      db.quoteCandidates,
-      db.quotePreferences,
-    ],
-    async () => {
-      await clearCollections();
-      if (payload.settings?.length) await db.settings.bulkPut(payload.settings);
-      if (payload.goals?.length) await db.goals.bulkPut(payload.goals);
-      if (payload.transactions?.length) await db.transactions.bulkPut(payload.transactions);
-      if (payload.annualChecklists?.length) await db.annualChecklists.bulkPut(payload.annualChecklists);
-      if (payload.monthlySnapshots?.length) await db.monthlySnapshots.bulkPut(payload.monthlySnapshots);
-      if (payload.schemaVersion === 2 && payload.instruments?.length) {
-        for (const inst of payload.instruments) {
-          validateInstrument(inst);
-          await db.instruments.put({
-            ...inst,
-            isin: normalizeIsin(inst.isin),
-            currency: String(inst.currency || "EUR").toUpperCase(),
-          });
-        }
-      }
-      if (payload.schemaVersion === 2 && payload.quotes?.length) {
-        for (const q of payload.quotes) {
-          validateQuote(q);
-          const isin = normalizeIsin(q.instrumentIsin);
-          const currency = String(q.currency || "EUR").toUpperCase();
-          await db.quotes.put({
-            ...q,
-            id: quoteId(isin, currency),
-            instrumentIsin: isin,
-            currency,
-          });
-        }
-      }
-    },
-  );
-
-  if (payload.schemaVersion === 1) {
-    await ensureMultiAssetMigrated();
-    await ensureQuoteFoundationMigrated();
-    return;
-  }
-  if (payload.schemaVersion === 2) {
-    await ensureMultiAssetMigrated();
-    await ensureQuoteFoundationMigrated();
-  }
+  await importLegacyOrV2(payload);
 }
