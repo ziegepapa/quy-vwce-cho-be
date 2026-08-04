@@ -6,6 +6,7 @@ import {
   countLocalData,
   ensureInitialized,
   getSettings,
+  ingestQuotesFeed,
   runPendingMigrations,
 } from "./lib/db";
 import type { AppSettings } from "./lib/types";
@@ -15,6 +16,7 @@ import type { SyncStatus } from "./lib/sync/types";
 import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
+import QuoteFeedRefresh from "./components/QuoteFeedRefresh";
 import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
@@ -62,6 +64,7 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
   const [pending, setPending] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
+  const [quoteRefreshVersion, setQuoteRefreshVersion] = useState(0);
   /** Fail-closed: migration must succeed before settings/sync use schema v3. */
   const [migrationError, setMigrationError] = useState<string | null>(null);
 
@@ -111,6 +114,18 @@ export default function App() {
       const s = await getSettings();
       setSettings(s);
       setReady(true);
+
+      // Non-blocking startup refresh. Offline/network/schema failures preserve local quotes.
+      void ingestQuotesFeed()
+        .then(async (result) => {
+          if (result.status === "ok" || result.status === "partial") {
+            setSettings(await getSettings());
+          }
+        })
+        .catch(() => {
+          /* fail-safe: local quote cache remains authoritative while offline */
+        });
+
       if (auth.user) {
         const meta = await getSyncMeta(auth.user.id);
         const counts = await countLocalData();
@@ -272,10 +287,19 @@ export default function App() {
             <Route
               path="/settings"
               element={
-                <SettingsPage
-                  onReload={reload}
-                  onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined}
-                />
+                <>
+                  <QuoteFeedRefresh
+                    onUpdated={async () => {
+                      setSettings(await getSettings());
+                      setQuoteRefreshVersion((value) => value + 1);
+                    }}
+                  />
+                  <SettingsPage
+                    key={quoteRefreshVersion}
+                    onReload={reload}
+                    onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined}
+                  />
+                </>
               }
             />
           </Routes>
