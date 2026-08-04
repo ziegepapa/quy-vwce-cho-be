@@ -2,6 +2,10 @@ import type { AnnualChecklist } from "./types";
 import { defaultChecklist } from "./defaults";
 import { db } from "./db.m01a";
 
+function isLive<T extends { deletedAt?: string }>(row: T): boolean {
+  return !row.deletedAt;
+}
+
 export async function clearAllData(): Promise<void> {
   await db.transaction(
     "rw",
@@ -69,7 +73,7 @@ export async function countLocalData(): Promise<{
     db.monthlySnapshots.count(),
     db.quotes.count(),
   ]);
-  const goals = goalsAll.filter((g) => !(g as { deletedAt?: string }).deletedAt).length;
-  const transactions = transactionsAll.filter((t) => !(t as { deletedAt?: string }).deletedAt).length;
+  const goals = goalsAll.filter(isLive).length;
+  const transactions = transactionsAll.filter(isLive).length;
   return { settings, goals, transactions, annualChecklists, monthlySnapshots, quotes };
 }
