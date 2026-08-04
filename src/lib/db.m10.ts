@@ -73,7 +73,7 @@ export async function countLocalData(): Promise<{
     db.monthlySnapshots.count(),
     db.quotes.count(),
   ]);
-  const settings = settingsAll.filter(isLive).length;
+  const settings = settingsAll.length;
   const goals = goalsAll.filter(isLive).length;
   const transactions = transactionsAll.filter(isLive).length;
   return { settings, goals, transactions, annualChecklists, monthlySnapshots, quotes };
