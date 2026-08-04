@@ -1,6 +1,7 @@
 import type { AnnualChecklist } from "./types";
-import { defaultChecklist, nowIso, uid } from "./defaults";
+import { defaultChecklist } from "./defaults";
 import { db } from "./db.m01a";
+
 export async function clearAllData(): Promise<void> {
   await db.transaction(
     "rw",
@@ -53,14 +54,20 @@ export async function getOrCreateChecklist(year: number): Promise<AnnualChecklis
 }
 
 export async function countLocalData(): Promise<{
+  settings: number;
   goals: number;
   transactions: number;
+  annualChecklists: number;
+  monthlySnapshots: number;
   quotes: number;
 }> {
-  const [goals, transactions, quotes] = await Promise.all([
+  const [settings, goals, transactions, annualChecklists, monthlySnapshots, quotes] = await Promise.all([
+    db.settings.count(),
     db.goals.count(),
     db.transactions.count(),
+    db.annualChecklists.count(),
+    db.monthlySnapshots.count(),
     db.quotes.count(),
   ]);
-  return { goals, transactions, quotes };
+  return { settings, goals, transactions, annualChecklists, monthlySnapshots, quotes };
 }
