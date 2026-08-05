@@ -176,6 +176,10 @@ export default function TodayCenter({
   }, [ownerKey, transactions]);
 
   const delta = useMemo(() => portfolioPulseDelta(pulse), [pulse]);
+  const portfolioEmpty =
+    transactions.length === 0 &&
+    Math.abs(totalValue) < 0.005 &&
+    Math.abs(totalQuantity) < 0.000001;
   const parsedAmount = parseDecimal(whatIfAmount);
   const amount = Number.isFinite(parsedAmount) ? Math.max(0, parsedAmount) : 0;
   const years = Math.max(
@@ -246,9 +250,13 @@ export default function TodayCenter({
       ? signedMoney(delta.value)
       : "Mốc đầu tiên";
 
+  const extraUnitsText = extraUnits.toLocaleString("vi-VN", { maximumFractionDigits: 4 });
   const whatIfValue = vwcePrice > 0 && amount > 0
-    ? `+${extraUnits.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} VWCE`
+    ? `+${extraUnitsText} VWCE`
     : "Cần giá VWCE";
+  const whatIfCardValue = portfolioEmpty && vwcePrice > 0 && amount > 0
+    ? `≈ ${extraUnitsText} VWCE`
+    : whatIfValue;
 
   function confirmRestore() {
     if (!window.confirm("Chỉ đánh dấu sau khi bạn đã thử nhập một bản backup và kiểm tra số liệu. Đã hoàn tất?")) return;
@@ -273,30 +281,37 @@ export default function TodayCenter({
             <h3>Đổi gì?</h3>
             {pulseChanged ? <span className="today-new-label">Mới</span> : null}
           </header>
-          {!valueComplete ? (
-            <div className="today-empty-state">
-              <strong>Đang chờ đủ giá</strong>
-              <span>Không ghi mốc thiếu dữ liệu.</span>
-            </div>
-          ) : delta ? (
-            <button type="button" className="today-card-detail" onClick={() => setTraceOpen(true)}>
-              <span className={`today-main-metric ${metricTone(delta.value)}`}>{signedMoney(delta.value)}</span>
-              <span className="today-metric-caption">
-                {delta.valuePct === null
-                  ? "Mốc trước chưa có giá trị"
-                  : `${delta.valuePct >= 0 ? "+" : ""}${delta.valuePct.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`}
-                {Math.abs(delta.quantity) > 0.000001
-                  ? ` · ${delta.quantity > 0 ? "+" : ""}${delta.quantity.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} đơn vị`
-                  : " · số lượng không đổi"}
+          <button
+            type="button"
+            className="today-card-detail"
+            onClick={() => setTraceOpen(true)}
+            aria-label={`Đổi gì: ${deltaValue}. Xem nguồn dữ liệu`}
+          >
+            {!valueComplete ? (
+              <span className="today-empty-state">
+                <strong>Đang chờ đủ giá</strong>
+                <span>Không ghi mốc thiếu dữ liệu.</span>
               </span>
-              <span className="today-detail-hint">Xem nguồn</span>
-            </button>
-          ) : (
-            <div className="today-empty-state">
-              <strong>Đã tạo mốc đầu tiên</strong>
-              <span>Lần mở tiếp theo sẽ hiện thay đổi.</span>
-            </div>
-          )}
+            ) : delta ? (
+              <>
+                <span className={`today-main-metric ${metricTone(delta.value)}`}>{signedMoney(delta.value)}</span>
+                <span className="today-metric-caption">
+                  {delta.valuePct === null
+                    ? "Mốc trước chưa có giá trị"
+                    : `${delta.valuePct >= 0 ? "+" : ""}${delta.valuePct.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`}
+                  {Math.abs(delta.quantity) > 0.000001
+                    ? ` · ${delta.quantity > 0 ? "+" : ""}${delta.quantity.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} đơn vị`
+                    : " · số lượng không đổi"}
+                </span>
+              </>
+            ) : (
+              <span className="today-empty-state">
+                <strong>Đã tạo mốc đầu tiên</strong>
+                <span>Lần mở tiếp theo sẽ hiện thay đổi.</span>
+              </span>
+            )}
+            <span className="today-detail-hint">Xem nguồn</span>
+          </button>
         </article>
 
         <Link
@@ -325,11 +340,15 @@ export default function TodayCenter({
             <h3>Nếu thêm…?</h3>
           </header>
           <button type="button" className="today-card-detail" onClick={() => setWhatIfOpen(true)}>
-            <span className="today-card-context">Thử {formatMoney(amount)}</span>
-            <span className="today-main-metric neutral">{whatIfValue}</span>
+            <span className={`today-card-context${portfolioEmpty ? " is-simulation" : ""}`}>
+              {portfolioEmpty ? "Mô phỏng · chưa ghi vào quỹ" : `Thử ${formatMoney(amount)}`}
+            </span>
+            <span className="today-main-metric neutral">{whatIfCardValue}</span>
             <span className="today-metric-caption">
               {vwcePrice > 0 && amount > 0
-                ? `${formatMoney(futureReal)} sức mua sau ${years} năm.`
+                ? portfolioEmpty
+                  ? `${formatMoney(amount)} giả định theo giá hiện tại · không phải số dư.`
+                  : `${formatMoney(futureReal)} sức mua sau ${years} năm.`
                 : "Cần giá hợp lệ để quy đổi."}
             </span>
             <span className="today-detail-hint">Đổi khoản thử</span>
@@ -356,9 +375,12 @@ export default function TodayCenter({
       <TraceSheet
         open={traceOpen}
         onClose={() => setTraceOpen(false)}
+        eyebrow="Nhịp Quỹ · nguồn dữ liệu"
         title="Đổi gì?"
         value={deltaValue}
-        explanation="Delta dùng hai mốc danh mục đầy đủ gần nhất. Refresh lỗi hoặc thiếu giá không tạo biến động giả."
+        explanation={delta
+          ? "Delta dùng hai mốc danh mục đầy đủ gần nhất. Refresh lỗi hoặc thiếu giá không tạo biến động giả."
+          : "Đây là mốc danh mục đầy đủ đầu tiên. Lần mở có thay đổi tiếp theo sẽ tạo delta để đối chiếu."}
         rows={[
           { label: "Hiện tại", value: formatMoney(totalValue) },
           {
@@ -381,14 +403,17 @@ export default function TodayCenter({
       <TraceSheet
         open={whatIfOpen}
         onClose={() => setWhatIfOpen(false)}
-        eyebrow="Nhịp Quỹ"
+        eyebrow="Nhịp Quỹ · mô phỏng"
         title="Nếu thêm…?"
-        value={whatIfValue}
-        explanation="Ước tính quy đổi khoản thêm hôm nay theo giá VWCE hiện tại và sức mua cuối kế hoạch. Đây không phải giao dịch thật."
+        value={whatIfCardValue}
+        explanation={portfolioEmpty
+          ? "Mô phỏng độc lập trước giao dịch đầu tiên. Kết quả không phải tài sản hiện có và không ghi gì vào sổ local."
+          : "Ước tính quy đổi khoản thêm hôm nay theo giá VWCE hiện tại và sức mua cuối kế hoạch. Đây không phải giao dịch thật."}
         rows={[
+          { label: "Trạng thái", value: portfolioEmpty ? "Mô phỏng · chưa ghi sổ" : "Ước tính · chưa tạo giao dịch", tone: "muted" },
           { label: "Khoản thử", value: formatMoney(amount) },
           { label: "Giá VWCE", value: vwcePrice > 0 ? formatMoney(vwcePrice) : "Chưa có", tone: vwcePrice > 0 ? undefined : "warning" },
-          { label: "Mua thêm", value: whatIfValue },
+          { label: "Mua thêm", value: whatIfCardValue },
           { label: `Sức mua sau ${years} năm`, value: amount > 0 ? formatMoney(futureReal) : "—" },
         ]}
         links={[

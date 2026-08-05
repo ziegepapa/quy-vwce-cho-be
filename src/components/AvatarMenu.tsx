@@ -41,10 +41,7 @@ export default function AvatarMenu({
   const initial = (displayName.trim()[0] || "?").toUpperCase();
   const gradient = avatarGradient(displayName);
   const subLabel = email ?? SYNC_STATUS_LABEL[syncStatus];
-  const metaLabel =
-    pending > 0 ? `${pending} chờ` : SYNC_STATUS_LABEL[syncStatus];
-  // Đọc lúc render chứ không giữ trong state: menu chỉ tồn tại khi đang mở,
-  // nên mỗi lần mở lại đã là giá trị mới nhất.
+  const metaLabel = pending > 0 ? `${pending} chờ` : SYNC_STATUS_LABEL[syncStatus];
   const themeLabel = THEME_LABEL[readTheme()];
 
   return (
@@ -84,10 +81,19 @@ export default function AvatarMenu({
       <a
         className="avatar-menu-item"
         role="menuitem"
+        href="#/notfallmappe"
+        onClick={onClose}
+      >
+        Hồ sơ khẩn cấp
+        <span className="avatar-menu-item-meta">An toàn</span>
+      </a>
+      <a
+        className="avatar-menu-item"
+        role="menuitem"
         href="#/settings"
         onClick={onClose}
       >
-        Chủ đề
+        Cài đặt
         <span className="avatar-menu-item-meta">{themeLabel}</span>
       </a>
       <div className="avatar-menu-rule" role="presentation" />
