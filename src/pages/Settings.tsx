@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   clearAllData,
   db,
@@ -6,22 +7,24 @@ import {
   getOrCreateChecklist,
   getSettings,
   importBackup,
-  listInstruments,
-  listQuotes,
   listTransactions,
-  saveManualQuoteForIsin,
   saveSettings,
 } from "../lib/db";
-import type { AnnualChecklist, AppSettings, BackupPayload, Instrument, Quote } from "../lib/types";
-import { APP_VERSION, SCHEMA_VERSION, VWCE_ISIN } from "../lib/types";
+import type { AnnualChecklist, AppSettings, BackupPayload } from "../lib/types";
+import { APP_VERSION, SCHEMA_VERSION } from "../lib/types";
 import { isSupportedBackupSchema } from "../lib/backupSchema";
-import { csvEscape, formatDateVN, formatMoney, parseDecimal } from "../lib/calc";
-import { isValidAsOfDate, isValidIsin, normalizeIsin } from "../lib/instrument";
+import { csvEscape, formatDateVN, parseDecimal } from "../lib/calc";
 import type { ThemeChoice } from "../lib/theme";
 import { THEME_OPTIONS, persistTheme, readTheme } from "../lib/theme";
 import { useAuth } from "../lib/auth";
 import { listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
 import type { OutboxItem } from "../lib/sync/types";
+import SettingsPricePanel from "../components/SettingsPricePanel";
+
+type SettingsTab = "general" | "prices" | "data";
+type SaveState = "saved" | "dirty" | "saving" | "error";
+
+const SETTINGS_AUTOSAVE_MS = 650;
 
 function pctDisplay(decimal: number): string {
   if (!Number.isFinite(decimal)) return "—";
@@ -48,7 +51,6 @@ function NumField({
   id,
   value,
   onCommit,
-  className = "pct-input",
   suffix,
   minFrac = 0,
   maxFrac = 2,
@@ -57,38 +59,45 @@ function NumField({
   id?: string;
   value: number;
   onCommit: (n: number) => void;
-  className?: string;
   suffix?: string;
   minFrac?: number;
   maxFrac?: number;
   ariaLabel?: string;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
-  const display = draft !== null ? draft : value ? formatNum(value, minFrac, maxFrac) : "";
+  const display = draft !== null ? draft : formatNum(value, minFrac, maxFrac);
 
   return (
-    <>
+    <span className="number-field-wrap">
       <input
         id={id}
-        className={className}
+        className="pct-input"
         type="text"
         inputMode="decimal"
         autoComplete="off"
         aria-label={ariaLabel}
         value={display}
-        onChange={(e) => setDraft(e.target.value)}
-        onFocus={(e) => {
-          setDraft(e.target.value);
-          e.target.select();
+        onChange={(event) => {
+          const raw = event.target.value;
+          setDraft(raw);
+          if (!raw.trim()) return;
+          const next = parseDecimal(raw);
+          if (Number.isFinite(next) && next !== value) onCommit(next);
+        }}
+        onFocus={(event) => {
+          setDraft(event.target.value);
+          event.target.select();
         }}
         onBlur={() => {
-          const next = draft === null ? value : parseDecimal(draft);
+          if (draft?.trim()) {
+            const next = parseDecimal(draft);
+            if (Number.isFinite(next) && next !== value) onCommit(next);
+          }
           setDraft(null);
-          if (next !== value) onCommit(next);
         }}
       />
       {suffix ? <span className="pct-suffix">{suffix}</span> : null}
-    </>
+    </span>
   );
 }
 
@@ -103,14 +112,14 @@ function Segmented({
 }) {
   return (
     <div className="seg-control" role="group">
-      {options.map((o) => (
+      {options.map((option) => (
         <button
-          key={o.value}
+          key={option.value}
           type="button"
-          className={value === o.value ? "seg-opt active" : "seg-opt"}
-          onClick={() => onChange(o.value)}
+          className={value === option.value ? "seg-opt active" : "seg-opt"}
+          onClick={() => onChange(option.value)}
         >
-          {o.label}
+          {option.label}
         </button>
       ))}
     </div>
@@ -120,11 +129,24 @@ function Segmented({
 export default function SettingsPage({
   onReload,
   onOpenMigrate,
+  refreshKey,
+  onQuotesChanged,
+  onSettingsChanged,
 }: {
   onReload: () => void;
   onOpenMigrate?: () => void;
+  refreshKey?: number;
+  onQuotesChanged?: () => void | Promise<void>;
+  onSettingsChanged?: () => void | Promise<void>;
 }) {
-  const [s, setS] = useState<AppSettings | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const activeTab: SettingsTab =
+    requestedTab === "prices" || requestedTab === "data" ? requestedTab : "general";
+
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [metaBackup, setMetaBackup] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
   const [checklist, setChecklist] = useState<AnnualChecklist | null>(null);
@@ -132,37 +154,41 @@ export default function SettingsPage({
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
-  const auth = useAuth();
   const [dead, setDead] = useState<OutboxItem[]>([]);
   const [deadRetrying, setDeadRetrying] = useState(false);
   const [deadSyncedMsg, setDeadSyncedMsg] = useState(false);
+  const auth = useAuth();
 
-  /** Multi-asset: local instruments + quotes (no outbox). */
-  const [instruments, setInstruments] = useState<Instrument[]>([]);
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [quoteIsin, setQuoteIsin] = useState(VWCE_ISIN);
-  const [quotePrice, setQuotePrice] = useState("");
-  const [quoteAsOf, setQuoteAsOf] = useState(() => new Date().toISOString().slice(0, 10));
-  const [quoteErr, setQuoteErr] = useState<string | null>(null);
-  const [quoteSaving, setQuoteSaving] = useState(false);
-
-  async function reloadAssets() {
-    setInstruments(await listInstruments());
-    setQuotes(await listQuotes());
-  }
+  const pendingSettings = useRef<Partial<AppSettings>>({});
+  const saveTimer = useRef<number | null>(null);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  const outstandingSaves = useRef(0);
+  const mounted = useRef(true);
+  const flushRef = useRef<() => Promise<void>>(async () => undefined);
+  const onSettingsChangedRef = useRef(onSettingsChanged);
 
   useEffect(() => {
-    (async () => {
-      setS(await getSettings());
+    onSettingsChangedRef.current = onSettingsChanged;
+  }, [onSettingsChanged]);
+
+  useEffect(() => {
+    mounted.current = true;
+    void (async () => {
+      setSettings(await getSettings());
       setMetaBackup((await db.appMetadata.get("meta"))?.lastBackupAt ?? "");
-      setChecklist(await getOrCreateChecklist(checklistYear));
-      await reloadAssets();
-      if (auth.user?.id) {
-        setDead(await listDeadOutbox());
-      } else {
-        setDead([]);
-      }
+      if (auth.user?.id) setDead(await listDeadOutbox());
+      else setDead([]);
     })();
+    return () => {
+      mounted.current = false;
+    };
+  }, [auth.user?.id]);
+
+  useEffect(() => {
+    void getOrCreateChecklist(checklistYear).then(setChecklist);
+  }, [checklistYear]);
+
+  useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);
     window.addEventListener("online", on);
@@ -171,86 +197,104 @@ export default function SettingsPage({
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };
-  }, [checklistYear, auth.user?.id]);
+  }, []);
 
-  function pickTheme(t: ThemeChoice) {
-    setTheme(t);
-    persistTheme(t);
+  async function flushPendingSettings() {
+    if (saveTimer.current !== null) {
+      window.clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    const partial = pendingSettings.current;
+    if (Object.keys(partial).length === 0) return;
+    pendingSettings.current = {};
+    outstandingSaves.current += 1;
+
+    const run = async () => {
+      let failed = false;
+      if (mounted.current) setSaveState("saving");
+      try {
+        await saveSettings(partial);
+        await onSettingsChangedRef.current?.();
+        if (mounted.current) setSaveError(null);
+      } catch (reason) {
+        failed = true;
+        pendingSettings.current = { ...partial, ...pendingSettings.current };
+        if (mounted.current) {
+          setSaveError(reason instanceof Error ? reason.message : "Không lưu được cài đặt.");
+          setSaveState("error");
+        }
+      } finally {
+        outstandingSaves.current -= 1;
+        if (mounted.current && !failed) {
+          const stillPending = Object.keys(pendingSettings.current).length > 0;
+          setSaveState(stillPending ? "dirty" : outstandingSaves.current > 0 ? "saving" : "saved");
+        }
+      }
+    };
+
+    const queued = saveQueue.current.then(run, run);
+    saveQueue.current = queued.then(() => undefined, () => undefined);
+    await queued;
   }
 
-  async function persist(partial: Partial<AppSettings>) {
-    await saveSettings(partial);
-    setS(await getSettings());
+  flushRef.current = flushPendingSettings;
+
+  function scheduleSettingsSave() {
+    if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      void flushRef.current();
+    }, SETTINGS_AUTOSAVE_MS);
   }
 
-  /**
-   * Legacy "Giá VWCE gần nhất" → atomic saveManualQuoteForIsin (quote + mirror).
-   * Policy A: reject price <= 0 — never create settings/quote split-brain.
-   */
-  async function persistLegacyVwcePrice(price: number) {
-    if (!(price > 0)) {
-      alert("Giá phải > 0");
-      setS(await getSettings());
-      return;
-    }
-    const asOf = new Date().toISOString().slice(0, 10);
-    try {
-      await saveManualQuoteForIsin({
-        instrumentIsin: VWCE_ISIN,
-        price,
-        asOf,
-        venue: "XETRA",
-      });
-      setS(await getSettings());
-      await reloadAssets();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Không lưu được giá VWCE");
-      setS(await getSettings());
-      await reloadAssets();
-    }
+  function patchSettings(partial: Partial<AppSettings>) {
+    setSettings((current) => (current ? { ...current, ...partial } : current));
+    pendingSettings.current = { ...pendingSettings.current, ...partial };
+    setSaveError(null);
+    setSaveState("dirty");
+    scheduleSettingsSave();
   }
 
-  async function saveManualQuote() {
-    setQuoteErr(null);
-    const isin = normalizeIsin(quoteIsin);
-    if (!isValidIsin(isin)) {
-      setQuoteErr("ISIN không hợp lệ (checksum).");
-      return;
-    }
-    const price = parseDecimal(quotePrice);
-    if (!(price > 0)) {
-      setQuoteErr("Giá phải > 0.");
-      return;
-    }
-    if (!isValidAsOfDate(quoteAsOf)) {
-      setQuoteErr("Ngày asOf phải dạng YYYY-MM-DD hợp lệ.");
-      return;
-    }
-    setQuoteSaving(true);
-    try {
-      await saveManualQuoteForIsin({
-        instrumentIsin: isin,
-        price,
-        asOf: quoteAsOf.trim(),
-        venue: instruments.find((i) => i.isin === isin)?.venue,
-      });
-      setS(await getSettings());
-      await reloadAssets();
-      setQuotePrice("");
-    } catch (e) {
-      setQuoteErr(e instanceof Error ? e.message : "Không lưu được quote");
-    } finally {
-      setQuoteSaving(false);
-    }
+  useEffect(() => {
+    const flushWhenHidden = () => {
+      if (document.visibilityState === "hidden") void flushRef.current();
+    };
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (Object.keys(pendingSettings.current).length === 0 && outstandingSaves.current === 0) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("pagehide", flushWhenHidden);
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    document.addEventListener("visibilitychange", flushWhenHidden);
+    return () => {
+      window.removeEventListener("pagehide", flushWhenHidden);
+      window.removeEventListener("beforeunload", warnBeforeUnload);
+      document.removeEventListener("visibilitychange", flushWhenHidden);
+      if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+      const partial = pendingSettings.current;
+      pendingSettings.current = {};
+      if (Object.keys(partial).length > 0) void saveSettings(partial);
+    };
+  }, []);
+
+  function changeTab(tab: SettingsTab) {
+    void flushRef.current();
+    setSearchParams(tab === "general" ? {} : { tab }, { replace: true });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function pickTheme(next: ThemeChoice) {
+    setTheme(next);
+    persistTheme(next);
   }
 
   function downloadJson(payload: BackupPayload, name: string) {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(
+    const anchor = document.createElement("a");
+    anchor.href = URL.createObjectURL(
       new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
     );
-    a.download = name;
-    a.click();
+    anchor.download = name;
+    anchor.click();
   }
 
   async function doExport() {
@@ -277,7 +321,7 @@ export default function SettingsPage({
       );
       return;
     }
-    if (!confirm("Tiếp tục nhập? (sẽ tự backup dữ liệu hiện tại trước)")) return;
+    if (!confirm("Tiếp tục nhập? Ứng dụng sẽ tự sao lưu dữ liệu hiện tại trước.")) return;
     try {
       const current = await exportBackup();
       downloadJson(
@@ -291,320 +335,300 @@ export default function SettingsPage({
       await importBackup(data);
       alert("Nhập backup thành công");
       onReload();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Lỗi nhập");
+    } catch (reason) {
+      alert(reason instanceof Error ? reason.message : "Lỗi nhập");
     }
   }
 
   async function exportCsv() {
-    const txs = await listTransactions();
+    const transactions = await listTransactions();
     const header = "date,type,amount,unitPrice,quantity,fee,tax,instrumentIsin,notes\n";
-    const rows = txs
-      .map((t) =>
+    const rows = transactions
+      .map((transaction) =>
         [
-          csvEscape(t.date),
-          csvEscape(t.type),
-          csvEscape(t.amount),
-          csvEscape(t.unitPrice ?? ""),
-          csvEscape(t.quantity ?? ""),
-          csvEscape(t.fee ?? ""),
-          csvEscape(t.tax ?? ""),
-          csvEscape(t.instrumentIsin ?? ""),
-          csvEscape(t.notes ?? ""),
+          csvEscape(transaction.date),
+          csvEscape(transaction.type),
+          csvEscape(transaction.amount),
+          csvEscape(transaction.unitPrice ?? ""),
+          csvEscape(transaction.quantity ?? ""),
+          csvEscape(transaction.fee ?? ""),
+          csvEscape(transaction.tax ?? ""),
+          csvEscape(transaction.instrumentIsin ?? ""),
+          csvEscape(transaction.notes ?? ""),
         ].join(","),
       )
       .join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(
+    const anchor = document.createElement("a");
+    anchor.href = URL.createObjectURL(
       new Blob(["\uFEFF" + header + rows], { type: "text/csv;charset=utf-8" }),
     );
-    a.download = "vwce-transactions.csv";
-    a.click();
+    anchor.download = "vwce-transactions.csv";
+    anchor.click();
   }
 
-  function quoteFor(isin: string): Quote | undefined {
-    return quotes.find((q) => q.instrumentIsin === isin && q.currency === "EUR");
-  }
+  if (!settings) return <p className="muted">Đang tải…</p>;
 
-  if (!s) return <p className="muted">Đang tải…</p>;
+  const saveLabel =
+    saveState === "saving"
+      ? "Đang lưu…"
+      : saveState === "dirty"
+        ? "Sẽ tự lưu"
+        : saveState === "error"
+          ? "Chưa lưu được"
+          : "Đã lưu tự động";
 
   return (
-    <div className="settings-v9">
-      <p className="group-label">Giao diện</p>
-      <div className="group-box">
-        <div className="group-row">
-          <span className="group-row-label">Chủ đề</span>
-          <Segmented
-            value={theme}
-            options={THEME_OPTIONS}
-            onChange={(v) => pickTheme(v as ThemeChoice)}
-          />
+    <div className="settings-page">
+      <header className="settings-hero">
+        <div>
+          <p className="settings-hero-kicker">Gọn hơn · an toàn hơn</p>
+          <h2>Mọi thứ ở đúng một chỗ</h2>
+          <p>Thay đổi được lưu tự động. Bạn có thể chuyển màn hình mà không cần tìm nút Lưu.</p>
         </div>
-        <p className="group-hint">
-          Premium là nền hắc thạch với điểm nhấn champagne. Lựa chọn được nhớ
-          trên máy này.
-        </p>
-      </div>
+        <span className={`settings-save-pill save-state-${saveState}`} role="status" aria-live="polite">
+          <span className="save-dot" aria-hidden />
+          {saveLabel}
+        </span>
+      </header>
 
-      <p className="group-label">Kế hoạch</p>
-      <div className="group-box">
-        <div className="group-row">
-          <label htmlFor="s-plan">Tên kế hoạch</label>
-          <input
-            id="s-plan"
-            value={s.planName ?? ""}
-            onChange={(e) => setS({ ...s, planName: e.target.value })}
-            onBlur={() => persist({ planName: s.planName })}
-          />
-        </div>
-        <div className="group-row">
-          <label htmlFor="s-child">Tên bé</label>
-          <input
-            id="s-child"
-            value={s.childName ?? ""}
-            onChange={(e) => setS({ ...s, childName: e.target.value })}
-            onBlur={() => persist({ childName: s.childName })}
-          />
-        </div>
-        <div className="group-row">
-          <span className="group-row-label">Tài khoản đứng tên</span>
-          <Segmented
-            value={s.accountType}
-            options={[
-              { value: "parent", label: "Cha/mẹ" },
-              { value: "child", label: "Bé" },
-            ]}
-            onChange={(v) => persist({ accountType: v as "child" | "parent" })}
-          />
-        </div>
-      </div>
+      {saveError ? <p className="settings-error settings-global-error" role="alert">{saveError}</p> : null}
 
-      <p className="group-label">Giả định</p>
-      <div className="group-box">
-        <div className="group-row row-between-inline">
-          <span className="group-row-label">Lạm phát</span>
-          <NumField
-            value={s.inflationRate * 100}
-            minFrac={1}
-            maxFrac={1}
-            suffix="%"
-            ariaLabel={`Lạm phát ${pctDisplay(s.inflationRate)}`}
-            onCommit={(pct) => persist({ inflationRate: pctToRate(pct) })}
-          />
-        </div>
-        <div className="group-row row-between-inline">
-          <span className="group-row-label">Buffer</span>
-          <NumField
-            value={s.bufferPct * 100}
-            minFrac={1}
-            maxFrac={1}
-            suffix="%"
-            ariaLabel={`Buffer ${pctDisplay(s.bufferPct)}`}
-            onCommit={(pct) => persist({ bufferPct: pctToRate(pct) })}
-          />
-        </div>
-        <div className="group-row row-between-inline">
-          <span className="group-row-label">Lợi suất VWCE</span>
-          <NumField
-            value={s.vwceReturn * 100}
-            minFrac={1}
-            maxFrac={1}
-            suffix="%"
-            ariaLabel={`Lợi suất VWCE ${pctDisplay(s.vwceReturn)}`}
-            onCommit={(pct) => persist({ vwceReturn: pctToRate(pct) })}
-          />
-        </div>
-        <div className="group-row row-between-inline">
-          <span className="group-row-label">Lợi suất an toàn</span>
-          <NumField
-            value={s.safeReturn * 100}
-            minFrac={1}
-            maxFrac={1}
-            suffix="%"
-            ariaLabel={`Lợi suất an toàn ${pctDisplay(s.safeReturn)}`}
-            onCommit={(pct) => persist({ safeReturn: pctToRate(pct) })}
-          />
-        </div>
-      </div>
-
-      <p className="group-label">Tài sản / mã (ISIN)</p>
-      <div className="group-box">
-        {/* @deprecated legacy field — synced intentionally to VWCE quote */}
-        <div className="group-row row-between-inline">
-          <span className="group-row-label">Giá VWCE gần nhất (legacy)</span>
-          <NumField
-            className="pct-input wide"
-            value={s.latestVwcePrice}
-            minFrac={0}
-            maxFrac={4}
-            suffix="€"
-            ariaLabel="Giá VWCE gần nhất"
-            onCommit={(price) => void persistLegacyVwcePrice(price)}
-          />
-        </div>
-        {s.latestPriceDate && (
-          <p className="group-hint">Legacy cập nhật {formatDateVN(s.latestPriceDate)} · đồng bộ quote VWCE</p>
-        )}
-
-        {instruments.length === 0 ? (
-          <p className="group-hint">Chưa có instrument — migration sẽ seed VWCE khi mở app.</p>
-        ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0" }}>
-            {instruments.map((inst) => {
-              const q = quoteFor(inst.isin);
-              return (
-                <li
-                  key={inst.isin}
-                  style={{
-                    borderTop: "1px solid var(--border, #e5e7eb)",
-                    padding: "12px 0",
-                    fontSize: 14,
-                  }}
-                >
-                  <div style={{ fontWeight: 600 }}>
-                    {inst.name || inst.isin}
-                    {inst.ticker ? ` · ${inst.ticker}` : ""}
-                  </div>
-                  <div className="muted" style={{ fontSize: 12 }}>
-                    {inst.isin}
-                    {inst.currency ? ` · ${inst.currency}` : ""}
-                    {inst.venue ? ` · ${inst.venue}` : ""}
-                  </div>
-                  {q ? (
-                    <div style={{ marginTop: 4 }}>
-                      {formatMoney(q.price, q.currency)} · asOf {formatDateVN(q.asOf)} · {q.source}
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: 4, color: "var(--warning-600, #b45309)" }}>Thiếu giá</div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <p className="group-hint" style={{ marginTop: 12 }}>
-          Quote thủ công (local-only, chưa đồng bộ Supabase). Mỗi ISIN một giá — không ghi đè chéo.
-        </p>
-        <div className="group-row">
-          <label htmlFor="q-isin">ISIN</label>
-          <input
-            id="q-isin"
-            value={quoteIsin}
-            onChange={(e) => setQuoteIsin(e.target.value)}
-            autoCapitalize="characters"
-            style={{ minHeight: 44 }}
-          />
-        </div>
-        <div className="group-row">
-          <label htmlFor="q-price">Giá (€)</label>
-          <input
-            id="q-price"
-            inputMode="decimal"
-            value={quotePrice}
-            onChange={(e) => setQuotePrice(e.target.value)}
-            style={{ minHeight: 44 }}
-          />
-        </div>
-        <div className="group-row">
-          <label htmlFor="q-asof">asOf (YYYY-MM-DD)</label>
-          <input
-            id="q-asof"
-            value={quoteAsOf}
-            onChange={(e) => setQuoteAsOf(e.target.value)}
-            style={{ minHeight: 44 }}
-          />
-        </div>
-        {quoteErr && (
-          <p role="alert" style={{ color: "var(--danger-600, #b91c1c)", fontSize: 13 }}>
-            {quoteErr}
-          </p>
-        )}
+      <nav className="settings-tabs" role="tablist" aria-label="Nhóm cài đặt">
         <button
           type="button"
-          className="group-action"
-          style={{ minHeight: 44 }}
-          disabled={quoteSaving}
-          onClick={() => void saveManualQuote()}
+          role="tab"
+          aria-selected={activeTab === "general"}
+          className={activeTab === "general" ? "settings-tab active" : "settings-tab"}
+          onClick={() => changeTab("general")}
         >
-          {quoteSaving ? "Đang lưu…" : "Lưu quote thủ công"}
+          <span aria-hidden>◫</span>
+          Chung
         </button>
-      </div>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "prices"}
+          className={activeTab === "prices" ? "settings-tab active" : "settings-tab"}
+          onClick={() => changeTab("prices")}
+        >
+          <span aria-hidden>€</span>
+          Giá & tài sản
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "data"}
+          className={activeTab === "data" ? "settings-tab active" : "settings-tab"}
+          onClick={() => changeTab("data")}
+        >
+          <span aria-hidden>↥</span>
+          Dữ liệu
+        </button>
+      </nav>
 
-      <p className="group-label">Hạn</p>
-      <div className="group-box">
-        <div className="group-row">
-          <span className="group-row-label">Hạn 2042</span>
-          <Segmented
-            value={s.endMode}
-            options={[
-              { value: "hard", label: "Hạn cứng" },
-              { value: "flexible", label: "Linh hoạt" },
-            ]}
-            onChange={(v) => persist({ endMode: v as "hard" | "flexible" })}
-          />
-        </div>
-      </div>
+      {activeTab === "general" ? (
+        <div className="settings-panel" role="tabpanel" aria-label="Cài đặt chung">
+          <section className="settings-card">
+            <div className="settings-card-head">
+              <div>
+                <p className="settings-card-eyebrow">Kế hoạch</p>
+                <h3>Thông tin chính</h3>
+                <p>Tên hiển thị và người sở hữu tài khoản đầu tư.</p>
+              </div>
+              <span className="settings-icon-bubble" aria-hidden>✦</span>
+            </div>
+            <div className="settings-field-grid">
+              <label className="setting-field">
+                <span>Tên kế hoạch</span>
+                <input
+                  value={settings.planName ?? ""}
+                  onChange={(event) => patchSettings({ planName: event.target.value })}
+                  onBlur={() => void flushRef.current()}
+                />
+              </label>
+              <label className="setting-field">
+                <span>Tên bé</span>
+                <input
+                  value={settings.childName ?? ""}
+                  onChange={(event) => patchSettings({ childName: event.target.value })}
+                  onBlur={() => void flushRef.current()}
+                />
+              </label>
+            </div>
+            <div className="setting-choice-row">
+              <div>
+                <strong>Tài khoản đứng tên</strong>
+                <span>Ảnh hưởng cách diễn giải quyền sở hữu.</span>
+              </div>
+              <Segmented
+                value={settings.accountType}
+                options={[
+                  { value: "parent", label: "Cha/mẹ" },
+                  { value: "child", label: "Bé" },
+                ]}
+                onChange={(value) => patchSettings({ accountType: value as "child" | "parent" })}
+              />
+            </div>
+          </section>
 
-      <p className="group-label">Checklist {checklistYear}</p>
-      <div className="group-box">
-        <div className="group-row">
-          <label htmlFor="cl-year">Năm</label>
-          <input
-            id="cl-year"
-            type="number"
-            value={checklistYear}
-            onChange={(e) => {
-              const y = Number(e.target.value);
-              if (y >= 2000 && y <= 2100) setChecklistYear(y);
-            }}
-          />
-        </div>
-        {checklist?.items.map((item) => (
-          <label key={item.key} className="switch-row">
-            <span>{item.label}</span>
-            <input
-              type="checkbox"
-              className="ios-switch"
-              checked={item.done}
-              onChange={async () => {
-                const items = checklist.items.map((i) =>
-                  i.key === item.key ? { ...i, done: !i.done } : i,
-                );
-                const next = { ...checklist, items, updatedAt: new Date().toISOString() };
-                await db.annualChecklists.put(next);
-                setChecklist(next);
-              }}
+          <section className="settings-card">
+            <div className="settings-card-head">
+              <div>
+                <p className="settings-card-eyebrow">Tính toán</p>
+                <h3>Giả định dài hạn</h3>
+                <p>Dùng cho mục tiêu và mô phỏng, không thay đổi giao dịch đã ghi.</p>
+              </div>
+              <span className="settings-icon-bubble" aria-hidden>%</span>
+            </div>
+            <div className="assumption-grid">
+              <div className="assumption-tile">
+                <span>Lạm phát</span>
+                <NumField
+                  value={settings.inflationRate * 100}
+                  minFrac={1}
+                  maxFrac={1}
+                  suffix="%"
+                  ariaLabel={`Lạm phát ${pctDisplay(settings.inflationRate)}`}
+                  onCommit={(pct) => patchSettings({ inflationRate: pctToRate(pct) })}
+                />
+              </div>
+              <div className="assumption-tile">
+                <span>Buffer</span>
+                <NumField
+                  value={settings.bufferPct * 100}
+                  minFrac={1}
+                  maxFrac={1}
+                  suffix="%"
+                  ariaLabel={`Buffer ${pctDisplay(settings.bufferPct)}`}
+                  onCommit={(pct) => patchSettings({ bufferPct: pctToRate(pct) })}
+                />
+              </div>
+              <div className="assumption-tile">
+                <span>Lợi suất VWCE</span>
+                <NumField
+                  value={settings.vwceReturn * 100}
+                  minFrac={1}
+                  maxFrac={1}
+                  suffix="%"
+                  ariaLabel={`Lợi suất VWCE ${pctDisplay(settings.vwceReturn)}`}
+                  onCommit={(pct) => patchSettings({ vwceReturn: pctToRate(pct) })}
+                />
+              </div>
+              <div className="assumption-tile">
+                <span>Lợi suất an toàn</span>
+                <NumField
+                  value={settings.safeReturn * 100}
+                  minFrac={1}
+                  maxFrac={1}
+                  suffix="%"
+                  ariaLabel={`Lợi suất an toàn ${pctDisplay(settings.safeReturn)}`}
+                  onCommit={(pct) => patchSettings({ safeReturn: pctToRate(pct) })}
+                />
+              </div>
+            </div>
+            <div className="setting-choice-row">
+              <div>
+                <strong>Hạn năm 2042</strong>
+                <span>Hạn cứng ưu tiên an toàn; linh hoạt cho phép điều chỉnh.</span>
+              </div>
+              <Segmented
+                value={settings.endMode}
+                options={[
+                  { value: "hard", label: "Hạn cứng" },
+                  { value: "flexible", label: "Linh hoạt" },
+                ]}
+                onChange={(value) => patchSettings({ endMode: value as "hard" | "flexible" })}
+              />
+            </div>
+          </section>
+
+          <section className="settings-card">
+            <div className="settings-card-head">
+              <div>
+                <p className="settings-card-eyebrow">Giao diện</p>
+                <h3>Chủ đề</h3>
+                <p>Lựa chọn được nhớ ngay trên thiết bị này.</p>
+              </div>
+            </div>
+            <Segmented
+              value={theme}
+              options={THEME_OPTIONS}
+              onChange={(value) => pickTheme(value as ThemeChoice)}
             />
-          </label>
-        ))}
-      </div>
+          </section>
 
-      {auth.user?.id && (dead.length > 0 || deadSyncedMsg) ? (
-        <>
-          <p className="group-label">Đồng bộ</p>
-          <div className="group-box">
-            {deadSyncedMsg && dead.length === 0 ? (
-              <p style={{ margin: 0, color: "var(--success-600)", fontSize: 14 }}>
-                Đã đồng bộ xong.
-              </p>
-            ) : (
-              <>
-                <p
-                  style={{
-                    margin: "0 0 12px",
-                    color: "var(--warning-600)",
-                    fontSize: 14,
-                    lineHeight: 1.45,
+          <section className="settings-card">
+            <div className="settings-card-head compact-head">
+              <div>
+                <p className="settings-card-eyebrow">Định kỳ</p>
+                <h3>Checklist {checklistYear}</h3>
+                <p>Nhắc lại các việc quan trọng mỗi năm.</p>
+              </div>
+              <label className="year-picker">
+                <span className="sr-only">Năm checklist</span>
+                <input
+                  type="number"
+                  value={checklistYear}
+                  min={2000}
+                  max={2100}
+                  onChange={(event) => {
+                    const year = Number(event.target.value);
+                    if (year >= 2000 && year <= 2100) setChecklistYear(year);
                   }}
-                >
-                  {dead.length} thay đổi chưa đồng bộ được lên máy chủ sau nhiều lần thử. Dữ liệu
-                  vẫn an toàn trên máy này.
-                </p>
+                />
+              </label>
+            </div>
+            <div className="checklist-list">
+              {checklist?.items.map((item) => (
+                <label key={item.key} className="switch-row">
+                  <span>{item.label}</span>
+                  <input
+                    type="checkbox"
+                    className="ios-switch"
+                    checked={item.done}
+                    onChange={async () => {
+                      const items = checklist.items.map((current) =>
+                        current.key === item.key ? { ...current, done: !current.done } : current,
+                      );
+                      const next = { ...checklist, items, updatedAt: new Date().toISOString() };
+                      await db.annualChecklists.put(next);
+                      setChecklist(next);
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {activeTab === "prices" ? (
+        <SettingsPricePanel refreshKey={refreshKey} onQuotesChanged={onQuotesChanged} />
+      ) : null}
+
+      {activeTab === "data" ? (
+        <div className="settings-panel" role="tabpanel" aria-label="Dữ liệu và sao lưu">
+          <section className="settings-card settings-health-card">
+            <div>
+              <span className={`health-dot${online ? " online" : ""}`} aria-hidden />
+              <strong>{online ? "Đang online" : "Đang offline"}</strong>
+            </div>
+            <p>Dữ liệu được ghi vào thiết bị trước, sau đó đồng bộ khi tài khoản và mạng sẵn sàng.</p>
+          </section>
+
+          {auth.user?.id && (dead.length > 0 || deadSyncedMsg) ? (
+            <section className="settings-card">
+              <div className="settings-card-head">
+                <div>
+                  <p className="settings-card-eyebrow">Đồng bộ</p>
+                  <h3>{dead.length > 0 ? `${dead.length} thay đổi đang chờ` : "Đã đồng bộ xong"}</h3>
+                  <p>Dữ liệu local vẫn an toàn trong khi ứng dụng thử gửi lại.</p>
+                </div>
+              </div>
+              {dead.length > 0 ? (
                 <button
                   type="button"
-                  className="group-action"
-                  style={{ minHeight: 44 }}
+                  className="settings-primary-action"
                   disabled={deadRetrying}
                   onClick={async () => {
                     if (!auth.user?.id) return;
@@ -626,87 +650,105 @@ export default function SettingsPage({
                 >
                   {deadRetrying ? "Đang thử lại…" : "Thử lại đồng bộ"}
                 </button>
-              </>
-            )}
-          </div>
-        </>
-      ) : null}
+              ) : (
+                <p className="settings-inline-status success">Mọi thay đổi đã lên máy chủ.</p>
+              )}
+            </section>
+          ) : null}
 
-      <p className="group-label">Dữ liệu</p>
-      <div className="group-box">
-        <button type="button" className="group-action" onClick={doExport}>
-          Xuất JSON
-        </button>
-        <label className="group-action">
-          Nhập JSON
-          <input
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) doImport(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
-        <button type="button" className="group-action" onClick={exportCsv}>
-          Xuất CSV giao dịch
-        </button>
-        {onOpenMigrate && (
-          <button type="button" className="group-action" onClick={onOpenMigrate}>
-            Nhập dữ liệu local vào tài khoản
-          </button>
-        )}
-      </div>
-
-      <p className="group-label">Vùng nguy hiểm</p>
-      <div className="group-box">
-        {deleteStep === 0 ? (
-          <button
-            type="button"
-            className="group-action danger-text"
-            onClick={() => setDeleteStep(1)}
-          >
-            Xóa toàn bộ dữ liệu
-          </button>
-        ) : (
-          <div className="delete-confirm">
-            <p className="muted" style={{ fontSize: 13 }}>
-              Gõ <strong>XOA</strong> để xác nhận. Không hoàn tác được.
-            </p>
-            <input
-              value={deleteConfirm}
-              onChange={(e) => setDeleteConfirm(e.target.value)}
-              placeholder="XOA"
-              autoCapitalize="characters"
-            />
-            <div className="stack" style={{ marginTop: 8 }}>
-              <button
-                type="button"
-                className="danger"
-                disabled={deleteConfirm.trim().toUpperCase() !== "XOA"}
-                onClick={async () => {
-                  await clearAllData();
-                  window.location.reload();
-                }}
-              >
-                Xác nhận xóa
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => {
-                  setDeleteStep(0);
-                  setDeleteConfirm("");
-                }}
-              >
-                Hủy
-              </button>
+          <section className="settings-card action-card">
+            <div className="settings-card-head">
+              <div>
+                <p className="settings-card-eyebrow">Sao lưu</p>
+                <h3>Xuất và nhập dữ liệu</h3>
+                <p>Tạo bản JSON đầy đủ hoặc CSV giao dịch để kiểm tra độc lập.</p>
+              </div>
+              <span className="settings-icon-bubble" aria-hidden>↥</span>
             </div>
-          </div>
-        )}
-      </div>
+            <button type="button" className="group-action" onClick={doExport}>
+              <span><strong>Xuất JSON</strong><small>Bản sao lưu đầy đủ</small></span>
+            </button>
+            <label className="group-action">
+              <span><strong>Nhập JSON</strong><small>Khôi phục từ bản sao lưu</small></span>
+              <input
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void doImport(file);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+            <button type="button" className="group-action" onClick={() => void exportCsv()}>
+              <span><strong>Xuất CSV giao dịch</strong><small>Dùng với bảng tính</small></span>
+            </button>
+            {onOpenMigrate ? (
+              <button type="button" className="group-action" onClick={onOpenMigrate}>
+                <span><strong>Nhập dữ liệu local</strong><small>Đưa dữ liệu cũ vào tài khoản</small></span>
+              </button>
+            ) : null}
+          </section>
+
+          <details className="settings-disclosure danger-disclosure" open={deleteStep > 0}>
+            <summary onClick={(event) => {
+              if (deleteStep > 0) event.preventDefault();
+            }}>
+              <span>
+                <strong>Vùng nguy hiểm</strong>
+                <small>Xóa toàn bộ dữ liệu trên thiết bị này.</small>
+              </span>
+              {deleteStep === 0 ? (
+                <button
+                  type="button"
+                  className="danger-link"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setDeleteStep(1);
+                  }}
+                >
+                  Mở
+                </button>
+              ) : null}
+            </summary>
+            {deleteStep > 0 ? (
+              <div className="delete-confirm">
+                <p>Gõ <strong>XOA</strong> để xác nhận. Thao tác này không thể hoàn tác.</p>
+                <input
+                  value={deleteConfirm}
+                  onChange={(event) => setDeleteConfirm(event.target.value)}
+                  placeholder="XOA"
+                  autoCapitalize="characters"
+                />
+                <div className="delete-actions">
+                  <button
+                    type="button"
+                    className="danger"
+                    disabled={deleteConfirm.trim().toUpperCase() !== "XOA"}
+                    onClick={async () => {
+                      await clearAllData();
+                      window.location.reload();
+                    }}
+                  >
+                    Xác nhận xóa
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      setDeleteStep(0);
+                      setDeleteConfirm("");
+                    }}
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </details>
+        </div>
+      ) : null}
 
       <p className="settings-foot">
         v{APP_VERSION} · {online ? "Online" : "Offline"} · Sao lưu:{" "}

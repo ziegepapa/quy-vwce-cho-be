@@ -49,77 +49,64 @@ export default function QuoteSourceControls({
     }
   }
 
+  if (states.length === 0) {
+    return <p className="settings-empty-note">Chưa có tài sản hoặc giá để lựa chọn nguồn.</p>;
+  }
+
   return (
-    <div className="settings-v9">
-      <p className="group-label">Nguồn giá & ưu tiên</p>
-      <div className="group-box">
-        {states.length === 0 ? (
-          <p className="group-hint">Chưa có mã hoặc quote để lựa chọn.</p>
-        ) : (
-          states.map((state, index) => {
-            const name = state.instrument?.ticker || state.instrument?.name || state.instrumentIsin;
-            const effective = state.effective;
-            return (
-              <div
-                key={state.key}
-                style={{
-                  borderTop: index === 0 ? undefined : "1px solid var(--border, #e5e7eb)",
-                  padding: "12px 0",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                  <div>
-                    <strong>{name}</strong>
-                    <div className="muted" style={{ fontSize: 12 }}>
-                      {state.instrumentIsin} · {state.currency}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right", fontSize: 13 }}>
-                    {effective ? formatPrice(effective.price, state.currency) : "Thiếu giá"}
-                    <div className="muted" style={{ fontSize: 12 }}>
-                      {effective
-                        ? `${effective.source === "auto" ? "Tự động" : "Thủ công"} · ${effective.asOf}`
-                        : "Không có nguồn hiệu lực"}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ margin: "8px 0", fontSize: 12 }}>
-                  Auto: {candidateStatusLabel(state.autoStatus)}
-                  {state.auto?.provider ? ` · ${state.auto.provider}` : ""}
-                  {state.isStale ? " · QUÁ CŨ" : ""}
-                  {state.manual ? ` · Manual: ${state.manual.asOf}` : " · Manual: chưa có"}
-                </div>
-
-                <div className="seg-control" role="group" aria-label={`Nguồn giá ${name}`}>
-                  <button
-                    type="button"
-                    className={state.mode === "auto" ? "seg-opt active" : "seg-opt"}
-                    disabled={busyKey === state.key}
-                    onClick={() => void choose(state, "auto")}
-                  >
-                    Dùng auto
-                  </button>
-                  <button
-                    type="button"
-                    className={state.mode === "manual" ? "seg-opt active" : "seg-opt"}
-                    disabled={busyKey === state.key || !state.manual}
-                    title={state.manual ? undefined : "Hãy lưu một quote thủ công trước"}
-                    onClick={() => void choose(state, "manual")}
-                  >
-                    Giữ manual
-                  </button>
-                </div>
+    <div className="price-source-list">
+      {states.map((state) => {
+        const name = state.instrument?.ticker || state.instrument?.name || state.instrumentIsin;
+        const effective = state.effective;
+        return (
+          <div className="price-source-row" key={state.key}>
+            <div className="price-source-heading">
+              <div>
+                <strong>{name}</strong>
+                <span>{state.instrumentIsin}</span>
               </div>
-            );
-          })
-        )}
-        {error ? (
-          <p role="alert" style={{ color: "var(--danger-600, #b91c1c)", fontSize: 13 }}>
-            {error}
-          </p>
-        ) : null}
-      </div>
+              <div className="price-source-effective">
+                <strong>{effective ? formatPrice(effective.price, state.currency) : "Thiếu giá"}</strong>
+                <span>
+                  {effective
+                    ? `${effective.source === "auto" ? "Tự động" : "Thủ công"} · ${effective.asOf}`
+                    : "Chưa có nguồn hiệu lực"}
+                </span>
+              </div>
+            </div>
+
+            <div className="price-source-meta">
+              <span className={state.isStale ? "source-chip warning" : "source-chip"}>
+                Auto: {candidateStatusLabel(state.autoStatus)}
+              </span>
+              <span className={state.manual ? "source-chip" : "source-chip muted-chip"}>
+                Thủ công: {state.manual ? state.manual.asOf : "chưa có"}
+              </span>
+            </div>
+
+            <div className="seg-control" role="group" aria-label={`Nguồn giá ${name}`}>
+              <button
+                type="button"
+                className={state.mode === "auto" ? "seg-opt active" : "seg-opt"}
+                disabled={busyKey === state.key}
+                onClick={() => void choose(state, "auto")}
+              >
+                Tự động
+              </button>
+              <button
+                type="button"
+                className={state.mode === "manual" ? "seg-opt active" : "seg-opt"}
+                disabled={busyKey === state.key || !state.manual}
+                title={state.manual ? undefined : "Hãy nhập một giá thủ công trước"}
+                onClick={() => void choose(state, "manual")}
+              >
+                Thủ công
+              </button>
+            </div>
+          </div>
+        );
+      })}
+      {error ? <p className="settings-error" role="alert">{error}</p> : null}
     </div>
   );
 }

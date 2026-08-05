@@ -4,17 +4,15 @@ import type { QuoteFeedIngestResult } from "../lib/db";
 
 function resultMessage(result: QuoteFeedIngestResult): string {
   if (result.status === "offline") {
-    return "Đang offline — giữ nguyên giá đã lưu trên máy.";
+    return "Đang offline — giá đã lưu trên máy vẫn được giữ nguyên.";
   }
   if (result.status === "error") {
-    return `Không thể cập nhật feed. Giá local được giữ nguyên${result.errors[0] ? `: ${result.errors[0]}` : "."}`;
+    return `Chưa cập nhật được. Giá đang dùng không bị thay đổi${result.errors[0] ? `: ${result.errors[0]}` : "."}`;
   }
-  const parts = [
-    result.updated > 0 ? `${result.updated} mã đã cập nhật` : "không có thay đổi kinh tế",
-  ];
+  const parts = [result.updated > 0 ? `${result.updated} mã đã cập nhật` : "Giá đã là bản mới nhất"];
   if (result.unchanged > 0) parts.push(`${result.unchanged} mã không đổi`);
   if (result.skipped.length > 0) parts.push(`${result.skipped.length} dòng không hợp lệ đã bỏ qua`);
-  if (result.errors.length > 0) parts.push(`${result.errors.length} mã cập nhật lỗi`);
+  if (result.errors.length > 0) parts.push(`${result.errors.length} mã gặp lỗi`);
   return parts.join(" · ");
 }
 
@@ -38,7 +36,7 @@ export default function QuoteFeedRefresh({
       }
     } catch (error) {
       setMessage(
-        `Không thể cập nhật feed. Giá local được giữ nguyên: ${
+        `Chưa cập nhật được. Giá đang dùng không bị thay đổi: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
@@ -48,27 +46,28 @@ export default function QuoteFeedRefresh({
   }
 
   return (
-    <div className="settings-v9">
-      <p className="group-label">Giá tự động</p>
-      <div className="group-box">
-        <button
-          type="button"
-          className="group-action"
-          style={{ minHeight: 44 }}
-          disabled={refreshing}
-          onClick={() => void refresh()}
-        >
-          {refreshing ? "Đang cập nhật…" : "Cập nhật giá tự động"}
-        </button>
-        <p className="group-hint">
-          Tải feed theo ISIN. Lỗi mạng hoặc dữ liệu không hợp lệ không xóa giá đang có.
-        </p>
-        {message ? (
-          <p className="group-hint" role="status" aria-live="polite">
-            {message}
-          </p>
-        ) : null}
+    <section className="settings-card quote-feed-card">
+      <div className="settings-card-head">
+        <div>
+          <p className="settings-card-eyebrow">Tự động</p>
+          <h3>Giá thị trường</h3>
+          <p>Lấy giá mới theo ISIN. Khi mạng lỗi, ứng dụng tiếp tục dùng dữ liệu local.</p>
+        </div>
+        <span className="settings-icon-bubble" aria-hidden>↻</span>
       </div>
-    </div>
+      <button
+        type="button"
+        className="settings-primary-action"
+        disabled={refreshing}
+        onClick={() => void refresh()}
+      >
+        {refreshing ? "Đang cập nhật…" : "Cập nhật giá bây giờ"}
+      </button>
+      {message ? (
+        <p className="settings-inline-status" role="status" aria-live="polite">
+          {message}
+        </p>
+      ) : null}
+    </section>
   );
 }

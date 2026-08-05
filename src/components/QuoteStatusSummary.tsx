@@ -43,7 +43,7 @@ export default function QuoteStatusSummary({ refreshKey }: { refreshKey?: number
     <section className="card" style={{ marginBottom: 12 }} aria-label="Trạng thái nguồn giá">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
         <strong>Nguồn giá</strong>
-        <Link to="/settings" style={{ fontSize: 13 }}>
+        <Link to="/settings?tab=prices" style={{ fontSize: 13 }}>
           Điều chỉnh →
         </Link>
       </div>
