@@ -14,6 +14,8 @@ export type TraceSource =
   | "simulation_engine"
   | "app_settings"
   | "user_input"
+  | "explicit_input"
+  | "default_constant"
   | "app_metadata"
   | "service_worker"
   | "emergency_profile";
@@ -100,6 +102,8 @@ const SOURCE_LABELS: Record<TraceSource, string> = {
   simulation_engine: "Simulation engine",
   app_settings: "Cài đặt kế hoạch",
   user_input: "Dữ liệu người dùng nhập",
+  explicit_input: "Tham số được truyền rõ ràng",
+  default_constant: "Hằng số mặc định của engine",
   app_metadata: "Metadata backup local",
   service_worker: "Trạng thái PWA",
   emergency_profile: "Hồ sơ khẩn cấp",
@@ -137,7 +141,8 @@ export function formatTraceValue(value: TraceValue, locale = "vi-VN"): string {
     return `${numericPrefix(value.value, value.signed, value.approximate)}${rendered}${value.suffix ?? ""}`;
   }
 
-  const rendered = Math.abs(value.value).toLocaleString(locale, {
+  const displayValue = value.signed ? Math.abs(value.value) : value.value;
+  const rendered = displayValue.toLocaleString(locale, {
     maximumFractionDigits: value.maximumFractionDigits ?? (value.kind === "percent" ? 2 : 6),
   });
   if (value.kind === "quantity") {

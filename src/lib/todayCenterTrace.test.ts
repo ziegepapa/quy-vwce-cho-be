@@ -23,6 +23,11 @@ describe("formatTraceValue", () => {
     expect(formatTraceValue({ kind: "quantity", value: 0.594321, maximumFractionDigits: 4, unit: "VWCE", approximate: true })).toContain("≈ 0,5943 VWCE");
     expect(formatTraceValue({ kind: "datetime", value: "invalid", fallback: "Chưa có" })).toBe("Chưa có");
   });
+
+  it("preserves a negative value when signed decoration is not requested", () => {
+    expect(formatTraceValue({ kind: "percent", value: -2 })).toContain("-2%");
+    expect(formatTraceValue({ kind: "quantity", value: -1, unit: "đơn vị" })).toContain("-1 đơn vị");
+  });
 });
 
 describe("typed trace builders", () => {
@@ -80,6 +85,18 @@ describe("typed trace builders", () => {
     expect(trace.rows.find((row) => row.id === "since")?.source).toBe("pulse_local_storage");
   });
 
+  it("does not expose a stale Pulse delta while current prices are incomplete", () => {
+    const trace = buildPulseTraceModel({
+      valueComplete: false,
+      totalValue: 700,
+      totalQuantity: 5.5,
+      delta: { value: 100, valuePct: 10, quantity: 0.5, since: "2026-08-05T08:00:00.000Z" },
+    });
+    expect(trace.primary).toEqual({ kind: "text", value: "Đang chờ đủ giá" });
+    expect(trace.rows.find((row) => row.id === "previous-value")?.value).toMatchObject({ value: null, fallback: "Giữ nguyên" });
+    expect(trace.rows.find((row) => row.id === "completeness")?.tone).toBe("warning");
+  });
+
   it("exposes the canonical What-if formula, assumptions and quote source", () => {
     const result = buildTodayCenterWhatIf({
       amount: 250,
@@ -89,11 +106,25 @@ describe("typed trace builders", () => {
       annualReturn: 0.07,
       inflation: 0.02,
     });
-    const trace = buildWhatIfTraceModel({ result, portfolioEmpty: false, priceSource: "manual_quote" });
+    const trace = buildWhatIfTraceModel({ result, portfolioEmpty: false });
     expect(trace.rows.find((row) => row.id === "vwce-price")?.source).toBe("manual_quote");
     expect(trace.rows.find((row) => row.id === "future-real")?.formula).toBe("simulation.projectEnd+purchasingPower");
-    expect(trace.rows.find((row) => row.id === "ter")?.source).toBe("simulation_engine");
+    expect(trace.rows.find((row) => row.id === "ter")?.source).toBe("default_constant");
     expect(trace.primary).toMatchObject({ kind: "quantity", value: 2, signed: true });
+  });
+
+  it("records an explicit TER separately from the engine default", () => {
+    const result = buildTodayCenterWhatIf({
+      amount: 250,
+      vwcePrice: 125,
+      priceSource: "auto_quote",
+      years: 12,
+      annualReturn: 0.07,
+      inflation: 0.02,
+      ter: 0.01,
+    });
+    const trace = buildWhatIfTraceModel({ result, portfolioEmpty: false });
+    expect(trace.rows.find((row) => row.id === "ter")?.source).toBe("explicit_input");
   });
 
   it("does not fabricate units when the quote is missing", () => {
@@ -105,7 +136,7 @@ describe("typed trace builders", () => {
       annualReturn: 0.05,
       inflation: 0.02,
     });
-    const trace = buildWhatIfTraceModel({ result, portfolioEmpty: true, priceSource: "missing" });
+    const trace = buildWhatIfTraceModel({ result, portfolioEmpty: true });
     expect(trace.primary).toEqual({ kind: "text", value: "Cần giá VWCE" });
     expect(trace.rows.find((row) => row.id === "vwce-price")?.source).toBe("missing_quote");
   });

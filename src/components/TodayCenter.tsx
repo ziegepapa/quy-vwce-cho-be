@@ -277,7 +277,6 @@ export default function TodayCenter({
   const whatIfTraceModel = buildWhatIfTraceModel({
     result: whatIf,
     portfolioEmpty,
-    priceSource: resolvedPriceSource,
   });
   const safetyTraceModel = buildSafetyTraceModel({
     assessment: safetyAssessment,

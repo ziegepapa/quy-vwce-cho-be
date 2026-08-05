@@ -121,24 +121,32 @@ export type PulseTraceInput = {
 };
 
 export function buildPulseTraceModel(input: PulseTraceInput): TraceSheetModel {
+  const comparableDelta = input.valueComplete ? input.delta : null;
   const primary: TraceValue = !input.valueComplete
     ? { kind: "text", value: "Đang chờ đủ giá" }
-    : input.delta
-      ? { kind: "money", value: input.delta.value, signed: true }
+    : comparableDelta
+      ? { kind: "money", value: comparableDelta.value, signed: true }
       : { kind: "text", value: "Mốc đầu tiên" };
+  const explanation = !input.valueComplete
+    ? "Danh mục đang thiếu giá nên Pulse không tạo hoặc hiển thị delta mới. Mốc đầy đủ gần nhất trên thiết bị được giữ nguyên."
+    : comparableDelta
+      ? "Delta dùng hai lần mở app có danh mục đầy đủ gần nhất. Refresh lỗi, rerender hoặc thiếu giá không tạo mốc giả."
+      : "Đây là mốc danh mục đầy đủ đầu tiên. Lần mở app tiếp theo sẽ tạo delta để đối chiếu.";
   return {
     id: "portfolio-pulse",
     eyebrow: "Nhịp Quỹ · nguồn dữ liệu",
     title: "Đổi gì?",
     primary,
-    explanation: input.delta
-      ? "Delta dùng hai lần mở app có danh mục đầy đủ gần nhất. Refresh lỗi, rerender hoặc thiếu giá không tạo mốc giả."
-      : "Đây là mốc danh mục đầy đủ đầu tiên. Lần mở app tiếp theo sẽ tạo delta để đối chiếu.",
+    explanation,
     rows: [
       {
         id: "current-value",
-        label: "Hiện tại",
-        value: { kind: "money", value: input.totalValue },
+        label: input.valueComplete ? "Hiện tại" : "Hiện tại đã định giá",
+        value: {
+          kind: "money",
+          value: input.totalValue,
+          suffix: input.valueComplete ? undefined : " đã định giá",
+        },
         source: "portfolio_market_value",
       },
       {
@@ -146,8 +154,8 @@ export function buildPulseTraceModel(input: PulseTraceInput): TraceSheetModel {
         label: "Mốc trước",
         value: {
           kind: "money",
-          value: input.delta ? input.totalValue - input.delta.value : null,
-          fallback: "Chưa có",
+          value: comparableDelta ? input.totalValue - comparableDelta.value : null,
+          fallback: input.valueComplete ? "Chưa có" : "Giữ nguyên",
         },
         source: "pulse_local_storage",
         tone: "muted",
@@ -163,11 +171,18 @@ export function buildPulseTraceModel(input: PulseTraceInput): TraceSheetModel {
         label: "Mốc so sánh",
         value: {
           kind: "datetime",
-          value: input.delta?.since ?? null,
-          fallback: "Lần mở app tiếp theo",
+          value: comparableDelta?.since ?? null,
+          fallback: input.valueComplete ? "Lần mở app tiếp theo" : "Chờ đủ giá",
         },
         source: "pulse_local_storage",
         tone: "muted",
+      },
+      {
+        id: "completeness",
+        label: "Độ đầy đủ",
+        value: { kind: "text", value: input.valueComplete ? "Đủ giá" : "Thiếu giá" },
+        source: "portfolio_market_value",
+        tone: input.valueComplete ? "positive" : "warning",
       },
     ],
     links: [
@@ -180,7 +195,6 @@ export function buildPulseTraceModel(input: PulseTraceInput): TraceSheetModel {
 export type WhatIfTraceInput = {
   result: TodayCenterWhatIfResult;
   portfolioEmpty: boolean;
-  priceSource: TodayCenterPriceSource;
 };
 
 function whatIfPrimary(input: WhatIfTraceInput): TraceValue {
@@ -198,7 +212,8 @@ function whatIfPrimary(input: WhatIfTraceInput): TraceValue {
 
 export function buildWhatIfTraceModel(input: WhatIfTraceInput): TraceSheetModel {
   const result = input.result;
-  const source = priceSource(input.priceSource);
+  const effectivePriceSource = result.trace.vwcePrice.source;
+  const source = priceSource(effectivePriceSource);
   const buyValue = whatIfPrimary(input);
   return {
     id: "what-if",
@@ -232,7 +247,7 @@ export function buildWhatIfTraceModel(input: WhatIfTraceInput): TraceSheetModel 
       {
         id: "price-source",
         label: "Nguồn giá",
-        value: { kind: "text", value: priceSourceLabel(input.priceSource) },
+        value: { kind: "text", value: priceSourceLabel(effectivePriceSource) },
         source,
         tone: "muted",
       },
@@ -251,6 +266,12 @@ export function buildWhatIfTraceModel(input: WhatIfTraceInput): TraceSheetModel 
         formula: result.trace.formula,
       },
       {
+        id: "years",
+        label: "Thời hạn",
+        value: { kind: "quantity", value: result.years, maximumFractionDigits: 0, unit: "năm" },
+        source: "app_settings",
+      },
+      {
         id: "annual-return",
         label: "Lợi suất giả định",
         value: { kind: "percent", value: result.annualReturn * 100 },
@@ -266,7 +287,7 @@ export function buildWhatIfTraceModel(input: WhatIfTraceInput): TraceSheetModel 
         id: "ter",
         label: "TER",
         value: { kind: "percent", value: result.ter * 100 },
-        source: "simulation_engine",
+        source: result.trace.ter.source,
       },
       {
         id: "formula",
