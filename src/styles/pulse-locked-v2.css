@@ -1,28 +1,30 @@
-/* Grok production-review lock — one breath, clean top bar, compact Pulse Home. */
+/* Final Pulse Home lock — quiet hierarchy, one-breath answers, no nested-card theatre. */
 :root {
-  --pulse-v2-panel: color-mix(in srgb, var(--surface-raised) 92%, var(--bg-base));
-  --pulse-v2-card: color-mix(in srgb, var(--surface) 91%, var(--surface-sunken));
-  --pulse-v2-line: color-mix(in srgb, var(--primary-600) 10%, var(--border-subtle));
-  --pulse-v2-soft: color-mix(in srgb, var(--primary-600) 7%, transparent);
+  --pulse-panel: color-mix(in srgb, var(--surface-raised) 94%, var(--bg-base));
+  --pulse-card: color-mix(in srgb, var(--surface) 96%, var(--surface-sunken));
+  --pulse-card-hover: color-mix(in srgb, var(--surface) 88%, var(--primary-050));
+  --pulse-line: color-mix(in srgb, var(--primary-600) 9%, var(--border-subtle));
+  --pulse-soft: color-mix(in srgb, var(--primary-600) 7%, transparent);
 }
 
 :root[data-theme="premium"] {
-  --pulse-v2-panel: #100e14;
-  --pulse-v2-card: #17141b;
-  --pulse-v2-line: rgba(201, 169, 97, 0.14);
-  --pulse-v2-soft: rgba(201, 169, 97, 0.07);
+  --pulse-panel: #100e14;
+  --pulse-card: #17141b;
+  --pulse-card-hover: #1b1720;
+  --pulse-line: rgba(201, 169, 97, 0.13);
+  --pulse-soft: rgba(201, 169, 97, 0.07);
 }
 
-/* Top bar: the centre is time, the right edge belongs to the account only on Home. */
+/* Top bar */
 .collapse-nav {
-  background: color-mix(in srgb, var(--color-surface-translucent) 94%, transparent);
+  background: color-mix(in srgb, var(--color-surface-translucent) 96%, transparent);
   border-bottom-color: var(--hairline);
 }
 
 @supports (backdrop-filter: blur(1px)) {
   .collapse-nav {
-    backdrop-filter: blur(var(--blur-nav)) saturate(155%);
-    -webkit-backdrop-filter: blur(var(--blur-nav)) saturate(155%);
+    backdrop-filter: blur(var(--blur-nav)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--blur-nav)) saturate(150%);
   }
 }
 
@@ -38,10 +40,10 @@
 }
 
 .nav-logo {
-  width: 26px;
-  height: 26px;
+  width: 25px;
+  height: 25px;
   border-radius: 8px;
-  box-shadow: 0 6px 18px -10px var(--hero-shadow);
+  box-shadow: 0 5px 16px -10px var(--hero-shadow);
 }
 
 .collapse-nav-title {
@@ -71,44 +73,68 @@
   margin-top: 4px;
   color: var(--text-tertiary);
   font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.075em;
+  font-weight: 680;
+  letter-spacing: 0.07em;
 }
 
 .collapse-nav-right {
   justify-self: end;
 }
 
-/* Hero: keep the number as the star; the empty state must not occupy the first screen. */
+.avatar-btn-wrap {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 50%;
+}
+
+.avatar-sm {
+  border-width: 1px !important;
+  box-shadow: 0 2px 8px -5px var(--hero-shadow) !important;
+}
+
+.sync-ring {
+  right: 1px;
+  bottom: 1px;
+  width: 8px;
+  height: 8px;
+  border-width: 1.5px;
+}
+
+/* Overview rhythm */
 .ov {
-  gap: 14px;
+  gap: 12px;
 }
 
 .hero-v8 {
-  min-height: 148px;
-  padding: 17px;
-  border-radius: 22px;
-  box-shadow: 0 18px 42px -28px var(--hero-shadow);
+  min-height: 144px;
+  padding: 16px;
+  border-radius: 21px;
+  box-shadow: 0 16px 38px -29px var(--hero-shadow);
+}
+
+.hero-v8.hero-empty {
+  min-height: 126px;
 }
 
 .hero-empty-inner {
-  min-height: 112px;
+  min-height: 94px;
   justify-content: center;
 }
 
 .hero-empty-copy {
   max-width: 23rem;
-  margin: 7px 0 14px;
-  font-size: 16px;
+  margin: 5px 0 11px;
+  font-size: 15px;
   line-height: 1.25;
   letter-spacing: -0.018em;
 }
 
 .hero-cta {
-  height: 40px;
-  padding: 0 15px;
+  align-self: flex-start;
+  height: 38px;
+  padding: 0 14px;
   border-radius: 11px;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 720;
 }
 
@@ -126,64 +152,40 @@
   padding-block: 6px;
 }
 
-/* Nhịp Quỹ: one surface, four concise answers, no card-on-card theatre. */
+/* Nhịp Quỹ is a section, not another card. */
 .today-center {
-  padding: 13px;
-  border: 1px solid var(--pulse-v2-line);
-  border-radius: 20px;
-  background:
-    radial-gradient(circle at 96% 0%, var(--pulse-v2-soft), transparent 32%),
-    var(--pulse-v2-panel);
+  padding: 2px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
 }
 
 .today-center-head {
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 0 3px 9px;
 }
 
 .today-center-head h2 {
   margin: 1px 0 0;
   font-size: 20px;
-  font-weight: 730;
-  letter-spacing: -0.04em;
-}
-
-.today-center-head > div:first-child > p:last-child {
-  display: none;
+  font-weight: 740;
+  line-height: 1.05;
+  letter-spacing: -0.045em;
 }
 
 .today-kicker {
-  font-size: 8.5px;
-  letter-spacing: 0.13em;
-}
-
-.today-head-actions {
-  gap: 0;
-}
-
-.today-sync-pill {
-  display: none;
-}
-
-.today-show-all {
-  min-height: 36px;
-  padding: 0 9px;
-  border-color: transparent;
-  background: transparent;
-  color: var(--text-tertiary);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.today-show-all:hover:not(:disabled) {
-  border-color: var(--pulse-v2-line);
-  background: var(--surface-sunken);
-  color: var(--text-primary);
+  color: var(--primary-600);
+  font-size: 8px;
+  font-weight: 720;
+  letter-spacing: 0.14em;
 }
 
 .today-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
   gap: 8px;
 }
 
@@ -192,65 +194,124 @@
 .today-card-reconcile,
 .today-card-whatif,
 .today-card-safety {
-  min-height: 124px;
+  display: flex;
+  min-width: 0;
+  min-height: 126px;
   padding: 11px;
-  border: 1px solid var(--pulse-v2-line);
+  flex-direction: column;
+  border: 0;
   border-radius: 16px;
-  background: var(--pulse-v2-card);
-  box-shadow: none;
+  background: var(--pulse-card);
+  box-shadow: inset 0 0 0 1px var(--pulse-line);
+  color: var(--text-primary);
+  text-decoration: none;
 }
 
 .today-card::before {
-  width: 1px;
+  display: none;
 }
 
 .today-card.is-new {
-  border-color: color-mix(in srgb, var(--primary-600) 36%, var(--pulse-v2-line));
-  box-shadow: inset 0 0 0 1px var(--pulse-v2-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-600) 28%, var(--pulse-line));
+}
+
+.today-card-link {
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .today-card-link:hover,
+  .today-card:has(.today-card-detail:hover) {
+    background: var(--pulse-card-hover);
+  }
 }
 
 .today-card-head {
-  min-height: 40px;
+  display: flex;
+  align-items: center;
+  min-height: 28px;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .today-card-head h3 {
+  min-width: 0;
+  margin: 0;
   font-size: 13px;
   font-weight: 730;
-  letter-spacing: -0.02em;
-}
-
-.today-card-head p {
-  margin-top: 2px;
-  color: var(--text-tertiary);
-  font-size: 9px;
-  line-height: 1.25;
-  -webkit-line-clamp: 1;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
 }
 
 .today-card-icon {
-  width: 28px;
-  height: 28px;
-  flex-basis: 28px;
-  border: 1px solid var(--pulse-v2-line);
-  border-radius: 10px;
-  background: var(--surface-sunken);
-  font-size: 13px;
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: var(--pulse-soft);
+  color: var(--primary-600);
+}
+
+.today-card-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .today-new-label {
+  margin-left: auto;
   padding: 2px 5px;
+  border-radius: 999px;
   background: var(--primary-050);
   color: var(--primary-600);
   font-size: 7px;
+  font-weight: 760;
+}
+
+.today-card-chevron {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.today-card-detail {
+  display: flex;
+  width: 100%;
+  min-height: 70px;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.today-card-context {
+  margin-bottom: 3px;
+  color: var(--text-tertiary);
+  font-size: 8.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
 }
 
 .today-main-metric {
-  margin-top: 2px;
+  display: block;
+  max-width: 100%;
+  margin: 1px 0 0;
   font-size: clamp(19px, 5vw, 24px);
-  font-weight: 740;
-  letter-spacing: -0.04em;
+  font-weight: 750;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
 }
 
 .today-card-whatif .today-main-metric {
@@ -259,62 +320,121 @@
 
 .today-metric-caption,
 .today-empty-state span {
-  margin-top: 3px;
+  display: block;
+  margin-top: 5px;
+  color: var(--text-secondary);
   font-size: 9.5px;
-  line-height: 1.3;
+  line-height: 1.28;
 }
 
-.today-empty-state,
-.today-metric-trigger {
-  min-height: 50px;
+.today-empty-state {
+  display: flex;
+  min-height: 66px;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.today-presets {
-  gap: 4px;
-  margin: 4px 0 6px;
+.today-empty-state strong {
+  font-size: 14px;
+  line-height: 1.2;
 }
 
-.today-presets button {
-  min-height: 38px;
-  border-color: var(--pulse-v2-line);
-  background: transparent;
-  font-size: 9px;
+.today-detail-hint {
+  margin-top: auto;
+  padding-top: 7px;
+  color: var(--primary-600);
+  font-size: 8px;
+  font-weight: 720;
+  letter-spacing: 0.035em;
 }
 
-.today-presets button.active {
+.today-sheet-tools {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.today-sheet-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.today-sheet-presets button {
+  min-height: 44px;
+  border: 1px solid var(--pulse-line);
+  border-radius: 12px;
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.today-sheet-presets button.active {
+  border-color: color-mix(in srgb, var(--primary-600) 30%, transparent);
   background: var(--primary-050);
   color: var(--primary-600);
-  border-color: color-mix(in srgb, var(--primary-600) 30%, transparent);
 }
 
-.today-primary-actions {
-  gap: 7px;
-  margin-top: 9px;
-}
-
-.today-primary-actions a {
-  min-height: 40px;
-  border-radius: 12px;
+.today-sheet-amount > span:first-child {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
   font-size: 11px;
+  font-weight: 650;
 }
 
-/* Dock: compact and calm; six destinations must not become a second hero. */
+.today-sheet-amount > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.today-sheet-amount input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--pulse-line);
+  border-radius: 12px;
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-inline-button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--pulse-line);
+  border-radius: 12px;
+  background: var(--primary-050);
+  color: var(--primary-600);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+/* Compact dock — persistent, but never the loudest object. */
 :root {
-  --dock-h: 52px;
+  --dock-h: 50px;
   --dock-pad: 6px;
 }
 
 .app-shell {
-  padding-bottom: calc(var(--dock-h) + var(--dock-pad) + 12px + var(--safe-bottom)) !important;
+  padding-bottom: calc(var(--dock-h) + var(--dock-pad) + 10px + var(--safe-bottom)) !important;
 }
 
 .app-shell::after {
-  height: 76px;
+  height: 66px;
 }
 
 .bottom-dock {
-  left: 10px;
-  right: 10px;
+  left: 13px;
+  right: 13px;
   bottom: calc(6px + var(--safe-bottom));
 }
 
@@ -323,17 +443,17 @@
   min-height: var(--dock-h);
   padding: 3px;
   border: 1px solid var(--hairline);
-  border-radius: 20px;
-  background: color-mix(in srgb, var(--color-surface-overlay) 96%, transparent);
-  box-shadow: 0 12px 34px -24px var(--hero-shadow);
+  border-radius: 19px;
+  background: color-mix(in srgb, var(--color-surface-overlay) 97%, transparent);
+  box-shadow: 0 11px 30px -24px var(--hero-shadow);
 }
 
 .dock-item {
-  min-height: 46px;
+  min-height: 44px;
   gap: 1px;
   padding: 3px 1px;
-  border-radius: 16px;
-  font-size: 9px;
+  border-radius: 15px;
+  font-size: 8.5px;
   font-weight: 620;
 }
 
@@ -342,28 +462,51 @@
 }
 
 .dock-item.active::before {
-  width: 45px;
-  height: 34px;
-  background: color-mix(in srgb, var(--primary-600) 10%, transparent);
+  width: 42px;
+  height: 32px;
+  background: color-mix(in srgb, var(--primary-600) 9%, transparent);
 }
 
 .dock-icon,
 .dock-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
 }
 
-/* Keyboard users keep a clear focus without adding permanent visual noise. */
-.today-show-all:focus-visible,
-.today-card button:focus-visible,
+.ov-foot {
+  margin: 1px 4px 0;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.4;
+  opacity: 0.72;
+}
+
+/* Focus is visible for keyboard, but a tap must not leave a purple halo around the avatar. */
+.today-card-detail:focus-visible,
+.today-card-link:focus-visible,
+.today-sheet-presets button:focus-visible,
+.today-inline-button:focus-visible,
 .hero-cta:focus-visible,
-.dock-item:focus-visible,
-.avatar-btn-wrap:focus-visible {
+.dock-item:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
-@media (max-width: 420px) {
+@media (hover: hover) and (pointer: fine) {
+  .avatar-btn-wrap:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .avatar-btn-wrap:focus,
+  .avatar-btn-wrap:focus-visible {
+    outline: none;
+  }
+}
+
+@media (max-width: 520px) {
   .collapse-nav {
     padding-left: max(13px, var(--safe-left));
     padding-right: max(13px, var(--safe-right));
@@ -374,13 +517,13 @@
   }
 
   .collapse-nav-title {
-    max-width: 92px;
+    max-width: 96px;
     font-size: 16px;
   }
 
   .nav-logo {
-    width: 24px;
-    height: 24px;
+    width: 23px;
+    height: 23px;
   }
 
   .nav-leading {
@@ -400,23 +543,27 @@
   }
 
   .hero-v8 {
-    min-height: 138px;
-    padding: 15px;
-    border-radius: 20px;
+    min-height: 136px;
+    padding: 14px;
+    border-radius: 19px;
+  }
+
+  .hero-v8.hero-empty {
+    min-height: 118px;
   }
 
   .hero-empty-inner {
-    min-height: 104px;
+    min-height: 90px;
   }
 
   .hero-empty-copy {
-    margin-bottom: 12px;
-    font-size: 15px;
+    margin-bottom: 10px;
+    font-size: 14px;
   }
 
-  .today-center {
-    padding: 11px;
-    border-radius: 18px;
+  .hero-cta {
+    height: 36px;
+    font-size: 12px;
   }
 
   .today-center-head {
@@ -436,25 +583,35 @@
   .today-card-reconcile,
   .today-card-whatif,
   .today-card-safety {
-    min-height: 116px;
+    min-height: 122px;
     padding: 9px;
     border-radius: 14px;
   }
 
   .today-card-head {
-    min-height: 30px;
-    margin-bottom: 5px;
+    min-height: 26px;
+    gap: 7px;
+    margin-bottom: 7px;
   }
 
-  .today-card-head p {
-    display: none;
+  .today-card-head h3 {
+    font-size: 12.5px;
   }
 
   .today-card-icon {
-    width: 26px;
-    height: 26px;
-    flex-basis: 26px;
-    border-radius: 9px;
+    width: 25px;
+    height: 25px;
+    flex-basis: 25px;
+    border-radius: 8px;
+  }
+
+  .today-card-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .today-card-detail {
+    min-height: 68px;
   }
 
   .today-main-metric {
@@ -465,13 +622,9 @@
     font-size: clamp(17px, 4.4vw, 20px);
   }
 
-  .today-presets button {
-    min-height: 36px;
-    font-size: 8.5px;
-  }
-
-  .today-primary-actions a {
-    min-height: 38px;
+  .today-metric-caption,
+  .today-empty-state span {
+    font-size: 9px;
   }
 }
 
@@ -485,8 +638,8 @@
     font-size: 12px;
   }
 
-  .today-presets button {
-    min-height: 34px;
+  .today-detail-hint {
+    display: none;
   }
 }
 

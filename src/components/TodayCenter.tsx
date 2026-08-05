@@ -6,8 +6,6 @@ import { useAuth } from "../lib/auth";
 import { db } from "../lib/db";
 import { formatMoney, parseDecimal } from "../lib/calc";
 import { listDepotStatements } from "../lib/depotStatements";
-import { listConflicts } from "../lib/sync/engine";
-import { outboxCount } from "../lib/sync/outbox";
 import {
   reconcileDepotStatement,
   type DepotReconciliationRow,
@@ -21,7 +19,6 @@ import {
   type PortfolioPulseState,
 } from "../lib/todayCenter";
 import type { AppSettings, Transaction } from "../lib/types";
-import { SYNC_STATUS_LABEL, type SyncStatus } from "../lib/sync/types";
 import TraceSheet from "./TraceSheet";
 
 type ReconciliationSummary = {
@@ -44,6 +41,35 @@ type Props = {
   settings: AppSettings;
   transactions: Transaction[];
 };
+
+type PulseIconName = "pulse" | "reconcile" | "whatif" | "safety";
+
+function PulseIcon({ name }: { name: PulseIconName }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {name === "pulse" ? (
+        <path d="M3 12h4l2.2-5 4.1 10 2.2-5H21" />
+      ) : name === "reconcile" ? (
+        <>
+          <path d="M4 8h13" />
+          <path d="m14 5 3 3-3 3" />
+          <path d="M20 16H7" />
+          <path d="m10 13-3 3 3 3" />
+        </>
+      ) : name === "whatif" ? (
+        <>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 8v8M8 12h8" />
+        </>
+      ) : (
+        <>
+          <path d="M12 3 19 6v5.4c0 4.2-2.8 8-7 9.6-4.2-1.6-7-5.4-7-9.6V6l7-3Z" />
+          <path d="m9 12 2 2 4-4" />
+        </>
+      )}
+    </svg>
+  );
+}
 
 function dateLabel(value: string): string {
   const date = new Date(value);
@@ -86,7 +112,6 @@ export default function TodayCenter({
   const [pulse, setPulse] = useState<PortfolioPulseState | null>(null);
   const [reconciliation, setReconciliation] = useState<ReconciliationSummary>(null);
   const [reconciliationLoaded, setReconciliationLoaded] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>(navigator.onLine ? "syncing" : "offline");
   const [safety, setSafety] = useState<SafetySnapshot>({
     backupAt: "",
     restoreAt: "",
@@ -96,7 +121,8 @@ export default function TodayCenter({
     String(Math.max(50, Math.round(settings.contributionY1 || 100))),
   );
   const [traceOpen, setTraceOpen] = useState(false);
-  const [allOpen, setAllOpen] = useState(false);
+  const [whatIfOpen, setWhatIfOpen] = useState(false);
+  const [safetyOpen, setSafetyOpen] = useState(false);
 
   useEffect(() => {
     const current = valueComplete
@@ -117,12 +143,10 @@ export default function TodayCenter({
           "serviceWorker" in navigator
             ? navigator.serviceWorker.getRegistration().catch(() => undefined)
             : Promise.resolve(undefined);
-        const [statements, metadata, registration, pending, conflicts] = await Promise.all([
+        const [statements, metadata, registration] = await Promise.all([
           listDepotStatements(),
           db.appMetadata.get("meta"),
           registrationPromise,
-          outboxCount(),
-          listConflicts(),
         ]);
         if (!active) return;
 
@@ -142,10 +166,6 @@ export default function TodayCenter({
           restoreAt: readRestoreCompleted(ownerKey),
           offlineReady: Boolean(navigator.serviceWorker?.controller || registration?.active),
         });
-        if (!navigator.onLine) setSyncStatus("offline");
-        else if (conflicts.length > 0) setSyncStatus("conflict");
-        else if (pending > 0) setSyncStatus("syncing");
-        else setSyncStatus("synced");
       } finally {
         if (active) setReconciliationLoaded(true);
       }
@@ -154,17 +174,6 @@ export default function TodayCenter({
       active = false;
     };
   }, [ownerKey, transactions]);
-
-  useEffect(() => {
-    const online = () => setSyncStatus("syncing");
-    const offline = () => setSyncStatus("offline");
-    window.addEventListener("online", online);
-    window.addEventListener("offline", offline);
-    return () => {
-      window.removeEventListener("online", online);
-      window.removeEventListener("offline", offline);
-    };
-  }, []);
 
   const delta = useMemo(() => portfolioPulseDelta(pulse), [pulse]);
   const parsedAmount = parseDecimal(whatIfAmount);
@@ -190,6 +199,7 @@ export default function TodayCenter({
   const safetyItems = [
     {
       key: "backup",
+      name: "Backup",
       ready: backupReady,
       label: backupReady
         ? `Backup ${backupAge === 0 ? "hôm nay" : `${backupAge} ngày trước`}`
@@ -199,16 +209,19 @@ export default function TodayCenter({
     },
     {
       key: "restore",
+      name: "Khôi phục",
       ready: restoreReady,
       label: restoreReady ? "Đã thử khôi phục" : "Chưa thử khôi phục",
     },
     {
       key: "offline",
+      name: "Offline",
       ready: safety.offlineReady,
       label: safety.offlineReady ? "PWA sẵn sàng offline" : "Chưa xác nhận PWA offline",
     },
     {
       key: "print",
+      name: "Hồ sơ",
       ready: printedReady,
       label: printedReady ? "Hồ sơ khẩn cấp đã in" : "Chưa in hồ sơ khẩn cấp",
     },
@@ -250,24 +263,14 @@ export default function TodayCenter({
         <div>
           <p className="today-kicker">Một lần mở · bốn câu trả lời</p>
           <h2 id="today-center-title">Nhịp Quỹ</h2>
-          <p>Nhịp đập danh mục của gia đình — gọn, thật và có thể kiểm chứng.</p>
-        </div>
-        <div className="today-head-actions">
-          <span className={`today-sync-pill sync-${syncStatus}`}>{SYNC_STATUS_LABEL[syncStatus]}</span>
-          <button type="button" className="today-show-all" onClick={() => setAllOpen(true)}>
-            Xem đủ 4
-          </button>
         </div>
       </header>
 
       <div className="today-grid">
         <article className={`today-card today-card-pulse${pulseChanged ? " is-new" : ""}`}>
           <header className="today-card-head">
-            <span className="today-card-icon" aria-hidden>↗</span>
-            <div>
-              <h3>Đổi gì?</h3>
-              <p>So với lần mở có dữ liệu gần nhất.</p>
-            </div>
+            <span className="today-card-icon"><PulseIcon name="pulse" /></span>
+            <h3>Đổi gì?</h3>
             {pulseChanged ? <span className="today-new-label">Mới</span> : null}
           </header>
           {!valueComplete ? (
@@ -276,7 +279,7 @@ export default function TodayCenter({
               <span>Không ghi mốc thiếu dữ liệu.</span>
             </div>
           ) : delta ? (
-            <button type="button" className="today-metric-trigger" onClick={() => setTraceOpen(true)}>
+            <button type="button" className="today-card-detail" onClick={() => setTraceOpen(true)}>
               <span className={`today-main-metric ${metricTone(delta.value)}`}>{signedMoney(delta.value)}</span>
               <span className="today-metric-caption">
                 {delta.valuePct === null
@@ -286,81 +289,68 @@ export default function TodayCenter({
                   ? ` · ${delta.quantity > 0 ? "+" : ""}${delta.quantity.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} đơn vị`
                   : " · số lượng không đổi"}
               </span>
+              <span className="today-detail-hint">Xem nguồn</span>
             </button>
           ) : (
             <div className="today-empty-state">
               <strong>Đã tạo mốc đầu tiên</strong>
-              <span>Lần mở có ý nghĩa tiếp theo sẽ hiện thay đổi.</span>
+              <span>Lần mở tiếp theo sẽ hiện thay đổi.</span>
             </div>
           )}
         </article>
 
-        <article className="today-card today-card-reconcile">
+        <Link
+          to="/transactions"
+          className="today-card today-card-reconcile today-card-link"
+          aria-label={`${reconciliationValue}. Mở giao dịch và đối chiếu PDF`}
+        >
           <header className="today-card-head">
-            <span className="today-card-icon" aria-hidden>≋</span>
-            <div>
-              <h3>Khớp chưa?</h3>
-              <p>Sổ nội bộ đối chiếu sao kê mới nhất.</p>
-            </div>
+            <span className="today-card-icon"><PulseIcon name="reconcile" /></span>
+            <h3>Khớp chưa?</h3>
+            <span className="today-card-chevron" aria-hidden>›</span>
           </header>
-          <p className={`today-main-metric ${reconciliation?.differences.length ? "warning" : reconciliation ? "positive" : "neutral"}`}>
+          <span className={`today-main-metric ${reconciliation?.differences.length ? "warning" : reconciliation ? "positive" : "neutral"}`}>
             {reconciliationValue}
-          </p>
-          <p className="today-metric-caption">
+          </span>
+          <span className="today-metric-caption">
             {reconciliation
               ? `Sao kê ${reconciliation.date}`
-              : "Nhập PDF Trade Republic để tạo mốc."}
-          </p>
-        </article>
+              : "Nhập PDF để tạo mốc đối chiếu."}
+          </span>
+        </Link>
 
         <article className="today-card today-card-whatif">
           <header className="today-card-head">
-            <span className="today-card-icon" aria-hidden>◎</span>
-            <div>
-              <h3>Nếu thêm…?</h3>
-              <p>Thử một khoản và xem tới cuối kế hoạch.</p>
-            </div>
+            <span className="today-card-icon"><PulseIcon name="whatif" /></span>
+            <h3>Nếu thêm…?</h3>
           </header>
-          <div className="today-presets" role="group" aria-label="Khoản thử nhanh">
-            {[50, 100, 250].map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                className={amount === preset ? "active" : ""}
-                onClick={() => setWhatIfAmount(String(preset))}
-              >
-                {preset} €
-              </button>
-            ))}
-          </div>
-          <p className="today-main-metric neutral">{whatIfValue}</p>
-          <p className="today-metric-caption">
-            {vwcePrice > 0 && amount > 0
-              ? `${formatMoney(futureReal)} sức mua sau ${years} năm.`
-              : "Cần giá hợp lệ để quy đổi."}
-          </p>
+          <button type="button" className="today-card-detail" onClick={() => setWhatIfOpen(true)}>
+            <span className="today-card-context">Thử {formatMoney(amount)}</span>
+            <span className="today-main-metric neutral">{whatIfValue}</span>
+            <span className="today-metric-caption">
+              {vwcePrice > 0 && amount > 0
+                ? `${formatMoney(futureReal)} sức mua sau ${years} năm.`
+                : "Cần giá hợp lệ để quy đổi."}
+            </span>
+            <span className="today-detail-hint">Đổi khoản thử</span>
+          </button>
         </article>
 
         <article className="today-card today-card-safety">
           <header className="today-card-head">
-            <span className="today-card-icon" aria-hidden>✓</span>
-            <div>
-              <h3>An toàn chưa?</h3>
-              <p>Backup, khôi phục, offline và đồng bộ.</p>
-            </div>
+            <span className="today-card-icon"><PulseIcon name="safety" /></span>
+            <h3>An toàn chưa?</h3>
           </header>
-          <p className={`today-main-metric ${safetyScore === 4 ? "positive" : "warning"}`}>
-            {safetyScore}/4 ổn
-          </p>
-          <p className="today-metric-caption">
-            {highestRisk?.label ?? "Bốn lớp bảo vệ đều sẵn sàng."}
-          </p>
+          <button type="button" className="today-card-detail" onClick={() => setSafetyOpen(true)}>
+            <span className={`today-main-metric ${safetyScore === 4 ? "positive" : "warning"}`}>
+              {safetyScore}/4 ổn
+            </span>
+            <span className="today-metric-caption">
+              {highestRisk?.label ?? "Bốn lớp bảo vệ đều sẵn sàng."}
+            </span>
+            <span className="today-detail-hint">Xem bốn lớp</span>
+          </button>
         </article>
-      </div>
-
-      <div className="today-primary-actions" aria-label="Hành động nhanh">
-        <Link to="/transactions">Đối chiếu PDF</Link>
-        <Link to="/settings?tab=prices">Nhập giá tay</Link>
       </div>
 
       <TraceSheet
@@ -389,42 +379,67 @@ export default function TodayCenter({
       />
 
       <TraceSheet
-        open={allOpen}
-        onClose={() => setAllOpen(false)}
+        open={whatIfOpen}
+        onClose={() => setWhatIfOpen(false)}
         eyebrow="Nhịp Quỹ"
-        title="Đủ bốn câu trả lời"
-        value={`${safetyScore}/4 lớp an toàn`}
-        explanation="Một ảnh chụp ngắn của danh mục hiện tại. Mỗi kết quả đều đến từ sổ local, feed giá hoặc sao kê thật."
+        title="Nếu thêm…?"
+        value={whatIfValue}
+        explanation="Ước tính quy đổi khoản thêm hôm nay theo giá VWCE hiện tại và sức mua cuối kế hoạch. Đây không phải giao dịch thật."
         rows={[
-          { label: "Đổi gì?", value: deltaValue, tone: delta && delta.value < 0 ? "negative" : undefined },
-          { label: "Khớp chưa?", value: reconciliationValue, tone: reconciliation?.differences.length ? "warning" : undefined },
-          { label: "Nếu thêm…?", value: whatIfValue },
-          { label: "An toàn chưa?", value: `${safetyScore}/4 ổn`, tone: safetyScore < 4 ? "warning" : "positive" },
+          { label: "Khoản thử", value: formatMoney(amount) },
+          { label: "Giá VWCE", value: vwcePrice > 0 ? formatMoney(vwcePrice) : "Chưa có", tone: vwcePrice > 0 ? undefined : "warning" },
+          { label: "Mua thêm", value: whatIfValue },
+          { label: `Sức mua sau ${years} năm`, value: amount > 0 ? formatMoney(futureReal) : "—" },
         ]}
         links={[
-          { label: "Giao dịch & PDF", to: "/transactions" },
           { label: "Mô phỏng đầy đủ", to: "/simulation" },
+          { label: "Kiểm tra giá", to: "/settings?tab=prices" },
+        ]}
+      >
+        <div className="today-sheet-tools">
+          <div className="today-sheet-presets" role="group" aria-label="Khoản thử nhanh">
+            {[50, 100, 250].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                className={amount === preset ? "active" : ""}
+                onClick={() => setWhatIfAmount(String(preset))}
+              >
+                {preset} €
+              </button>
+            ))}
+          </div>
+          <label className="today-sheet-amount">
+            <span>Khoản tùy chọn</span>
+            <span><input inputMode="decimal" value={whatIfAmount} onChange={(event) => setWhatIfAmount(event.target.value)} /><b>€</b></span>
+          </label>
+        </div>
+      </TraceSheet>
+
+      <TraceSheet
+        open={safetyOpen}
+        onClose={() => setSafetyOpen(false)}
+        eyebrow="Nhịp Quỹ"
+        title="An toàn chưa?"
+        value={`${safetyScore}/4 ổn`}
+        explanation="Bốn lớp bảo vệ giúp sổ local vẫn có thể sao lưu, khôi phục, dùng offline và bàn giao khi cần."
+        rows={safetyItems.map((item) => ({
+          label: item.name,
+          value: item.label,
+          tone: item.ready ? ("positive" as const) : ("warning" as const),
+        }))}
+        links={[
           { label: "Backup & dữ liệu", to: "/settings?tab=data" },
           { label: "Hồ sơ khẩn cấp", to: "/notfallmappe" },
         ]}
       >
-        <div className="today-sheet-tools">
-          <label className="today-sheet-amount">
-            <span>Khoản what-if tùy chọn</span>
-            <span><input inputMode="decimal" value={whatIfAmount} onChange={(event) => setWhatIfAmount(event.target.value)} /><b>€</b></span>
-          </label>
-          <div className="today-safety-detail" aria-label="Chi tiết an toàn dữ liệu">
-            {safetyItems.map((item) => (
-              <div key={item.key} className={item.ready ? "ready" : "pending"}>
-                <span aria-hidden>{item.ready ? "✓" : "○"}</span>
-                <p>{item.label}</p>
-                {item.key === "restore" && !item.ready ? (
-                  <button type="button" className="today-inline-button" onClick={confirmRestore}>Đã thử</button>
-                ) : null}
-              </div>
-            ))}
+        {!restoreReady ? (
+          <div className="today-sheet-tools">
+            <button type="button" className="today-inline-button" onClick={confirmRestore}>
+              Đánh dấu đã thử khôi phục
+            </button>
           </div>
-        </div>
+        ) : null}
       </TraceSheet>
     </section>
   );
