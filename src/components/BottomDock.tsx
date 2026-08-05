@@ -7,6 +7,9 @@ export type DockItem = {
   icon: ReactNode;
 };
 
+/** Mobile dock chỉ giữ bốn đích chính; các đích phụ nằm trong menu avatar. */
+const PRIMARY_DOCK_ITEMS = 4;
+
 /**
  * V10-A3 — ngưỡng ẩn hiện.
  *
@@ -32,6 +35,7 @@ export default function BottomDock({ items }: { items: DockItem[] }) {
   const ticking = useRef(false);
   const reduced = useRef(false);
   const { pathname } = useLocation();
+  const primaryItems = items.slice(0, PRIMARY_DOCK_ITEMS);
 
   // Đổi màn thì luôn hiện lại, và quên hết quãng đường đã cộng dồn.
   useEffect(() => {
@@ -102,10 +106,10 @@ export default function BottomDock({ items }: { items: DockItem[] }) {
   return (
     <nav
       className={"bottom-dock" + (hidden ? " is-hidden" : "")}
-      aria-label="Điều hướng"
+      aria-label="Điều hướng chính"
     >
       <div className="bottom-dock-inner">
-        {items.map(({ to, label, icon }) => (
+        {primaryItems.map(({ to, label, icon }) => (
           <NavLink
             key={to}
             to={to}
