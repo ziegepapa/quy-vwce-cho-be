@@ -128,6 +128,7 @@ export default function SettingsPricePanel({
         return false;
       }
       if (checked.value.fingerprint === lastSavedFingerprint.current) {
+        forgetDraft();
         setError(null);
         setSaveState("saved");
         return true;
@@ -167,19 +168,21 @@ export default function SettingsPricePanel({
 
   useEffect(() => {
     draftRef.current = draft;
-    rememberDraft(draft);
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);
 
     const checked = validateManualQuoteDraft(draft);
     if (!checked.ok) {
+      rememberDraft(draft);
       if (checked.reason === "empty") setSaveState("idle");
       return;
     }
     if (checked.value.fingerprint === lastSavedFingerprint.current) {
+      forgetDraft();
       if (saveState !== "saving") setSaveState("saved");
       return;
     }
 
+    rememberDraft(draft);
     setSaveState("dirty");
     timerRef.current = window.setTimeout(() => {
       void saveRef.current(false);
