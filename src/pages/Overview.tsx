@@ -21,6 +21,7 @@ import {
   portfolioMarketValue,
 } from "../lib/calc";
 import TodayCenter from "../components/TodayCenter";
+import TraceSheet from "../components/TraceSheet";
 
 type Insight = {
   id: string;
@@ -64,30 +65,6 @@ function Sparkline({ points }: { points: { value: number }[] }) {
   );
 }
 
-function MiniRing({ pct }: { pct: number }) {
-  const shown = pct <= 0 ? 3 : Math.min(100, pct);
-  const radius = 18;
-  const circumference = 2 * Math.PI * radius;
-  return (
-    <svg className="mini-ring" width="44" height="44" viewBox="0 0 44 44" aria-hidden>
-      <circle cx="22" cy="22" r={radius} fill="none" stroke="rgba(16,24,40,.08)" strokeWidth="4" />
-      <circle
-        cx="22"
-        cy="22"
-        r={radius}
-        fill="none"
-        stroke="var(--primary-600)"
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={circumference - (shown / 100) * circumference}
-        transform="rotate(-90 22 22)"
-      />
-      <text x="22" y="25" textAnchor="middle" className="mini-ring-pct">{Math.round(pct)}%</text>
-    </svg>
-  );
-}
-
 export default function Overview({ refreshKey = 0 }: { displayName?: string; refreshKey?: number }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -97,6 +74,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   const [loading, setLoading] = useState(true);
   const [detailOpen, setDetailOpen] = useState(false);
   const [moreActions, setMoreActions] = useState(false);
+  const [traceOpen, setTraceOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -153,8 +131,8 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   if (loading) {
     return (
       <div className="ov">
-        <div className="skeleton" style={{ height: 176, borderRadius: 18 }} />
-        <div className="skeleton" style={{ height: 260, borderRadius: 20, marginTop: 20 }} />
+        <div className="skeleton" style={{ height: 176, borderRadius: 22 }} />
+        <div className="skeleton" style={{ height: 360, borderRadius: 24, marginTop: 16 }} />
       </div>
     );
   }
@@ -168,6 +146,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     0,
   );
   const vwcePrice = pricesByIsin[VWCE_ISIN] ?? 0;
+  const vwceQuote = quotes.find((quote) => quote.instrumentIsin === VWCE_ISIN && quote.currency === "EUR");
   const vwceValue = vwcePrice > 0 ? portfolio.vwceQty * vwcePrice : null;
   const pnl = vwceValue != null && portfolio.vwceCostBasis > 0 ? vwceValue - portfolio.vwceCostBasis : 0;
   const today = new Date();
@@ -217,10 +196,9 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     const due = parseDate(goal.dueDate);
     const months = monthsBetween(today, due);
     const years = Math.max(0, due.getFullYear() - goal.baseYear);
-    const adjusted =
-      goal.mode === "purchasing_power"
-        ? inflate(goal.amount, goal.inflationRate, years)
-        : goal.amount;
+    const adjusted = goal.mode === "purchasing_power"
+      ? inflate(goal.amount, goal.inflationRate, years)
+      : goal.amount;
     if (months <= 36 && months > 0 && goal.protectedAmount < adjusted * 0.5) {
       insights.push({
         id: `goal-${goal.id}`,
@@ -234,19 +212,17 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   }
 
   const cashNegative = portfolio.cashBalance < 0;
-  const ratio =
-    totalKnown > 0 && securitiesKnown >= 0
-      ? Math.min(100, Math.max(0, Math.round((securitiesKnown / totalKnown) * 100)))
-      : 0;
-  const pnlPct =
-    portfolio.vwceCostBasis > 0 && vwceValue != null
-      ? ((pnl / portfolio.vwceCostBasis) * 100).toFixed(1)
-      : null;
+  const ratio = totalKnown > 0 && securitiesKnown >= 0
+    ? Math.min(100, Math.max(0, Math.round((securitiesKnown / totalKnown) * 100)))
+    : 0;
+  const pnlPct = portfolio.vwceCostBasis > 0 && vwceValue != null
+    ? ((pnl / portfolio.vwceCostBasis) * 100).toFixed(1)
+    : null;
 
   let nearestGoal: Goal | null = null;
   let nearestMonths = Infinity;
-  let nearestPct = 0;
-  let nearestPerMonth = 0;
+  let nearestTarget = 0;
+  let nearestGap = 0;
   for (const goal of goals) {
     const due = parseDate(goal.dueDate);
     const months = monthsBetween(today, due);
@@ -254,12 +230,10 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       nearestMonths = months;
       nearestGoal = goal;
       const years = Math.max(0, due.getFullYear() - goal.baseYear);
-      const adjusted =
-        goal.mode === "purchasing_power"
-          ? inflate(goal.amount, goal.inflationRate, years)
-          : goal.amount;
-      nearestPct = adjusted > 0 ? Math.min(100, (goal.protectedAmount / adjusted) * 100) : 0;
-      nearestPerMonth = months > 0 ? Math.max(0, adjusted - goal.protectedAmount) / months : 0;
+      nearestTarget = goal.mode === "purchasing_power"
+        ? inflate(goal.amount, goal.inflationRate, years)
+        : goal.amount;
+      nearestGap = Math.max(0, nearestTarget - goal.protectedAmount);
     }
   }
 
@@ -269,6 +243,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     const instrument = instruments.find((candidate) => candidate.isin === isin);
     return instrument?.ticker || instrument?.name || isin;
   };
+  const sourceLabel = vwceQuote?.source === "manual" ? "Tay đang thắng" : vwceQuote ? "Auto" : "Chưa có giá";
 
   return (
     <div className="ov">
@@ -282,11 +257,13 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
           </div>
         ) : (
           <>
-            <p className="hero-label">{hasMissingPrices ? "Tài sản đã định giá" : "Tổng tài sản"}</p>
-            <p className="hero-amount">
-              <span className="hero-num">{formatMoney(totalKnown).replace(/\s*€$/, "")}</span>
-              <span className="hero-eur">€</span>
-            </p>
+            <button type="button" className="hero-trace-trigger" onClick={() => setTraceOpen(true)}>
+              <span className="hero-label">{hasMissingPrices ? "Tài sản đã định giá" : "Tổng tài sản"}</span>
+              <span className="hero-amount">
+                <span className="hero-num">{formatMoney(totalKnown).replace(/\s*€$/, "")}</span>
+                <span className="hero-eur">€</span>
+              </span>
+            </button>
             {hasMissingPrices ? (
               <span className="hero-delta">+ {market.missingIsins.length} mã thiếu giá</span>
             ) : pnl !== 0 && vwceValue != null ? (
@@ -294,6 +271,10 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
                 {pnl >= 0 ? "↑" : "↓"} {formatMoney(Math.abs(pnl))}{pnlPct ? ` (${pnlPct}%)` : ""}
               </span>
             ) : null}
+            <button type="button" className="hero-provenance" onClick={() => setTraceOpen(true)}>
+              <span aria-hidden />
+              {sourceLabel}{vwceQuote?.asOf ? ` · ${vwceQuote.asOf}` : ""}
+            </button>
             <Sparkline points={series} />
             {cashNegative ? (
               <div className="alloc-legend-v8"><span className="neg">Tỉ lệ chưa tính được — số dư âm</span></div>
@@ -306,13 +287,33 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
                 <div className="alloc-legend-v8"><span>Chứng khoán {ratio}%</span><span>An toàn {100 - ratio}%</span></div>
               </>
             )}
-            {mode === "early" ? <p className="hero-early">Còn {Math.max(0, 3 - transactions.length)} bước để hoàn tất thiết lập · · ·</p> : null}
+            {mode === "early" ? <p className="hero-early">Còn {Math.max(0, 3 - transactions.length)} bước để hoàn tất thiết lập</p> : null}
           </>
         )}
       </section>
 
+      {nearestGoal ? (
+        <Link to="/goals" className="pulse-goal-line">
+          <span className="pulse-goal-label">Mốc kế tiếp</span>
+          <strong>{nearestGoal.name}</strong>
+          <span className="pulse-goal-meta">Còn {formatMoney(nearestGap)} · {nearestMonths} tháng</span>
+          <span aria-hidden>›</span>
+        </Link>
+      ) : null}
+
+      {settings ? (
+        <TodayCenter
+          totalValue={totalKnown}
+          totalQuantity={totalQuantity}
+          valueComplete={!hasMissingPrices}
+          vwcePrice={vwcePrice}
+          settings={settings}
+          transactions={transactions}
+        />
+      ) : null}
+
       {mode !== "empty" ? (
-        <section className="stat-strip">
+        <section className="stat-strip" aria-label="Chi tiết phân bổ">
           <div className="stat-col"><span className="stat-label">CK đã định giá</span><span className="stat-val">{formatMoney(securitiesKnown)}</span></div>
           <div className="stat-rule" aria-hidden />
           <div className="stat-col"><span className="stat-label">An toàn</span><span className={`stat-val${cashNegative ? " neg" : ""}`}>{formatMoney(portfolio.cashBalance)}</span></div>
@@ -336,17 +337,6 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
             </dl>
           ) : null}
         </section>
-      ) : null}
-
-      {settings ? (
-        <TodayCenter
-          totalValue={totalKnown}
-          totalQuantity={totalQuantity}
-          valueComplete={!hasMissingPrices}
-          vwcePrice={vwcePrice}
-          settings={settings}
-          transactions={transactions}
-        />
       ) : null}
 
       {cashNegative ? (
@@ -377,18 +367,26 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         </section>
       ) : null}
 
-      {nearestGoal ? (
-        <section className="next-goal">
-          <Link to="/goals" className="next-goal-row">
-            <MiniRing pct={nearestPct} />
-            <div className="next-goal-body"><p className="next-goal-name">{nearestGoal.name}</p><p className="next-goal-meta">Còn {nearestMonths} tháng{nearestPerMonth > 0 ? ` · cần thêm ${formatMoney(nearestPerMonth)}/tháng` : ""}</p></div>
-            <span className="next-goal-chev" aria-hidden>›</span>
-          </Link>
-          {goals.length > 1 ? <Link to="/goals" className="next-goal-all">Xem cả {goals.length} mục tiêu →</Link> : null}
-        </section>
-      ) : null}
+      <p className="ov-foot">Không phải tư vấn đầu tư. What-if là ước tính; giao dịch vẫn lấy từ sổ local.</p>
 
-      <p className="ov-foot">Không phải tư vấn đầu tư. What-if là ước tính, dữ liệu giao dịch vẫn lấy từ sổ local.</p>
+      <TraceSheet
+        open={traceOpen}
+        onClose={() => setTraceOpen(false)}
+        title="Tổng tài sản"
+        value={hasMissingPrices ? `${formatMoney(totalKnown)} đã định giá` : formatMoney(totalKnown)}
+        explanation="Tổng tài sản = chứng khoán có giá hợp lệ + số dư an toàn trong sổ local. Giá thiếu không bị tính thành 0."
+        rows={[
+          { label: "Chứng khoán", value: formatMoney(securitiesKnown) },
+          { label: "An toàn", value: formatMoney(cash), tone: cashNegative ? "negative" : undefined },
+          { label: "Nguồn VWCE", value: sourceLabel },
+          { label: "Giá / asOf", value: vwcePrice > 0 ? `${formatMoney(vwcePrice)} · ${vwceQuote?.asOf ?? "legacy"}` : "Chưa có", tone: vwcePrice > 0 ? undefined : "warning" },
+          { label: "Độ đầy đủ", value: hasMissingPrices ? `Thiếu ${market.missingIsins.length} mã` : "Đủ giá", tone: hasMissingPrices ? "warning" : "positive" },
+        ]}
+        links={[
+          { label: "Xem giao dịch", to: "/transactions" },
+          { label: "Giá & tài sản", to: "/settings?tab=prices" },
+        ]}
+      />
     </div>
   );
 }

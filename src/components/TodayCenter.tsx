@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import "../styles/today-center.css";
+import "../styles/pulse-polish.css";
 import { useAuth } from "../lib/auth";
 import { db } from "../lib/db";
 import { formatMoney, parseDecimal } from "../lib/calc";
@@ -21,6 +22,7 @@ import {
 } from "../lib/todayCenter";
 import type { AppSettings, Transaction } from "../lib/types";
 import { SYNC_STATUS_LABEL, type SyncStatus } from "../lib/sync/types";
+import TraceSheet from "./TraceSheet";
 
 type ReconciliationSummary = {
   date: string;
@@ -93,6 +95,8 @@ export default function TodayCenter({
   const [whatIfAmount, setWhatIfAmount] = useState(() =>
     String(Math.max(50, Math.round(settings.contributionY1 || 100))),
   );
+  const [traceOpen, setTraceOpen] = useState(false);
+  const [allOpen, setAllOpen] = useState(false);
 
   useEffect(() => {
     const current = valueComplete
@@ -108,40 +112,43 @@ export default function TodayCenter({
   useEffect(() => {
     let active = true;
     void (async () => {
-      const registrationPromise =
-        "serviceWorker" in navigator
-          ? navigator.serviceWorker.getRegistration().catch(() => undefined)
-          : Promise.resolve(undefined);
-      const [statements, metadata, registration, pending, conflicts] = await Promise.all([
-        listDepotStatements(),
-        db.appMetadata.get("meta"),
-        registrationPromise,
-        outboxCount(),
-        listConflicts(),
-      ]);
-      if (!active) return;
+      try {
+        const registrationPromise =
+          "serviceWorker" in navigator
+            ? navigator.serviceWorker.getRegistration().catch(() => undefined)
+            : Promise.resolve(undefined);
+        const [statements, metadata, registration, pending, conflicts] = await Promise.all([
+          listDepotStatements(),
+          db.appMetadata.get("meta"),
+          registrationPromise,
+          outboxCount(),
+          listConflicts(),
+        ]);
+        if (!active) return;
 
-      const latest = statements[0];
-      if (latest) {
-        const rows = reconcileDepotStatement(latest, transactions);
-        setReconciliation({
-          date: latest.date,
-          rows,
-          differences: rows.filter((row) => row.status !== "match"),
+        const latest = statements[0];
+        if (latest) {
+          const rows = reconcileDepotStatement(latest, transactions);
+          setReconciliation({
+            date: latest.date,
+            rows,
+            differences: rows.filter((row) => row.status !== "match"),
+          });
+        } else {
+          setReconciliation(null);
+        }
+        setSafety({
+          backupAt: metadata?.lastBackupAt ?? "",
+          restoreAt: readRestoreCompleted(ownerKey),
+          offlineReady: Boolean(navigator.serviceWorker?.controller || registration?.active),
         });
-      } else {
-        setReconciliation(null);
+        if (!navigator.onLine) setSyncStatus("offline");
+        else if (conflicts.length > 0) setSyncStatus("conflict");
+        else if (pending > 0) setSyncStatus("syncing");
+        else setSyncStatus("synced");
+      } finally {
+        if (active) setReconciliationLoaded(true);
       }
-      setReconciliationLoaded(true);
-      setSafety({
-        backupAt: metadata?.lastBackupAt ?? "",
-        restoreAt: readRestoreCompleted(ownerKey),
-        offlineReady: Boolean(navigator.serviceWorker?.controller || registration?.active),
-      });
-      if (!navigator.onLine) setSyncStatus("offline");
-      else if (conflicts.length > 0) setSyncStatus("conflict");
-      else if (pending > 0) setSyncStatus("syncing");
-      else setSyncStatus("synced");
     })();
     return () => {
       active = false;
@@ -160,7 +167,8 @@ export default function TodayCenter({
   }, []);
 
   const delta = useMemo(() => portfolioPulseDelta(pulse), [pulse]);
-  const amount = Math.max(0, parseDecimal(whatIfAmount));
+  const parsedAmount = parseDecimal(whatIfAmount);
+  const amount = Number.isFinite(parsedAmount) ? Math.max(0, parsedAmount) : 0;
   const years = Math.max(
     0,
     Math.min(
@@ -206,112 +214,113 @@ export default function TodayCenter({
     },
   ];
   const safetyScore = safetyItems.filter((item) => item.ready).length;
+  const highestRisk = safetyItems.find((item) => !item.ready);
+  const pulseChanged = Boolean(
+    delta && (Math.abs(delta.value) > 0.005 || Math.abs(delta.quantity) > 0.000001),
+  );
+
+  const reconciliationValue = !reconciliationLoaded
+    ? "Đang kiểm tra"
+    : !reconciliation
+      ? "Chưa có sao kê"
+      : reconciliation.differences.length === 0
+        ? `${reconciliation.rows.length}/${reconciliation.rows.length} khớp`
+        : `${reconciliation.differences.length} cần xem`;
+
+  const deltaValue = !valueComplete
+    ? "Đang chờ đủ giá"
+    : delta
+      ? signedMoney(delta.value)
+      : "Mốc đầu tiên";
+
+  const whatIfValue = vwcePrice > 0 && amount > 0
+    ? `+${extraUnits.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} VWCE`
+    : "Cần giá VWCE";
+
+  function confirmRestore() {
+    if (!window.confirm("Chỉ đánh dấu sau khi bạn đã thử nhập một bản backup và kiểm tra số liệu. Đã hoàn tất?")) return;
+    const completedAt = new Date().toISOString();
+    markRestoreCompleted(ownerKey, completedAt);
+    setSafety((current) => ({ ...current, restoreAt: completedAt }));
+  }
 
   return (
     <section className="today-center" aria-labelledby="today-center-title">
       <header className="today-center-head">
         <div>
           <p className="today-kicker">Một lần mở · bốn câu trả lời</p>
-          <h2 id="today-center-title">Trung tâm hôm nay</h2>
-          <p>Biến động, đối chiếu, thử nhanh và độ an toàn — không cần tìm ở bốn màn hình.</p>
+          <h2 id="today-center-title">Nhịp Quỹ</h2>
+          <p>Nhịp đập danh mục của gia đình — gọn, thật và có thể kiểm chứng.</p>
         </div>
-        <span className="today-live-pill">
-          <span aria-hidden />
-          Live local
-        </span>
+        <div className="today-head-actions">
+          <span className={`today-sync-pill sync-${syncStatus}`}>{SYNC_STATUS_LABEL[syncStatus]}</span>
+          <button type="button" className="today-show-all" onClick={() => setAllOpen(true)}>
+            Xem đủ 4
+          </button>
+        </div>
       </header>
 
       <div className="today-grid">
-        <article className="today-card today-card-pulse">
-          <div className="today-card-head">
+        <article className={`today-card today-card-pulse${pulseChanged ? " is-new" : ""}`}>
+          <header className="today-card-head">
             <span className="today-card-icon" aria-hidden>↗</span>
             <div>
-              <p className="today-card-eyebrow">A · Daily delta</p>
-              <h3>Từ lần mở trước</h3>
+              <h3>Đổi gì?</h3>
+              <p>So với lần mở có dữ liệu gần nhất.</p>
             </div>
-          </div>
+            {pulseChanged ? <span className="today-new-label">Mới</span> : null}
+          </header>
           {!valueComplete ? (
             <div className="today-empty-state">
               <strong>Đang chờ đủ giá</strong>
-              <span>Delta sẽ không ghi một mốc thiếu dữ liệu.</span>
-              <Link to="/settings?tab=prices">Bổ sung giá →</Link>
+              <span>Không ghi mốc thiếu dữ liệu.</span>
             </div>
           ) : delta ? (
-            <>
-              <p className={`today-main-metric ${metricTone(delta.value)}`}>
-                {signedMoney(delta.value)}
-              </p>
-              <p className="today-metric-caption">
+            <button type="button" className="today-metric-trigger" onClick={() => setTraceOpen(true)}>
+              <span className={`today-main-metric ${metricTone(delta.value)}`}>{signedMoney(delta.value)}</span>
+              <span className="today-metric-caption">
                 {delta.valuePct === null
                   ? "Mốc trước chưa có giá trị"
                   : `${delta.valuePct >= 0 ? "+" : ""}${delta.valuePct.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`}
                 {Math.abs(delta.quantity) > 0.000001
                   ? ` · ${delta.quantity > 0 ? "+" : ""}${delta.quantity.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} đơn vị`
                   : " · số lượng không đổi"}
-              </p>
-              <p className="today-subtle">So với mốc {dateLabel(delta.since)}</p>
-            </>
+              </span>
+            </button>
           ) : (
             <div className="today-empty-state">
               <strong>Đã tạo mốc đầu tiên</strong>
-              <span>Lần mở có ý nghĩa tiếp theo sẽ hiện phần thay đổi.</span>
+              <span>Lần mở có ý nghĩa tiếp theo sẽ hiện thay đổi.</span>
             </div>
           )}
         </article>
 
         <article className="today-card today-card-reconcile">
-          <div className="today-card-head">
+          <header className="today-card-head">
             <span className="today-card-icon" aria-hidden>≋</span>
             <div>
-              <p className="today-card-eyebrow">B · Đối chiếu 30 giây</p>
-              <h3>App so với Trade</h3>
+              <h3>Khớp chưa?</h3>
+              <p>Sổ nội bộ đối chiếu sao kê mới nhất.</p>
             </div>
-          </div>
-          {!reconciliationLoaded ? (
-            <p className="today-subtle">Đang kiểm tra mốc Depot gần nhất…</p>
-          ) : reconciliation ? (
-            <>
-              <p
-                className={`today-main-metric ${reconciliation.differences.length ? "warning" : "positive"}`}
-              >
-                {reconciliation.differences.length === 0
-                  ? `${reconciliation.rows.length}/${reconciliation.rows.length} khớp`
-                  : `${reconciliation.differences.length} cần xem`}
-              </p>
-              <p className="today-metric-caption">Sao kê ngày {reconciliation.date}</p>
-              {reconciliation.differences.length > 0 ? (
-                <ul className="today-mini-list">
-                  {reconciliation.differences.slice(0, 2).map((row) => (
-                    <li key={row.instrumentIsin}>
-                      <span>{row.instrumentIsin.slice(0, 4)}…{row.instrumentIsin.slice(-4)}</span>
-                      <strong>
-                        {row.difference > 0 ? "+" : ""}
-                        {row.difference.toLocaleString("vi-VN", { maximumFractionDigits: 6 })}
-                      </strong>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="today-subtle">Số lượng trong sổ đang khớp sao kê mới nhất.</p>
-              )}
-            </>
-          ) : (
-            <div className="today-empty-state">
-              <strong>Chưa có sao kê Depot</strong>
-              <span>Nhập PDF Trade Republic để tạo mốc đối chiếu.</span>
-            </div>
-          )}
-          <Link className="today-card-link" to="/transactions">Mở đối chiếu →</Link>
+          </header>
+          <p className={`today-main-metric ${reconciliation?.differences.length ? "warning" : reconciliation ? "positive" : "neutral"}`}>
+            {reconciliationValue}
+          </p>
+          <p className="today-metric-caption">
+            {reconciliation
+              ? `Sao kê ${reconciliation.date}`
+              : "Nhập PDF Trade Republic để tạo mốc."}
+          </p>
         </article>
 
         <article className="today-card today-card-whatif">
-          <div className="today-card-head">
+          <header className="today-card-head">
             <span className="today-card-icon" aria-hidden>◎</span>
             <div>
-              <p className="today-card-eyebrow">C · What-if một chạm</p>
-              <h3>Nếu thêm hôm nay</h3>
+              <h3>Nếu thêm…?</h3>
+              <p>Thử một khoản và xem tới cuối kế hoạch.</p>
             </div>
-          </div>
+          </header>
           <div className="today-presets" role="group" aria-label="Khoản thử nhanh">
             {[50, 100, 250].map((preset) => (
               <button
@@ -324,67 +333,99 @@ export default function TodayCenter({
               </button>
             ))}
           </div>
-          <label className="today-amount-input">
-            <span>Số tiền</span>
-            <input
-              inputMode="decimal"
-              value={whatIfAmount}
-              onChange={(event) => setWhatIfAmount(event.target.value)}
-            />
-            <b>€</b>
-          </label>
-          {vwcePrice > 0 && amount > 0 ? (
-            <>
-              <p className="today-main-metric neutral">
-                +{extraUnits.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} VWCE
-              </p>
-              <p className="today-metric-caption">
-                Ước tính thành {formatMoney(futureReal)} theo sức mua hôm nay sau {years} năm.
-              </p>
-            </>
-          ) : (
-            <p className="today-subtle">Cần giá VWCE hợp lệ để quy đổi số đơn vị.</p>
-          )}
-          <Link className="today-card-link" to="/simulation">Mở mô phỏng đầy đủ →</Link>
+          <p className="today-main-metric neutral">{whatIfValue}</p>
+          <p className="today-metric-caption">
+            {vwcePrice > 0 && amount > 0
+              ? `${formatMoney(futureReal)} sức mua sau ${years} năm.`
+              : "Cần giá hợp lệ để quy đổi."}
+          </p>
         </article>
 
         <article className="today-card today-card-safety">
-          <div className="today-card-head">
+          <header className="today-card-head">
             <span className="today-card-icon" aria-hidden>✓</span>
             <div>
-              <p className="today-card-eyebrow">D · Notfallmappe sống</p>
-              <h3>An toàn {safetyScore}/4</h3>
+              <h3>An toàn chưa?</h3>
+              <p>Backup, khôi phục, offline và đồng bộ.</p>
             </div>
-            <span className={`today-sync-pill sync-${syncStatus}`}>{SYNC_STATUS_LABEL[syncStatus]}</span>
-          </div>
-          <div className="today-safety-list">
+          </header>
+          <p className={`today-main-metric ${safetyScore === 4 ? "positive" : "warning"}`}>
+            {safetyScore}/4 ổn
+          </p>
+          <p className="today-metric-caption">
+            {highestRisk?.label ?? "Bốn lớp bảo vệ đều sẵn sàng."}
+          </p>
+        </article>
+      </div>
+
+      <div className="today-primary-actions" aria-label="Hành động nhanh">
+        <Link to="/transactions">Đối chiếu PDF</Link>
+        <Link to="/settings?tab=prices">Nhập giá tay</Link>
+      </div>
+
+      <TraceSheet
+        open={traceOpen}
+        onClose={() => setTraceOpen(false)}
+        title="Đổi gì?"
+        value={deltaValue}
+        explanation="Delta dùng hai mốc danh mục đầy đủ gần nhất. Refresh lỗi hoặc thiếu giá không tạo biến động giả."
+        rows={[
+          { label: "Hiện tại", value: formatMoney(totalValue) },
+          {
+            label: "Mốc trước",
+            value: delta ? formatMoney(totalValue - delta.value) : "Chưa có",
+            tone: "muted",
+          },
+          {
+            label: "Số lượng",
+            value: `${totalQuantity.toLocaleString("vi-VN", { maximumFractionDigits: 6 })} đơn vị`,
+          },
+          { label: "Mốc so sánh", value: delta ? dateLabel(delta.since) : "Lần mở tiếp theo", tone: "muted" },
+        ]}
+        links={[
+          { label: "Xem giao dịch", to: "/transactions" },
+          { label: "Kiểm tra giá", to: "/settings?tab=prices" },
+        ]}
+      />
+
+      <TraceSheet
+        open={allOpen}
+        onClose={() => setAllOpen(false)}
+        eyebrow="Nhịp Quỹ"
+        title="Đủ bốn câu trả lời"
+        value={`${safetyScore}/4 lớp an toàn`}
+        explanation="Một ảnh chụp ngắn của danh mục hiện tại. Mỗi kết quả đều đến từ sổ local, feed giá hoặc sao kê thật."
+        rows={[
+          { label: "Đổi gì?", value: deltaValue, tone: delta && delta.value < 0 ? "negative" : undefined },
+          { label: "Khớp chưa?", value: reconciliationValue, tone: reconciliation?.differences.length ? "warning" : undefined },
+          { label: "Nếu thêm…?", value: whatIfValue },
+          { label: "An toàn chưa?", value: `${safetyScore}/4 ổn`, tone: safetyScore < 4 ? "warning" : "positive" },
+        ]}
+        links={[
+          { label: "Giao dịch & PDF", to: "/transactions" },
+          { label: "Mô phỏng đầy đủ", to: "/simulation" },
+          { label: "Backup & dữ liệu", to: "/settings?tab=data" },
+          { label: "Hồ sơ khẩn cấp", to: "/notfallmappe" },
+        ]}
+      >
+        <div className="today-sheet-tools">
+          <label className="today-sheet-amount">
+            <span>Khoản what-if tùy chọn</span>
+            <span><input inputMode="decimal" value={whatIfAmount} onChange={(event) => setWhatIfAmount(event.target.value)} /><b>€</b></span>
+          </label>
+          <div className="today-safety-detail" aria-label="Chi tiết an toàn dữ liệu">
             {safetyItems.map((item) => (
               <div key={item.key} className={item.ready ? "ready" : "pending"}>
                 <span aria-hidden>{item.ready ? "✓" : "○"}</span>
                 <p>{item.label}</p>
                 {item.key === "restore" && !item.ready ? (
-                  <button
-                    type="button"
-                    className="today-inline-button"
-                    onClick={() => {
-                      if (!confirm("Chỉ đánh dấu sau khi bạn đã thử nhập một bản backup và kiểm tra số liệu. Đã hoàn tất?")) return;
-                      const completedAt = new Date().toISOString();
-                      markRestoreCompleted(ownerKey, completedAt);
-                      setSafety((current) => ({ ...current, restoreAt: completedAt }));
-                    }}
-                  >
-                    Đã thử
-                  </button>
+                  <button type="button" className="today-inline-button" onClick={confirmRestore}>Đã thử</button>
                 ) : null}
               </div>
             ))}
           </div>
-          <div className="today-card-actions">
-            <Link className="today-card-link" to="/settings?tab=data">Backup & khôi phục →</Link>
-            <Link className="today-card-link secondary-link" to="/notfallmappe">Hồ sơ →</Link>
-          </div>
-        </article>
-      </div>
+        </div>
+      </TraceSheet>
     </section>
   );
 }
