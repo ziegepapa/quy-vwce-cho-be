@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import "../styles/today-center.css";
+import { useAuth } from "../lib/auth";
 import { db } from "../lib/db";
 import { formatMoney, parseDecimal } from "../lib/calc";
 import { listDepotStatements } from "../lib/depotStatements";
+import { listConflicts } from "../lib/sync/engine";
+import { outboxCount } from "../lib/sync/outbox";
 import {
   reconcileDepotStatement,
   type DepotReconciliationRow,
 } from "../lib/tr/depotStatement";
 import {
+  markRestoreCompleted,
   portfolioPulseDelta,
   readPortfolioPulse,
   readRestoreCompleted,
@@ -30,14 +35,12 @@ type SafetySnapshot = {
 };
 
 type Props = {
-  ownerKey: string;
   totalValue: number;
   totalQuantity: number;
   valueComplete: boolean;
   vwcePrice: number;
   settings: AppSettings;
   transactions: Transaction[];
-  syncStatus: SyncStatus;
 };
 
 function dateLabel(value: string): string {
@@ -69,18 +72,19 @@ function metricTone(value: number): "positive" | "negative" | "neutral" {
 }
 
 export default function TodayCenter({
-  ownerKey,
   totalValue,
   totalQuantity,
   valueComplete,
   vwcePrice,
   settings,
   transactions,
-  syncStatus,
 }: Props) {
+  const auth = useAuth();
+  const ownerKey = auth.user?.id ?? "local";
   const [pulse, setPulse] = useState<PortfolioPulseState | null>(null);
   const [reconciliation, setReconciliation] = useState<ReconciliationSummary>(null);
   const [reconciliationLoaded, setReconciliationLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(navigator.onLine ? "syncing" : "offline");
   const [safety, setSafety] = useState<SafetySnapshot>({
     backupAt: "",
     restoreAt: "",
@@ -108,10 +112,12 @@ export default function TodayCenter({
         "serviceWorker" in navigator
           ? navigator.serviceWorker.getRegistration().catch(() => undefined)
           : Promise.resolve(undefined);
-      const [statements, metadata, registration] = await Promise.all([
+      const [statements, metadata, registration, pending, conflicts] = await Promise.all([
         listDepotStatements(),
         db.appMetadata.get("meta"),
         registrationPromise,
+        outboxCount(),
+        listConflicts(),
       ]);
       if (!active) return;
 
@@ -132,17 +138,36 @@ export default function TodayCenter({
         restoreAt: readRestoreCompleted(ownerKey),
         offlineReady: Boolean(navigator.serviceWorker?.controller || registration?.active),
       });
+      if (!navigator.onLine) setSyncStatus("offline");
+      else if (conflicts.length > 0) setSyncStatus("conflict");
+      else if (pending > 0) setSyncStatus("syncing");
+      else setSyncStatus("synced");
     })();
     return () => {
       active = false;
     };
   }, [ownerKey, transactions]);
 
+  useEffect(() => {
+    const online = () => setSyncStatus("syncing");
+    const offline = () => setSyncStatus("offline");
+    window.addEventListener("online", online);
+    window.addEventListener("offline", offline);
+    return () => {
+      window.removeEventListener("online", online);
+      window.removeEventListener("offline", offline);
+    };
+  }, []);
+
   const delta = useMemo(() => portfolioPulseDelta(pulse), [pulse]);
   const amount = Math.max(0, parseDecimal(whatIfAmount));
   const years = Math.max(
     0,
-    Math.min(40, (Number(settings.endDate.slice(0, 4)) || new Date().getFullYear()) - new Date().getFullYear()),
+    Math.min(
+      40,
+      (Number(settings.endDate.slice(0, 4)) || new Date().getFullYear()) -
+        new Date().getFullYear(),
+    ),
   );
   const annualReturn = Math.max(-0.95, Math.min(0.5, settings.vwceReturn));
   const inflation = Math.max(0, Math.min(0.5, settings.inflationRate));
@@ -156,6 +181,7 @@ export default function TodayCenter({
   const printedReady = Boolean(settings.notfallmappe?.lastPrintedAt);
   const safetyItems = [
     {
+      key: "backup",
       ready: backupReady,
       label: backupReady
         ? `Backup ${backupAge === 0 ? "hôm nay" : `${backupAge} ngày trước`}`
@@ -163,9 +189,21 @@ export default function TodayCenter({
           ? "Backup đã quá 30 ngày"
           : "Chưa có backup",
     },
-    { ready: restoreReady, label: restoreReady ? "Đã thử khôi phục" : "Chưa thử khôi phục" },
-    { ready: safety.offlineReady, label: safety.offlineReady ? "PWA sẵn sàng offline" : "Chưa xác nhận PWA offline" },
-    { ready: printedReady, label: printedReady ? "Hồ sơ khẩn cấp đã in" : "Chưa in hồ sơ khẩn cấp" },
+    {
+      key: "restore",
+      ready: restoreReady,
+      label: restoreReady ? "Đã thử khôi phục" : "Chưa thử khôi phục",
+    },
+    {
+      key: "offline",
+      ready: safety.offlineReady,
+      label: safety.offlineReady ? "PWA sẵn sàng offline" : "Chưa xác nhận PWA offline",
+    },
+    {
+      key: "print",
+      ready: printedReady,
+      label: printedReady ? "Hồ sơ khẩn cấp đã in" : "Chưa in hồ sơ khẩn cấp",
+    },
   ];
   const safetyScore = safetyItems.filter((item) => item.ready).length;
 
@@ -233,7 +271,9 @@ export default function TodayCenter({
             <p className="today-subtle">Đang kiểm tra mốc Depot gần nhất…</p>
           ) : reconciliation ? (
             <>
-              <p className={`today-main-metric ${reconciliation.differences.length ? "warning" : "positive"}`}>
+              <p
+                className={`today-main-metric ${reconciliation.differences.length ? "warning" : "positive"}`}
+              >
                 {reconciliation.differences.length === 0
                   ? `${reconciliation.rows.length}/${reconciliation.rows.length} khớp`
                   : `${reconciliation.differences.length} cần xem`}
@@ -244,7 +284,10 @@ export default function TodayCenter({
                   {reconciliation.differences.slice(0, 2).map((row) => (
                     <li key={row.instrumentIsin}>
                       <span>{row.instrumentIsin.slice(0, 4)}…{row.instrumentIsin.slice(-4)}</span>
-                      <strong>{row.difference > 0 ? "+" : ""}{row.difference.toLocaleString("vi-VN", { maximumFractionDigits: 6 })}</strong>
+                      <strong>
+                        {row.difference > 0 ? "+" : ""}
+                        {row.difference.toLocaleString("vi-VN", { maximumFractionDigits: 6 })}
+                      </strong>
                     </li>
                   ))}
                 </ul>
@@ -316,9 +359,23 @@ export default function TodayCenter({
           </div>
           <div className="today-safety-list">
             {safetyItems.map((item) => (
-              <div key={item.label} className={item.ready ? "ready" : "pending"}>
+              <div key={item.key} className={item.ready ? "ready" : "pending"}>
                 <span aria-hidden>{item.ready ? "✓" : "○"}</span>
                 <p>{item.label}</p>
+                {item.key === "restore" && !item.ready ? (
+                  <button
+                    type="button"
+                    className="today-inline-button"
+                    onClick={() => {
+                      if (!confirm("Chỉ đánh dấu sau khi bạn đã thử nhập một bản backup và kiểm tra số liệu. Đã hoàn tất?")) return;
+                      const completedAt = new Date().toISOString();
+                      markRestoreCompleted(ownerKey, completedAt);
+                      setSafety((current) => ({ ...current, restoreAt: completedAt }));
+                    }}
+                  >
+                    Đã thử
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>
