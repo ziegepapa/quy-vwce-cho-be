@@ -6,6 +6,7 @@ import type {
 import type {
   TodayCenterSafetyAssessment,
   TodayCenterSafetyKey,
+  TodayCenterTraceSource,
   TodayCenterWhatIfResult,
 } from "./todayCenterEngine";
 import type {
@@ -19,6 +20,22 @@ function priceSource(source: TodayCenterPriceSource): TraceSource {
   if (source === "auto_quote") return "auto_quote";
   if (source === "legacy_quote") return "legacy_quote";
   return "missing_quote";
+}
+
+function enginePriceSource(source: TodayCenterTraceSource): TodayCenterPriceSource {
+  if (
+    source === "manual_quote"
+    || source === "auto_quote"
+    || source === "legacy_quote"
+    || source === "missing"
+  ) {
+    return source;
+  }
+  return "missing";
+}
+
+function engineTraceSource(source: TodayCenterTraceSource): TraceSource {
+  return source === "missing" ? "missing_quote" : source;
 }
 
 export function priceSourceLabel(source: TodayCenterPriceSource): string {
@@ -212,7 +229,7 @@ function whatIfPrimary(input: WhatIfTraceInput): TraceValue {
 
 export function buildWhatIfTraceModel(input: WhatIfTraceInput): TraceSheetModel {
   const result = input.result;
-  const effectivePriceSource = result.trace.vwcePrice.source;
+  const effectivePriceSource = enginePriceSource(result.trace.vwcePrice.source);
   const source = priceSource(effectivePriceSource);
   const buyValue = whatIfPrimary(input);
   return {
@@ -287,7 +304,7 @@ export function buildWhatIfTraceModel(input: WhatIfTraceInput): TraceSheetModel 
         id: "ter",
         label: "TER",
         value: { kind: "percent", value: result.ter * 100 },
-        source: result.trace.ter.source,
+        source: engineTraceSource(result.trace.ter.source),
       },
       {
         id: "formula",
