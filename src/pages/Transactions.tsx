@@ -1,27 +1,31 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   deleteTransaction,
-  findTransactionByExternalRef,
   listTransactions,
   uid,
+  upsertInstrument,
   upsertTransaction,
 } from "../lib/db";
 import type { Transaction, TxType } from "../lib/types";
+import { VWCE_ISIN } from "../lib/types";
 import { calcQuantity, formatDateVN, formatMoney, parseDecimal } from "../lib/calc";
 import { nowIso } from "../lib/defaults";
+import {
+  isSecuritySell,
+  isSecurityTx,
+  isValidIsin,
+  normalizeIsin,
+  resolveInstrumentIsin,
+} from "../lib/instrument";
 import ActionMenu from "../components/ActionMenu";
 import { IconPlus } from "../components/Icons";
-import { parseTrPdf } from "../lib/tr/readPdf";
-import {
-  trExecutionToDraft,
-  validateTrImportDraft,
-  draftToTransaction,
-  type TrImportDraft,
-} from "../lib/tr/toTransaction";
+import TradeRepublicPdfImport from "../components/TradeRepublicPdfImport";
 
 const TYPES: { value: TxType; label: string; sign: "+" | "-" | "~" }[] = [
   { value: "buy_vwce", label: "Mua VWCE", sign: "~" },
   { value: "sell_vwce", label: "Bán VWCE", sign: "~" },
+  { value: "buy_security", label: "Mua chứng khoán khác", sign: "~" },
+  { value: "sell_security", label: "Bán chứng khoán khác", sign: "~" },
   { value: "cash_in", label: "Nạp cash", sign: "+" },
   { value: "cash_out", label: "Rút cash", sign: "-" },
   { value: "tax", label: "Thuế", sign: "-" },
@@ -33,6 +37,7 @@ const TYPES: { value: TxType; label: string; sign: "+" | "-" | "~" }[] = [
 const emptyForm = () => ({
   date: new Date().toISOString().slice(0, 10),
   type: "cash_in" as TxType,
+  instrumentIsin: VWCE_ISIN,
   amount: "",
   unitPrice: "",
   quantity: "",
@@ -51,61 +56,48 @@ export default function Transactions() {
   const [typeFilter, setTypeFilter] = useState<"all" | TxType>("all");
   const [rulesOpen, setRulesOpen] = useState(false);
   const [qtyError, setQtyError] = useState("");
-
-  const pdfInputRef = useRef<HTMLInputElement>(null);
-  const [pdfReading, setPdfReading] = useState(false);
-  const [pdfError, setPdfError] = useState("");
-  const [pdfDraft, setPdfDraft] = useState<TrImportDraft | null>(null);
-  const [pdfWarnings, setPdfWarnings] = useState<string[]>([]);
-  const [pdfSaving, setPdfSaving] = useState(false);
-  const [pdfToast, setPdfToast] = useState("");
-  const [pdfForm, setPdfForm] = useState({
-    date: "",
-    amount: "",
-    unitPrice: "",
-    quantity: "",
-    fee: "",
-    tax: "",
-    notes: "",
-  });
+  const [isinError, setIsinError] = useState("");
 
   async function reload() {
     setTxs(await listTransactions());
   }
+
   useEffect(() => {
-    reload();
+    void reload();
   }, []);
 
   const years = useMemo(() => {
-    const set = new Set(txs.map((t) => t.date.slice(0, 4)));
-    return [...set].sort().reverse();
+    const values = new Set(txs.map((tx) => tx.date.slice(0, 4)));
+    return [...values].sort().reverse();
   }, [txs]);
 
-  const filtered = useMemo(() => {
-    return txs.filter((t) => {
-      if (yearFilter !== "all" && !t.date.startsWith(yearFilter)) return false;
-      if (typeFilter !== "all" && t.type !== typeFilter) return false;
-      if (q && !`${t.notes} ${t.type} ${t.amount}`.toLowerCase().includes(q.toLowerCase()))
-        return false;
-      return true;
-    });
-  }, [txs, q, yearFilter, typeFilter]);
+  const filtered = useMemo(
+    () =>
+      txs.filter((tx) => {
+        if (yearFilter !== "all" && !tx.date.startsWith(yearFilter)) return false;
+        if (typeFilter !== "all" && tx.type !== typeFilter) return false;
+        const searchable = `${tx.notes} ${tx.type} ${tx.amount} ${resolveInstrumentIsin(tx)}`.toLowerCase();
+        return !q || searchable.includes(q.toLowerCase());
+      }),
+    [txs, q, yearFilter, typeFilter],
+  );
 
   const amount = parseDecimal(form.amount);
   const unitPrice = parseDecimal(form.unitPrice);
   const fee = parseDecimal(form.fee);
   const tax = parseDecimal(form.tax);
-  const autoQty =
-    form.type === "buy_vwce" || form.type === "sell_vwce"
-      ? form.quantity
-        ? parseDecimal(form.quantity)
-        : unitPrice > 0
-          ? calcQuantity(amount, unitPrice, fee, tax)
-          : 0
-      : 0;
+  const security = isSecurityTx(form.type);
+  const autoQty = security
+    ? form.quantity
+      ? parseDecimal(form.quantity)
+      : unitPrice > 0
+        ? calcQuantity(amount, unitPrice, fee, tax)
+        : 0
+    : 0;
 
   async function save() {
     setQtyError("");
+    setIsinError("");
     if (!form.date || !form.amount.trim()) {
       alert("Ngày và số tiền bắt buộc");
       return;
@@ -114,272 +106,149 @@ export default function Transactions() {
       alert("Điều chỉnh bắt buộc có ghi chú");
       return;
     }
-    if (form.type === "sell_vwce") {
-      const qRaw = form.quantity.trim();
-      const q = qRaw ? parseDecimal(qRaw) : 0;
-      if (!qRaw || q <= 0) {
-        setQtyError("Giao dịch bán cần số lượng chứng chỉ quỹ.");
+
+    let instrumentIsin: string | undefined;
+    if (security) {
+      instrumentIsin =
+        form.type === "buy_vwce" || form.type === "sell_vwce"
+          ? VWCE_ISIN
+          : normalizeIsin(form.instrumentIsin);
+      if (!isValidIsin(instrumentIsin)) {
+        setIsinError("ISIN không hợp lệ hoặc sai checksum.");
+        return;
+      }
+      if (isSecuritySell(form.type)) {
+        const quantity = parseDecimal(form.quantity);
+        if (!form.quantity.trim() || quantity <= 0) {
+          setQtyError("Giao dịch bán cần số lượng chứng khoán.");
+          return;
+        }
+      }
+      if (unitPrice <= 0 && !form.quantity.trim()) {
+        alert("Cần giá hoặc số lượng");
         return;
       }
     }
-    if ((form.type === "buy_vwce" || form.type === "sell_vwce") && unitPrice <= 0 && !form.quantity) {
-      alert("Cần giá hoặc số lượng");
-      return;
-    }
+
     let quantity: number | undefined = form.quantity ? parseDecimal(form.quantity) : undefined;
-    if (
-      form.type === "buy_vwce" &&
-      unitPrice &&
-      !form.quantity
-    ) {
+    if (security && unitPrice > 0 && !form.quantity) {
       quantity = calcQuantity(amount, unitPrice, fee, tax);
     }
     if (quantity != null && (!Number.isFinite(quantity) || quantity < 0)) {
       alert("Số lượng không hợp lệ");
       return;
     }
+
+    const previous = editId ? txs.find((tx) => tx.id === editId) : undefined;
+    const t = nowIso();
+    if (security && instrumentIsin && instrumentIsin !== VWCE_ISIN) {
+      await upsertInstrument({
+        isin: instrumentIsin,
+        name: instrumentIsin,
+        currency: "EUR",
+        createdAt: t,
+        updatedAt: t,
+      });
+    }
     await upsertTransaction({
       id: editId ?? uid("tx"),
       date: form.date,
       type: form.type,
       amount,
-      unitPrice: unitPrice || undefined,
-      quantity,
-      fee,
-      tax,
+      unitPrice: security ? unitPrice || undefined : undefined,
+      quantity: security ? quantity : undefined,
+      fee: security ? fee : undefined,
+      tax: security ? tax : undefined,
+      instrumentIsin,
       notes: form.notes,
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
+      createdAt: previous?.createdAt ?? t,
+      updatedAt: t,
+      source: previous?.source ?? "manual",
+      sourceVersion: previous?.sourceVersion,
+      externalRef: previous?.externalRef,
     });
     setShow(false);
     setForm(emptyForm());
     setEditId(null);
-    setQtyError("");
     await reload();
   }
 
-  function openEdit(t: Transaction) {
-    setEditId(t.id);
+  function openEdit(tx: Transaction) {
+    setEditId(tx.id);
     setForm({
-      date: t.date,
-      type: t.type,
-      amount: String(t.amount),
-      unitPrice: String(t.unitPrice ?? ""),
-      quantity: String(t.quantity ?? ""),
-      fee: String(t.fee ?? 0),
-      tax: String(t.tax ?? 0),
-      notes: t.notes,
+      date: tx.date,
+      type: tx.type,
+      instrumentIsin: resolveInstrumentIsin(tx) || VWCE_ISIN,
+      amount: String(tx.amount),
+      unitPrice: String(tx.unitPrice ?? ""),
+      quantity: String(tx.quantity ?? ""),
+      fee: String(tx.fee ?? 0),
+      tax: String(tx.tax ?? 0),
+      notes: tx.notes,
     });
     setShow(true);
-  }
-
-  function fmtDec(n: number): string {
-    if (!Number.isFinite(n)) return "";
-    return String(n).replace(".", ",");
-  }
-
-  async function onPdfPicked(file: File | null) {
-    if (!file) return;
-    setPdfError("");
-    setPdfDraft(null);
-    setPdfWarnings([]);
-    setPdfReading(true);
-    try {
-      const result = await parseTrPdf(file);
-      if (!result.ok) {
-        setPdfError(result.error);
-        return;
-      }
-      const draft = trExecutionToDraft(result.value, 0);
-      setPdfDraft(draft);
-      setPdfWarnings(result.warnings ?? []);
-      setPdfForm({
-        date: draft.date,
-        amount: fmtDec(draft.amount),
-        unitPrice: fmtDec(draft.unitPrice),
-        quantity: fmtDec(draft.quantity),
-        fee: fmtDec(draft.fee),
-        tax: fmtDec(draft.tax),
-        notes: draft.notes,
-      });
-    } catch {
-      setPdfError("Không đọc được tệp PDF.");
-    } finally {
-      setPdfReading(false);
-      if (pdfInputRef.current) pdfInputRef.current.value = "";
-    }
-  }
-
-  function closePdfSheet() {
-    setPdfDraft(null);
-    setPdfWarnings([]);
-    setPdfError("");
-    setPdfForm({ date: "", amount: "", unitPrice: "", quantity: "", fee: "", tax: "", notes: "" });
-  }
-
-  function currentPdfDraft(): TrImportDraft | null {
-    if (!pdfDraft) return null;
-    return {
-      ...pdfDraft,
-      date: pdfForm.date,
-      amount: parseDecimal(pdfForm.amount),
-      unitPrice: parseDecimal(pdfForm.unitPrice),
-      quantity: parseDecimal(pdfForm.quantity),
-      fee: parseDecimal(pdfForm.fee),
-      tax: parseDecimal(pdfForm.tax),
-      notes: pdfForm.notes,
-    };
-  }
-
-  async function confirmPdfImport() {
-    const draft = currentPdfDraft();
-    if (!draft) return;
-    const v = validateTrImportDraft(draft);
-    if (!v.ok) {
-      setPdfError(v.error);
-      return;
-    }
-    const existing = await findTransactionByExternalRef(draft.externalRef!);
-    if (existing) {
-      setPdfError("Hóa đơn này đã được nhập trước đó.");
-      return;
-    }
-    setPdfSaving(true);
-    setPdfError("");
-    try {
-      const t = nowIso();
-      const tx = draftToTransaction(draft, { id: uid("tx"), createdAt: t, updatedAt: t });
-      const race = await findTransactionByExternalRef(draft.externalRef!);
-      if (race) {
-        setPdfError("Hóa đơn này đã được nhập trước đó.");
-        return;
-      }
-      await upsertTransaction(tx);
-      closePdfSheet();
-      setPdfToast("Đã nhập hóa đơn Trade Republic.");
-      await reload();
-      window.setTimeout(() => setPdfToast(""), 4000);
-    } finally {
-      setPdfSaving(false);
-    }
   }
 
   return (
     <div>
       <div className="row-between">
         <h1 className="page-title">Giao dịch</h1>
-        <div className="row" style={{ gap: 8, alignItems: "center" }}>
-          <button
-            type="button"
-            className="secondary"
-            style={{ minHeight: 44, padding: "0 14px" }}
-            disabled={pdfReading}
-            onClick={() => pdfInputRef.current?.click()}
-          >
-            {pdfReading ? "Đang đọc PDF…" : "Nhập PDF"}
-          </button>
-          <button
-            type="button"
-            className="fab"
-            aria-label="Thêm giao dịch"
-            onClick={() => {
-              setEditId(null);
-              setForm(emptyForm());
-              setShow(true);
-            }}
-          >
-            <IconPlus />
-          </button>
-        </div>
+        <button
+          type="button"
+          className="fab"
+          aria-label="Thêm giao dịch"
+          onClick={() => {
+            setEditId(null);
+            setForm(emptyForm());
+            setShow(true);
+          }}
+        >
+          <IconPlus />
+        </button>
       </div>
-      <input
-        ref={pdfInputRef}
-        type="file"
-        accept="application/pdf,.pdf"
-        style={{ display: "none" }}
-        onChange={(e) => {
-          const f = e.target.files?.[0] ?? null;
-          void onPdfPicked(f);
-        }}
-      />
-      {pdfError && !pdfDraft && (
-        <div className="banner error" role="alert" style={{ marginTop: 8 }}>
-          {pdfError}
-        </div>
-      )}
-      {pdfToast && (
-        <div className="banner success" role="status" style={{ marginTop: 8 }}>
-          {pdfToast}
-        </div>
-      )}
+
+      <TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} />
 
       <button
         type="button"
         className="callout-toggle"
-        onClick={() => setRulesOpen((v) => !v)}
+        onClick={() => setRulesOpen((value) => !value)}
         aria-expanded={rulesOpen}
       >
         Quy ước dòng tiền {rulesOpen ? "▴" : "▾"}
       </button>
       {rulesOpen && (
         <div className="banner info">
-          <strong>Nạp cash</strong> mới tăng vốn đóng. <strong>Mua VWCE</strong> chỉ chuyển cash →
-          chứng khoán (không đếm vốn lần 2). Bán VWCE đưa tiền về cash sau phí/thuế.
+          <strong>Nạp cash</strong> mới tăng vốn đóng. <strong>Mua chứng khoán</strong> chỉ chuyển cash → chứng khoán, không đếm vốn lần hai. Sao kê Depot chỉ đối chiếu và không tạo giao dịch.
         </div>
       )}
 
       <div className="field">
         <label htmlFor="tx-search">Tìm</label>
-        <input
-          id="tx-search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Ghi chú, loại…"
-        />
+        <input id="tx-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ghi chú, loại, ISIN…" />
       </div>
       <div className="grid2">
         <div className="field">
           <label htmlFor="tx-year">Năm</label>
-          <select
-            id="tx-year"
-            value={yearFilter}
-            onChange={(e) => setYearFilter(e.target.value)}
-          >
+          <select id="tx-year" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
             <option value="all">Tất cả</option>
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
+            {years.map((year) => <option key={year} value={year}>{year}</option>)}
           </select>
         </div>
         <div className="field">
           <label htmlFor="tx-type">Loại</label>
-          <select
-            id="tx-type"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as "all" | TxType)}
-          >
+          <select id="tx-type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as "all" | TxType)}>
             <option value="all">Tất cả</option>
-            {TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
+            {TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
           </select>
         </div>
       </div>
       {(yearFilter !== "all" || typeFilter !== "all" || q) && (
-        <button
-          type="button"
-          className="secondary"
-          style={{ marginBottom: 12, width: "100%" }}
-          onClick={() => {
-            setYearFilter("all");
-            setTypeFilter("all");
-            setQ("");
-          }}
-        >
+        <button type="button" className="secondary" style={{ marginBottom: 12, width: "100%" }} onClick={() => {
+          setYearFilter("all");
+          setTypeFilter("all");
+          setQ("");
+        }}>
           Xóa bộ lọc
         </button>
       )}
@@ -387,59 +256,51 @@ export default function Transactions() {
       {!filtered.length ? (
         <div className="empty card">
           <p>Chưa có giao dịch.</p>
-          <button
-            type="button"
-            onClick={() => {
-              setEditId(null);
-              setForm(emptyForm());
-              setShow(true);
-            }}
-          >
+          <button type="button" onClick={() => {
+            setEditId(null);
+            setForm(emptyForm());
+            setShow(true);
+          }}>
             Thêm giao dịch đầu tiên
           </button>
         </div>
       ) : (
         <div className="card" style={{ padding: "0.25rem 0.75rem" }}>
-          {filtered.map((t) => {
-            const meta = TYPES.find((x) => x.value === t.type);
+          {filtered.map((tx) => {
+            const meta = TYPES.find((type) => type.value === tx.type);
             const sign = meta?.sign ?? "~";
-            const amountClass =
-              sign === "+" ? "positive" : sign === "-" ? "negative" : "";
+            const amountClass = sign === "+" ? "positive" : sign === "-" ? "negative" : "";
+            const isin = resolveInstrumentIsin(tx);
             return (
-              <div className="tx-row" key={t.id}>
-                <div className="tx-icon" aria-hidden>
-                  {sign === "+" ? "↑" : sign === "-" ? "↓" : "⇄"}
-                </div>
+              <div className="tx-row" key={tx.id}>
+                <div className="tx-icon" aria-hidden>{sign === "+" ? "↑" : sign === "-" ? "↓" : "⇄"}</div>
                 <div className="tx-body">
                   <div className="row-between">
-                    <strong>{meta?.label ?? t.type}</strong>
+                    <strong>{meta?.label ?? tx.type}</strong>
                     <span className={`metric-value ${amountClass}`} style={{ fontSize: "1rem" }}>
-                      {sign === "-" ? "−" : sign === "+" ? "+" : ""}
-                      {formatMoney(t.amount)}
+                      {sign === "-" ? "−" : sign === "+" ? "+" : ""}{formatMoney(tx.amount)}
                     </span>
                   </div>
                   <div className="row-between">
                     <span className="muted">
-                      {formatDateVN(t.date)}
-                      {t.source === "trade_republic_pdf" ? " · TR PDF" : ""}
-                      {t.notes ? ` · ${t.notes}` : ""}
-                      {t.quantity != null ? ` · SL ${t.quantity.toFixed(4)}` : ""}
+                      {formatDateVN(tx.date)}
+                      {isin ? ` · ${isin}` : ""}
+                      {tx.source === "trade_republic_pdf" ? " · TR PDF" : ""}
+                      {tx.notes ? ` · ${tx.notes}` : ""}
+                      {tx.quantity != null ? ` · SL ${tx.quantity.toFixed(4)}` : ""}
                     </span>
-                    <ActionMenu
-                      actions={[
-                        { label: "Sửa", onClick: () => openEdit(t) },
-                        {
-                          label: "Xóa",
-                          danger: true,
-                          onClick: async () => {
-                            if (confirm("Xóa giao dịch này?")) {
-                              await deleteTransaction(t.id);
-                              await reload();
-                            }
-                          },
+                    <ActionMenu actions={[
+                      { label: "Sửa", onClick: () => openEdit(tx) },
+                      {
+                        label: "Xóa",
+                        danger: true,
+                        onClick: async () => {
+                          if (!confirm("Xóa giao dịch này?")) return;
+                          await deleteTransaction(tx.id);
+                          await reload();
                         },
-                      ]}
-                    />
+                      },
+                    ]} />
                   </div>
                 </div>
               </div>
@@ -455,261 +316,76 @@ export default function Transactions() {
             <h2>{editId ? "Sửa" : "Thêm"} giao dịch</h2>
             <div className="field">
               <label htmlFor="f-date">Ngày</label>
-              <input
-                id="f-date"
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
+              <input id="f-date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
             </div>
             <div className="field">
               <label htmlFor="f-type">Loại</label>
-              <select
-                id="f-type"
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as TxType })}
-              >
-                {TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
+              <select id="f-type" value={form.type} onChange={(e) => {
+                const type = e.target.value as TxType;
+                setForm({
+                  ...form,
+                  type,
+                  instrumentIsin: type === "buy_vwce" || type === "sell_vwce" ? VWCE_ISIN : form.instrumentIsin,
+                });
+              }}>
+                {TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
               </select>
             </div>
+            {security && (
+              <div className="field">
+                <label htmlFor="f-isin">ISIN</label>
+                <input
+                  id="f-isin"
+                  value={form.type === "buy_vwce" || form.type === "sell_vwce" ? VWCE_ISIN : form.instrumentIsin}
+                  readOnly={form.type === "buy_vwce" || form.type === "sell_vwce"}
+                  onChange={(e) => {
+                    setIsinError("");
+                    setForm({ ...form, instrumentIsin: e.target.value.toUpperCase() });
+                  }}
+                />
+                {isinError && <p style={{ color: "var(--color-danger)", fontSize: 13 }}>{isinError}</p>}
+              </div>
+            )}
             <div className="field">
-              <label htmlFor="f-amt">
-                {form.type === "buy_vwce" || form.type === "sell_vwce"
-                  ? "Tổng tiền thanh toán"
-                  : "Số tiền"}
-              </label>
-              <input
-                id="f-amt"
-                inputMode="decimal"
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              />
+              <label htmlFor="f-amt">{security ? "Tổng tiền thanh toán" : "Số tiền"}</label>
+              <input id="f-amt" inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             </div>
-            {(form.type === "buy_vwce" || form.type === "sell_vwce") && (
+            {security && (
               <>
                 <div className="field">
-                  <label htmlFor="f-price">Giá 1 VWCE</label>
-                  <input
-                    id="f-price"
-                    inputMode="decimal"
-                    value={form.unitPrice}
-                    onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-                  />
+                  <label htmlFor="f-price">Giá một đơn vị</label>
+                  <input id="f-price" inputMode="decimal" value={form.unitPrice} onChange={(e) => setForm({ ...form, unitPrice: e.target.value })} />
                 </div>
                 <div className="field">
-                  <label htmlFor="f-qty">
-                    {form.type === "sell_vwce"
-                      ? "Số lượng (bắt buộc khi bán)"
-                      : "Số lượng (để trống = tự tính)"}
-                  </label>
-                  <input
-                    id="f-qty"
-                    inputMode="decimal"
-                    value={form.quantity}
-                    onChange={(e) => {
-                      setQtyError("");
-                      setForm({ ...form, quantity: e.target.value });
-                    }}
-                    placeholder={
-                      form.type === "sell_vwce"
-                        ? ""
-                        : autoQty
-                          ? autoQty.toFixed(4)
-                          : ""
-                    }
-                  />
-                  {qtyError && (
-                    <p style={{ color: "var(--danger-600, #E0455F)", fontSize: 13, margin: "6px 0 0" }}>
-                      {qtyError}
-                    </p>
-                  )}
+                  <label htmlFor="f-qty">{isSecuritySell(form.type) ? "Số lượng (bắt buộc khi bán)" : "Số lượng (để trống = tự tính)"}</label>
+                  <input id="f-qty" inputMode="decimal" value={form.quantity} onChange={(e) => {
+                    setQtyError("");
+                    setForm({ ...form, quantity: e.target.value });
+                  }} placeholder={!isSecuritySell(form.type) && autoQty ? autoQty.toFixed(4) : ""} />
+                  {qtyError && <p style={{ color: "var(--color-danger)", fontSize: 13 }}>{qtyError}</p>}
                 </div>
                 <div className="grid2">
                   <div className="field">
                     <label htmlFor="f-fee">Phí</label>
-                    <input
-                      id="f-fee"
-                      inputMode="decimal"
-                      value={form.fee}
-                      onChange={(e) => setForm({ ...form, fee: e.target.value })}
-                    />
+                    <input id="f-fee" inputMode="decimal" value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value })} />
                   </div>
                   <div className="field">
                     <label htmlFor="f-tax">Thuế</label>
-                    <input
-                      id="f-tax"
-                      inputMode="decimal"
-                      value={form.tax}
-                      onChange={(e) => setForm({ ...form, tax: e.target.value })}
-                    />
+                    <input id="f-tax" inputMode="decimal" value={form.tax} onChange={(e) => setForm({ ...form, tax: e.target.value })} />
                   </div>
                 </div>
                 {unitPrice > 0 && amount > 0 && (
-                  <div className="banner info">
-                    Preview: SL ≈ {autoQty.toFixed(4)} · CK ≈{" "}
-                    {formatMoney(Math.max(0, amount - fee - tax))}
-                  </div>
+                  <div className="banner info">Preview: SL ≈ {autoQty.toFixed(4)} · CK ≈ {formatMoney(Math.max(0, amount - fee - tax))}</div>
                 )}
               </>
             )}
             <div className="field">
               <label htmlFor="f-notes">Ghi chú{form.type === "adjust" ? " (bắt buộc)" : ""}</label>
-              <textarea
-                id="f-notes"
-                rows={2}
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
+              <textarea id="f-notes" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
             <div className="stack">
-              <button type="button" onClick={save}>
-                Lưu
-              </button>
-              <button type="button" className="secondary" onClick={() => setShow(false)}>
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {pdfDraft && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Xem trước hóa đơn Trade Republic">
-          <div className="modal" style={{ maxHeight: "min(90vh, 720px)", overflowY: "auto", paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))" }}>
-            <div className="sheet-handle" aria-hidden />
-            <h2>Nhập hóa đơn Trade Republic</h2>
-            {pdfWarnings.length > 0 && (
-              <div className="banner info" role="status">
-                {pdfWarnings.map((w, i) => (
-                  <div key={i}>{w}</div>
-                ))}
-              </div>
-            )}
-            {pdfError && (
-              <div className="banner error" role="alert">
-                {pdfError}
-              </div>
-            )}
-            {pdfDraft.isin.trim().toUpperCase() !== "IE00BK5BQT80" && (
-              <div className="banner error" role="alert">
-                ISIN không phải VWCE (IE00BK5BQT80). Không thể lưu hóa đơn này.
-              </div>
-            )}
-            <div className="field">
-              <label>Loại</label>
-              <input
-                readOnly
-                value={pdfDraft.type === "sell_vwce" ? "Bán VWCE" : "Mua VWCE"}
-                style={{ minHeight: 44 }}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="pdf-date">Ngày</label>
-              <input
-                id="pdf-date"
-                type="date"
-                value={pdfForm.date}
-                onChange={(e) => setPdfForm({ ...pdfForm, date: e.target.value })}
-                style={{ minHeight: 44 }}
-              />
-            </div>
-            <div className="field">
-              <label>ISIN</label>
-              <input readOnly value={pdfDraft.isin} style={{ minHeight: 44 }} />
-            </div>
-            <div className="grid2">
-              <div className="field">
-                <label htmlFor="pdf-qty">Số lượng</label>
-                <input
-                  id="pdf-qty"
-                  inputMode="decimal"
-                  value={pdfForm.quantity}
-                  onChange={(e) => setPdfForm({ ...pdfForm, quantity: e.target.value })}
-                  style={{ minHeight: 44 }}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="pdf-price">Giá 1 VWCE</label>
-                <input
-                  id="pdf-price"
-                  inputMode="decimal"
-                  value={pdfForm.unitPrice}
-                  onChange={(e) => setPdfForm({ ...pdfForm, unitPrice: e.target.value })}
-                  style={{ minHeight: 44 }}
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label htmlFor="pdf-amount">Tổng tiền</label>
-              <input
-                id="pdf-amount"
-                inputMode="decimal"
-                value={pdfForm.amount}
-                onChange={(e) => setPdfForm({ ...pdfForm, amount: e.target.value })}
-                style={{ minHeight: 44 }}
-              />
-            </div>
-            <div className="grid2">
-              <div className="field">
-                <label htmlFor="pdf-fee">Phí</label>
-                <input
-                  id="pdf-fee"
-                  inputMode="decimal"
-                  value={pdfForm.fee}
-                  onChange={(e) => setPdfForm({ ...pdfForm, fee: e.target.value })}
-                  style={{ minHeight: 44 }}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="pdf-tax">Thuế</label>
-                <input
-                  id="pdf-tax"
-                  inputMode="decimal"
-                  value={pdfForm.tax}
-                  onChange={(e) => setPdfForm({ ...pdfForm, tax: e.target.value })}
-                  style={{ minHeight: 44 }}
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>Số hóa đơn</label>
-              <input readOnly value={pdfDraft.docNumber || "—"} style={{ minHeight: 44 }} />
-            </div>
-            <div className="field">
-              <label htmlFor="pdf-notes">Ghi chú</label>
-              <textarea
-                id="pdf-notes"
-                rows={2}
-                value={pdfForm.notes}
-                onChange={(e) => setPdfForm({ ...pdfForm, notes: e.target.value })}
-              />
-            </div>
-            <div className="stack">
-              <button
-                type="button"
-                style={{ minHeight: 44 }}
-                disabled={
-                  pdfSaving ||
-                  !pdfDraft.docNumber.trim() ||
-                  pdfDraft.isin.trim().toUpperCase() !== "IE00BK5BQT80"
-                }
-                onClick={() => void confirmPdfImport()}
-              >
-                {pdfSaving ? "Đang lưu…" : "Xác nhận lưu"}
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                style={{ minHeight: 44 }}
-                disabled={pdfSaving}
-                onClick={closePdfSheet}
-              >
-                Hủy
-              </button>
+              <button type="button" onClick={() => void save()}>Lưu</button>
+              <button type="button" className="secondary" onClick={() => setShow(false)}>Hủy</button>
             </div>
           </div>
         </div>

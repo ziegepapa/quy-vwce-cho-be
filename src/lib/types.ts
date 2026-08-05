@@ -42,58 +42,41 @@ export type Notfallmappe = {
   updatedAt: string;
 };
 
-/**
- * Multi-asset foundation — instrument keyed by normalized ISIN.
- * Ticker is optional metadata; ISIN is the primary key.
- */
+/** Multi-asset foundation — instrument keyed by normalized ISIN. */
 export type Instrument = {
-  /** Normalized uppercase ISIN (primary key). */
   isin: string;
   name: string;
-  /** Optional display/provider ticker — never required for ledger. */
   ticker?: string;
   currency: string;
   venue?: string;
-  /** Explicit provider symbol map, e.g. { yahoo: "VWCE.DE" }. */
   providerSymbols?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
 };
 
-/** Candidate source kind — manual and auto coexist without overwrite. */
 export type QuoteSourceKind = "manual" | "auto";
 
-/**
- * Raw quote candidate — one row per (ISIN, currency, source).
- * Never overwritten across sources. Local-only (not in EntityTable/outbox).
- */
 export type QuoteCandidate = {
-  id: string; // qc_<ISIN>_<CCY>_<manual|auto>
+  id: string;
   instrumentIsin: string;
   currency: string;
   source: QuoteSourceKind;
-  price: number; // > 0 finite
-  asOf: string; // YYYY-MM-DD calendar date
+  price: number;
+  asOf: string;
   venue?: string;
   provider?: string;
   providerUrl?: string;
   crossCheckedWith?: string;
   crossCheckDifferencePct?: number;
-  /** Wall-clock ISO; metadata only — never economics key. */
   fetchedAt?: string;
   createdAt: string;
   updatedAt: string;
 };
 
-/** User preference: auto (default) or explicit manual override. */
 export type QuotePreferenceMode = "auto" | "manual";
 
-/**
- * Preference per (ISIN, currency). Absent row ≡ mode auto.
- * Local-only (not in EntityTable/outbox).
- */
 export type QuoteSelectionPreference = {
-  id: string; // pref_<ISIN>_<CCY>
+  id: string;
   instrumentIsin: string;
   currency: string;
   mode: QuotePreferenceMode;
@@ -101,11 +84,6 @@ export type QuoteSelectionPreference = {
   updatedAt: string;
 };
 
-/**
- * Effective/materialized quote for one ISIN+currency.
- * Derived cache of the winning candidate; UI/calc read this table only.
- * id = quote_<ISIN>_<CCY> (unchanged from pre-2B).
- */
 export type Quote = {
   id: string;
   instrumentIsin: string;
@@ -123,6 +101,34 @@ export type Quote = {
   updatedAt: string;
 };
 
+/** One security position read from a broker depot statement. */
+export type DepotPosition = {
+  instrumentIsin: string;
+  name?: string;
+  quantity: number;
+  unitPrice?: number;
+  marketValue?: number;
+  currency: string;
+};
+
+/**
+ * Read-only broker snapshot. It is evidence for reconciliation and never a
+ * source of synthetic buy/sell transactions.
+ */
+export type DepotStatement = {
+  id: string;
+  statementId: string;
+  date: string;
+  accountRef?: string;
+  broker: "trade_republic";
+  positions: DepotPosition[];
+  source: "trade_republic_pdf";
+  sourceVersion: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+};
+
 export type AppSettings = {
   id: string; planName: string; childName: string; accountType: "child" | "parent";
   currency: "EUR"; inflationRate: number; vwceReturn: number; safeReturn: number; bufferPct: number;
@@ -135,15 +141,15 @@ export type AppSettings = {
   /** @deprecated Prefer Quote.asOf for IE00BK5BQT80. */
   latestPriceDate: string;
   contributionY1: number; contributionY2: number; disclaimerAccepted: boolean; onboardingDone: boolean;
-  /** V10-A — tùy chọn, để bản ghi settings cũ vẫn hợp lệ. */
   notfallmappe?: Notfallmappe;
+  /** V10-C — nested to inherit settings backup/sync without a remote schema change. */
+  depotStatements?: DepotStatement[];
   createdAt: string; updatedAt: string;
 };
 export type Goal = {
   id: string; name: string; dueDate: string; amount: number; mode: GoalMode; baseYear: number;
   inflationRate: number; bufferPct: number; urgency: GoalUrgency; protectedAmount: number; notes: string;
   createdAt: string; updatedAt: string;
-  /** A3 — xóa mềm; bản ghi tombstone vẫn giữ trong IndexedDB. */
   deletedAt?: string;
 };
 
@@ -167,17 +173,10 @@ export type TxType =
 export type Transaction = {
   id: string; date: string; type: TxType; amount: number; unitPrice?: number; quantity?: number;
   fee?: number; tax?: number; goalId?: string; notes: string; createdAt: string; updatedAt: string;
-  /**
-   * ISIN of the security for buy/sell. Legacy rows without this field are
-   * treated as IE00BK5BQT80 (VWCE) by resolveInstrumentIsin().
-   */
   instrumentIsin?: string;
-  /** C3 — nguồn nhập; bản cũ không có field này vẫn hợp lệ. */
   source?: "manual" | "trade_republic_pdf";
   sourceVersion?: number;
-  /** C3 — khóa chống trùng, ví dụ trade_republic:<docNumber>. */
   externalRef?: string;
-  /** A3 — xóa mềm; bản ghi tombstone vẫn giữ trong IndexedDB. */
   deletedAt?: string;
 };
 export type ChecklistItem = { key: string; label: string; done: boolean };
@@ -190,43 +189,19 @@ export type AppMetadata = { id: string; schemaVersion: number; lastBackupAt: str
 export type BackupPayload = {
   schemaVersion: number; exportedAt: string; settings: AppSettings[]; goals: Goal[];
   transactions: Transaction[]; annualChecklists: AnnualChecklist[]; monthlySnapshots: MonthlySnapshot[];
-  /** Multi-asset foundation — optional on legacy backups. */
   instruments?: Instrument[];
-  /**
-   * Effective quotes — in BACKUP_SCHEMA_VERSION 3 this is a non-authoritative
-   * diagnostic snapshot only. Import always recomputes from candidates+preferences.
-   */
   quotes?: Quote[];
-  /** Authoritative on v3. */
   quoteCandidates?: QuoteCandidate[];
-  /** Authoritative on v3. */
   quotePreferences?: QuoteSelectionPreference[];
 };
 
-/**
- * Local backup envelope version.
- * - 1: legacy (pre multi-asset)
- * - 2: instruments + effective quotes
- * - 3: candidates + preferences authoritative; quotes derived
- */
 export const BACKUP_SCHEMA_VERSION = 3;
-/** @deprecated Use BACKUP_SCHEMA_VERSION for export; kept as alias for older imports. */
 export const SCHEMA_VERSION = BACKUP_SCHEMA_VERSION;
 
-/**
- * IndexedDB Dexie schema version (forward-only).
- * v4 adds quoteCandidates + quotePreferences empty stores; data migration is app-level.
- * Emergency/revert builds that ship after any client has opened v4 MUST still declare 4.
- */
+/** IndexedDB version remains 4; depot snapshots ride inside synced settings. */
 export const DEXIE_DB_VERSION = 4;
-
-/** Calendar-day stale threshold for auto candidates (economics asOf, not fetchedAt). */
 export const STALE_DAYS = 7;
 
-/**
- * Migration marker for app-level candidate seed after Dexie v4 open.
- * Stored in appMetadata id = "quoteMigration".
- */
 export type QuoteMigrationState = "pending" | "complete" | "failed";
 
 export type QuoteMigrationMeta = {
@@ -237,7 +212,6 @@ export type QuoteMigrationMeta = {
 };
 
 /** Hiển thị ở Cài đặt — đổi khi ship UI lớn */
-export const APP_VERSION = "1.7.0";
+export const APP_VERSION = "1.8.0";
 
-/** Canonical VWCE ISIN used for legacy migration. */
 export const VWCE_ISIN = "IE00BK5BQT80";

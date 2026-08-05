@@ -1,4 +1,4 @@
-/** PR 2B quote foundation, feed ingestion, and UI state public surface. */
+/** Public data surface. */
 export {
   VwceDB, db, migrateTransactionIsin, ensureMultiAssetMigrated,
   runPendingMigrations, isQuoteMigrationComplete, assertQuoteWritesUnlocked,
@@ -19,6 +19,12 @@ export {
   findTransactionByExternalRef, upsertTransaction, deleteTransaction,
   upsertGoal, deleteGoal,
 } from "./db.m07";
+export {
+  listDepotStatements,
+  findDepotStatementByStatementId,
+  saveDepotStatement,
+  deleteDepotStatement,
+} from "./depotStatements";
 export { exportBackup } from "./db.m08";
 export { importBackup } from "./db.m09";
 export {

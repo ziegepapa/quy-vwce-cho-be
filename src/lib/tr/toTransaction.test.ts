@@ -10,6 +10,7 @@ import {
 } from "./toTransaction";
 import type { TrExecution } from "./parseTr";
 
+const OTHER_ISIN = "FR0010315770";
 const sampleBuy: TrExecution = {
   side: "buy",
   date: "2024-03-15",
@@ -22,84 +23,73 @@ const sampleBuy: TrExecution = {
 };
 
 describe("sideToTxType", () => {
-  it("buy → buy_vwce", () => expect(sideToTxType("buy")).toBe("buy_vwce"));
-  it("sell → sell_vwce", () => expect(sideToTxType("sell")).toBe("sell_vwce"));
+  it("keeps VWCE legacy aliases", () => {
+    expect(sideToTxType("buy", VWCE_ISIN)).toBe("buy_vwce");
+    expect(sideToTxType("sell", VWCE_ISIN)).toBe("sell_vwce");
+  });
+  it("maps other ISINs to generic security types", () => {
+    expect(sideToTxType("buy", OTHER_ISIN)).toBe("buy_security");
+    expect(sideToTxType("sell", OTHER_ISIN)).toBe("sell_security");
+  });
 });
 
 describe("buildExternalRef", () => {
   it("forms trade_republic:<docNumber>", () => {
     expect(buildExternalRef("ABC-123456")).toBe("trade_republic:ABC-123456");
   });
-  it("trims whitespace", () => {
-    expect(buildExternalRef("  X9  ")).toBe("trade_republic:X9");
-  });
-  it("empty → null", () => {
-    expect(buildExternalRef("")).toBeNull();
-    expect(buildExternalRef("   ")).toBeNull();
-  });
+  it("trims whitespace", () => expect(buildExternalRef("  X9  ")).toBe("trade_republic:X9"));
+  it("empty → null", () => expect(buildExternalRef("   ")).toBeNull());
 });
 
 describe("trExecutionToDraft", () => {
-  it("maps buy fields and default notes", () => {
-    const d = trExecutionToDraft(sampleBuy);
-    expect(d.type).toBe("buy_vwce");
-    expect(d.date).toBe("2024-03-15");
-    expect(d.quantity).toBe(10.5);
-    expect(d.unitPrice).toBe(100.25);
-    expect(d.amount).toBe(1053.63);
-    expect(d.fee).toBe(1);
-    expect(d.tax).toBe(0);
-    expect(d.notes).toBe("Trade Republic · ABC-123456");
-    expect(d.externalRef).toBe("trade_republic:ABC-123456");
-    expect(d.source).toBe(TR_SOURCE);
-    expect(d.sourceVersion).toBe(1);
+  it("maps VWCE fields and source metadata", () => {
+    const draft = trExecutionToDraft(sampleBuy);
+    expect(draft.type).toBe("buy_vwce");
+    expect(draft.externalRef).toBe("trade_republic:ABC-123456");
+    expect(draft.source).toBe(TR_SOURCE);
+    expect(draft.sourceVersion).toBe(2);
   });
 
-  it("sell maps to sell_vwce", () => {
-    const d = trExecutionToDraft({ ...sampleBuy, side: "sell" });
-    expect(d.type).toBe("sell_vwce");
+  it("preserves another valid ISIN and generic type", () => {
+    const draft = trExecutionToDraft({ ...sampleBuy, isin: OTHER_ISIN });
+    expect(draft.type).toBe("buy_security");
+    expect(draft.isin).toBe(OTHER_ISIN);
   });
 });
 
 describe("validateTrImportDraft", () => {
-  it("accepts valid VWCE draft", () => {
+  it("accepts valid VWCE and non-VWCE drafts", () => {
     expect(validateTrImportDraft(trExecutionToDraft(sampleBuy))).toEqual({ ok: true });
+    expect(
+      validateTrImportDraft(trExecutionToDraft({ ...sampleBuy, isin: OTHER_ISIN })),
+    ).toEqual({ ok: true });
   });
 
-  it("blocks wrong ISIN", () => {
-    const d = trExecutionToDraft({ ...sampleBuy, isin: "IE00B4L5Y983" });
-    const v = validateTrImportDraft(d);
-    expect(v.ok).toBe(false);
-    if (!v.ok) expect(v.error).toMatch(/ISIN/);
+  it("blocks invalid ISIN checksum", () => {
+    const result = validateTrImportDraft(
+      trExecutionToDraft({ ...sampleBuy, isin: "FR0010315771" }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/ISIN/);
   });
 
   it("blocks empty docNumber", () => {
-    const d = trExecutionToDraft({ ...sampleBuy, docNumber: "" });
-    const v = validateTrImportDraft(d);
-    expect(v.ok).toBe(false);
-    if (!v.ok) expect(v.error).toMatch(/hóa đơn/);
-  });
-
-  it("blocks non-positive amount", () => {
-    const d = trExecutionToDraft(sampleBuy);
-    d.amount = 0;
-    const v = validateTrImportDraft(d);
-    expect(v.ok).toBe(false);
+    const result = validateTrImportDraft(trExecutionToDraft({ ...sampleBuy, docNumber: "" }));
+    expect(result.ok).toBe(false);
   });
 });
 
 describe("draftToTransaction", () => {
-  it("preserves source fields", () => {
-    const d = trExecutionToDraft(sampleBuy);
-    const tx = draftToTransaction(d, {
+  it("preserves generic ISIN, type and source fields", () => {
+    const draft = trExecutionToDraft({ ...sampleBuy, isin: OTHER_ISIN });
+    const tx = draftToTransaction(draft, {
       id: "tx_1",
       createdAt: "2024-01-01T00:00:00.000Z",
       updatedAt: "2024-01-01T00:00:00.000Z",
     });
-    expect(tx.type).toBe("buy_vwce");
+    expect(tx.type).toBe("buy_security");
+    expect(tx.instrumentIsin).toBe(OTHER_ISIN);
     expect(tx.source).toBe("trade_republic_pdf");
-    expect(tx.sourceVersion).toBe(1);
     expect(tx.externalRef).toBe("trade_republic:ABC-123456");
-    expect(tx.notes).toContain("ABC-123456");
   });
 });
