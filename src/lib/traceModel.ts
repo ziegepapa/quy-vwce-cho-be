@@ -10,6 +10,7 @@ export type TraceSource =
   | "legacy_quote"
   | "missing_quote"
   | "pulse_local_storage"
+  | "restore_marker"
   | "simulation_engine"
   | "app_settings"
   | "user_input"
@@ -95,6 +96,7 @@ const SOURCE_LABELS: Record<TraceSource, string> = {
   legacy_quote: "Giá VWCE tương thích cũ",
   missing_quote: "Chưa có giá hiệu lực",
   pulse_local_storage: "Lịch sử Pulse trên thiết bị",
+  restore_marker: "Dấu kiểm tra khôi phục trên thiết bị",
   simulation_engine: "Simulation engine",
   app_settings: "Cài đặt kế hoạch",
   user_input: "Dữ liệu người dùng nhập",

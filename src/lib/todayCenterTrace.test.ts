@@ -35,7 +35,6 @@ describe("typed trace builders", () => {
       valueComplete: false,
       missingIsins: ["IE00B4L5Y983"],
       vwcePrice: 0,
-      vwcePriceSource: "missing",
       provenance: {
         holdings: "transactions_replay",
         marketValue: "portfolio_market_value",
@@ -59,7 +58,6 @@ describe("typed trace builders", () => {
       valueComplete: true,
       missingIsins: [],
       vwcePrice: 123,
-      vwcePriceSource: "legacy_quote",
       provenance: {
         holdings: "transactions_replay",
         marketValue: "portfolio_market_value",
@@ -130,6 +128,7 @@ describe("typed trace builders", () => {
       ],
     });
     expect(trace.rows.find((row) => row.id === "backup")?.source).toBe("app_metadata");
+    expect(trace.rows.find((row) => row.id === "restore")?.source).toBe("restore_marker");
     expect(trace.rows.find((row) => row.id === "offline")?.source).toBe("service_worker");
     expect(trace.rows.find((row) => row.id === "print")?.source).toBe("emergency_profile");
   });

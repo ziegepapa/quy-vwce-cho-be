@@ -36,13 +36,13 @@ export type PortfolioTraceInput = {
   valueComplete: boolean;
   missingIsins: string[];
   vwcePrice: number;
-  vwcePriceSource: TodayCenterPriceSource;
   vwceAsOf?: string;
   provenance: TodayCenterPortfolioProvenance;
 };
 
 export function buildPortfolioTraceModel(input: PortfolioTraceInput): TraceSheetModel {
-  const quoteSource = priceSource(input.vwcePriceSource);
+  const effectiveSource = input.provenance.vwcePrice;
+  const quoteSource = priceSource(effectiveSource);
   return {
     id: "portfolio-total",
     title: "Tổng tài sản",
@@ -78,7 +78,7 @@ export function buildPortfolioTraceModel(input: PortfolioTraceInput): TraceSheet
       {
         id: "vwce-source",
         label: "Nguồn VWCE",
-        value: { kind: "text", value: priceSourceLabel(input.vwcePriceSource) },
+        value: { kind: "text", value: priceSourceLabel(effectiveSource) },
         source: quoteSource,
       },
       {
@@ -91,7 +91,7 @@ export function buildPortfolioTraceModel(input: PortfolioTraceInput): TraceSheet
       {
         id: "vwce-as-of",
         label: "asOf",
-        value: { kind: "text", value: input.vwceAsOf ?? (input.vwcePriceSource === "legacy_quote" ? "legacy" : "—") },
+        value: { kind: "text", value: input.vwceAsOf ?? (effectiveSource === "legacy_quote" ? "legacy" : "—") },
         source: quoteSource,
         tone: "muted",
       },
@@ -298,7 +298,7 @@ export type SafetyTraceInput = {
 
 function safetySource(key: TodayCenterSafetyKey): TraceSource {
   if (key === "backup") return "app_metadata";
-  if (key === "restore") return "pulse_local_storage";
+  if (key === "restore") return "restore_marker";
   if (key === "offline") return "service_worker";
   return "emergency_profile";
 }
