@@ -23,6 +23,12 @@ import {
   buildTodayCenterWhatIf,
 } from "../lib/todayCenterEngine";
 import type { TodayCenterPriceSource } from "../lib/todayCenterAdapter";
+import {
+  buildPulseTraceModel,
+  buildSafetyTraceModel,
+  buildWhatIfTraceModel,
+  type SafetyTraceDisplayItem,
+} from "../lib/todayCenterTrace";
 import type { AppSettings, Transaction } from "../lib/types";
 import TraceSheet from "./TraceSheet";
 
@@ -77,17 +83,6 @@ function PulseIcon({ name }: { name: PulseIconName }) {
   );
 }
 
-function dateLabel(value: string): string {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "—";
-  return date.toLocaleString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function signedMoney(value: number): string {
   if (Math.abs(value) < 0.005) return formatMoney(0);
   return `${value > 0 ? "+" : "−"}${formatMoney(Math.abs(value))}`;
@@ -97,13 +92,6 @@ function metricTone(value: number): "positive" | "negative" | "neutral" {
   if (value > 0.005) return "positive";
   if (value < -0.005) return "negative";
   return "neutral";
-}
-
-function priceSourceLabel(source: TodayCenterPriceSource): string {
-  if (source === "manual_quote") return "Giá thủ công hiệu lực";
-  if (source === "auto_quote") return "Giá tự động hiệu lực";
-  if (source === "legacy_quote") return "Giá VWCE tương thích cũ";
-  return "Chưa có giá";
 }
 
 export default function TodayCenter({
@@ -220,7 +208,7 @@ export default function TodayCenter({
   const backupReady = isSafetyReady("backup");
   const restoreReady = isSafetyReady("restore");
   const printedReady = isSafetyReady("print");
-  const safetyItems = [
+  const safetyItems: SafetyTraceDisplayItem[] = [
     {
       key: "backup",
       name: "Backup",
@@ -279,7 +267,21 @@ export default function TodayCenter({
   const whatIfCardValue = portfolioEmpty && whatIf.status === "ready"
     ? `≈ ${extraUnitsText} VWCE`
     : whatIfValue;
-  const terLabel = `${(whatIf.ter * 100).toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%/năm`;
+
+  const pulseTraceModel = buildPulseTraceModel({
+    valueComplete,
+    totalValue,
+    totalQuantity,
+    delta,
+  });
+  const whatIfTraceModel = buildWhatIfTraceModel({
+    result: whatIf,
+    portfolioEmpty,
+  });
+  const safetyTraceModel = buildSafetyTraceModel({
+    assessment: safetyAssessment,
+    items: safetyItems,
+  });
 
   function confirmRestore() {
     if (!window.confirm("Chỉ đánh dấu sau khi bạn đã thử nhập một bản backup và kiểm tra số liệu. Đã hoàn tất?")) return;
@@ -400,53 +402,13 @@ export default function TodayCenter({
       <TraceSheet
         open={traceOpen}
         onClose={() => setTraceOpen(false)}
-        eyebrow="Nhịp Quỹ · nguồn dữ liệu"
-        title="Đổi gì?"
-        value={deltaValue}
-        explanation={delta
-          ? "Delta dùng hai lần mở app có danh mục đầy đủ gần nhất. Refresh lỗi, rerender hoặc thiếu giá không tạo mốc giả."
-          : "Đây là mốc danh mục đầy đủ đầu tiên. Lần mở app tiếp theo sẽ tạo delta để đối chiếu."}
-        rows={[
-          { label: "Hiện tại", value: formatMoney(totalValue) },
-          {
-            label: "Mốc trước",
-            value: delta ? formatMoney(totalValue - delta.value) : "Chưa có",
-            tone: "muted",
-          },
-          {
-            label: "Số lượng",
-            value: `${totalQuantity.toLocaleString("vi-VN", { maximumFractionDigits: 6 })} đơn vị`,
-          },
-          { label: "Mốc so sánh", value: delta ? dateLabel(delta.since) : "Lần mở app tiếp theo", tone: "muted" },
-        ]}
-        links={[
-          { label: "Xem giao dịch", to: "/transactions" },
-          { label: "Kiểm tra giá", to: "/settings?tab=prices" },
-        ]}
+        model={pulseTraceModel}
       />
 
       <TraceSheet
         open={whatIfOpen}
         onClose={() => setWhatIfOpen(false)}
-        eyebrow="Nhịp Quỹ · mô phỏng"
-        title="Nếu thêm…?"
-        value={whatIfCardValue}
-        explanation={portfolioEmpty
-          ? "Mô phỏng độc lập trước giao dịch đầu tiên, dùng cùng engine với màn Mô phỏng và đã tính TER. Kết quả không phải tài sản hiện có, không ghi vào sổ local."
-          : "Ước tính dùng cùng engine với màn Mô phỏng, gồm TER và lạm phát. Đây không phải giao dịch thật."}
-        rows={[
-          { label: "Trạng thái", value: portfolioEmpty ? "Mô phỏng · chưa ghi sổ" : "Ước tính · chưa tạo giao dịch", tone: "muted" },
-          { label: "Khoản thử", value: formatMoney(amount) },
-          { label: "Giá VWCE", value: whatIf.vwcePrice ? formatMoney(whatIf.vwcePrice) : "Chưa có", tone: whatIf.vwcePrice ? undefined : "warning" },
-          { label: "Nguồn giá", value: priceSourceLabel(whatIf.trace.vwcePrice.source as TodayCenterPriceSource), tone: "muted" },
-          { label: "Mua thêm", value: whatIfCardValue },
-          { label: `Sức mua sau ${years} năm`, value: amount > 0 ? formatMoney(futureReal) : "—" },
-          { label: "Mô hình", value: `Simulation engine · TER ${terLabel}`, tone: "muted" },
-        ]}
-        links={[
-          { label: "Mô phỏng đầy đủ", to: "/simulation" },
-          { label: "Kiểm tra giá", to: "/settings?tab=prices" },
-        ]}
+        model={whatIfTraceModel}
       >
         <div className="today-sheet-tools">
           <div className="today-sheet-presets" role="group" aria-label="Khoản thử nhanh">
@@ -471,19 +433,7 @@ export default function TodayCenter({
       <TraceSheet
         open={safetyOpen}
         onClose={() => setSafetyOpen(false)}
-        eyebrow="Nhịp Quỹ"
-        title="An toàn chưa?"
-        value={`${safetyScore}/4 ổn`}
-        explanation="Bốn lớp bảo vệ giúp sổ local vẫn có thể sao lưu, khôi phục, dùng offline và bàn giao khi cần."
-        rows={safetyItems.map((item) => ({
-          label: item.name,
-          value: item.label,
-          tone: item.ready ? ("positive" as const) : ("warning" as const),
-        }))}
-        links={[
-          { label: "Backup & dữ liệu", to: "/settings?tab=data" },
-          { label: "Hồ sơ khẩn cấp", to: "/notfallmappe" },
-        ]}
+        model={safetyTraceModel}
       >
         {!restoreReady ? (
           <div className="today-sheet-tools">

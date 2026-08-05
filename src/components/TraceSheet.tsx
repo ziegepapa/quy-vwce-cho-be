@@ -1,38 +1,27 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import {
+  formatTraceValue,
+  traceSourceLabel,
+  type TraceSheetModel,
+} from "../lib/traceModel";
 
-export type TraceRow = {
-  label: string;
-  value: string;
-  tone?: "positive" | "negative" | "warning" | "muted";
-};
-
-export type TraceLink = {
-  label: string;
-  to: string;
-};
+export type {
+  TraceLinkModel as TraceLink,
+  TraceRowModel as TraceRow,
+} from "../lib/traceModel";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  eyebrow?: string;
-  title: string;
-  value?: string;
-  explanation: string;
-  rows?: TraceRow[];
-  links?: TraceLink[];
+  model: TraceSheetModel;
   children?: ReactNode;
 };
 
 export default function TraceSheet({
   open,
   onClose,
-  eyebrow = "Vì sao số này?",
-  title,
-  value,
-  explanation,
-  rows = [],
-  links = [],
+  model,
   children,
 }: Props) {
   const titleId = useId();
@@ -99,12 +88,13 @@ export default function TraceSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        data-trace-id={model.id}
       >
         <div className="pulse-sheet-handle" aria-hidden />
         <header className="pulse-sheet-head">
           <div>
-            <p>{eyebrow}</p>
-            <h2 id={titleId}>{title}</h2>
+            <p>{model.eyebrow ?? "Vì sao số này?"}</p>
+            <h2 id={titleId}>{model.title}</h2>
           </div>
           <button ref={closeRef} type="button" className="pulse-sheet-close" onClick={onClose}>
             <span aria-hidden>×</span>
@@ -112,15 +102,20 @@ export default function TraceSheet({
           </button>
         </header>
 
-        {value ? <p className="pulse-sheet-value">{value}</p> : null}
-        <p className="pulse-sheet-explanation">{explanation}</p>
+        {model.primary ? <p className="pulse-sheet-value">{formatTraceValue(model.primary)}</p> : null}
+        <p className="pulse-sheet-explanation">{model.explanation}</p>
 
-        {rows.length > 0 ? (
+        {model.rows.length > 0 ? (
           <dl className="pulse-trace-rows">
-            {rows.map((row) => (
-              <div key={`${row.label}-${row.value}`}>
+            {model.rows.map((row) => (
+              <div
+                key={row.id}
+                data-trace-source={row.source}
+                data-trace-formula={row.formula}
+                title={`Nguồn: ${traceSourceLabel(row.source)}${row.formula ? ` · ${row.formula}` : ""}`}
+              >
                 <dt>{row.label}</dt>
-                <dd className={row.tone ? `tone-${row.tone}` : undefined}>{row.value}</dd>
+                <dd className={row.tone ? `tone-${row.tone}` : undefined}>{formatTraceValue(row.value)}</dd>
               </div>
             ))}
           </dl>
@@ -128,9 +123,9 @@ export default function TraceSheet({
 
         {children}
 
-        {links.length > 0 ? (
+        {model.links && model.links.length > 0 ? (
           <nav className="pulse-sheet-links" aria-label="Đi tới dữ liệu liên quan">
-            {links.map((link) => (
+            {model.links.map((link) => (
               <Link key={`${link.to}-${link.label}`} to={link.to} onClick={onClose}>
                 {link.label}<span aria-hidden> →</span>
               </Link>

@@ -18,6 +18,7 @@ import {
   parseDate,
 } from "../lib/calc";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
+import { buildPortfolioTraceModel } from "../lib/todayCenterTrace";
 import TodayCenter from "../components/TodayCenter";
 import TraceSheet from "../components/TraceSheet";
 
@@ -237,6 +238,17 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       : vwcePriceSource === "legacy_quote"
         ? "Giá tương thích cũ"
         : "Chưa có giá";
+  const portfolioTraceModel = buildPortfolioTraceModel({
+    totalValue: totalKnown,
+    securities: securitiesKnown,
+    cash,
+    cashNegative,
+    valueComplete: portfolioSnapshot.valueComplete,
+    missingIsins: market.missingIsins,
+    vwcePrice,
+    vwceAsOf: vwceQuote?.asOf,
+    provenance: portfolioSnapshot.provenance,
+  });
 
   return (
     <div className="ov">
@@ -366,21 +378,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       <TraceSheet
         open={traceOpen}
         onClose={() => setTraceOpen(false)}
-        title="Tổng tài sản"
-        value={hasMissingPrices ? `${formatMoney(totalKnown)} đã định giá` : formatMoney(totalKnown)}
-        explanation="Tổng tài sản = chứng khoán có giá hợp lệ + số dư an toàn trong sổ local. Holdings được dựng bằng cách replay sổ giao dịch; giá thiếu không bị tính thành 0."
-        rows={[
-          { label: "Chứng khoán", value: formatMoney(securitiesKnown) },
-          { label: "An toàn", value: formatMoney(cash), tone: cashNegative ? "negative" : undefined },
-          { label: "Nguồn holdings", value: "Replay sổ giao dịch", tone: "muted" },
-          { label: "Nguồn VWCE", value: sourceLabel },
-          { label: "Giá / asOf", value: vwcePrice > 0 ? `${formatMoney(vwcePrice)} · ${vwceQuote?.asOf ?? "legacy"}` : "Chưa có", tone: vwcePrice > 0 ? undefined : "warning" },
-          { label: "Độ đầy đủ", value: hasMissingPrices ? `Thiếu ${market.missingIsins.length} mã` : "Đủ giá", tone: hasMissingPrices ? "warning" : "positive" },
-        ]}
-        links={[
-          { label: "Xem giao dịch", to: "/transactions" },
-          { label: "Giá & tài sản", to: "/settings?tab=prices" },
-        ]}
+        model={portfolioTraceModel}
       />
     </div>
   );
