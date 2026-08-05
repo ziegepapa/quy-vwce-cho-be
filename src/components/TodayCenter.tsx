@@ -18,6 +18,11 @@ import {
   recordPortfolioPulse,
   type PortfolioPulseState,
 } from "../lib/todayCenter";
+import {
+  buildTodayCenterSafety,
+  buildTodayCenterWhatIf,
+} from "../lib/todayCenterEngine";
+import type { TodayCenterPriceSource } from "../lib/todayCenterAdapter";
 import type { AppSettings, Transaction } from "../lib/types";
 import TraceSheet from "./TraceSheet";
 
@@ -38,6 +43,7 @@ type Props = {
   totalQuantity: number;
   valueComplete: boolean;
   vwcePrice: number;
+  vwcePriceSource?: TodayCenterPriceSource;
   settings: AppSettings;
   transactions: Transaction[];
 };
@@ -82,12 +88,6 @@ function dateLabel(value: string): string {
   });
 }
 
-function dayAge(value: string): number | null {
-  const time = Date.parse(value);
-  if (!Number.isFinite(time)) return null;
-  return Math.max(0, Math.floor((Date.now() - time) / 86_400_000));
-}
-
 function signedMoney(value: number): string {
   if (Math.abs(value) < 0.005) return formatMoney(0);
   return `${value > 0 ? "+" : "−"}${formatMoney(Math.abs(value))}`;
@@ -99,11 +99,19 @@ function metricTone(value: number): "positive" | "negative" | "neutral" {
   return "neutral";
 }
 
+function priceSourceLabel(source: TodayCenterPriceSource): string {
+  if (source === "manual_quote") return "Giá thủ công hiệu lực";
+  if (source === "auto_quote") return "Giá tự động hiệu lực";
+  if (source === "legacy_quote") return "Giá VWCE tương thích cũ";
+  return "Chưa có giá";
+}
+
 export default function TodayCenter({
   totalValue,
   totalQuantity,
   valueComplete,
   vwcePrice,
+  vwcePriceSource,
   settings,
   transactions,
 }: Props) {
@@ -181,25 +189,37 @@ export default function TodayCenter({
     Math.abs(totalValue) < 0.005 &&
     Math.abs(totalQuantity) < 0.000001;
   const parsedAmount = parseDecimal(whatIfAmount);
-  const amount = Number.isFinite(parsedAmount) ? Math.max(0, parsedAmount) : 0;
-  const years = Math.max(
+  const rawYears = Math.max(
     0,
-    Math.min(
-      40,
-      (Number(settings.endDate.slice(0, 4)) || new Date().getFullYear()) -
-        new Date().getFullYear(),
-    ),
+    (Number(settings.endDate.slice(0, 4)) || new Date().getFullYear()) -
+      new Date().getFullYear(),
   );
-  const annualReturn = Math.max(-0.95, Math.min(0.5, settings.vwceReturn));
-  const inflation = Math.max(0, Math.min(0.5, settings.inflationRate));
-  const extraUnits = vwcePrice > 0 ? amount / vwcePrice : 0;
-  const futureNominal = amount * Math.pow(1 + annualReturn, years);
-  const futureReal = futureNominal / Math.pow(1 + inflation, years);
+  const resolvedPriceSource = vwcePriceSource ?? (vwcePrice > 0 ? "auto_quote" : "missing");
+  const whatIf = buildTodayCenterWhatIf({
+    amount: parsedAmount,
+    vwcePrice,
+    priceSource: resolvedPriceSource,
+    years: rawYears,
+    annualReturn: settings.vwceReturn,
+    inflation: settings.inflationRate,
+  });
+  const amount = whatIf.amount;
+  const years = whatIf.years;
+  const extraUnits = whatIf.extraUnits ?? 0;
+  const futureReal = whatIf.futureReal;
 
-  const backupAge = dayAge(safety.backupAt);
-  const backupReady = backupAge !== null && backupAge <= 30;
-  const restoreReady = Boolean(safety.restoreAt);
-  const printedReady = Boolean(settings.notfallmappe?.lastPrintedAt);
+  const safetyAssessment = buildTodayCenterSafety({
+    backupAt: safety.backupAt,
+    restoreAt: safety.restoreAt,
+    offlineReady: safety.offlineReady,
+    lastPrintedAt: settings.notfallmappe?.lastPrintedAt,
+  });
+  const isSafetyReady = (key: "backup" | "restore" | "offline" | "print") =>
+    safetyAssessment.items.some((item) => item.key === key && item.ready);
+  const backupAge = safetyAssessment.backupAgeDays;
+  const backupReady = isSafetyReady("backup");
+  const restoreReady = isSafetyReady("restore");
+  const printedReady = isSafetyReady("print");
   const safetyItems = [
     {
       key: "backup",
@@ -220,8 +240,8 @@ export default function TodayCenter({
     {
       key: "offline",
       name: "Offline",
-      ready: safety.offlineReady,
-      label: safety.offlineReady ? "PWA sẵn sàng offline" : "Chưa xác nhận PWA offline",
+      ready: isSafetyReady("offline"),
+      label: isSafetyReady("offline") ? "PWA sẵn sàng offline" : "Chưa xác nhận PWA offline",
     },
     {
       key: "print",
@@ -230,7 +250,7 @@ export default function TodayCenter({
       label: printedReady ? "Hồ sơ khẩn cấp đã in" : "Chưa in hồ sơ khẩn cấp",
     },
   ];
-  const safetyScore = safetyItems.filter((item) => item.ready).length;
+  const safetyScore = safetyAssessment.score;
   const highestRisk = safetyItems.find((item) => !item.ready);
   const pulseChanged = Boolean(
     delta && (Math.abs(delta.value) > 0.005 || Math.abs(delta.quantity) > 0.000001),
@@ -251,12 +271,15 @@ export default function TodayCenter({
       : "Mốc đầu tiên";
 
   const extraUnitsText = extraUnits.toLocaleString("vi-VN", { maximumFractionDigits: 4 });
-  const whatIfValue = vwcePrice > 0 && amount > 0
+  const whatIfValue = whatIf.status === "ready"
     ? `+${extraUnitsText} VWCE`
-    : "Cần giá VWCE";
-  const whatIfCardValue = portfolioEmpty && vwcePrice > 0 && amount > 0
+    : whatIf.status === "missing_price"
+      ? "Cần giá VWCE"
+      : "Nhập khoản thử";
+  const whatIfCardValue = portfolioEmpty && whatIf.status === "ready"
     ? `≈ ${extraUnitsText} VWCE`
     : whatIfValue;
+  const terLabel = `${(whatIf.ter * 100).toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%/năm`;
 
   function confirmRestore() {
     if (!window.confirm("Chỉ đánh dấu sau khi bạn đã thử nhập một bản backup và kiểm tra số liệu. Đã hoàn tất?")) return;
@@ -345,11 +368,13 @@ export default function TodayCenter({
             </span>
             <span className="today-main-metric neutral">{whatIfCardValue}</span>
             <span className="today-metric-caption">
-              {vwcePrice > 0 && amount > 0
+              {whatIf.status === "ready"
                 ? portfolioEmpty
                   ? `${formatMoney(amount)} giả định theo giá hiện tại · không phải số dư.`
                   : `${formatMoney(futureReal)} sức mua sau ${years} năm.`
-                : "Cần giá hợp lệ để quy đổi."}
+                : whatIf.status === "missing_price"
+                  ? "Cần giá hợp lệ để quy đổi."
+                  : "Nhập khoản lớn hơn 0 để mô phỏng."}
             </span>
             <span className="today-detail-hint">Đổi khoản thử</span>
           </button>
@@ -379,8 +404,8 @@ export default function TodayCenter({
         title="Đổi gì?"
         value={deltaValue}
         explanation={delta
-          ? "Delta dùng hai mốc danh mục đầy đủ gần nhất. Refresh lỗi hoặc thiếu giá không tạo biến động giả."
-          : "Đây là mốc danh mục đầy đủ đầu tiên. Lần mở có thay đổi tiếp theo sẽ tạo delta để đối chiếu."}
+          ? "Delta dùng hai lần mở app có danh mục đầy đủ gần nhất. Refresh lỗi, rerender hoặc thiếu giá không tạo mốc giả."
+          : "Đây là mốc danh mục đầy đủ đầu tiên. Lần mở app tiếp theo sẽ tạo delta để đối chiếu."}
         rows={[
           { label: "Hiện tại", value: formatMoney(totalValue) },
           {
@@ -392,7 +417,7 @@ export default function TodayCenter({
             label: "Số lượng",
             value: `${totalQuantity.toLocaleString("vi-VN", { maximumFractionDigits: 6 })} đơn vị`,
           },
-          { label: "Mốc so sánh", value: delta ? dateLabel(delta.since) : "Lần mở tiếp theo", tone: "muted" },
+          { label: "Mốc so sánh", value: delta ? dateLabel(delta.since) : "Lần mở app tiếp theo", tone: "muted" },
         ]}
         links={[
           { label: "Xem giao dịch", to: "/transactions" },
@@ -407,14 +432,16 @@ export default function TodayCenter({
         title="Nếu thêm…?"
         value={whatIfCardValue}
         explanation={portfolioEmpty
-          ? "Mô phỏng độc lập trước giao dịch đầu tiên. Kết quả không phải tài sản hiện có và không ghi gì vào sổ local."
-          : "Ước tính quy đổi khoản thêm hôm nay theo giá VWCE hiện tại và sức mua cuối kế hoạch. Đây không phải giao dịch thật."}
+          ? "Mô phỏng độc lập trước giao dịch đầu tiên, dùng cùng engine với màn Mô phỏng và đã tính TER. Kết quả không phải tài sản hiện có, không ghi vào sổ local."
+          : "Ước tính dùng cùng engine với màn Mô phỏng, gồm TER và lạm phát. Đây không phải giao dịch thật."}
         rows={[
           { label: "Trạng thái", value: portfolioEmpty ? "Mô phỏng · chưa ghi sổ" : "Ước tính · chưa tạo giao dịch", tone: "muted" },
           { label: "Khoản thử", value: formatMoney(amount) },
-          { label: "Giá VWCE", value: vwcePrice > 0 ? formatMoney(vwcePrice) : "Chưa có", tone: vwcePrice > 0 ? undefined : "warning" },
+          { label: "Giá VWCE", value: whatIf.vwcePrice ? formatMoney(whatIf.vwcePrice) : "Chưa có", tone: whatIf.vwcePrice ? undefined : "warning" },
+          { label: "Nguồn giá", value: priceSourceLabel(whatIf.trace.vwcePrice.source as TodayCenterPriceSource), tone: "muted" },
           { label: "Mua thêm", value: whatIfCardValue },
           { label: `Sức mua sau ${years} năm`, value: amount > 0 ? formatMoney(futureReal) : "—" },
+          { label: "Mô hình", value: `Simulation engine · TER ${terLabel}`, tone: "muted" },
         ]}
         links={[
           { label: "Mô phỏng đầy đủ", to: "/simulation" },
