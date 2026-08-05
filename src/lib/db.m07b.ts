@@ -37,17 +37,27 @@ export async function getSettings(): Promise<AppSettings> {
   return (await db.settings.get("settings")) ?? defaultSettings();
 }
 
+/**
+ * Merge settings inside a single read/write transaction.
+ *
+ * The former read-then-put sequence could lose a field when two autosaves (or
+ * an autosave and a VWCE quote mirror) overlapped. Dexie serializes write
+ * transactions touching these stores, so every partial update now sees the
+ * latest committed settings and the outbox always carries the same snapshot.
+ */
 export async function saveSettings(
   partial: Partial<AppSettings>,
   opts?: { sync?: boolean },
 ): Promise<void> {
-  const current = await getSettings();
-  const ver = ((current as AppSettings & { version?: number }).version ?? 0) + 1;
-  const next = { ...current, ...partial, id: "settings", updatedAt: nowIso(), version: ver };
-  await db.settings.put(next as AppSettings);
-  if (opts?.sync !== false) {
-    await enqueueOutbox("settings", "settings", "upsert", next, ver);
-  }
+  await db.transaction("rw", [db.settings, db.outbox], async () => {
+    const current = (await db.settings.get("settings")) ?? defaultSettings();
+    const ver = ((current as AppSettings & { version?: number }).version ?? 0) + 1;
+    const next = { ...current, ...partial, id: "settings", updatedAt: nowIso(), version: ver };
+    await db.settings.put(next as AppSettings);
+    if (opts?.sync !== false) {
+      await enqueueOutbox("settings", "settings", "upsert", next, ver);
+    }
+  });
 }
 
 export async function listGoals(): Promise<Goal[]> {
