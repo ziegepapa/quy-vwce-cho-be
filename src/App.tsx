@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { NavLink, Route, Routes } from "react-router-dom";
+import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { useAuth } from "./lib/auth";
 import {
   clearUserBusinessData,
@@ -16,8 +16,6 @@ import type { SyncStatus } from "./lib/sync/types";
 import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
-import QuoteFeedRefresh from "./components/QuoteFeedRefresh";
-import QuoteSourceControls from "./components/QuoteSourceControls";
 import QuoteStatusSummary from "./components/QuoteStatusSummary";
 import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import Overview from "./pages/Overview";
@@ -61,6 +59,7 @@ const NAV: { to: string; label: string; icon: ReactNode }[] = [
 
 export default function App() {
   const auth = useAuth();
+  const navigate = useNavigate();
   const [ready, setReady] = useState(false);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
@@ -83,6 +82,17 @@ export default function App() {
     setPending(p);
   }, []);
 
+  const handleSettingsChanged = useCallback(async () => {
+    setSettings(await getSettings());
+    await refreshSyncBadge();
+  }, [refreshSyncBadge]);
+
+  const handleQuotesChanged = useCallback(async () => {
+    setSettings(await getSettings());
+    setQuoteRefreshVersion((value) => value + 1);
+    await refreshSyncBadge();
+  }, [refreshSyncBadge]);
+
   async function reload() {
     setMigrationError(null);
     try {
@@ -96,11 +106,6 @@ export default function App() {
     setSettings(await getSettings());
     setReady(true);
     await refreshSyncBadge();
-  }
-
-  async function handleQuotesChanged() {
-    setSettings(await getSettings());
-    setQuoteRefreshVersion((value) => value + 1);
   }
 
   useEffect(() => {
@@ -149,7 +154,7 @@ export default function App() {
         await refreshSyncBadge();
       }
     })();
-  }, [auth.ready, auth.configured, auth.user, refreshSyncBadge]);
+  }, [auth.ready, auth.configured, auth.user, handleQuotesChanged, refreshSyncBadge]);
 
   useEffect(() => {
     const on = () => {
@@ -277,7 +282,7 @@ export default function App() {
             pending={pending}
             onSignOut={handleSignOut}
             onSyncNow={handleSyncNow}
-            onUpdatePrice={navAction("updatePrice")}
+            onUpdatePrice={() => navigate("/settings?tab=prices")}
             onSearch={navAction("search")}
             onFilter={navAction("filter")}
             onAddGoal={navAction("addGoal")}
@@ -302,18 +307,13 @@ export default function App() {
             <Route
               path="/settings"
               element={
-                <>
-                  <QuoteFeedRefresh onUpdated={handleQuotesChanged} />
-                  <QuoteSourceControls
-                    refreshKey={quoteRefreshVersion}
-                    onChanged={handleQuotesChanged}
-                  />
-                  <SettingsPage
-                    key={quoteRefreshVersion}
-                    onReload={reload}
-                    onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined}
-                  />
-                </>
+                <SettingsPage
+                  onReload={reload}
+                  onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined}
+                  refreshKey={quoteRefreshVersion}
+                  onQuotesChanged={handleQuotesChanged}
+                  onSettingsChanged={handleSettingsChanged}
+                />
               }
             />
           </Routes>
