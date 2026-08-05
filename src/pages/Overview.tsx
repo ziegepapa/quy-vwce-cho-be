@@ -10,16 +10,14 @@ import {
 import type { AppSettings, Goal, Instrument, Quote, Transaction } from "../lib/types";
 import { VWCE_ISIN } from "../lib/types";
 import {
-  applyTransaction,
   avgCost,
   buildEquitySeries,
-  emptyPortfolio,
   formatMoney,
   inflate,
   monthsBetween,
   parseDate,
-  portfolioMarketValue,
 } from "../lib/calc";
+import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import TodayCenter from "../components/TodayCenter";
 import TraceSheet from "../components/TraceSheet";
 
@@ -101,30 +99,25 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     };
   }, [refreshKey]);
 
-  const portfolio = useMemo(() => {
-    let state = emptyPortfolio();
-    for (const transaction of [...transactions].sort((a, b) => (a.date < b.date ? -1 : 1))) {
-      state = applyTransaction(state, transaction);
-    }
-    return state;
-  }, [transactions]);
-
-  const pricesByIsin = useMemo(() => {
-    const map: Record<string, number | undefined> = {};
-    for (const quote of quotes) {
-      if (quote.currency === "EUR" && quote.price > 0) map[quote.instrumentIsin] = quote.price;
-    }
-    const legacy = settings?.latestVwcePrice ?? 0;
-    if (legacy > 0 && map[VWCE_ISIN] == null) map[VWCE_ISIN] = legacy;
-    return map;
-  }, [quotes, settings?.latestVwcePrice]);
-
-  const market = useMemo(
-    () => portfolioMarketValue(portfolio, pricesByIsin),
-    [portfolio, pricesByIsin],
+  const portfolioSnapshot = useMemo(
+    () => buildTodayCenterPortfolioSnapshot({
+      transactions,
+      quotes,
+      legacyVwcePrice: settings?.latestVwcePrice ?? 0,
+    }),
+    [transactions, quotes, settings?.latestVwcePrice],
   );
+  const {
+    portfolio,
+    pricesByIsin,
+    market,
+    totalQuantity,
+    vwcePrice,
+    vwceQuote,
+    vwcePriceSource,
+  } = portfolioSnapshot;
   const series = useMemo(
-    () => buildEquitySeries(transactions, pricesByIsin[VWCE_ISIN] ?? 0, pricesByIsin as Record<string, number>),
+    () => buildEquitySeries(transactions, pricesByIsin[VWCE_ISIN] ?? 0, pricesByIsin),
     [transactions, pricesByIsin],
   );
 
@@ -137,16 +130,10 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     );
   }
 
-  const hasMissingPrices = market.missingIsins.length > 0;
+  const hasMissingPrices = !portfolioSnapshot.valueComplete;
   const securitiesKnown = market.securities;
   const cash = market.cash;
-  const totalKnown = securitiesKnown + cash;
-  const totalQuantity = Object.values(market.byIsin).reduce(
-    (sum, row) => sum + Math.max(0, row.qty),
-    0,
-  );
-  const vwcePrice = pricesByIsin[VWCE_ISIN] ?? 0;
-  const vwceQuote = quotes.find((quote) => quote.instrumentIsin === VWCE_ISIN && quote.currency === "EUR");
+  const totalKnown = portfolioSnapshot.totalValue;
   const vwceValue = vwcePrice > 0 ? portfolio.vwceQty * vwcePrice : null;
   const pnl = vwceValue != null && portfolio.vwceCostBasis > 0 ? vwceValue - portfolio.vwceCostBasis : 0;
   const today = new Date();
@@ -243,7 +230,13 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     const instrument = instruments.find((candidate) => candidate.isin === isin);
     return instrument?.ticker || instrument?.name || isin;
   };
-  const sourceLabel = vwceQuote?.source === "manual" ? "Tay đang thắng" : vwceQuote ? "Auto" : "Chưa có giá";
+  const sourceLabel = vwcePriceSource === "manual_quote"
+    ? "Tay đang thắng"
+    : vwcePriceSource === "auto_quote"
+      ? "Auto"
+      : vwcePriceSource === "legacy_quote"
+        ? "Giá tương thích cũ"
+        : "Chưa có giá";
 
   return (
     <div className="ov">
@@ -305,8 +298,9 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         <TodayCenter
           totalValue={totalKnown}
           totalQuantity={totalQuantity}
-          valueComplete={!hasMissingPrices}
+          valueComplete={portfolioSnapshot.valueComplete}
           vwcePrice={vwcePrice}
+          vwcePriceSource={vwcePriceSource}
           settings={settings}
           transactions={transactions}
         />
@@ -374,10 +368,11 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         onClose={() => setTraceOpen(false)}
         title="Tổng tài sản"
         value={hasMissingPrices ? `${formatMoney(totalKnown)} đã định giá` : formatMoney(totalKnown)}
-        explanation="Tổng tài sản = chứng khoán có giá hợp lệ + số dư an toàn trong sổ local. Giá thiếu không bị tính thành 0."
+        explanation="Tổng tài sản = chứng khoán có giá hợp lệ + số dư an toàn trong sổ local. Holdings được dựng bằng cách replay sổ giao dịch; giá thiếu không bị tính thành 0."
         rows={[
           { label: "Chứng khoán", value: formatMoney(securitiesKnown) },
           { label: "An toàn", value: formatMoney(cash), tone: cashNegative ? "negative" : undefined },
+          { label: "Nguồn holdings", value: "Replay sổ giao dịch", tone: "muted" },
           { label: "Nguồn VWCE", value: sourceLabel },
           { label: "Giá / asOf", value: vwcePrice > 0 ? `${formatMoney(vwcePrice)} · ${vwceQuote?.asOf ?? "legacy"}` : "Chưa có", tone: vwcePrice > 0 ? undefined : "warning" },
           { label: "Độ đầy đủ", value: hasMissingPrices ? `Thiếu ${market.missingIsins.length} mã` : "Đủ giá", tone: hasMissingPrices ? "warning" : "positive" },
