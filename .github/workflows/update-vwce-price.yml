@@ -7,6 +7,7 @@ on:
     - cron: "30 18 * * 1-5"
 
 permissions:
+  actions: write
   contents: write
 
 concurrency:
@@ -37,6 +38,7 @@ jobs:
         run: node scripts/update-quotes.mjs
 
       - name: Commit and push if economic price data changed
+        id: quote_commit
         run: |
           set -euo pipefail
           QUOTES_PATH="public/data/quotes.json"
@@ -68,6 +70,7 @@ jobs:
 
           git add -- "$QUOTES_PATH" "$LEGACY_PATH"
           if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No economic quote changes"
             exit 0
           fi
@@ -82,3 +85,10 @@ jobs:
 
           git commit -m "chore(data): update quotes.json and VWCE legacy mirror"
           git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger test and Pages deploy for updated feed
+        if: steps.quote_commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
