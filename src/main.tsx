@@ -10,6 +10,7 @@ import "./styles/bento.css";
 import "./styles/goals.css";
 import "./styles/overview-v8.css";
 import "./styles/settings-v9.css";
+import "./styles/pulse-locked-v2.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
