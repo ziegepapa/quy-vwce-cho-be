@@ -109,7 +109,7 @@ describe("typed trace builders", () => {
     const trace = buildWhatIfTraceModel({ result, portfolioEmpty: false });
     expect(trace.rows.find((row) => row.id === "vwce-price")?.source).toBe("manual_quote");
     expect(trace.rows.find((row) => row.id === "future-real")?.formula).toBe("simulation.projectEnd+purchasingPower");
-    expect(trace.rows.find((row) => row.id === "ter")?.source).toBe("default_constant");
+    expect(trace.rows.find((row) => row.id === "ter")?.source).toBe("simulation_default");
     expect(trace.primary).toMatchObject({ kind: "quantity", value: 2, signed: true });
   });
 

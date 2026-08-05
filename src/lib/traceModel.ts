@@ -15,7 +15,7 @@ export type TraceSource =
   | "app_settings"
   | "user_input"
   | "explicit_input"
-  | "default_constant"
+  | "simulation_default"
   | "app_metadata"
   | "service_worker"
   | "emergency_profile";
@@ -103,7 +103,7 @@ const SOURCE_LABELS: Record<TraceSource, string> = {
   app_settings: "Cài đặt kế hoạch",
   user_input: "Dữ liệu người dùng nhập",
   explicit_input: "Tham số được truyền rõ ràng",
-  default_constant: "Hằng số mặc định của engine",
+  simulation_default: "Mặc định của simulation engine",
   app_metadata: "Metadata backup local",
   service_worker: "Trạng thái PWA",
   emergency_profile: "Hồ sơ khẩn cấp",
