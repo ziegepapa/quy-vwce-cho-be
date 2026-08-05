@@ -24,7 +24,8 @@ export function validateManualQuoteDraft(
   draft: ManualQuoteDraft,
   today = new Date().toISOString().slice(0, 10),
 ): ManualQuoteDraftResult {
-  const isin = normalizeIsin(draft.isin);
+  // Broker documents and copied ISINs are often grouped with spaces.
+  const isin = normalizeIsin(draft.isin).replace(/\s+/g, "");
   const rawPrice = draft.price.trim();
   const asOf = draft.asOf.trim();
 
