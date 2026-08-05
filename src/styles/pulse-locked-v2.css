@@ -1,0 +1,508 @@
+/* Grok production-review lock — one breath, clean top bar, compact Pulse Home. */
+:root {
+  --pulse-v2-panel: color-mix(in srgb, var(--surface-raised) 92%, var(--bg-base));
+  --pulse-v2-card: color-mix(in srgb, var(--surface) 91%, var(--surface-sunken));
+  --pulse-v2-line: color-mix(in srgb, var(--primary-600) 10%, var(--border-subtle));
+  --pulse-v2-soft: color-mix(in srgb, var(--primary-600) 7%, transparent);
+}
+
+:root[data-theme="premium"] {
+  --pulse-v2-panel: #100e14;
+  --pulse-v2-card: #17141b;
+  --pulse-v2-line: rgba(201, 169, 97, 0.14);
+  --pulse-v2-soft: rgba(201, 169, 97, 0.07);
+}
+
+/* Top bar: the centre is time, the right edge belongs to the account only on Home. */
+.collapse-nav {
+  background: color-mix(in srgb, var(--color-surface-translucent) 94%, transparent);
+  border-bottom-color: var(--hairline);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .collapse-nav {
+    backdrop-filter: blur(var(--blur-nav)) saturate(155%);
+    -webkit-backdrop-filter: blur(var(--blur-nav)) saturate(155%);
+  }
+}
+
+.collapse-nav-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.nav-leading {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.nav-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px -10px var(--hero-shadow);
+}
+
+.collapse-nav-title {
+  max-width: 11rem;
+  font-size: 18px;
+  font-weight: 680;
+  letter-spacing: -0.025em;
+}
+
+.nav-time-date {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-width: 74px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-clock-time {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 720;
+  letter-spacing: 0.045em;
+}
+
+.nav-clock-date {
+  margin-top: 4px;
+  color: var(--text-tertiary);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.075em;
+}
+
+.collapse-nav-right {
+  justify-self: end;
+}
+
+/* Hero: keep the number as the star; the empty state must not occupy the first screen. */
+.ov {
+  gap: 14px;
+}
+
+.hero-v8 {
+  min-height: 148px;
+  padding: 17px;
+  border-radius: 22px;
+  box-shadow: 0 18px 42px -28px var(--hero-shadow);
+}
+
+.hero-empty-inner {
+  min-height: 112px;
+  justify-content: center;
+}
+
+.hero-empty-copy {
+  max-width: 23rem;
+  margin: 7px 0 14px;
+  font-size: 16px;
+  line-height: 1.25;
+  letter-spacing: -0.018em;
+}
+
+.hero-cta {
+  height: 40px;
+  padding: 0 15px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.hero-num {
+  font-size: clamp(34px, 9vw, 42px);
+}
+
+.hero-provenance {
+  min-height: 28px;
+  font-size: 9px;
+}
+
+.pulse-goal-line {
+  min-height: 40px;
+  padding-block: 6px;
+}
+
+/* Nhịp Quỹ: one surface, four concise answers, no card-on-card theatre. */
+.today-center {
+  padding: 13px;
+  border: 1px solid var(--pulse-v2-line);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 96% 0%, var(--pulse-v2-soft), transparent 32%),
+    var(--pulse-v2-panel);
+  box-shadow: none;
+}
+
+.today-center-head {
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.today-center-head h2 {
+  margin: 1px 0 0;
+  font-size: 20px;
+  font-weight: 730;
+  letter-spacing: -0.04em;
+}
+
+.today-center-head > div:first-child > p:last-child {
+  display: none;
+}
+
+.today-kicker {
+  font-size: 8.5px;
+  letter-spacing: 0.13em;
+}
+
+.today-head-actions {
+  gap: 0;
+}
+
+.today-sync-pill {
+  display: none;
+}
+
+.today-show-all {
+  min-height: 36px;
+  padding: 0 9px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.today-show-all:hover:not(:disabled) {
+  border-color: var(--pulse-v2-line);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+}
+
+.today-grid {
+  gap: 8px;
+}
+
+.today-card,
+.today-card-pulse,
+.today-card-reconcile,
+.today-card-whatif,
+.today-card-safety {
+  min-height: 124px;
+  padding: 11px;
+  border: 1px solid var(--pulse-v2-line);
+  border-radius: 16px;
+  background: var(--pulse-v2-card);
+  box-shadow: none;
+}
+
+.today-card::before {
+  width: 1px;
+}
+
+.today-card.is-new {
+  border-color: color-mix(in srgb, var(--primary-600) 36%, var(--pulse-v2-line));
+  box-shadow: inset 0 0 0 1px var(--pulse-v2-soft);
+}
+
+.today-card-head {
+  min-height: 40px;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.today-card-head h3 {
+  font-size: 13px;
+  font-weight: 730;
+  letter-spacing: -0.02em;
+}
+
+.today-card-head p {
+  margin-top: 2px;
+  color: var(--text-tertiary);
+  font-size: 9px;
+  line-height: 1.25;
+  -webkit-line-clamp: 1;
+}
+
+.today-card-icon {
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+  border: 1px solid var(--pulse-v2-line);
+  border-radius: 10px;
+  background: var(--surface-sunken);
+  font-size: 13px;
+}
+
+.today-new-label {
+  padding: 2px 5px;
+  background: var(--primary-050);
+  color: var(--primary-600);
+  font-size: 7px;
+}
+
+.today-main-metric {
+  margin-top: 2px;
+  font-size: clamp(19px, 5vw, 24px);
+  font-weight: 740;
+  letter-spacing: -0.04em;
+}
+
+.today-card-whatif .today-main-metric {
+  font-size: clamp(18px, 4.6vw, 22px);
+}
+
+.today-metric-caption,
+.today-empty-state span {
+  margin-top: 3px;
+  font-size: 9.5px;
+  line-height: 1.3;
+}
+
+.today-empty-state,
+.today-metric-trigger {
+  min-height: 50px;
+}
+
+.today-presets {
+  gap: 4px;
+  margin: 4px 0 6px;
+}
+
+.today-presets button {
+  min-height: 38px;
+  border-color: var(--pulse-v2-line);
+  background: transparent;
+  font-size: 9px;
+}
+
+.today-presets button.active {
+  background: var(--primary-050);
+  color: var(--primary-600);
+  border-color: color-mix(in srgb, var(--primary-600) 30%, transparent);
+}
+
+.today-primary-actions {
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.today-primary-actions a {
+  min-height: 40px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+/* Dock: compact and calm; six destinations must not become a second hero. */
+:root {
+  --dock-h: 52px;
+  --dock-pad: 6px;
+}
+
+.app-shell {
+  padding-bottom: calc(var(--dock-h) + var(--dock-pad) + 12px + var(--safe-bottom)) !important;
+}
+
+.app-shell::after {
+  height: 76px;
+}
+
+.bottom-dock {
+  left: 10px;
+  right: 10px;
+  bottom: calc(6px + var(--safe-bottom));
+}
+
+.bottom-dock-inner {
+  max-width: 25rem;
+  min-height: var(--dock-h);
+  padding: 3px;
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--color-surface-overlay) 96%, transparent);
+  box-shadow: 0 12px 34px -24px var(--hero-shadow);
+}
+
+.dock-item {
+  min-height: 46px;
+  gap: 1px;
+  padding: 3px 1px;
+  border-radius: 16px;
+  font-size: 9px;
+  font-weight: 620;
+}
+
+.dock-item.active {
+  font-weight: 730;
+}
+
+.dock-item.active::before {
+  width: 45px;
+  height: 34px;
+  background: color-mix(in srgb, var(--primary-600) 10%, transparent);
+}
+
+.dock-icon,
+.dock-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Keyboard users keep a clear focus without adding permanent visual noise. */
+.today-show-all:focus-visible,
+.today-card button:focus-visible,
+.hero-cta:focus-visible,
+.dock-item:focus-visible,
+.avatar-btn-wrap:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 420px) {
+  .collapse-nav {
+    padding-left: max(13px, var(--safe-left));
+    padding-right: max(13px, var(--safe-right));
+  }
+
+  .collapse-nav-inner {
+    gap: 7px;
+  }
+
+  .collapse-nav-title {
+    max-width: 92px;
+    font-size: 16px;
+  }
+
+  .nav-logo {
+    width: 24px;
+    height: 24px;
+  }
+
+  .nav-leading {
+    gap: 7px;
+  }
+
+  .nav-time-date {
+    min-width: 68px;
+  }
+
+  .nav-clock-time {
+    font-size: 11px;
+  }
+
+  .nav-clock-date {
+    font-size: 7.5px;
+  }
+
+  .hero-v8 {
+    min-height: 138px;
+    padding: 15px;
+    border-radius: 20px;
+  }
+
+  .hero-empty-inner {
+    min-height: 104px;
+  }
+
+  .hero-empty-copy {
+    margin-bottom: 12px;
+    font-size: 15px;
+  }
+
+  .today-center {
+    padding: 11px;
+    border-radius: 18px;
+  }
+
+  .today-center-head {
+    margin-bottom: 8px;
+  }
+
+  .today-center-head h2 {
+    font-size: 18px;
+  }
+
+  .today-grid {
+    gap: 7px;
+  }
+
+  .today-card,
+  .today-card-pulse,
+  .today-card-reconcile,
+  .today-card-whatif,
+  .today-card-safety {
+    min-height: 116px;
+    padding: 9px;
+    border-radius: 14px;
+  }
+
+  .today-card-head {
+    min-height: 30px;
+    margin-bottom: 5px;
+  }
+
+  .today-card-head p {
+    display: none;
+  }
+
+  .today-card-icon {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
+    border-radius: 9px;
+  }
+
+  .today-main-metric {
+    font-size: clamp(18px, 5vw, 22px);
+  }
+
+  .today-card-whatif .today-main-metric {
+    font-size: clamp(17px, 4.4vw, 20px);
+  }
+
+  .today-presets button {
+    min-height: 36px;
+    font-size: 8.5px;
+  }
+
+  .today-primary-actions a {
+    min-height: 38px;
+  }
+}
+
+@media (max-width: 350px) {
+  .collapse-nav-title {
+    max-width: 64px;
+    font-size: 14px;
+  }
+
+  .today-card-head h3 {
+    font-size: 12px;
+  }
+
+  .today-presets button {
+    min-height: 34px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapse-nav,
+  .bottom-dock,
+  .today-card,
+  .hero-v8 {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media print {
+  .nav-time-date,
+  .bottom-dock {
+    display: none !important;
+  }
+}

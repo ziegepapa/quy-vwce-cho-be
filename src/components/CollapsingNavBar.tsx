@@ -12,22 +12,60 @@ const TITLES: Record<string, string> = {
   "/settings": "Cài đặt",
 };
 
+type BerlinClock = {
+  iso: string;
+  time: string;
+  date: string;
+};
+
+function readBerlinClock(): BerlinClock {
+  const now = new Date();
+  return {
+    iso: now.toISOString(),
+    time: new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Berlin",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(now),
+    date: new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Berlin",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(now),
+  };
+}
+
+function TimeDate() {
+  const [clock, setClock] = useState<BerlinClock>(() => readBerlinClock());
+
+  useEffect(() => {
+    const tick = () => setClock(readBerlinClock());
+    tick();
+    const id = window.setInterval(tick, 1_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return (
+    <div
+      className="nav-time-date"
+      role="timer"
+      aria-live="off"
+      aria-label={`Giờ Berlin ${clock.time}, ngày ${clock.date}`}
+    >
+      <time className="nav-clock-time" dateTime={clock.iso}>{clock.time}</time>
+      <time className="nav-clock-date" dateTime={clock.iso}>{clock.date}</time>
+    </div>
+  );
+}
+
 function syncRingClass(status: SyncStatus): string {
   if (status === "synced") return "sync-ring synced";
   if (status === "syncing") return "sync-ring syncing";
   if (status === "conflict") return "sync-ring conflict";
   return "sync-ring offline";
-}
-
-function IconRefresh() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-      <path d="M3 16v-4h4" />
-      <path d="M21 8V4h-4" />
-    </svg>
-  );
 }
 
 function IconSearch() {
@@ -72,7 +110,6 @@ export default function CollapsingNavBar({
   pending,
   onSignOut,
   onSyncNow,
-  onUpdatePrice,
   onSearch,
   onFilter,
   onAddGoal,
@@ -95,8 +132,6 @@ export default function CollapsingNavBar({
   const [menuOpen, setMenuOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const lastNavH = useRef<string | null>(null);
-
-  // V9 B2: theo dõi cả thay đổi cài đặt hệ thống, không chỉ đọc một lần
   const [reduced, setReduced] = useState(() =>
     typeof window !== "undefined"
       ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -121,33 +156,24 @@ export default function CollapsingNavBar({
     return () => window.removeEventListener("scroll", onScroll);
   }, [reduced]);
 
-  // V9 B2: BẮT BUỘC làm tròn. Số thập phân làm --nav-h-dyn đổi mỗi pixel cuộn
-  // → guard bên dưới vô dụng → layout tính lại mọi frame → rung trên iOS.
   const h = Math.round(56 - progress * 8);
   const condensed = progress > 0.5;
 
   useEffect(() => {
     const value = `${h}px`;
     if (lastNavH.current === value) return;
-
     const raf = requestAnimationFrame(() => {
       document.documentElement.style.setProperty("--nav-h-dyn", value);
       lastNavH.current = value;
     });
-
-    return () => {
-      cancelAnimationFrame(raf);
-    };
+    return () => cancelAnimationFrame(raf);
   }, [h]);
 
-  useEffect(() => {
-    return () => {
-      document.documentElement.style.removeProperty("--nav-h-dyn");
-    };
+  useEffect(() => () => {
+    document.documentElement.style.removeProperty("--nav-h-dyn");
   }, []);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
-
   const initial = (displayName.trim()[0] || "?").toUpperCase();
 
   return (
@@ -158,54 +184,27 @@ export default function CollapsingNavBar({
             <span className="nav-logo" aria-hidden />
             <h1 className="collapse-nav-title">{title}</h1>
           </div>
+
+          <TimeDate />
+
           <div className="collapse-nav-right">
-            {pathname === "/" && onUpdatePrice ? (
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Cập nhật giá VWCE"
-                onClick={onUpdatePrice}
-              >
-                <IconRefresh />
-              </button>
-            ) : null}
             {pathname === "/transactions" && onSearch ? (
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Tìm kiếm giao dịch"
-                onClick={onSearch}
-              >
+              <button type="button" className="icon-btn" aria-label="Tìm kiếm giao dịch" onClick={onSearch}>
                 <IconSearch />
               </button>
             ) : null}
             {pathname === "/transactions" && onFilter ? (
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Lọc giao dịch"
-                onClick={onFilter}
-              >
+              <button type="button" className="icon-btn" aria-label="Lọc giao dịch" onClick={onFilter}>
                 <IconFilter />
               </button>
             ) : null}
             {pathname === "/goals" && onAddGoal ? (
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Thêm mục tiêu"
-                onClick={onAddGoal}
-              >
+              <button type="button" className="icon-btn" aria-label="Thêm mục tiêu" onClick={onAddGoal}>
                 <IconPlus />
               </button>
             ) : null}
             {pathname === "/simulation" && onChangeScenario ? (
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Đổi kịch bản"
-                onClick={onChangeScenario}
-              >
+              <button type="button" className="icon-btn" aria-label="Đổi kịch bản" onClick={onChangeScenario}>
                 <IconScenario />
               </button>
             ) : null}
@@ -216,12 +215,9 @@ export default function CollapsingNavBar({
               aria-label={`Menu tài khoản, ${SYNC_STATUS_LABEL[syncStatus]}`}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((v) => !v)}
+              onClick={() => setMenuOpen((value) => !value)}
             >
-              <span
-                className="avatar avatar-sm"
-                style={{ background: avatarGradient(displayName) }}
-              >
+              <span className="avatar avatar-sm" style={{ background: avatarGradient(displayName) }}>
                 {initial}
               </span>
               <span className={syncRingClass(syncStatus)} aria-hidden />
