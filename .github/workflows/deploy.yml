@@ -6,7 +6,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 concurrency:
@@ -30,10 +30,13 @@ jobs:
         run: npm run build
       - name: Verify release artifact
         run: npm run test:release
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload dist for deploy job
         if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
         with:
+          name: site-dist
           path: dist
+          retention-days: 2
   preview-smoke:
     needs: test-build
     runs-on: ubuntu-latest
@@ -73,15 +76,24 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: [test-build, preview-smoke]
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    timeout-minutes: 15
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Download site-dist
+        uses: actions/download-artifact@v4
         with:
-          # The default 10-minute action timeout was exceeded after PR #41.
-          timeout: "1200000"
-          error_count: "20"
+          name: site-dist
+          path: dist
+      # Option B: publish dist to branch gh-pages.
+      # Bypasses actions/deploy-pages@v4 which hard-caps timeout at 600000ms
+      # (log: "timeout value is greater than the allowed maximum - timeout set to the maximum of 600000 milliseconds").
+      # OWNER MUST set Settings → Pages → Source = Deploy from a branch → gh-pages / (root)
+      # before or right after merge, or the site will not update.
+      - name: Deploy dist to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
