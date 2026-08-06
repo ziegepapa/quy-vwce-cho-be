@@ -134,6 +134,18 @@ async function hasAuthenticatedUser(request: Request): Promise<boolean> {
   }
 }
 
+function providerUrlAllowed(value: string | undefined): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    if (url.protocol === "https:") return true;
+    return url.protocol === "http:"
+      && (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1");
+  } catch {
+    return false;
+  }
+}
+
 function cleanProviderOutput(value: string): string {
   return value
     .replace(/[\u0000-\u001f\u007f]/g, " ")
@@ -175,7 +187,7 @@ Deno.serve(async (request: Request) => {
   const apiUrl = Deno.env.get("AI_API_URL")?.trim();
   const apiKey = Deno.env.get("AI_API_KEY")?.trim();
   const model = Deno.env.get("AI_MODEL")?.trim();
-  if (!apiUrl?.startsWith("https://") || !apiKey || !model) {
+  if (!providerUrlAllowed(apiUrl) || !apiKey || !model) {
     return jsonResponse(request, 503, { code: "AI_PROVIDER_NOT_CONFIGURED" });
   }
 

@@ -32,9 +32,44 @@ jobs:
         if: github.ref == 'refs/heads/main'
         with:
           path: dist
+  preview-smoke:
+    needs: test-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: npm install
+      - name: Check Edge Function in Deno
+        run: deno check supabase/functions/explain-trace/index.ts
+      - name: Run isolated Edge Function smoke environment
+        run: npm run test:edge-smoke
+      - name: Install isolated browser
+        run: npx playwright install --with-deps chromium
+      - name: Build production preview
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_AI_TRACE_ENABLED: ${{ vars.VITE_AI_TRACE_ENABLED }}
+        run: npm run build
+      - name: Run browser preview smoke test
+        run: npm run test:preview
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: preview-smoke-failure
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
   deploy:
     if: github.ref == 'refs/heads/main'
-    needs: test-build
+    needs: [test-build, preview-smoke]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
