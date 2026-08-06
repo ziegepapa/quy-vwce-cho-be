@@ -1,5 +1,9 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import {
+  aiTraceAvailable,
+  requestAiTraceExplanation,
+} from "../lib/aiTraceExplanation";
 import {
   formatTraceValue,
   traceSourceLabel,
@@ -18,6 +22,12 @@ type Props = {
   children?: ReactNode;
 };
 
+type AiState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; explanation: string }
+  | { status: "error"; message: string };
+
 export default function TraceSheet({
   open,
   onClose,
@@ -28,10 +38,23 @@ export default function TraceSheet({
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
+  const aiRequestRef = useRef(0);
+  const [aiState, setAiState] = useState<AiState>({ status: "idle" });
 
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
+  useEffect(() => {
+    aiRequestRef.current += 1;
+    setAiState({ status: "idle" });
+  }, [model.id]);
+
+  useEffect(() => {
+    if (open) return;
+    aiRequestRef.current += 1;
+    setAiState({ status: "idle" });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -72,6 +95,25 @@ export default function TraceSheet({
       previous?.focus();
     };
   }, [open]);
+
+  const explainWithAi = async () => {
+    const requestId = aiRequestRef.current + 1;
+    aiRequestRef.current = requestId;
+    setAiState({ status: "loading" });
+    try {
+      const explanation = await requestAiTraceExplanation(model);
+      if (aiRequestRef.current !== requestId) return;
+      setAiState({ status: "ready", explanation });
+    } catch (error) {
+      if (aiRequestRef.current !== requestId) return;
+      setAiState({
+        status: "error",
+        message: error instanceof Error
+          ? error.message
+          : "AI tạm thời không khả dụng. Phần giải thích chuẩn phía trên vẫn dùng được.",
+      });
+    }
+  };
 
   if (!open) return null;
 
@@ -119,6 +161,37 @@ export default function TraceSheet({
               </div>
             ))}
           </dl>
+        ) : null}
+
+        {aiTraceAvailable ? (
+          <section className="pulse-ai-panel" aria-label="Giải thích AI tùy chọn">
+            <div className="pulse-ai-head">
+              <strong>AI tùy chọn</strong>
+              <span>Chỉ gửi Trace đã lọc</span>
+            </div>
+            <div className="pulse-ai-live" aria-live="polite">
+              {aiState.status === "idle" ? (
+                <button type="button" className="pulse-ai-button" onClick={() => void explainWithAi()}>
+                  Giải thích thêm bằng AI
+                </button>
+              ) : null}
+              {aiState.status === "loading" ? (
+                <p className="pulse-ai-status">Đang tạo giải thích…</p>
+              ) : null}
+              {aiState.status === "ready" ? (
+                <p className="pulse-ai-copy">{aiState.explanation}</p>
+              ) : null}
+              {aiState.status === "error" ? (
+                <>
+                  <p className="pulse-ai-error" role="alert">{aiState.message}</p>
+                  <button type="button" className="pulse-ai-button" onClick={() => void explainWithAi()}>
+                    Thử lại
+                  </button>
+                </>
+              ) : null}
+            </div>
+            <p className="pulse-ai-note">Không phải tư vấn đầu tư. Giải thích chuẩn phía trên luôn là nguồn tham chiếu.</p>
+          </section>
         ) : null}
 
         {children}

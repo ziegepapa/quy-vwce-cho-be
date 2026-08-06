@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run && npm run test:price",
     "test:price": "node --test scripts/update-vwce-price.test.mjs scripts/update-quotes.test.mjs",
+    "test:preview": "playwright test",
+    "test:edge-smoke": "node scripts/smoke-ai-edge.mjs",
     "update:price": "node scripts/update-quotes.mjs",
     "update:price:legacy": "node scripts/update-vwce-price.mjs"
   },
@@ -21,6 +23,7 @@
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
