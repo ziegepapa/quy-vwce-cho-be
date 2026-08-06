@@ -4,13 +4,18 @@
   "version": "1.6.0",
   "type": "module",
   "scripts": {
+    "generate:pwa-icons": "node scripts/generate-pwa-icons.mjs",
+    "predev": "npm run generate:pwa-icons",
     "dev": "vite",
+    "prebuild": "npm run generate:pwa-icons",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run && npm run test:price",
     "test:price": "node --test scripts/update-vwce-price.test.mjs scripts/update-quotes.test.mjs",
     "test:preview": "playwright test",
+    "test:release": "node scripts/verify-release.mjs",
     "test:edge-smoke": "node scripts/smoke-ai-edge.mjs",
+    "verify:production": "node scripts/verify-production.mjs",
     "update:price": "node scripts/update-quotes.mjs",
     "update:price:legacy": "node scripts/update-vwce-price.mjs"
   },
