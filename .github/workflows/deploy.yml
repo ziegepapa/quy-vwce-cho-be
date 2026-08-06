@@ -28,6 +28,8 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_AI_TRACE_ENABLED: ${{ vars.VITE_AI_TRACE_ENABLED }}
         run: npm run build
+      - name: Verify release artifact
+        run: npm run test:release
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:

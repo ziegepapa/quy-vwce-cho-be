@@ -3,3 +3,7 @@ dist
 .DS_Store
 *.local
 coverage
+public/icons/apple-touch-icon.png
+public/icons/icon-192.png
+public/icons/icon-512.png
+public/icons/icon-maskable-512.png
