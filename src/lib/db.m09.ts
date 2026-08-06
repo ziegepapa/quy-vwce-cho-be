@@ -1,4 +1,10 @@
-import type { BackupPayload, Quote, QuoteCandidate, QuoteSelectionPreference } from "./types";
+import type {
+  AppSettings,
+  BackupPayload,
+  Quote,
+  QuoteCandidate,
+  QuoteSelectionPreference,
+} from "./types";
 import { BACKUP_SCHEMA_VERSION } from "./types";
 import { nowIso } from "./defaults";
 import {
@@ -37,6 +43,17 @@ const CLEAR_TABLES = [
 
 async function clearAllTables(): Promise<void> {
   await Promise.all(CLEAR_TABLES.map((getTable) => getTable().clear()));
+}
+
+/** Old backup files may still embed soft-deleted depot statements — never revive them. */
+function sanitizeSettingsDepotTombstones(settings: AppSettings[]): AppSettings[] {
+  return settings.map((row) => {
+    if (!row.depotStatements?.length) return row;
+    return {
+      ...row,
+      depotStatements: row.depotStatements.filter((d) => !d.deletedAt),
+    };
+  });
 }
 
 function validateInstrument(inst: { isin: string; currency: string; name: string }): void {
@@ -99,7 +116,9 @@ async function importLegacyOrV2(payload: BackupPayload): Promise<void> {
     ],
     async () => {
       await clearAllTables();
-      if (payload.settings?.length) await db.settings.bulkPut(payload.settings);
+      if (payload.settings?.length) {
+        await db.settings.bulkPut(sanitizeSettingsDepotTombstones(payload.settings));
+      }
       if (payload.goals?.length) await db.goals.bulkPut(payload.goals);
       if (payload.transactions?.length) await db.transactions.bulkPut(payload.transactions);
       if (payload.annualChecklists?.length) await db.annualChecklists.bulkPut(payload.annualChecklists);
@@ -156,7 +175,9 @@ async function importV3(payload: BackupPayload): Promise<void> {
     ],
     async () => {
       await clearAllTables();
-      if (payload.settings?.length) await db.settings.bulkPut(payload.settings);
+      if (payload.settings?.length) {
+        await db.settings.bulkPut(sanitizeSettingsDepotTombstones(payload.settings));
+      }
       if (payload.goals?.length) await db.goals.bulkPut(payload.goals);
       if (payload.transactions?.length) await db.transactions.bulkPut(payload.transactions);
       if (payload.annualChecklists?.length) await db.annualChecklists.bulkPut(payload.annualChecklists);

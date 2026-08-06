@@ -1,10 +1,21 @@
-import type { BackupPayload } from "./types";
+import type { AppSettings, BackupPayload } from "./types";
 import { BACKUP_SCHEMA_VERSION } from "./types";
 import { nowIso } from "./defaults";
 import { db } from "./db.m01a";
 
 function isLive<T extends { deletedAt?: string }>(row: T): boolean {
   return !row.deletedAt;
+}
+
+/** Nested depotStatements carry deletedAt; settings row itself does not. */
+function sanitizeSettingsDepotTombstones(settings: AppSettings[]): AppSettings[] {
+  return settings.map((row) => {
+    if (!row.depotStatements?.length) return row;
+    return {
+      ...row,
+      depotStatements: row.depotStatements.filter(isLive),
+    };
+  });
 }
 
 export async function exportBackup(): Promise<BackupPayload> {
@@ -21,8 +32,8 @@ export async function exportBackup(): Promise<BackupPayload> {
       db.quotePreferences.toArray(),
     ]);
 
-  // settings has no soft-delete field — export as-is
-  const settings = settingsAll;
+  // Settings has no top-level soft-delete; nested depotStatements do — strip tombstones.
+  const settings = sanitizeSettingsDepotTombstones(settingsAll);
   const goals = goalsAll.filter(isLive);
   const transactions = transactionsAll.filter(isLive);
   const exportedAt = nowIso();
