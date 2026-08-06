@@ -1,5 +1,5 @@
 import type {
-  AppMetadata, Quote, QuoteCandidate, QuoteMigrationMeta, QuoteSelectionPreference,
+  QuoteCandidate, QuoteMigrationMeta, QuoteSelectionPreference,
 } from "./types";
 import { nowIso } from "./defaults";
 import { candidateId, normalizeIsin, preferenceId } from "./instrument";
@@ -7,10 +7,19 @@ import { db } from "./db.m01a";
 import {
   QUOTE_MIGRATION_META_ID, coerceQuoteSource, validateQuoteRowForMigration,
 } from "./db.m01b";
+
+function isQuoteMigrationMeta(row: unknown): row is QuoteMigrationMeta {
+  return (
+    !!row &&
+    typeof row === "object" &&
+    (row as QuoteMigrationMeta).id === "quoteMigration" &&
+    typeof (row as QuoteMigrationMeta).state === "string"
+  );
+}
+
 export async function ensureQuoteFoundationMigrated(): Promise<void> {
-  const existing = (await db.appMetadata.get(QUOTE_MIGRATION_META_ID)) as
-    | QuoteMigrationMeta
-    | undefined;
+  const existingRow = await db.appMetadata.get(QUOTE_MIGRATION_META_ID);
+  const existing = isQuoteMigrationMeta(existingRow) ? existingRow : undefined;
   if (existing?.state === "complete") return;
 
   const t = nowIso();
@@ -21,7 +30,7 @@ export async function ensureQuoteFoundationMigrated(): Promise<void> {
       updatedAt: t,
       lastError: existing?.lastError,
     };
-    await db.appMetadata.put(pending as unknown as AppMetadata);
+    await db.appMetadata.put(pending);
   }
 
   try {
@@ -86,7 +95,7 @@ export async function ensureQuoteFoundationMigrated(): Promise<void> {
           state: "complete",
           updatedAt: nowIso(),
         };
-        await db.appMetadata.put(done as unknown as AppMetadata);
+        await db.appMetadata.put(done);
       },
     );
   } catch (err) {
@@ -98,7 +107,7 @@ export async function ensureQuoteFoundationMigrated(): Promise<void> {
       lastError: msg,
     };
     try {
-      await db.appMetadata.put(failed as unknown as AppMetadata);
+      await db.appMetadata.put(failed);
     } catch {
       /* ignore secondary failure */
     }

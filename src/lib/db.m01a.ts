@@ -1,6 +1,6 @@
 import Dexie, { type Table } from "dexie";
 import type {
-  AppMetadata, AppSettings, Instrument, Quote, QuoteCandidate,
+  AppMetadataRow, AppSettings, Instrument, Quote, QuoteCandidate,
   QuoteSelectionPreference, Transaction, AnnualChecklist, Goal, MonthlySnapshot,
 } from "./types";
 import type { ConflictRecord, OutboxItem, SyncMeta } from "./sync/types";
@@ -11,7 +11,7 @@ export class VwceDB extends Dexie {
   transactions!: Table<Transaction, string>;
   annualChecklists!: Table<AnnualChecklist, string>;
   monthlySnapshots!: Table<MonthlySnapshot, string>;
-  appMetadata!: Table<AppMetadata, string>;
+  appMetadata!: Table<AppMetadataRow, string>;
   outbox!: Table<OutboxItem, string>;
   conflicts!: Table<ConflictRecord, string>;
   syncMeta!: Table<SyncMeta, string>;

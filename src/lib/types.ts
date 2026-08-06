@@ -186,6 +186,23 @@ export type MonthlySnapshot = {
   contributed: number; withdrawn: number; createdAt: string; updatedAt: string;
 };
 export type AppMetadata = { id: string; schemaVersion: number; lastBackupAt: string; createdAt: string; updatedAt: string };
+
+export type QuoteMigrationState = "pending" | "complete" | "failed";
+
+export type QuoteMigrationMeta = {
+  id: "quoteMigration";
+  state: QuoteMigrationState;
+  updatedAt: string;
+  lastError?: string;
+};
+
+/**
+ * Rows stored in Dexie table appMetadata.
+ * id "meta" → AppMetadata; id "quoteMigration" → QuoteMigrationMeta.
+ * Union avoids double-cast when writing migration state.
+ */
+export type AppMetadataRow = AppMetadata | QuoteMigrationMeta;
+
 export type BackupPayload = {
   schemaVersion: number; exportedAt: string; settings: AppSettings[]; goals: Goal[];
   transactions: Transaction[]; annualChecklists: AnnualChecklist[]; monthlySnapshots: MonthlySnapshot[];
@@ -201,15 +218,6 @@ export const SCHEMA_VERSION = BACKUP_SCHEMA_VERSION;
 /** IndexedDB version remains 4; depot snapshots ride inside synced settings. */
 export const DEXIE_DB_VERSION = 4;
 export const STALE_DAYS = 7;
-
-export type QuoteMigrationState = "pending" | "complete" | "failed";
-
-export type QuoteMigrationMeta = {
-  id: "quoteMigration";
-  state: QuoteMigrationState;
-  updatedAt: string;
-  lastError?: string;
-};
 
 /** Hiển thị ở Cài đặt — đổi khi ship UI lớn */
 export const APP_VERSION = "1.8.0";
