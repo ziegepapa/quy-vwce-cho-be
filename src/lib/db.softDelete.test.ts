@@ -16,9 +16,13 @@ import {
   findTransactionByExternalRef,
   countLocalData,
   exportBackup,
+  importBackup,
+  getSettings,
+  saveSettings,
 } from "./db";
 import { nowIso, uid } from "./defaults";
-import type { Transaction, Goal } from "./types";
+import type { Transaction, Goal, DepotStatement, AppSettings } from "./types";
+import { VWCE_ISIN } from "./types";
 
 async function clearTxGoal() {
   await db.transactions.clear();
@@ -58,6 +62,55 @@ function sampleGoal(partial: Partial<Goal> = {}): Goal {
     urgency: "hard",
     protectedAmount: 0,
     notes: "",
+    createdAt: t,
+    updatedAt: t,
+    ...partial,
+  };
+}
+
+function sampleDepot(partial: Partial<DepotStatement> = {}): DepotStatement {
+  const t = nowIso();
+  return {
+    id: uid("depot"),
+    statementId: "stmt-1",
+    date: "2024-06-15",
+    broker: "trade_republic",
+    positions: [
+      {
+        instrumentIsin: VWCE_ISIN,
+        quantity: 10,
+        currency: "EUR",
+      },
+    ],
+    source: "trade_republic_pdf",
+    sourceVersion: 1,
+    createdAt: t,
+    updatedAt: t,
+    ...partial,
+  };
+}
+
+function minimalSettings(partial: Partial<AppSettings> = {}): AppSettings {
+  const t = nowIso();
+  return {
+    id: "settings",
+    planName: "Test",
+    childName: "Be",
+    accountType: "parent",
+    currency: "EUR",
+    inflationRate: 0.02,
+    vwceReturn: 0.07,
+    safeReturn: 0.02,
+    bufferPct: 0.1,
+    endMode: "hard",
+    startDate: "2024-01-01",
+    endDate: "2042-01-01",
+    latestVwcePrice: 100,
+    latestPriceDate: "2024-06-01",
+    contributionY1: 100,
+    contributionY2: 100,
+    disclaimerAccepted: true,
+    onboardingDone: true,
     createdAt: t,
     updatedAt: t,
     ...partial,
@@ -111,6 +164,78 @@ describe("A3 soft delete", () => {
     const live = await db.transactions.get(tx.id);
     expect(live?.deletedAt).toBeUndefined();
     expect((await listTransactions()).length).toBe(1);
+  });
+
+  it("exportBackup strips soft-deleted depotStatements nested in settings", async () => {
+    await db.settings.clear();
+    const live = sampleDepot({ id: "depot_live", statementId: "LIVE" });
+    const dead = sampleDepot({
+      id: "depot_dead",
+      statementId: "DEAD",
+      deletedAt: nowIso(),
+    });
+    await saveSettings(
+      minimalSettings({ depotStatements: [live, dead] }),
+      { sync: false },
+    );
+    const backup = await exportBackup();
+    const exported = backup.settings[0]?.depotStatements ?? [];
+    expect(exported.map((d) => d.statementId)).toEqual(["LIVE"]);
+    expect(exported.every((d) => !d.deletedAt)).toBe(true);
+  });
+
+  it("importBackup does not revive soft-deleted depotStatements from old files", async () => {
+    await db.settings.clear();
+    await db.transactions.clear();
+    await db.goals.clear();
+    await db.appMetadata.clear();
+    await db.instruments.clear();
+    await db.quotes.clear();
+    await db.quoteCandidates.clear();
+    await db.quotePreferences.clear();
+
+    const live = sampleDepot({ id: "depot_live", statementId: "LIVE" });
+    const dead = sampleDepot({
+      id: "depot_dead",
+      statementId: "DEAD",
+      deletedAt: nowIso(),
+    });
+    // Simulate an old backup that still embedded tombstones.
+    const dirtyPayload = await exportBackup();
+    dirtyPayload.schemaVersion = 3;
+    dirtyPayload.settings = [
+      minimalSettings({ depotStatements: [live, dead] }),
+    ];
+
+    await importBackup(dirtyPayload);
+    const settings = await getSettings();
+    const restored = settings.depotStatements ?? [];
+    expect(restored.map((d) => d.statementId)).toEqual(["LIVE"]);
+    expect(restored.every((d) => !d.deletedAt)).toBe(true);
+  });
+
+  it("export then import round-trip never revives depot tombstones", async () => {
+    await db.settings.clear();
+    const live = sampleDepot({ id: "depot_live", statementId: "LIVE" });
+    const dead = sampleDepot({
+      id: "depot_dead",
+      statementId: "DEAD",
+      deletedAt: nowIso(),
+    });
+    await saveSettings(
+      minimalSettings({ depotStatements: [live, dead] }),
+      { sync: false },
+    );
+
+    const backup = await exportBackup();
+    expect((backup.settings[0]?.depotStatements ?? []).map((d) => d.statementId)).toEqual([
+      "LIVE",
+    ]);
+
+    await db.settings.clear();
+    await importBackup(backup);
+    const after = await getSettings();
+    expect((after.depotStatements ?? []).map((d) => d.statementId)).toEqual(["LIVE"]);
   });
 });
 
