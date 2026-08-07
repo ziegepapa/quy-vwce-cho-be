@@ -1,10 +1,11 @@
 import type {
-  AppMetadata, AppSettings, Instrument, Quote, Transaction, QuoteMigrationMeta,
+  Instrument, Quote, Transaction, QuoteMigrationMeta,
 } from "./types";
 import { VWCE_ISIN } from "./types";
 import { nowIso } from "./defaults";
 import { isValidAsOfDate, isValidIsin, normalizeIsin, quoteId, resolveInstrumentIsin } from "./instrument";
 import { db } from "./db.m01a";
+import { QUOTE_MIGRATION_META_ID, isQuoteMigrationMeta } from "./appMetadata";
 
 export function migrateTransactionIsin(tx: Transaction): Transaction {
   if (
@@ -90,19 +91,26 @@ export async function runPendingMigrations(): Promise<void> {
   await ensureQuoteFoundationMigrated();
 }
 
-export const QUOTE_MIGRATION_META_ID = "quoteMigration";
+/** Defined in appMetadata.ts next to the guard; re-exported so importers stay put. */
+export { QUOTE_MIGRATION_META_ID };
+
+/**
+ * Read the migration row and verify it instead of asserting its shape. A row
+ * that fails the guard is reported as absent, so the caller keeps quote writes
+ * locked and the migration runs again rather than trusting a broken row.
+ */
+export async function readQuoteMigrationMeta(): Promise<QuoteMigrationMeta | undefined> {
+  const row = await db.appMetadataRows.get(QUOTE_MIGRATION_META_ID);
+  return isQuoteMigrationMeta(row) ? row : undefined;
+}
 
 export async function isQuoteMigrationComplete(): Promise<boolean> {
-  const meta = (await db.appMetadata.get(QUOTE_MIGRATION_META_ID)) as
-    | QuoteMigrationMeta
-    | undefined;
+  const meta = await readQuoteMigrationMeta();
   return meta?.state === "complete";
 }
 
 export async function assertQuoteWritesUnlocked(): Promise<void> {
-  const meta = (await db.appMetadata.get(QUOTE_MIGRATION_META_ID)) as
-    | QuoteMigrationMeta
-    | undefined;
+  const meta = await readQuoteMigrationMeta();
   if (!meta || meta.state !== "complete") {
     throw new Error(
       `Quote writes locked until migration complete (state=${meta?.state ?? "absent"})`,

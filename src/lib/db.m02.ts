@@ -1,27 +1,26 @@
 import type {
-  AppMetadata, Quote, QuoteCandidate, QuoteMigrationMeta, QuoteSelectionPreference,
+  QuoteCandidate, QuoteMigrationMeta, QuoteSelectionPreference,
 } from "./types";
 import { nowIso } from "./defaults";
 import { candidateId, normalizeIsin, preferenceId } from "./instrument";
 import { db } from "./db.m01a";
 import {
-  QUOTE_MIGRATION_META_ID, coerceQuoteSource, validateQuoteRowForMigration,
+  QUOTE_MIGRATION_META_ID, coerceQuoteSource, readQuoteMigrationMeta,
+  validateQuoteRowForMigration,
 } from "./db.m01b";
 export async function ensureQuoteFoundationMigrated(): Promise<void> {
-  const existing = (await db.appMetadata.get(QUOTE_MIGRATION_META_ID)) as
-    | QuoteMigrationMeta
-    | undefined;
+  const existing = await readQuoteMigrationMeta();
   if (existing?.state === "complete") return;
 
   const t = nowIso();
   if (!existing || existing.state === "failed") {
     const pending: QuoteMigrationMeta = {
-      id: "quoteMigration",
+      id: QUOTE_MIGRATION_META_ID,
       state: "pending",
       updatedAt: t,
-      lastError: existing?.lastError,
+      ...(existing?.lastError !== undefined ? { lastError: existing.lastError } : {}),
     };
-    await db.appMetadata.put(pending as unknown as AppMetadata);
+    await db.appMetadataRows.put(pending);
   }
 
   try {
@@ -82,23 +81,23 @@ export async function ensureQuoteFoundationMigrated(): Promise<void> {
           }
         }
         const done: QuoteMigrationMeta = {
-          id: "quoteMigration",
+          id: QUOTE_MIGRATION_META_ID,
           state: "complete",
           updatedAt: nowIso(),
         };
-        await db.appMetadata.put(done as unknown as AppMetadata);
+        await db.appMetadataRows.put(done);
       },
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const failed: QuoteMigrationMeta = {
-      id: "quoteMigration",
+      id: QUOTE_MIGRATION_META_ID,
       state: "failed",
       updatedAt: nowIso(),
       lastError: msg,
     };
     try {
-      await db.appMetadata.put(failed as unknown as AppMetadata);
+      await db.appMetadataRows.put(failed);
     } catch {
       /* ignore secondary failure */
     }

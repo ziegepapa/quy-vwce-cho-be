@@ -3,6 +3,7 @@ import type {
   BackupPayload,
   Quote,
   QuoteCandidate,
+  QuoteMigrationMeta,
   QuoteSelectionPreference,
 } from "./types";
 import { BACKUP_SCHEMA_VERSION } from "./types";
@@ -17,6 +18,7 @@ import {
   toDateOnly,
 } from "./instrument";
 import { db } from "./db.m01a";
+import { QUOTE_MIGRATION_META_ID } from "./appMetadata";
 import { isSupportedBackupSchema } from "./backupSchema";
 import { ensureMultiAssetMigrated } from "./db.m01b";
 import { ensureQuoteFoundationMigrated } from "./db.m02";
@@ -242,11 +244,14 @@ async function importV3(payload: BackupPayload): Promise<void> {
         await applyResolvedEffective(isin, currency, resolved.effective, { t, syncSettings: false });
       }
 
-      await db.appMetadata.put({
-        id: "quoteMigration",
+      // A restored v3 backup already carries the migrated shape, so the migration
+      // row is written straight to complete. Typed, not cast into AppMetadata.
+      const migrated: QuoteMigrationMeta = {
+        id: QUOTE_MIGRATION_META_ID,
         state: "complete",
         updatedAt: t,
-      } as unknown as { id: string; schemaVersion: number; lastBackupAt: string; createdAt: string; updatedAt: string });
+      };
+      await db.appMetadataRows.put(migrated);
     },
   );
 }
