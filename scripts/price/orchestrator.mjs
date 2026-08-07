@@ -2,6 +2,14 @@
  * Multi-asset quote orchestrator.
  * Per-instrument isolation: one failure keeps prior valid quote for that key
  * and never deletes other instruments' quotes.
+ *
+ * Price source policy (PRICE-FALLBACK-001):
+ *   - each instrument has an ordered chain: primary, declared fallbacks, then
+ *     the cross-check provider if it can stand on its own
+ *   - the first source that parses wins and is recorded honestly in `provider`
+ *   - a cross-check that cannot be read only drops the cross-check stamp
+ *   - a cross-check that disagrees beyond the tolerance stops the write
+ *   - every source down means keep the previous quote, never an empty feed
  */
 
 import fs from "node:fs";
@@ -21,7 +29,9 @@ import { loadRegistry, quoteKey } from "./registry.mjs";
 import { parseYahooChart } from "./providers/yahoo.mjs";
 import {
   parseOnvistaSnapshot,
+  parseOnvistaAsPrimary,
   crossCheckWithOnvista,
+  ONVISTA_MISMATCH,
 } from "./providers/onvista.mjs";
 import { hourInTz } from "./time.mjs";
 
@@ -67,6 +77,64 @@ export async function fetchJson(url, timeoutMs = 20_000) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Price adapters keyed by provider id. Supporting a new provider means adding
+ * one entry here plus the id in registry SUPPORTED_PROVIDER_IDS. No other file
+ * may branch on a provider id.
+ *
+ * bodyKey        which options key carries a pre-fetched body (tests, fixtures)
+ * requiresSymbol whether the registry must pin an exchange symbol
+ * parse          body -> { price, asOf, meta }
+ * providerUrl    human readable source URL recorded in the quote row
+ */
+export const PRIMARY_ADAPTERS = {
+  yahoo_finance_chart: {
+    bodyKey: "yahooBody",
+    requiresSymbol: true,
+    parse: (body, now, instrument) => parseYahooChart(body, now, instrument),
+    providerUrl: (cfg) =>
+      cfg.providerUrl ||
+      (cfg.symbol ? `https://finance.yahoo.com/quote/${cfg.symbol}` : cfg.url),
+  },
+  onvista: {
+    bodyKey: "onvistaBody",
+    requiresSymbol: false,
+    parse: (body, now, instrument) => parseOnvistaAsPrimary(body, now, instrument),
+    providerUrl: (cfg) => cfg.providerUrl || cfg.url,
+  },
+};
+
+/** @returns {null | typeof PRIMARY_ADAPTERS[keyof typeof PRIMARY_ADAPTERS]} */
+export function getPrimaryAdapter(id) {
+  if (typeof id !== "string") return null;
+  return Object.prototype.hasOwnProperty.call(PRIMARY_ADAPTERS, id)
+    ? PRIMARY_ADAPTERS[id]
+    : null;
+}
+
+/**
+ * Ordered price sources for one instrument.
+ * Primary first, then declared fallbacks, then the cross-check provider as a
+ * standby. A provider only joins the chain if it has an adapter and a url.
+ */
+export function resolvePriceSourceChain(instrument) {
+  const chain = [];
+  const seen = new Set();
+  const push = (cfg, role) => {
+    if (!cfg?.id || !cfg.url) return;
+    if (seen.has(cfg.id)) return;
+    if (!getPrimaryAdapter(cfg.id)) return;
+    seen.add(cfg.id);
+    chain.push({ cfg, role });
+  };
+  push(instrument.primaryProvider, "primary");
+  for (const fallback of instrument.fallbackProviders || []) {
+    push(fallback, "fallback");
+  }
+  push(instrument.crossCheckProvider, "fallback");
+  return chain;
 }
 
 /**
@@ -128,82 +196,108 @@ export function decideQuoteWrite(next, existing, instrument, now) {
 }
 
 /**
- * Resolve one instrument quote via primary + optional cross-check.
+ * Resolve one instrument quote by walking its price source chain, then
+ * cross-checking the winner against a different provider when possible.
+ *
+ * Returned object carries `degraded` and `warnings` for logging only; the
+ * contract validator drops them before anything reaches disk.
  */
 export async function resolveInstrumentQuote(instrument, options = {}) {
   const now = options.now instanceof Date ? options.now : new Date();
   const fetchedAt =
     options.fetchedAt instanceof Date ? options.fetchedAt : new Date();
 
-  const primaryCfg = instrument.primaryProvider;
-  if (!primaryCfg?.id) {
+  const chain = resolvePriceSourceChain(instrument);
+  if (!chain.length) {
     throw new OrchestratorError(
-      `No primaryProvider.id for ${instrument.isin}`,
-    );
-  }
-  if (primaryCfg.id !== "yahoo_finance_chart") {
-    throw new OrchestratorError(
-      `Unsupported primaryProvider.id "${primaryCfg.id}" for ${instrument.isin}`,
-    );
-  }
-  if (!primaryCfg.symbol) {
-    throw new OrchestratorError(
-      `No verified primaryProvider.symbol for ${instrument.isin}`,
-    );
-  }
-  if (!primaryCfg.url) {
-    throw new OrchestratorError(
-      `No primaryProvider.url for ${instrument.isin}`,
+      `No usable price source for ${instrument.isin}: need a supported provider id with a url`,
     );
   }
 
-  let yahooBody = options.yahooBody;
-  if (!yahooBody) {
-    // Canonical contract: request URL must come from registry primaryProvider.url
-    yahooBody = await fetchJson(primaryCfg.url);
+  /** @type {string[]} */
+  const warnings = [];
+  let picked = null;
+
+  for (const { cfg, role } of chain) {
+    const adapter = getPrimaryAdapter(cfg.id);
+    try {
+      if (adapter.requiresSymbol && !cfg.symbol) {
+        throw new OrchestratorError(
+          `No verified ${cfg.id} symbol for ${instrument.isin}`,
+        );
+      }
+      let body = options[adapter.bodyKey];
+      if (!body) {
+        // Canonical contract: the request URL always comes from the registry
+        body = await fetchJson(cfg.url);
+      }
+      const parsed = adapter.parse(body, now, instrument);
+      picked = { cfg, role, parsed };
+      break;
+    } catch (e) {
+      warnings.push(`${cfg.id} (${role}) unusable: ${e?.message || e}`);
+    }
   }
 
-  const primary = parseYahooChart(yahooBody, now, instrument);
+  if (!picked) {
+    throw new OrchestratorError(
+      `All price sources failed for ${instrument.isin}: ${warnings.join(" | ")}`,
+    );
+  }
 
+  const chosenId = picked.cfg.id;
   let crossCheckedWith;
   let crossCheckDifferencePct;
   const ccCfg = instrument.crossCheckProvider;
-  // Canonical discriminator is provider.id (never kind)
-  if (ccCfg?.id === "onvista") {
+
+  if (ccCfg?.id && ccCfg.id === chosenId) {
+    // Never validate a source against itself: that proves nothing.
+    warnings.push(`cross-check skipped: ${chosenId} is already the price source`);
+  } else if (ccCfg?.id) {
+    // Canonical discriminator is provider.id (never kind)
+    if (ccCfg.id !== "onvista") {
+      throw new OrchestratorError(
+        `Unsupported crossCheckProvider.id "${ccCfg.id}" for ${instrument.isin}`,
+      );
+    }
     if (!ccCfg.url) {
       throw new OrchestratorError(
         `crossCheckProvider.onvista missing url for ${instrument.isin}`,
       );
     }
-    let onvistaBody = options.onvistaBody;
-    if (!onvistaBody) {
-      // Canonical contract: use configured funds/stocks endpoint; no silent fallback
-      onvistaBody = await fetchJson(ccCfg.url);
+    try {
+      let onvistaBody = options.onvistaBody;
+      if (!onvistaBody) {
+        // Canonical contract: use configured funds/stocks endpoint
+        onvistaBody = await fetchJson(ccCfg.url);
+      }
+      const onvista = parseOnvistaSnapshot(onvistaBody, instrument, ccCfg);
+      const cc = crossCheckWithOnvista(picked.parsed, onvista, instrument);
+      crossCheckedWith = "onvista";
+      crossCheckDifferencePct = cc.differencePct;
+    } catch (e) {
+      // Two sources that genuinely disagree is a data quality stop.
+      if (e?.code === ONVISTA_MISMATCH) throw e;
+      // Anything else only means the second opinion was not available.
+      warnings.push(`cross-check onvista unusable: ${e?.message || e}`);
     }
-    const onvista = parseOnvistaSnapshot(onvistaBody, instrument);
-    const cc = crossCheckWithOnvista(primary, onvista, instrument);
-    crossCheckedWith = "onvista";
-    crossCheckDifferencePct = cc.differencePct;
-  } else if (ccCfg?.id) {
-    throw new OrchestratorError(
-      `Unsupported crossCheckProvider.id "${ccCfg.id}" for ${instrument.isin}`,
-    );
   }
 
   return {
     instrumentIsin: instrument.isin,
     currency: instrument.currency,
-    venue: instrument.venue || primary.meta?.venue,
-    price: primary.price,
-    asOf: primary.asOf,
+    venue: instrument.venue || picked.parsed.meta?.venue,
+    price: picked.parsed.price,
+    asOf: picked.parsed.asOf,
     fetchedAt: fetchedAt.toISOString(),
     source: "auto",
-    provider: primaryCfg.id,
-    providerUrl:
-      primaryCfg.providerUrl ||
-      `https://finance.yahoo.com/quote/${primaryCfg.symbol}`,
+    provider: chosenId,
+    providerUrl: getPrimaryAdapter(chosenId).providerUrl(picked.cfg),
     crossCheckedWith,
     crossCheckDifferencePct,
+    // Diagnostics only. validateQuoteRow strips these before the file is written.
+    degraded: picked.role !== "primary" || crossCheckedWith == null,
+    warnings,
   };
 }
 
@@ -243,6 +337,7 @@ export async function runMultiAssetUpdate(options = {}) {
   const existingMap = quotesToMap(existingDoc);
   const nextMap = new Map(existingMap);
   const errors = [];
+  const warnings = [];
   let anyEconomicChange = false;
 
   const worklist = options.includeTestOnly
@@ -251,8 +346,9 @@ export async function runMultiAssetUpdate(options = {}) {
 
   for (const inst of worklist) {
     if (!inst.enabled) continue;
-    // Live path requires verified primary mapping
-    if (inst.live && !inst.primaryProvider?.symbol) {
+    // Live path requires a verified mapping for adapters that need a symbol
+    const primaryAdapter = getPrimaryAdapter(inst.primaryProvider?.id);
+    if (inst.live && primaryAdapter?.requiresSymbol && !inst.primaryProvider?.symbol) {
       errors.push({
         isin: inst.isin,
         message: "skip live instrument without verified provider symbol",
@@ -270,6 +366,9 @@ export async function runMultiAssetUpdate(options = {}) {
         yahooBody: bodies.yahooBody,
         onvistaBody: bodies.onvistaBody,
       });
+      for (const w of resolved.warnings || []) {
+        warnings.push({ isin: inst.isin, message: w });
+      }
       const decided = decideQuoteWrite(
         resolved,
         existingMap.get(key) || null,
@@ -310,9 +409,14 @@ export async function runMultiAssetUpdate(options = {}) {
   if (!anyEconomicChange && existingDoc && sameDocumentEconomics(existingDoc, quotesDoc)) {
     return {
       wrote: false,
-      reason: "No economic change",
+      // Say which of the two very different silences this is.
+      reason: errors.length
+        ? "All price sources failed; kept previous quotes"
+        : "No economic change",
+      degraded: errors.length > 0,
       quotesDoc: existingDoc,
       errors,
+      warnings,
       legacyWrote: false,
     };
   }
@@ -321,8 +425,10 @@ export async function runMultiAssetUpdate(options = {}) {
     return {
       wrote: false,
       reason: "dry-run",
+      degraded: errors.length > 0,
       quotesDoc,
       errors,
+      warnings,
       legacyWrote: false,
     };
   }
@@ -342,8 +448,10 @@ export async function runMultiAssetUpdate(options = {}) {
 
   return {
     wrote: true,
+    degraded: errors.length > 0 || warnings.length > 0,
     quotesDoc,
     errors,
+    warnings,
     legacyWrote,
   };
 }
