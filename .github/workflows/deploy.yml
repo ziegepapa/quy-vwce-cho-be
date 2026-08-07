@@ -5,10 +5,14 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+# Least privilege: the workflow token is read-only by default and only the
+# deploy job is granted contents: write, because it is the only job that pushes
+# (dist -> branch gh-pages). pages: write and id-token: write are gone; they
+# were required by actions/deploy-pages@v4, which #43 replaced with
+# peaceiris/actions-gh-pages. Naming any permission here already set every
+# unnamed scope to none, so this does not tighten anything except contents.
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -77,6 +81,9 @@ jobs:
     needs: [test-build, preview-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The only job that writes to the repository: it pushes dist to gh-pages.
+    permissions:
+      contents: write
     steps:
       - name: Download site-dist
         uses: actions/download-artifact@v4
