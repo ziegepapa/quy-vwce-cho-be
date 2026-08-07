@@ -7,9 +7,10 @@ import { db } from "../lib/db";
 import { formatMoney, parseDecimal } from "../lib/calc";
 import { listDepotStatements } from "../lib/depotStatements";
 import {
-  reconcileDepotStatement,
-  type DepotReconciliationRow,
-} from "../lib/tr/depotStatement";
+  buildDepotReconciliation,
+  describeDepotReconciliation,
+  type DepotReconciliationDisplay,
+} from "../lib/depotReconciliation";
 import { buildPulseDisplay } from "../lib/overviewNumbers";
 import {
   markRestoreCompleted,
@@ -32,12 +33,6 @@ import {
 } from "../lib/todayCenterTrace";
 import type { AppSettings, Transaction } from "../lib/types";
 import TraceSheet from "./TraceSheet";
-
-type ReconciliationSummary = {
-  date: string;
-  rows: DepotReconciliationRow[];
-  differences: DepotReconciliationRow[];
-} | null;
 
 type SafetySnapshot = {
   backupAt: string;
@@ -107,7 +102,7 @@ export default function TodayCenter({
   const auth = useAuth();
   const ownerKey = auth.user?.id ?? "local";
   const [pulse, setPulse] = useState<PortfolioPulseState | null>(null);
-  const [reconciliation, setReconciliation] = useState<ReconciliationSummary>(null);
+  const [reconciliation, setReconciliation] = useState<DepotReconciliationDisplay | null>(null);
   const [reconciliationLoaded, setReconciliationLoaded] = useState(false);
   const [safety, setSafety] = useState<SafetySnapshot>({
     backupAt: "",
@@ -148,16 +143,13 @@ export default function TodayCenter({
         if (!active) return;
 
         const latest = statements[0];
-        if (latest) {
-          const rows = reconcileDepotStatement(latest, transactions);
-          setReconciliation({
-            date: latest.date,
-            rows,
-            differences: rows.filter((row) => row.status !== "match"),
-          });
-        } else {
-          setReconciliation(null);
-        }
+        setReconciliation(
+          buildDepotReconciliation({
+            statement: latest ? { date: latest.date, positions: latest.positions } : null,
+            transactions,
+            today: new Date().toISOString().slice(0, 10),
+          }),
+        );
         setSafety({
           backupAt: metadata?.lastBackupAt ?? "",
           restoreAt: readRestoreCompleted(ownerKey),
@@ -249,13 +241,23 @@ export default function TodayCenter({
     delta && (Math.abs(delta.value) > 0.005 || Math.abs(delta.quantity) > 0.000001),
   );
 
+  // DEBT_3: the reconciliation states the statement date, its age, and the gap
+  // in units and in money at the price printed on the statement. Read-only.
+  const reconciliationCopy = reconciliation ? describeDepotReconciliation(reconciliation) : null;
   const reconciliationValue = !reconciliationLoaded
     ? "Đang kiểm tra"
-    : !reconciliation
-      ? "Chưa có sao kê"
-      : reconciliation.differences.length === 0
-        ? `${reconciliation.rows.length}/${reconciliation.rows.length} khớp`
-        : `${reconciliation.differences.length} cần xem`;
+    : (reconciliationCopy?.headline ?? "Chưa có sao kê");
+  const reconciliationTone =
+    reconciliation?.status === "has_gap"
+      ? "warning"
+      : reconciliation?.status === "all_match"
+        ? "positive"
+        : "neutral";
+  const reconciliationGapMoney =
+    reconciliation && reconciliation.totalMoneyGap != null &&
+    Math.abs(reconciliation.totalMoneyGap) >= 0.005
+      ? `${reconciliation.moneyGapComplete ? "≈" : "≥"} ${formatMoney(Math.abs(reconciliation.totalMoneyGap))} theo giá trên sao kê`
+      : "";
 
   const deltaValue = !valueComplete
     ? "Đang chờ đủ giá"
@@ -356,13 +358,15 @@ export default function TodayCenter({
             <h3>Khớp chưa?</h3>
             <span className="today-card-chevron" aria-hidden>›</span>
           </header>
-          <span className={`today-main-metric ${reconciliation?.differences.length ? "warning" : reconciliation ? "positive" : "neutral"}`}>
+          <span className={`today-main-metric ${reconciliationTone}`}>
             {reconciliationValue}
           </span>
           <span className="today-metric-caption">
-            {reconciliation
-              ? `Sao kê ${reconciliation.date}`
-              : "Nhập PDF để tạo mốc đối chiếu."}
+            {reconciliationCopy?.dateLabel ?? reconciliationCopy?.detail ?? "Nhập PDF để tạo mốc đối chiếu."}
+            {reconciliationCopy?.dateLabel && reconciliationCopy?.detail
+              ? ` · ${reconciliationCopy.detail}`
+              : ""}
+            {reconciliationGapMoney ? ` · ${reconciliationGapMoney}` : ""}
           </span>
         </Link>
 
