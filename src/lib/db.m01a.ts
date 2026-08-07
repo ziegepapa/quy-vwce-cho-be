@@ -1,8 +1,9 @@
 import Dexie, { type Table } from "dexie";
 import type {
-  AppMetadata, AppMetadataRow, AppSettings, Instrument, Quote, QuoteCandidate,
+  AppMetadata, AppSettings, Instrument, Quote, QuoteCandidate,
   QuoteSelectionPreference, Transaction, AnnualChecklist, Goal, MonthlySnapshot,
 } from "./types";
+import type { AppMetadataRow } from "./appMetadata";
 import type { ConflictRecord, OutboxItem, SyncMeta } from "./sync/types";
 
 export class VwceDB extends Dexie {

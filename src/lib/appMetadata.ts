@@ -1,5 +1,16 @@
 import type { AppMetadata, QuoteMigrationMeta, QuoteMigrationState } from "./types";
 
+/**
+ * The appMetadata store is not homogeneous: id "meta" holds AppMetadata and id
+ * "quoteMigration" holds QuoteMigrationMeta. Naming that union is what lets the
+ * migration row be written without an unchecked cast.
+ *
+ * It is declared here rather than in types.ts on purpose: types.ts holds plain
+ * data shapes, while this module owns the knowledge of which row kinds live in
+ * that one store, together with the ids and the guards that tell them apart.
+ */
+export type AppMetadataRow = AppMetadata | QuoteMigrationMeta;
+
 /** Row that carries backup and schema bookkeeping. */
 export const APP_META_ID = "meta";
 
