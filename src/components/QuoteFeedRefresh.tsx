@@ -1,20 +1,12 @@
 import { useState } from "react";
 import { ingestQuotesFeed } from "../lib/db";
-import type { QuoteFeedIngestResult } from "../lib/db";
+import { describeRefreshResult } from "../lib/quoteFreshness";
+import type { FeedFreshnessLevel } from "../lib/quoteFreshness";
 
-function resultMessage(result: QuoteFeedIngestResult): string {
-  if (result.status === "offline") {
-    return "Đang offline — giá đã lưu trên máy vẫn được giữ nguyên.";
-  }
-  if (result.status === "error") {
-    return `Chưa cập nhật được. Giá đang dùng không bị thay đổi${result.errors[0] ? `: ${result.errors[0]}` : "."}`;
-  }
-  const parts = [result.updated > 0 ? `${result.updated} mã đã cập nhật` : "Giá đã là bản mới nhất"];
-  if (result.unchanged > 0) parts.push(`${result.unchanged} mã không đổi`);
-  if (result.skipped.length > 0) parts.push(`${result.skipped.length} dòng không hợp lệ đã bỏ qua`);
-  if (result.errors.length > 0) parts.push(`${result.errors.length} mã gặp lỗi`);
-  return parts.join(" · ");
-}
+type RefreshStatus = {
+  message: string;
+  level: FeedFreshnessLevel;
+};
 
 export default function QuoteFeedRefresh({
   onUpdated,
@@ -22,24 +14,26 @@ export default function QuoteFeedRefresh({
   onUpdated?: () => void | Promise<void>;
 }) {
   const [refreshing, setRefreshing] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [status, setStatus] = useState<RefreshStatus | null>(null);
 
   async function refresh() {
     if (refreshing) return;
     setRefreshing(true);
-    setMessage(null);
+    setStatus(null);
     try {
       const result = await ingestQuotesFeed();
-      setMessage(resultMessage(result));
+      const described = describeRefreshResult(result);
+      setStatus({ message: described.message, level: described.level });
       if (result.status === "ok" || result.status === "partial") {
         await onUpdated?.();
       }
     } catch (error) {
-      setMessage(
-        `Chưa cập nhật được. Giá đang dùng không bị thay đổi: ${
+      setStatus({
+        level: "unknown",
+        message: `Chưa cập nhật được. Giá đang dùng không bị thay đổi: ${
           error instanceof Error ? error.message : String(error)
         }`,
-      );
+      });
     } finally {
       setRefreshing(false);
     }
@@ -63,9 +57,14 @@ export default function QuoteFeedRefresh({
       >
         {refreshing ? "Đang cập nhật…" : "Cập nhật giá bây giờ"}
       </button>
-      {message ? (
-        <p className="settings-inline-status" role="status" aria-live="polite">
-          {message}
+      {status ? (
+        <p
+          className="settings-inline-status"
+          data-freshness={status.level}
+          role="status"
+          aria-live="polite"
+        >
+          {status.message}
         </p>
       ) : null}
     </section>
