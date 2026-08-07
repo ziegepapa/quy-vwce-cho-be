@@ -10,7 +10,6 @@ import {
 import type { AppSettings, Goal, Instrument, Quote, Transaction } from "../lib/types";
 import { VWCE_ISIN } from "../lib/types";
 import {
-  avgCost,
   buildEquitySeries,
   formatMoney,
   inflate,
@@ -19,6 +18,12 @@ import {
 } from "../lib/calc";
 import { buildOverviewHero, shouldShowContributionNudge } from "../lib/overviewNumbers";
 import { buildAllocationDisplay, describeAllocation } from "../lib/overviewAllocation";
+import {
+  buildCostBasisDisplay,
+  describeCostBasis,
+  describePnlSuppression,
+  summarizeCostBasisLedger,
+} from "../lib/overviewCostBasis";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import { buildPortfolioTraceModel } from "../lib/todayCenterTrace";
 import TodayCenter from "../components/TodayCenter";
@@ -214,6 +219,17 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   // copy always names what it does not include yet.
   const allocation = buildAllocationDisplay(hero);
   const allocationCopy = describeAllocation(allocation);
+  // DEBT_2: the cost basis names the ledger entries behind it, and a withheld
+  // profit and loss names its reason instead of showing a bare dash.
+  const costBasis = buildCostBasisDisplay({
+    costBasis: portfolio.vwceCostBasis,
+    quantity: portfolio.vwceQty,
+    provenance: summarizeCostBasisLedger(transactions),
+  });
+  const costBasisCopy = describeCostBasis(costBasis);
+  const pnlSuppression = describePnlSuppression(hero.pnlSuppressedReason, {
+    missingPriceCount: market.missingIsins.length,
+  });
   const pnlPct = hero.pnlPct != null ? hero.pnlPct.toFixed(1) : null;
 
   let nearestGoal: Goal | null = null;
@@ -339,7 +355,13 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
           <div className="stat-rule" aria-hidden />
           <div className="stat-col"><span className="stat-label">An toàn</span><span className={`stat-val${cashNegative ? " neg" : ""}`}>{formatMoney(portfolio.cashBalance)}</span></div>
           <div className="stat-rule" aria-hidden />
-          <div className="stat-col"><span className="stat-label">Lãi–lỗ VWCE</span><span className={`stat-val ${hero.pnl == null ? "" : hero.pnl >= 0 ? "pos" : "neg"}`}>{hero.pnl != null ? formatMoney(hero.pnl) : "—"}</span></div>
+          <div className="stat-col">
+            <span className="stat-label">Lãi–lỗ VWCE</span>
+            <span className={`stat-val ${hero.pnl == null ? "" : hero.pnl >= 0 ? "pos" : "neg"}`}>{hero.pnl != null ? formatMoney(hero.pnl) : "—"}</span>
+            {hero.pnl == null && pnlSuppression ? (
+              <span className="stat-label" style={{ fontSize: 11, opacity: 0.85 }}>{pnlSuppression}</span>
+            ) : null}
+          </div>
           <button type="button" className="stat-detail-btn" onClick={() => setDetailOpen((open) => !open)} aria-expanded={detailOpen}>
             Chi tiết {detailOpen ? "▴" : "▾"}
           </button>
@@ -351,7 +373,10 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
                   <dd>{row.qty.toFixed(4)} × {row.price != null ? formatMoney(row.price) : <span style={{ color: "var(--warning-600)" }}>Thiếu giá</span>}{row.value != null ? ` = ${formatMoney(row.value)}` : ""}</dd>
                 </div>
               ))}
-              <div><dt>Giá vốn TB VWCE</dt><dd>{formatMoney(avgCost(portfolio))}</dd></div>
+              <div>
+                <dt>Giá vốn TB VWCE{costBasisCopy.provenance ? <span className="muted" style={{ display: "block", fontSize: 11 }}>{costBasisCopy.provenance}</span> : null}</dt>
+                <dd>{costBasis.avgCost != null ? formatMoney(costBasis.avgCost) : <span className="muted">{costBasisCopy.value}</span>}</dd>
+              </div>
               <div><dt>Vốn đã đóng</dt><dd>{formatMoney(portfolio.totalContributed)}</dd></div>
               <div><dt>Đã rút</dt><dd>{formatMoney(portfolio.totalWithdrawn)}</dd></div>
               <div><dt>Phí + thuế</dt><dd>{formatMoney(portfolio.totalFees + portfolio.totalTax)}</dd></div>
