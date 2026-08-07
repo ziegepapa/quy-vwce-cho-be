@@ -18,6 +18,7 @@ import {
   parseDate,
 } from "../lib/calc";
 import { buildOverviewHero, shouldShowContributionNudge } from "../lib/overviewNumbers";
+import { buildAllocationDisplay, describeAllocation } from "../lib/overviewAllocation";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import { buildPortfolioTraceModel } from "../lib/todayCenterTrace";
 import TodayCenter from "../components/TodayCenter";
@@ -209,9 +210,10 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   }
 
   const cashNegative = hero.setupIncomplete;
-  const ratio = hero.assets > 0 && securitiesKnown >= 0
-    ? Math.min(100, Math.max(0, Math.round((securitiesKnown / hero.assets) * 100)))
-    : 0;
+  // DEBT_1: the ratio is taken on the same denominator the hero shows, and the
+  // copy always names what it does not include yet.
+  const allocation = buildAllocationDisplay(hero);
+  const allocationCopy = describeAllocation(allocation);
   const pnlPct = hero.pnlPct != null ? hero.pnlPct.toFixed(1) : null;
 
   let nearestGoal: Goal | null = null;
@@ -291,16 +293,19 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
               {sourceLabel}{vwceQuote?.asOf ? ` · ${vwceQuote.asOf}` : ""}
             </button>
             <Sparkline points={series} />
-            {cashNegative ? (
-              <div className="alloc-legend-v8"><span className="neg">Tỉ lệ chưa tính được — thiếu bút toán nạp</span></div>
-            ) : (
+            {allocation.showBar ? (
               <>
-                <div className="alloc-v8" role="img" aria-label={`Chứng khoán ${ratio}%, an toàn ${100 - ratio}%`}>
-                  <div className="alloc-seg-v8 vwce" style={{ flex: Math.max(ratio, 1) }} />
-                  <div className="alloc-seg-v8 cash" style={{ flex: Math.max(100 - ratio, 1) }} />
+                <div className="alloc-v8" role="img" aria-label={allocationCopy.ariaLabel}>
+                  <div className="alloc-seg-v8 vwce" style={{ flex: Math.max(allocation.securitiesPct, 1) }} />
+                  <div className="alloc-seg-v8 cash" style={{ flex: Math.max(allocation.cashPct, 1) }} />
                 </div>
-                <div className="alloc-legend-v8"><span>Chứng khoán {ratio}%</span><span>An toàn {100 - ratio}%</span></div>
+                <div className="alloc-legend-v8"><span>{allocationCopy.securitiesLabel}</span><span>{allocationCopy.cashLabel}</span></div>
+                {allocationCopy.caveat ? (
+                  <p className="alloc-caveat-v8" style={{ margin: "6px 0 0", fontSize: 12, lineHeight: 1.4, color: "inherit", opacity: 0.85 }}>{allocationCopy.caveat}</p>
+                ) : null}
               </>
+            ) : (
+              <div className="alloc-legend-v8"><span className="neg">{allocationCopy.unavailable}</span></div>
             )}
             {mode === "early" ? <p className="hero-early">Còn {Math.max(0, 3 - transactions.length)} bước để hoàn tất thiết lập</p> : null}
           </>
