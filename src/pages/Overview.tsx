@@ -17,6 +17,7 @@ import {
   monthsBetween,
   parseDate,
 } from "../lib/calc";
+import { buildOverviewHero, shouldShowContributionNudge } from "../lib/overviewNumbers";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import { buildPortfolioTraceModel } from "../lib/todayCenterTrace";
 import TodayCenter from "../components/TodayCenter";
@@ -136,21 +137,29 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   const cash = market.cash;
   const totalKnown = portfolioSnapshot.totalValue;
   const vwceValue = vwcePrice > 0 ? portfolio.vwceQty * vwcePrice : null;
-  const pnl = vwceValue != null && portfolio.vwceCostBasis > 0 ? vwceValue - portfolio.vwceCostBasis : 0;
+  const hero = buildOverviewHero({
+    securitiesValue: securitiesKnown,
+    cashBalance: portfolio.cashBalance,
+    missingPriceCount: market.missingIsins.length,
+    totalQuantity,
+    costBasis: portfolio.vwceCostBasis,
+    positionValue: vwceValue,
+    transactionCount: transactions.length,
+  });
   const today = new Date();
   const yearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   const hasContributionThisMonth = transactions.some(
     (transaction) => transaction.type === "cash_in" && transaction.date.startsWith(yearMonth),
   );
   const mode: "empty" | "early" | "active" =
-    transactions.length === 0 && totalKnown === 0 && !hasMissingPrices
+    hero.status === "empty"
       ? "empty"
       : transactions.length < 3
         ? "early"
         : "active";
 
   const insights: Insight[] = [];
-  if (!hasContributionThisMonth && mode !== "empty") {
+  if (shouldShowContributionNudge({ status: hero.status, hasContributionThisMonth })) {
     insights.push({
       id: "contribution",
       priority: "high",
@@ -199,13 +208,11 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     }
   }
 
-  const cashNegative = portfolio.cashBalance < 0;
-  const ratio = totalKnown > 0 && securitiesKnown >= 0
-    ? Math.min(100, Math.max(0, Math.round((securitiesKnown / totalKnown) * 100)))
+  const cashNegative = hero.setupIncomplete;
+  const ratio = hero.assets > 0 && securitiesKnown >= 0
+    ? Math.min(100, Math.max(0, Math.round((securitiesKnown / hero.assets) * 100)))
     : 0;
-  const pnlPct = portfolio.vwceCostBasis > 0 && vwceValue != null
-    ? ((pnl / portfolio.vwceCostBasis) * 100).toFixed(1)
-    : null;
+  const pnlPct = hero.pnlPct != null ? hero.pnlPct.toFixed(1) : null;
 
   let nearestGoal: Goal | null = null;
   let nearestMonths = Infinity;
@@ -239,10 +246,11 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         ? "Giá tương thích cũ"
         : "Chưa có giá";
   const portfolioTraceModel = buildPortfolioTraceModel({
-    totalValue: totalKnown,
+    totalValue: hero.assets,
     securities: securitiesKnown,
     cash,
     cashNegative,
+    cashShortfall: hero.cashShortfall,
     valueComplete: portfolioSnapshot.valueComplete,
     missingIsins: market.missingIsins,
     vwcePrice,
@@ -265,15 +273,17 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
             <button type="button" className="hero-trace-trigger" onClick={() => setTraceOpen(true)}>
               <span className="hero-label">{hasMissingPrices ? "Tài sản đã định giá" : "Tổng tài sản"}</span>
               <span className="hero-amount">
-                <span className="hero-num">{formatMoney(totalKnown).replace(/\s*€$/, "")}</span>
+                <span className="hero-num">{formatMoney(hero.assets).replace(/\s*€$/, "")}</span>
                 <span className="hero-eur">€</span>
               </span>
             </button>
-            {hasMissingPrices ? (
+            {hero.setupIncomplete ? (
+              <span className="hero-delta">Chưa ghi nạp tiền {formatMoney(hero.cashShortfall)}</span>
+            ) : hasMissingPrices ? (
               <span className="hero-delta">+ {market.missingIsins.length} mã thiếu giá</span>
-            ) : pnl !== 0 && vwceValue != null ? (
+            ) : hero.pnl != null && hero.pnl !== 0 ? (
               <span className="hero-delta">
-                {pnl >= 0 ? "↑" : "↓"} {formatMoney(Math.abs(pnl))}{pnlPct ? ` (${pnlPct}%)` : ""}
+                {hero.pnl >= 0 ? "↑" : "↓"} {formatMoney(Math.abs(hero.pnl))}{pnlPct ? ` (${pnlPct}%)` : ""}
               </span>
             ) : null}
             <button type="button" className="hero-provenance" onClick={() => setTraceOpen(true)}>
@@ -282,7 +292,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
             </button>
             <Sparkline points={series} />
             {cashNegative ? (
-              <div className="alloc-legend-v8"><span className="neg">Tỉ lệ chưa tính được — số dư âm</span></div>
+              <div className="alloc-legend-v8"><span className="neg">Tỉ lệ chưa tính được — thiếu bút toán nạp</span></div>
             ) : (
               <>
                 <div className="alloc-v8" role="img" aria-label={`Chứng khoán ${ratio}%, an toàn ${100 - ratio}%`}>
@@ -324,7 +334,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
           <div className="stat-rule" aria-hidden />
           <div className="stat-col"><span className="stat-label">An toàn</span><span className={`stat-val${cashNegative ? " neg" : ""}`}>{formatMoney(portfolio.cashBalance)}</span></div>
           <div className="stat-rule" aria-hidden />
-          <div className="stat-col"><span className="stat-label">Lãi–lỗ VWCE</span><span className={`stat-val ${pnl >= 0 ? "pos" : "neg"}`}>{vwceValue != null ? formatMoney(pnl) : "—"}</span></div>
+          <div className="stat-col"><span className="stat-label">Lãi–lỗ VWCE</span><span className={`stat-val ${hero.pnl == null ? "" : hero.pnl >= 0 ? "pos" : "neg"}`}>{hero.pnl != null ? formatMoney(hero.pnl) : "—"}</span></div>
           <button type="button" className="stat-detail-btn" onClick={() => setDetailOpen((open) => !open)} aria-expanded={detailOpen}>
             Chi tiết {detailOpen ? "▴" : "▾"}
           </button>
@@ -347,9 +357,9 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
 
       {cashNegative ? (
         <section className="card">
-          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Số dư an toàn đang âm</p>
-          <p className="muted" style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.45 }}>Có giao dịch mua hoặc chi nhiều hơn số tiền đã nạp. Hãy kiểm tra giao dịch nạp tiền.</p>
-          <Link to="/transactions" className="action-item" style={{ minHeight: 44 }}>Xem giao dịch</Link>
+          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Sổ đang thiếu bút toán nạp tiền</p>
+          <p className="muted" style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.45 }}>Đã ghi mua hoặc chi nhiều hơn số tiền nạp {formatMoney(hero.cashShortfall)}, nên số dư an toàn đang âm. Ghi khoản nạp tương ứng để tổng tài sản và lãi–lỗ khớp lại.</p>
+          <Link to="/transactions" className="action-item" style={{ minHeight: 44 }}>Ghi nạp tiền</Link>
         </section>
       ) : null}
 

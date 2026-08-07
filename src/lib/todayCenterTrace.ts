@@ -10,6 +10,7 @@ import type {
   TodayCenterWhatIfResult,
 } from "./todayCenterEngine";
 import type {
+  TraceRowModel,
   TraceSheetModel,
   TraceSource,
   TraceValue,
@@ -50,6 +51,8 @@ export type PortfolioTraceInput = {
   securities: number;
   cash: number;
   cashNegative: boolean;
+  /** Missing funding entries as a positive number; omitted by callers that never net cash. */
+  cashShortfall?: number;
   valueComplete: boolean;
   missingIsins: string[];
   vwcePrice: number;
@@ -60,6 +63,76 @@ export type PortfolioTraceInput = {
 export function buildPortfolioTraceModel(input: PortfolioTraceInput): TraceSheetModel {
   const effectiveSource = input.provenance.vwcePrice;
   const quoteSource = priceSource(effectiveSource);
+  const shortfall =
+    typeof input.cashShortfall === "number" && input.cashShortfall > 0.005
+      ? input.cashShortfall
+      : 0;
+  const rows: TraceRowModel[] = [
+    {
+      id: "securities",
+      label: "Chứng khoán",
+      value: { kind: "money", value: input.securities },
+      source: "portfolio_market_value",
+      formula: "sum(position.quantity × effectiveQuote.price)",
+    },
+    {
+      id: "cash",
+      label: "An toàn",
+      value: { kind: "money", value: input.cash },
+      source: "transaction_ledger",
+      tone: input.cashNegative ? "negative" : undefined,
+      formula: "replay(cash transactions + security settlements)",
+    },
+    {
+      id: "holdings-source",
+      label: "Nguồn holdings",
+      value: { kind: "text", value: input.provenance.holdings === "transactions_replay" ? "Replay sổ giao dịch" : input.provenance.holdings },
+      source: "transaction_ledger",
+      tone: "muted",
+    },
+    {
+      id: "vwce-source",
+      label: "Nguồn VWCE",
+      value: { kind: "text", value: priceSourceLabel(effectiveSource) },
+      source: quoteSource,
+    },
+    {
+      id: "vwce-price",
+      label: "Giá VWCE",
+      value: { kind: "money", value: input.vwcePrice > 0 ? input.vwcePrice : null, fallback: "Chưa có" },
+      source: quoteSource,
+      tone: input.vwcePrice > 0 ? undefined : "warning",
+    },
+    {
+      id: "vwce-as-of",
+      label: "asOf",
+      value: { kind: "text", value: input.vwceAsOf ?? (effectiveSource === "legacy_quote" ? "legacy" : "—") },
+      source: quoteSource,
+      tone: "muted",
+    },
+    {
+      id: "completeness",
+      label: "Độ đầy đủ",
+      value: {
+        kind: "text",
+        value: input.valueComplete ? "Đủ giá" : `Thiếu ${input.missingIsins.length} mã`,
+      },
+      source: "portfolio_market_value",
+      tone: input.valueComplete ? "positive" : "warning",
+    },
+  ];
+
+  if (shortfall > 0) {
+    rows.splice(2, 0, {
+      id: "cash-shortfall",
+      label: "Thiếu bút toán nạp",
+      value: { kind: "money", value: shortfall },
+      source: "transaction_ledger",
+      tone: "warning",
+      formula: "abs(min(cashBalance, 0))",
+    });
+  }
+
   return {
     id: "portfolio-total",
     title: "Tổng tài sản",
@@ -68,61 +141,10 @@ export function buildPortfolioTraceModel(input: PortfolioTraceInput): TraceSheet
       value: input.totalValue,
       suffix: input.valueComplete ? undefined : " đã định giá",
     },
-    explanation: "Tổng tài sản = chứng khoán có giá hợp lệ + số dư an toàn trong sổ local. Holdings được dựng bằng cách replay sổ giao dịch; giá thiếu không bị tính thành 0.",
-    rows: [
-      {
-        id: "securities",
-        label: "Chứng khoán",
-        value: { kind: "money", value: input.securities },
-        source: "portfolio_market_value",
-        formula: "sum(position.quantity × effectiveQuote.price)",
-      },
-      {
-        id: "cash",
-        label: "An toàn",
-        value: { kind: "money", value: input.cash },
-        source: "transaction_ledger",
-        tone: input.cashNegative ? "negative" : undefined,
-        formula: "replay(cash transactions + security settlements)",
-      },
-      {
-        id: "holdings-source",
-        label: "Nguồn holdings",
-        value: { kind: "text", value: input.provenance.holdings === "transactions_replay" ? "Replay sổ giao dịch" : input.provenance.holdings },
-        source: "transaction_ledger",
-        tone: "muted",
-      },
-      {
-        id: "vwce-source",
-        label: "Nguồn VWCE",
-        value: { kind: "text", value: priceSourceLabel(effectiveSource) },
-        source: quoteSource,
-      },
-      {
-        id: "vwce-price",
-        label: "Giá VWCE",
-        value: { kind: "money", value: input.vwcePrice > 0 ? input.vwcePrice : null, fallback: "Chưa có" },
-        source: quoteSource,
-        tone: input.vwcePrice > 0 ? undefined : "warning",
-      },
-      {
-        id: "vwce-as-of",
-        label: "asOf",
-        value: { kind: "text", value: input.vwceAsOf ?? (effectiveSource === "legacy_quote" ? "legacy" : "—") },
-        source: quoteSource,
-        tone: "muted",
-      },
-      {
-        id: "completeness",
-        label: "Độ đầy đủ",
-        value: {
-          kind: "text",
-          value: input.valueComplete ? "Đủ giá" : `Thiếu ${input.missingIsins.length} mã`,
-        },
-        source: "portfolio_market_value",
-        tone: input.valueComplete ? "positive" : "warning",
-      },
-    ],
+    explanation: shortfall > 0
+      ? "Tổng tài sản = chứng khoán có giá hợp lệ + số dư an toàn dương. Sổ đang thiếu bút toán nạp tiền nên số dư âm được tách thành một dòng riêng thay vì trừ vào tài sản; ghi khoản nạp là hai số khớp lại."
+      : "Tổng tài sản = chứng khoán có giá hợp lệ + số dư an toàn trong sổ local. Holdings được dựng bằng cách replay sổ giao dịch; giá thiếu không bị tính thành 0.",
+    rows,
     links: [
       { label: "Xem giao dịch", to: "/transactions" },
       { label: "Giá & tài sản", to: "/settings?tab=prices" },

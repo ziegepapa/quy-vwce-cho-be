@@ -10,6 +10,7 @@ import {
   reconcileDepotStatement,
   type DepotReconciliationRow,
 } from "../lib/tr/depotStatement";
+import { buildPulseDisplay } from "../lib/overviewNumbers";
 import {
   markRestoreCompleted,
   portfolioPulseDelta,
@@ -172,6 +173,10 @@ export default function TodayCenter({
   }, [ownerKey, transactions]);
 
   const delta = useMemo(() => portfolioPulseDelta(pulse), [pulse]);
+  const pulseDisplay = useMemo(
+    () => buildPulseDisplay(delta, { baselineValue: pulse?.previous?.totalValue ?? null }),
+    [delta, pulse],
+  );
   const portfolioEmpty =
     transactions.length === 0 &&
     Math.abs(totalValue) < 0.005 &&
@@ -321,9 +326,11 @@ export default function TodayCenter({
               <>
                 <span className={`today-main-metric ${metricTone(delta.value)}`}>{signedMoney(delta.value)}</span>
                 <span className="today-metric-caption">
-                  {delta.valuePct === null
-                    ? "Mốc trước chưa có giá trị"
-                    : `${delta.valuePct >= 0 ? "+" : ""}${delta.valuePct.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`}
+                  {pulseDisplay.showPercent && pulseDisplay.percent !== null
+                    ? `${pulseDisplay.percent >= 0 ? "+" : ""}${pulseDisplay.percent.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`
+                    : pulseDisplay.basis === "ledger_changed"
+                      ? "Sổ đổi giữa hai lần mở nên không tính %"
+                      : "Mốc trước chưa đủ để tính %"}
                   {Math.abs(delta.quantity) > 0.000001
                     ? ` · ${delta.quantity > 0 ? "+" : ""}${delta.quantity.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} đơn vị`
                     : " · số lượng không đổi"}
