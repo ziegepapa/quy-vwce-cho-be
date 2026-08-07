@@ -11,7 +11,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run && npm run test:price",
-    "test:price": "node --test scripts/update-vwce-price.test.mjs scripts/update-quotes.test.mjs",
+    "test:price": "node --test scripts/update-vwce-price.test.mjs scripts/update-quotes.test.mjs scripts/price-fallback.test.mjs",
     "test:preview": "playwright test",
     "test:release": "node scripts/verify-release.mjs",
     "test:edge-smoke": "node scripts/smoke-ai-edge.mjs",
