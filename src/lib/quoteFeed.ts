@@ -40,6 +40,12 @@ export type QuoteFeedIngestResult = {
   unchanged: number;
   skipped: QuoteFeedRowIssue[];
   errors: string[];
+  /** Envelope timestamp of the feed that was read, when one could be parsed. */
+  feedGeneratedAt?: string | undefined;
+  /** Newest closed session among accepted rows (YYYY-MM-DD). */
+  newestAsOf?: string | undefined;
+  /** Newest price-bot fetch timestamp among accepted rows (ISO-8601). */
+  newestFetchedAt?: string | undefined;
 };
 
 export type QuoteFeedFetch = (
@@ -253,6 +259,23 @@ async function fetchFeedJson(
   }
 }
 
+/** Newest session among accepted rows — what the feed can honestly claim. */
+function newestSession(rows: AutoQuoteInput[]): string | undefined {
+  return rows.reduce<string | undefined>(
+    (newest, row) => (newest && newest >= row.asOf ? newest : row.asOf),
+    undefined,
+  );
+}
+
+/** Newest bot fetch among accepted rows, used to report real feed latency. */
+function newestFetch(rows: AutoQuoteInput[]): string | undefined {
+  return rows.reduce<string | undefined>((newest, row) => {
+    if (!row.fetchedAt) return newest;
+    if (!newest) return row.fetchedAt;
+    return Date.parse(row.fetchedAt) > Date.parse(newest) ? row.fetchedAt : newest;
+  }, undefined);
+}
+
 async function ingestQuotesFeedInternal(
   options: IngestQuotesFeedOptions,
 ): Promise<QuoteFeedIngestResult> {
@@ -307,6 +330,9 @@ async function ingestQuotesFeedInternal(
     unchanged,
     skipped: validation.skipped,
     errors,
+    feedGeneratedAt: validation.generatedAt,
+    newestAsOf: newestSession(validation.rows),
+    newestFetchedAt: newestFetch(validation.rows),
   };
 }
 
