@@ -46,6 +46,9 @@ export const LEGACY_VWCE_PATH = path.join(
 );
 export const VWCE_ISIN = "IE00BK5BQT80";
 
+/** Human readable Yahoo quote page, used only when the registry pins no providerUrl. */
+export const YAHOO_QUOTE_URL_BASE = "https://finance.yahoo.com/quote/";
+
 const UA =
   "quy-vwce-cho-be/1.0 (+https://github.com/ziegepapa/quy-vwce-cho-be; price-bot)";
 
@@ -94,9 +97,10 @@ export const PRIMARY_ADAPTERS = {
     bodyKey: "yahooBody",
     requiresSymbol: true,
     parse: (body, now, instrument) => parseYahooChart(body, now, instrument),
-    providerUrl: (cfg) =>
-      cfg.providerUrl ||
-      (cfg.symbol ? `https://finance.yahoo.com/quote/${cfg.symbol}` : cfg.url),
+    providerUrl: (cfg) => {
+      if (cfg.providerUrl) return cfg.providerUrl;
+      return cfg.symbol ? YAHOO_QUOTE_URL_BASE + cfg.symbol : cfg.url;
+    },
   },
   onvista: {
     bodyKey: "onvistaBody",
