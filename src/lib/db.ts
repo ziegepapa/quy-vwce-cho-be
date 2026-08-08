@@ -8,7 +8,11 @@ export { ensureQuoteFoundationMigrated } from "./db.m02";
 export { applyResolvedEffective, listInstruments, upsertInstrument } from "./db.m03";
 export { listQuotes, upsertQuote, getQuoteForIsin } from "./db.m04";
 export type { ManualQuoteInput, ManualQuoteSaveResult } from "./db.m05";
-export { saveManualQuoteForIsin } from "./db.m05";
+export {
+  deleteManualQuoteForIsin,
+  removeInstrumentAndQuotes,
+  saveManualQuoteForIsin,
+} from "./db.m05";
 export {
   setQuotePreference,
   putAutoCandidateAndResolve,

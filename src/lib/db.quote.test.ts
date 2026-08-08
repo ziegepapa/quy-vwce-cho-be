@@ -2,21 +2,27 @@ import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   db,
+  deleteManualQuoteForIsin,
   getQuoteForIsin,
   getSettings,
   importBackup,
   listInstruments,
   listQuotes,
+  putAutoCandidateAndResolve,
+  removeInstrumentAndQuotes,
   saveManualQuoteForIsin,
   saveSettings,
 } from "./db";
 import { VWCE_ISIN } from "./types";
 import type { BackupPayload } from "./types";
 import { defaultSettings } from "./defaults";
-import { quoteId } from "./instrument";
+import { candidateId, preferenceId, quoteId } from "./instrument";
 
 /** Valid non-VWCE ISIN (Amundi MSCI World — checksum verified). */
 const OTHER_ISIN = "FR0010315770";
+
+/** Fixed clock so the future-date guard and staleness never depend on today. */
+const NOW_DATE = "2026-08-08";
 
 beforeEach(async () => {
   await db.delete();
@@ -138,6 +144,95 @@ describe("saveManualQuoteForIsin — VWCE legacy atomic mirror", () => {
     expect(q?.price).toBe(111);
   });
 
+});
+
+describe("deleteManualQuoteForIsin", () => {
+  it("falls back to the auto candidate and puts the preference back to auto", async () => {
+    await putAutoCandidateAndResolve(
+      { instrumentIsin: OTHER_ISIN, price: 30, asOf: "2026-08-07", provider: "yahoo" },
+      { nowDate: NOW_DATE },
+    );
+    await saveManualQuoteForIsin(
+      { instrumentIsin: OTHER_ISIN, price: 44, asOf: "2026-08-08" },
+      { nowDate: NOW_DATE },
+    );
+    expect((await getQuoteForIsin(OTHER_ISIN))?.price).toBe(44);
+    expect((await db.quotePreferences.get(preferenceId(OTHER_ISIN, "EUR")))?.mode).toBe("manual");
+
+    const effective = await deleteManualQuoteForIsin(OTHER_ISIN, { nowDate: NOW_DATE });
+
+    expect(effective?.price).toBe(30);
+    expect(effective?.source).toBe("auto");
+    expect((await getQuoteForIsin(OTHER_ISIN))?.price).toBe(30);
+    expect(await db.quoteCandidates.get(candidateId(OTHER_ISIN, "EUR", "manual"))).toBeUndefined();
+    expect(await db.quoteCandidates.get(candidateId(OTHER_ISIN, "EUR", "auto"))).toBeDefined();
+    expect((await db.quotePreferences.get(preferenceId(OTHER_ISIN, "EUR")))?.mode).toBe("auto");
+  });
+
+  it("clears the effective row when there is no auto candidate, keeping the instrument", async () => {
+    await saveManualQuoteForIsin(
+      { instrumentIsin: OTHER_ISIN, price: 44, asOf: "2026-08-08" },
+      { nowDate: NOW_DATE },
+    );
+
+    const effective = await deleteManualQuoteForIsin(OTHER_ISIN, { nowDate: NOW_DATE });
+
+    expect(effective).toBeNull();
+    expect(await getQuoteForIsin(OTHER_ISIN)).toBeUndefined();
+    expect((await listInstruments()).some((i) => i.isin === OTHER_ISIN)).toBe(true);
+  });
+
+  it("rejects an invalid ISIN", async () => {
+    await expect(deleteManualQuoteForIsin("IE00BK5BQT81")).rejects.toThrow(/Invalid ISIN/);
+  });
+});
+
+describe("removeInstrumentAndQuotes", () => {
+  it("removes instrument, both candidates, preference and effective quote", async () => {
+    await putAutoCandidateAndResolve(
+      { instrumentIsin: OTHER_ISIN, price: 30, asOf: "2026-08-07" },
+      { nowDate: NOW_DATE },
+    );
+    await saveManualQuoteForIsin(
+      { instrumentIsin: OTHER_ISIN, price: 44, asOf: "2026-08-08" },
+      { nowDate: NOW_DATE },
+    );
+
+    await removeInstrumentAndQuotes(OTHER_ISIN);
+
+    expect(await listInstruments()).toHaveLength(0);
+    expect(await listQuotes()).toHaveLength(0);
+    expect(await db.quoteCandidates.toArray()).toHaveLength(0);
+    expect(await db.quotePreferences.toArray()).toHaveLength(0);
+  });
+
+  it("leaves other ISINs alone", async () => {
+    await saveManualQuoteForIsin(
+      { instrumentIsin: VWCE_ISIN, price: 160, asOf: "2026-08-08" },
+      { nowDate: NOW_DATE },
+    );
+    await saveManualQuoteForIsin(
+      { instrumentIsin: OTHER_ISIN, price: 44, asOf: "2026-08-08" },
+      { nowDate: NOW_DATE },
+    );
+
+    await removeInstrumentAndQuotes(OTHER_ISIN);
+
+    expect((await listInstruments()).map((i) => i.isin)).toEqual([VWCE_ISIN]);
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(160);
+  });
+
+  it("refuses VWCE and changes nothing", async () => {
+    await saveManualQuoteForIsin(
+      { instrumentIsin: VWCE_ISIN, price: 160, asOf: "2026-08-08" },
+      { nowDate: NOW_DATE },
+    );
+
+    await expect(removeInstrumentAndQuotes(VWCE_ISIN)).rejects.toThrow(/VWCE/);
+
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(160);
+    expect((await listInstruments()).some((i) => i.isin === VWCE_ISIN)).toBe(true);
+  });
 });
 
 describe("importBackup rollback", () => {
