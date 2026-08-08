@@ -120,14 +120,17 @@
   position: relative;
 }
 
-/* V9: setup steps line -- previously clipped by max-height. */
-.hero-early {
-  margin: 10px 0 0;
-  font-size: 12px;
-  line-height: 1.35;
-  opacity: 0.72;
-  position: relative;
-}
+/*
+ * VISUAL-POLISH-001 r3 -- .hero-early was removed here.
+ *
+ * It styled the "Con N buoc de hoan tat thiet lap" paragraph, which Overview
+ * no longer renders. Leaving the rule behind would have been worse than dead
+ * CSS: the hero section renders className={`hero-v8 hero-${mode}`}, so mode
+ * "early" also puts a literal hero-early class on the card itself. This rule
+ * was matching it and dimming the entire hero to opacity 0.72 with a 12px
+ * font-size for anyone holding 1-2 transactions. hero-early is now inert,
+ * exactly like hero-active.
+ */
 
 .hero-empty-inner {
   position: relative;

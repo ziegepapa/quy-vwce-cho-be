@@ -186,6 +186,9 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   const hasContributionThisMonth = transactions.some(
     (transaction) => contributionTypes.includes(transaction.type) && transaction.date.startsWith(yearMonth),
   );
+  // VISUAL-POLISH-001 r3: "early" no longer prints a setup countdown. It is
+  // kept because it still drives the hero-${mode} class name, which pairs with
+  // the .hero-empty rule; "early" and "active" are deliberately unstyled.
   const mode: "empty" | "early" | "active" =
     hero.status === "empty"
       ? "empty"
@@ -352,7 +355,6 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
             ) : (
               <div className="alloc-legend-v8"><span className="neg">{allocationCopy.unavailable}</span></div>
             )}
-            {mode === "early" ? <p className="hero-early">{"C\u00f2n "}{Math.max(0, 3 - transactions.length)}{" b\u01b0\u1edbc \u0111\u1ec3 ho\u00e0n t\u1ea5t thi\u1ebft l\u1eadp"}</p> : null}
           </>
         )}
       </section>
