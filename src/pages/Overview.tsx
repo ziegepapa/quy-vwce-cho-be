@@ -176,15 +176,13 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   });
   const today = new Date();
   const yearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-  // Without this, removing the "unfunded" status would hand the screen a fresh
-  // false alarm instead of removing one: in securities-first mode there is no
-  // cash_in to record, so a month holding a real purchase would be reported as
-  // a month without a contribution, every month, forever.
-  const contributionTypes: string[] = trackInAppCash
-    ? ["cash_in"]
-    : ["cash_in", "buy_vwce", "buy_security"];
+  // VISUAL-POLISH-001 r3: a contribution is a cash_in again, plainly. The old
+  // list also counted buy_vwce and buy_security, but that existed only to stop
+  // the monthly nudge firing forever in securities-first mode -- and the nudge
+  // is now suppressed outright in that mode by the guard below, so the
+  // workaround has nothing left to protect against.
   const hasContributionThisMonth = transactions.some(
-    (transaction) => contributionTypes.includes(transaction.type) && transaction.date.startsWith(yearMonth),
+    (transaction) => transaction.type === "cash_in" && transaction.date.startsWith(yearMonth),
   );
   // VISUAL-POLISH-001 r3: "early" no longer prints a setup countdown. It is
   // kept because it still drives the hero-${mode} class name, which pairs with
@@ -197,7 +195,11 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         : "active";
 
   const insights: Insight[] = [];
-  if (shouldShowContributionNudge({ status: hero.status, hasContributionThisMonth })) {
+  // VISUAL-POLISH-001 r3: in securities-first mode the money arrives in a bank
+  // account this app never sees, so it has no standing to tell anyone they
+  // forgot to contribute this month. The nudge is for people who opted into
+  // tracking the wallet here.
+  if (trackInAppCash && shouldShowContributionNudge({ status: hero.status, hasContributionThisMonth })) {
     insights.push({
       id: "contribution",
       priority: "high",

@@ -10,7 +10,8 @@
  * as secondary to the hero. Visible at rest; no hover required.
  *
  * VISUAL-POLISH-001 r3 -- stop the meta row from stranding its hint against
- * the right edge.
+ * the right edge, and give the checklist rows a caption/figure ranking so two
+ * stacked rows stop reading as four equally loud things.
  */
 
 .nhip-block {
@@ -130,15 +131,21 @@
   transition: background var(--d-fast, 120ms), border-color var(--d-fast, 120ms);
 }
 
+/* VISUAL-POLISH-001 r3 -- rank the row instead of shouting twice.
+   The label was 13px/600 at 0.85 and the value 14px/700, which is close enough
+   that two stacked rows read as four equally loud things: "Khop sao ke" cost
+   the reader as much attention as its own answer. The label is now plainly a
+   caption and the value is the figure being reported. Same treatment on the
+   simulation row below so all three peers rank identically. */
 .nhip-check-label {
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0.85;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.68;
 }
 
 .nhip-check-value {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 650;
   text-align: right;
 }
 
@@ -173,14 +180,14 @@
 }
 
 .nhip-sim-label {
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0.85;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.68;
 }
 
 .nhip-sim-value {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 650;
   text-align: right;
 }
 
