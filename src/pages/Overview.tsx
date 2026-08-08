@@ -343,7 +343,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
                 </div>
                 <div className="alloc-legend-v8"><span>{allocationCopy.securitiesLabel}</span><span>{allocationCopy.cashLabel}</span></div>
                 {allocationCopy.caveat ? (
-                  <p className="alloc-caveat-v8" style={{ margin: "6px 0 0", fontSize: 12, lineHeight: 1.4, color: "inherit", opacity: 0.85 }}>{allocationCopy.caveat}</p>
+                  <p className="alloc-caveat-v8">{allocationCopy.caveat}</p>
                 ) : null}
               </>
             ) : (

@@ -395,3 +395,14 @@
   color: var(--text-secondary);
   line-height: 1.4;
 }
+
+/* VISUAL-POLISH-001 r1 — alloc-caveat lives here so Overview.tsx carries no
+   inline style. Uses CSS custom properties so it adjusts with the theme. */
+.alloc-caveat-v8 {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  opacity: 0.82;
+  position: relative;
+}
