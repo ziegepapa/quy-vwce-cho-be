@@ -47,28 +47,33 @@
   letter-spacing: -0.025em;
 }
 
+/* VISUAL-POLISH-001 r3 -- the clock lost its seconds, so the column needs
+   three fewer characters and the width goes back into legibility. The date
+   was 8px, 7.5px on the phone, at 0.07em tracking: small enough that it was
+   decoration rather than information. Tertiary text on a translucent nav did
+   not help either, so it moves up to secondary. */
 .nav-time-date {
   display: grid;
   justify-items: center;
   align-content: center;
-  min-width: 74px;
+  min-width: 64px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .nav-clock-time {
   color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 720;
-  letter-spacing: 0.045em;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .nav-clock-date {
-  margin-top: 4px;
-  color: var(--text-tertiary);
-  font-size: 8px;
-  font-weight: 680;
-  letter-spacing: 0.07em;
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .collapse-nav-right {
@@ -403,15 +408,15 @@
   }
 
   .nav-time-date {
-    min-width: 68px;
+    min-width: 60px;
   }
 
   .nav-clock-time {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .nav-clock-date {
-    font-size: 7.5px;
+    font-size: 9.5px;
   }
 
   .hero-v8 {

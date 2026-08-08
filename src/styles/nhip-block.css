@@ -8,6 +8,9 @@
  *
  * VISUAL-POLISH-001 r2 -- reduce font sizes and padding so nhip block reads
  * as secondary to the hero. Visible at rest; no hover required.
+ *
+ * VISUAL-POLISH-001 r3 -- stop the meta row from stranding its hint against
+ * the right edge.
  */
 
 .nhip-block {
@@ -73,11 +76,15 @@
 /* neutral: softer so it doesn't compete with a real monetary figure */
 .nhip-meta-value.neutral  { opacity: 0.72; }
 
+/* VISUAL-POLISH-001 r3: this was flex: 1 1 auto, so the caption swallowed every
+   spare pixel in the row and pushed the hint to the far right, leaving a band
+   of empty space in the middle of a line that reads as one sentence. The row
+   now packs left and the hint sits next to the text it qualifies. */
 .nhip-meta-caption {
   font-size: 12px;
   line-height: 1.4;
   opacity: 0.8;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
 .nhip-meta-hint {
