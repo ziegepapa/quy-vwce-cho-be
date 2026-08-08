@@ -433,7 +433,7 @@ export default function SettingsPage({
               <div>
                 <p className="settings-card-eyebrow">Kế hoạch</p>
                 <h3>Thông tin chính</h3>
-                <p>Tên hiển thị và người sở hứu tài khoản đầu tư.</p>
+                <p>Tên hiển thị và người sở hữu tài khoản đầu tư.</p>
               </div>
               <span className="settings-icon-bubble" aria-hidden>✦</span>
             </div>
@@ -458,12 +458,12 @@ export default function SettingsPage({
             <div className="setting-choice-row">
               <div>
                 <strong>Tài khoản đứng tên</strong>
-                <span>Ảnh hưởng cách diễn giải quyền sở hứu.</span>
+                <span>Ảnh hưởng cách diễn giải quyền sở hữu.</span>
               </div>
               <Segmented
                 value={settings.accountType}
                 options={[
-                  { value: "parent", label: "Cha/mệ" },
+                  { value: "parent", label: "Cha/mẹ" },
                   { value: "child", label: "Bé" },
                 ]}
                 onChange={(value) => patchSettings({ accountType: value as "child" | "parent" })}
@@ -654,7 +654,7 @@ export default function SettingsPage({
                 <div>
                   <p className="settings-card-eyebrow">Đồng bộ</p>
                   <h3>{dead.length > 0 ? `${dead.length} thay đổi đang chờ` : "Đã đồng bộ xong"}</h3>
-                  <p>Dữ liệu local vẫn an toàn trong khi ứng dụng thực gửi lại.</p>
+                  <p>Dữ liệu local vẫn an toàn trong khi ứng dụng thử gửi lại.</p>
                 </div>
               </div>
               {dead.length > 0 ? (

@@ -266,13 +266,4 @@ describe("shouldShowContributionNudge", () => {
       shouldShowContributionNudge({ status: "ready", hasContributionThisMonth: true }),
     ).toBe(false);
   });
-
-  it("treats a securities-first month with a purchase as a contribution", () => {
-    // The caller decides what counts as a contribution. In securities-first
-    // mode a buy is one, otherwise killing the "unfunded" status would turn
-    // this nudge into a permanent monthly false alarm.
-    expect(
-      shouldShowContributionNudge({ status: "ready", hasContributionThisMonth: true }),
-    ).toBe(false);
-  });
 });
