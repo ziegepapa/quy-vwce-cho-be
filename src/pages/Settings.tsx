@@ -433,7 +433,7 @@ export default function SettingsPage({
               <div>
                 <p className="settings-card-eyebrow">Kế hoạch</p>
                 <h3>Thông tin chính</h3>
-                <p>Tên hiển thị và người sở hữu tài khoản đầu tư.</p>
+                <p>Tên hiển thị và người sở hứu tài khoản đầu tư.</p>
               </div>
               <span className="settings-icon-bubble" aria-hidden>✦</span>
             </div>
@@ -458,15 +458,47 @@ export default function SettingsPage({
             <div className="setting-choice-row">
               <div>
                 <strong>Tài khoản đứng tên</strong>
-                <span>Ảnh hưởng cách diễn giải quyền sở hữu.</span>
+                <span>Ảnh hưởng cách diễn giải quyền sở hứu.</span>
               </div>
               <Segmented
                 value={settings.accountType}
                 options={[
-                  { value: "parent", label: "Cha/mẹ" },
+                  { value: "parent", label: "Cha/mệ" },
                   { value: "child", label: "Bé" },
                 ]}
                 onChange={(value) => patchSettings({ accountType: value as "child" | "parent" })}
+              />
+            </div>
+          </section>
+
+          {/* CASH-MODEL-OPTIONAL-001 r1: the owner pays for the ETF from a bank
+              or broker account this app never sees, so the double-entry ledger
+              is the exception here and not the default. */}
+          <section className="settings-card">
+            <div className="settings-card-head">
+              <div>
+                <p className="settings-card-eyebrow">Tiền</p>
+                <h3>Ví trong app</h3>
+                <p>Quyết định app có đòi bút toán nạp tiền cho mọi lệnh mua hay không.</p>
+              </div>
+              <span className="settings-icon-bubble" aria-hidden>€</span>
+            </div>
+            <div className="setting-choice-row">
+              <div>
+                <strong>Nguồn tiền mua</strong>
+                <span>
+                  {settings.trackInAppCash === true
+                    ? "Sổ kép: mọi lệnh mua cần một khoản nạp tương ứng, thiếu thì Tổng quan sẽ báo."
+                    : "Ngoài app: chỉ theo dõi chứng khoán. Không báo thiếu nạp, hàng An toàn để trống."}
+                </span>
+              </div>
+              <Segmented
+                value={settings.trackInAppCash === true ? "ledger" : "securities"}
+                options={[
+                  { value: "securities", label: "Ngoài app" },
+                  { value: "ledger", label: "Sổ kép" },
+                ]}
+                onChange={(value) => patchSettings({ trackInAppCash: value === "ledger" })}
               />
             </div>
           </section>
@@ -622,7 +654,7 @@ export default function SettingsPage({
                 <div>
                   <p className="settings-card-eyebrow">Đồng bộ</p>
                   <h3>{dead.length > 0 ? `${dead.length} thay đổi đang chờ` : "Đã đồng bộ xong"}</h3>
-                  <p>Dữ liệu local vẫn an toàn trong khi ứng dụng thử gửi lại.</p>
+                  <p>Dữ liệu local vẫn an toàn trong khi ứng dụng thực gửi lại.</p>
                 </div>
               </div>
               {dead.length > 0 ? (
