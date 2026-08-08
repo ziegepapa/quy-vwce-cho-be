@@ -18,6 +18,12 @@ type BerlinClock = {
   date: string;
 };
 
+/*
+ * VISUAL-POLISH-001 r3 -- this is a wall clock, not a stopwatch. Seconds were
+ * dropped for two reasons: HH:mm:ss reads as a running timer sitting next to
+ * the page title, and it is three characters wider than HH:mm. The width it
+ * gives back is what pays for a legible date line in pulse-locked-v2.css.
+ */
 function readBerlinClock(): BerlinClock {
   const now = new Date();
   return {
@@ -26,7 +32,6 @@ function readBerlinClock(): BerlinClock {
       timeZone: "Europe/Berlin",
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
       hour12: false,
     }).format(now),
     date: new Intl.DateTimeFormat("en-GB", {
@@ -44,7 +49,10 @@ function TimeDate() {
   useEffect(() => {
     const tick = () => setClock(readBerlinClock());
     tick();
-    const id = window.setInterval(tick, 1_000);
+    // Without seconds on screen there is nothing a 1s tick can show. 30s keeps
+    // the displayed minute at most half a minute stale and drops the header
+    // from 60 re-renders a minute to 2.
+    const id = window.setInterval(tick, 30_000);
     return () => window.clearInterval(id);
   }, []);
 
@@ -189,22 +197,22 @@ export default function CollapsingNavBar({
 
           <div className="collapse-nav-right">
             {pathname === "/transactions" && onSearch ? (
-              <button type="button" className="icon-btn" aria-label="Tìm kiếm giao dịch" onClick={onSearch}>
+              <button type="button" className="icon-btn" aria-label={"Tìm kiếm giao dịch"} onClick={onSearch}>
                 <IconSearch />
               </button>
             ) : null}
             {pathname === "/transactions" && onFilter ? (
-              <button type="button" className="icon-btn" aria-label="Lọc giao dịch" onClick={onFilter}>
+              <button type="button" className="icon-btn" aria-label={"Lọc giao dịch"} onClick={onFilter}>
                 <IconFilter />
               </button>
             ) : null}
             {pathname === "/goals" && onAddGoal ? (
-              <button type="button" className="icon-btn" aria-label="Thêm mục tiêu" onClick={onAddGoal}>
+              <button type="button" className="icon-btn" aria-label={"Thêm mục tiêu"} onClick={onAddGoal}>
                 <IconPlus />
               </button>
             ) : null}
             {pathname === "/simulation" && onChangeScenario ? (
-              <button type="button" className="icon-btn" aria-label="Đổi kịch bản" onClick={onChangeScenario}>
+              <button type="button" className="icon-btn" aria-label={"Đổi kịch bản"} onClick={onChangeScenario}>
                 <IconScenario />
               </button>
             ) : null}
