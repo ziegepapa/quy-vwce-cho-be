@@ -1,17 +1,20 @@
 /*
- * NHIP-UI-001 r1 — the one block that replaced the four pulse cards.
+ * NHIP-UI-001 r1 -- the one block that replaced the four pulse cards.
  * Density first: one story, one meta line, one checklist, one simulation entry.
  *
- * VISUAL-POLISH-001 r1 — hover/active micro-interactions, neutral tone for
+ * VISUAL-POLISH-001 r1 -- hover/active micro-interactions, neutral tone for
  * meta-value, nhip-check-neutral value colour, nhip-sim tint + hover.
  * All purely additive; no markup changed.
+ *
+ * VISUAL-POLISH-001 r2 -- reduce font sizes and padding so nhip block reads
+ * as secondary to the hero. Visible at rest; no hover required.
  */
 
 .nhip-block {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px;
+  padding: 14px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -28,7 +31,7 @@
 
 .nhip-item {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   font-weight: 500;
 }
@@ -60,8 +63,8 @@
 }
 
 .nhip-meta-value {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
