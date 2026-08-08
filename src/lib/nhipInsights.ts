@@ -30,6 +30,8 @@ export type NhipInsightsResult = {
 const MAX_INSIGHTS = 3;
 const CONTRIBUTION_WINDOW_DAYS = 35;
 const GOAL_UPCOMING_DAYS = 365;
+const MONEY_EPSILON = 0.005;
+const QUANTITY_EPSILON = 0.000001;
 
 function daysBetween(fromIso: string, toIso: string): number | null {
   const a = Date.parse(fromIso);
@@ -103,12 +105,37 @@ export function buildNhipInsights({
       );
       result.push({
         kind: "on_track",
-        text: `${recent.length} khoản góp trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua, tổng ${Math.round(total)} € — nhịp quỹ đang được duy trì.`,
+        text: `${recent.length} khoản góp trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua, tổng ${Math.round(total)} € — nhịp quỹ đang được duy trì.`,
       });
     }
   }
 
   return { insights: result.slice(0, MAX_INSIGHTS) };
+}
+
+/**
+ * One shared definition of "the fund has not started yet".
+ *
+ * A ledger that recorded activity is never empty, even when the numbers happen
+ * to net back to zero. Without this rule the UI tells a first-time story
+ * ("start with your first contribution") to someone who already deposited and
+ * withdrew, which is false. Soft-deleted rows do not count as activity.
+ */
+export function isLedgerEmpty({
+  transactions,
+  totalValue,
+  totalQuantity,
+}: {
+  transactions: ReadonlyArray<Pick<Transaction, "deletedAt">>;
+  totalValue: number;
+  totalQuantity: number;
+}): boolean {
+  const active = transactions.filter((tx) => !tx.deletedAt);
+  return (
+    active.length === 0 &&
+    Math.abs(totalValue) < MONEY_EPSILON &&
+    Math.abs(totalQuantity) < QUANTITY_EPSILON
+  );
 }
 
 /**
@@ -122,7 +149,11 @@ export function buildNhipInsightInput(
   now?: string,
 ): NhipInsightInput {
   return {
-    portfolioEmpty: snapshot.totalQuantity === 0 && snapshot.totalValue === 0,
+    portfolioEmpty: isLedgerEmpty({
+      transactions,
+      totalValue: snapshot.totalValue,
+      totalQuantity: snapshot.totalQuantity,
+    }),
     vwceAsOf: snapshot.vwceQuote?.asOf ?? null,
     planEndDate: settings.endDate,
     transactions,
