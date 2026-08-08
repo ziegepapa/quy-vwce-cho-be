@@ -133,3 +133,109 @@ export async function saveManualQuoteForIsin(
     return { instrument: existingInstrument ?? instrument, quote };
   });
 }
+
+/**
+ * QUOTE-MANUAL-UX-001 r1 — drop the manual candidate for one ISIN.
+ *
+ * The preference goes back to "auto" on purpose. Leaving it on "manual" with no
+ * manual row would only survive through the soft fallback inside resolveEffective,
+ * and the row would keep claiming a source the owner just deleted.
+ *
+ * What the owner sees afterwards is whatever is actually true: a usable auto
+ * candidate becomes the effective price again, and when there is none the
+ * effective row is cleared, so the list says "Thiếu giá" instead of showing a
+ * number nobody stands behind. The instrument row is kept — deleting a price is
+ * not the same as leaving the asset.
+ *
+ * Returns the new effective quote, or null when the ISIN now has no price.
+ */
+export async function deleteManualQuoteForIsin(
+  instrumentIsin: string,
+  opts?: { currency?: string; nowDate?: string },
+): Promise<Quote | null> {
+  await ensureQuoteFoundationMigrated();
+  await assertQuoteWritesUnlocked();
+
+  const isin = normalizeIsin(instrumentIsin);
+  if (!isValidIsin(isin)) {
+    throw new Error(`Invalid ISIN: ${instrumentIsin}`);
+  }
+  const currency = normalizeCurrency(opts?.currency);
+  const nowDate = opts?.nowDate ?? toDateOnly();
+  const t = nowIso();
+
+  return db.transaction(
+    "rw",
+    [db.instruments, db.quoteCandidates, db.quotePreferences, db.quotes, db.settings, db.outbox],
+    async () => {
+      await db.quoteCandidates.delete(candidateId(isin, currency, "manual"));
+
+      const existingPref = await db.quotePreferences.get(preferenceId(isin, currency));
+      await db.quotePreferences.put({
+        id: preferenceId(isin, currency),
+        instrumentIsin: isin,
+        currency,
+        mode: "auto",
+        createdAt: existingPref?.createdAt ?? t,
+        updatedAt: t,
+      });
+
+      const { auto, existing } = await loadCurrentCandidates(isin, currency);
+      const resolved = resolveEffective({
+        mode: "auto",
+        auto,
+        manual: null,
+        existingEffective: existing ?? null,
+        nowDate,
+      });
+      await applyResolvedEffective(isin, currency, resolved.effective, { t, syncSettings: true });
+      return resolved.effective;
+    },
+  );
+}
+
+/**
+ * QUOTE-MANUAL-UX-001 r1 — take one ISIN out of the price list entirely.
+ *
+ * Call canRemoveFromPriceList first; the VWCE guard is repeated here because
+ * this deletes rows, and the legacy settings mirror only makes sense while VWCE
+ * still exists.
+ *
+ * This is a hard delete. Instrument, Quote, QuoteCandidate and
+ * QuoteSelectionPreference have no deletedAt field, unlike Goal, Transaction and
+ * DepotStatement, so a tombstone would need a type and schema change that this
+ * task is not allowed to make. Two consequences worth knowing rather than
+ * discovering:
+ * - importing an older backup can bring the row back, because BackupPayload
+ *   carries instruments, quotes, quoteCandidates and quotePreferences
+ * - the price bot only writes ISINs from its registry, so a removed extra ISIN
+ *   does not reappear on its own
+ */
+export async function removeInstrumentAndQuotes(
+  instrumentIsin: string,
+  opts?: { currency?: string },
+): Promise<void> {
+  await ensureQuoteFoundationMigrated();
+  await assertQuoteWritesUnlocked();
+
+  const isin = normalizeIsin(instrumentIsin);
+  if (!isValidIsin(isin)) {
+    throw new Error(`Invalid ISIN: ${instrumentIsin}`);
+  }
+  if (isin === VWCE_ISIN) {
+    throw new Error("Refusing to remove VWCE from the price list");
+  }
+  const currency = normalizeCurrency(opts?.currency);
+
+  await db.transaction(
+    "rw",
+    [db.instruments, db.quoteCandidates, db.quotePreferences, db.quotes],
+    async () => {
+      await db.quotes.delete(quoteId(isin, currency));
+      await db.quoteCandidates.delete(candidateId(isin, currency, "manual"));
+      await db.quoteCandidates.delete(candidateId(isin, currency, "auto"));
+      await db.quotePreferences.delete(preferenceId(isin, currency));
+      await db.instruments.delete(isin);
+    },
+  );
+}

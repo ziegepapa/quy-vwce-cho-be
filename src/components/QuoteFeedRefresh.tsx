@@ -45,7 +45,7 @@ export default function QuoteFeedRefresh({
         <div>
           <p className="settings-card-eyebrow">Tự động</p>
           <h3>Giá thị trường</h3>
-          <p>Lấy giá mới theo ISIN. Khi mạng lỗi, ứng dụng tiếp tục dùng dữ liệu local.</p>
+          <p>Chỉ làm mới những mã có trong feed giá trên GitHub, hiện tại là VWCE. Mã khác cần nhập giá thủ công ở danh sách bên dưới. Khi mạng lỗi, ứng dụng tiếp tục dùng dữ liệu local.</p>
         </div>
         <span className="settings-icon-bubble" aria-hidden>↻</span>
       </div>

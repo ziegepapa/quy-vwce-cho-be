@@ -1,62 +1,39 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  listInstruments,
-  listQuotes,
+  candidateStatusLabel,
+  deleteManualQuoteForIsin,
+  listQuoteSelectionStates,
+  listTransactions,
+  removeInstrumentAndQuotes,
   saveManualQuoteForIsin,
+  setQuotePreference,
 } from "../lib/db";
-import type { Instrument, Quote } from "../lib/types";
-import { VWCE_ISIN } from "../lib/types";
+import type { QuoteSelectionState } from "../lib/db";
+import type { QuotePreferenceMode, Transaction } from "../lib/types";
 import { formatDateVN, formatMoney } from "../lib/calc";
-import {
-  MANUAL_QUOTE_DRAFT_KEY,
-  validateManualQuoteDraft,
-} from "../lib/manualQuoteDraft";
-import type { ManualQuoteDraft } from "../lib/manualQuoteDraft";
+import { validateManualQuoteDraft } from "../lib/manualQuoteDraft";
+import { canRemoveFromPriceList } from "../lib/priceListRemoval";
 import QuoteFeedRefresh from "./QuoteFeedRefresh";
-import QuoteSourceControls from "./QuoteSourceControls";
 
-type QuoteSaveState = "idle" | "dirty" | "saving" | "saved" | "error";
-
-const QUOTE_AUTOSAVE_MS = 900;
+type RowDraft = { price: string; asOf: string };
+type BusyKind = "idle" | "saving" | "clearing" | "removing" | "switching";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function readStoredDraft(): ManualQuoteDraft | null {
-  try {
-    const raw = window.sessionStorage.getItem(MANUAL_QUOTE_DRAFT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<ManualQuoteDraft>;
-    if (
-      typeof parsed.isin !== "string" ||
-      typeof parsed.price !== "string" ||
-      typeof parsed.asOf !== "string"
-    ) {
-      return null;
-    }
-    return { isin: parsed.isin, price: parsed.price, asOf: parsed.asOf };
-  } catch {
-    return null;
-  }
+function displayName(state: QuoteSelectionState): string {
+  return state.instrument?.ticker || state.instrument?.name || state.instrumentIsin;
 }
 
-function rememberDraft(draft: ManualQuoteDraft) {
-  try {
-    window.sessionStorage.setItem(MANUAL_QUOTE_DRAFT_KEY, JSON.stringify(draft));
-  } catch {
-    /* Storage can be unavailable in private mode. IndexedDB save still works. */
-  }
-}
-
-function forgetDraft() {
-  try {
-    window.sessionStorage.removeItem(MANUAL_QUOTE_DRAFT_KEY);
-  } catch {
-    /* */
-  }
-}
-
+/**
+ * QUOTE-MANUAL-UX-001 r1 — one ISIN, one place to edit it.
+ *
+ * There is deliberately no autosave here. The previous version saved every valid
+ * draft after 900ms, saved again from an unmount cleanup, and kept the draft in
+ * sessionStorage, which is why a half-typed price could not be taken back. With
+ * an explicit Luu button, Hủy can actually mean Hủy.
+ */
 export default function SettingsPricePanel({
   refreshKey,
   onQuotesChanged,
@@ -64,207 +41,143 @@ export default function SettingsPricePanel({
   refreshKey?: number;
   onQuotesChanged?: () => void | Promise<void>;
 }) {
-  const storedAtStart = useRef(readStoredDraft());
-  const [instruments, setInstruments] = useState<Instrument[]>([]);
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [draft, setDraft] = useState<ManualQuoteDraft>(
-    storedAtStart.current ?? { isin: VWCE_ISIN, price: "", asOf: todayIso() },
-  );
-  const [saveState, setSaveState] = useState<QuoteSaveState>("idle");
+  const [states, setStates] = useState<QuoteSelectionState[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [draft, setDraft] = useState<RowDraft>({ price: "", asOf: todayIso() });
+  const [busy, setBusy] = useState<BusyKind>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [confirmRemoveKey, setConfirmRemoveKey] = useState<string | null>(null);
 
-  const initialized = useRef(false);
-  const draftRef = useRef(draft);
-  const instrumentsRef = useRef<Instrument[]>([]);
-  const lastSavedFingerprint = useRef("");
-  const timerRef = useRef<number | null>(null);
-  const saveRef = useRef<(explicit?: boolean) => Promise<boolean>>(async () => false);
-  const onQuotesChangedRef = useRef(onQuotesChanged);
-
-  useEffect(() => {
-    onQuotesChangedRef.current = onQuotesChanged;
-  }, [onQuotesChanged]);
-
-  const loadAssets = useCallback(async () => {
-    const [nextInstruments, nextQuotes] = await Promise.all([listInstruments(), listQuotes()]);
-    instrumentsRef.current = nextInstruments;
-    setInstruments(nextInstruments);
-    setQuotes(nextQuotes);
-
-    if (!initialized.current) {
-      initialized.current = true;
-      if (!storedAtStart.current) {
-        const isin = nextInstruments.some((item) => item.isin === VWCE_ISIN)
-          ? VWCE_ISIN
-          : nextInstruments[0]?.isin ?? VWCE_ISIN;
-        const quote = nextQuotes.find(
-          (item) => item.instrumentIsin === isin && item.currency === "EUR",
-        );
-        const nextDraft = {
-          isin,
-          price: quote ? String(quote.price) : "",
-          asOf: quote?.asOf ?? todayIso(),
-        };
-        const checked = validateManualQuoteDraft(nextDraft);
-        if (checked.ok) lastSavedFingerprint.current = checked.value.fingerprint;
-        draftRef.current = nextDraft;
-        setDraft(nextDraft);
-      }
-    }
+  const load = useCallback(async () => {
+    const [nextStates, nextTransactions] = await Promise.all([
+      listQuoteSelectionStates(),
+      listTransactions(),
+    ]);
+    setStates(nextStates);
+    setTransactions(nextTransactions);
   }, []);
 
   useEffect(() => {
-    void loadAssets();
-  }, [loadAssets, refreshKey]);
+    void load();
+  }, [load, refreshKey]);
 
-  const saveDraft = useCallback(
-    async (explicit = false): Promise<boolean> => {
-      const checked = validateManualQuoteDraft(draftRef.current);
-      if (!checked.ok) {
-        if (explicit || checked.reason !== "empty") {
-          setError(checked.message);
-          setSaveState(checked.reason === "empty" ? "idle" : "error");
-        }
-        return false;
-      }
-      if (checked.value.fingerprint === lastSavedFingerprint.current) {
-        forgetDraft();
-        setError(null);
-        setSaveState("saved");
-        return true;
-      }
+  function closeEditor() {
+    setOpenKey(null);
+    setConfirmRemoveKey(null);
+    setError(null);
+    setDraft({ price: "", asOf: todayIso() });
+  }
 
-      setError(null);
-      setSaveState("saving");
-      try {
-        const instrument = instrumentsRef.current.find(
-          (item) => item.isin === checked.value.instrumentIsin,
-        );
-        await saveManualQuoteForIsin({
-          instrumentIsin: checked.value.instrumentIsin,
-          price: checked.value.price,
-          asOf: checked.value.asOf,
-          venue: instrument?.venue,
-          name: instrument?.name,
-        });
-        lastSavedFingerprint.current = checked.value.fingerprint;
-        forgetDraft();
-        setSaveState("saved");
-        await loadAssets();
-        await onQuotesChangedRef.current?.();
-        return true;
-      } catch (reason) {
-        setError(reason instanceof Error ? reason.message : "Không lưu được giá.");
-        setSaveState("error");
-        return false;
-      }
-    },
-    [loadAssets],
-  );
+  function toggleEditor(state: QuoteSelectionState) {
+    if (openKey === state.key) {
+      closeEditor();
+      return;
+    }
+    setOpenKey(state.key);
+    setConfirmRemoveKey(null);
+    setError(null);
+    setNote(null);
+    // Prefilled from the manual candidate only. Copying the fetched auto price in
+    // here would let one tap on Luu turn it into a manual price nobody entered.
+    setDraft({
+      price: state.manual ? String(state.manual.price) : "",
+      asOf: state.manual?.asOf ?? todayIso(),
+    });
+  }
 
-  useEffect(() => {
-    saveRef.current = saveDraft;
-  }, [saveDraft]);
+  async function afterWrite(message: string) {
+    setNote(message);
+    closeEditor();
+    await load();
+    await onQuotesChanged?.();
+  }
 
-  useEffect(() => {
-    draftRef.current = draft;
-    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-
-    const checked = validateManualQuoteDraft(draft);
+  async function saveManual(state: QuoteSelectionState) {
+    const checked = validateManualQuoteDraft({
+      isin: state.instrumentIsin,
+      price: draft.price,
+      asOf: draft.asOf,
+    });
     if (!checked.ok) {
-      rememberDraft(draft);
-      if (checked.reason === "empty") setSaveState("idle");
+      setError(checked.message);
       return;
     }
-    if (checked.value.fingerprint === lastSavedFingerprint.current) {
-      forgetDraft();
-      if (saveState !== "saving") setSaveState("saved");
-      return;
+    setBusy("saving");
+    setError(null);
+    try {
+      await saveManualQuoteForIsin({
+        instrumentIsin: checked.value.instrumentIsin,
+        price: checked.value.price,
+        asOf: checked.value.asOf,
+        venue: state.instrument?.venue,
+        name: state.instrument?.name,
+      });
+      await afterWrite(`Đã lưu giá thủ công cho ${displayName(state)}.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không lưu được giá.");
+    } finally {
+      setBusy("idle");
     }
+  }
 
-    rememberDraft(draft);
-    setSaveState("dirty");
-    timerRef.current = window.setTimeout(() => {
-      void saveRef.current(false);
-    }, QUOTE_AUTOSAVE_MS);
-    return () => {
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    };
-  }, [draft]);
-
-  useEffect(() => {
-    const saveWhenHidden = () => {
-      if (document.visibilityState === "hidden") void saveRef.current(false);
-    };
-    window.addEventListener("pagehide", saveWhenHidden);
-    document.addEventListener("visibilitychange", saveWhenHidden);
-    return () => {
-      window.removeEventListener("pagehide", saveWhenHidden);
-      document.removeEventListener("visibilitychange", saveWhenHidden);
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-
-      const checked = validateManualQuoteDraft(draftRef.current);
-      if (checked.ok && checked.value.fingerprint !== lastSavedFingerprint.current) {
-        const instrument = instrumentsRef.current.find(
-          (item) => item.isin === checked.value.instrumentIsin,
-        );
-        void saveManualQuoteForIsin({
-          instrumentIsin: checked.value.instrumentIsin,
-          price: checked.value.price,
-          asOf: checked.value.asOf,
-          venue: instrument?.venue,
-          name: instrument?.name,
-        }).then(forgetDraft, () => undefined);
-      }
-    };
-  }, []);
-
-  function patchDraft(partial: Partial<ManualQuoteDraft>) {
-    const next = { ...draftRef.current, ...partial };
-    draftRef.current = next;
-    rememberDraft(next);
+  async function clearManual(state: QuoteSelectionState) {
+    setBusy("clearing");
     setError(null);
-    setDraft(next);
+    try {
+      const effective = await deleteManualQuoteForIsin(state.instrumentIsin, {
+        currency: state.currency,
+      });
+      await afterWrite(
+        effective
+          ? `Đã xóa giá thủ công. ${displayName(state)} trở lại giá tự động ngày ${formatDateVN(effective.asOf)}.`
+          : `Đã xóa giá thủ công. ${displayName(state)} hiện chưa có giá nào.`,
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không xóa được giá thủ công.");
+    } finally {
+      setBusy("idle");
+    }
   }
 
-  function quoteFor(isin: string): Quote | undefined {
-    return quotes.find((item) => item.instrumentIsin === isin && item.currency === "EUR");
-  }
-
-  function selectAsset(isin: string) {
-    const quote = quoteFor(isin);
-    const next = {
-      isin,
-      price: quote ? String(quote.price) : "",
-      asOf: quote?.asOf ?? todayIso(),
-    };
-    const checked = validateManualQuoteDraft(next);
-    lastSavedFingerprint.current = checked.ok ? checked.value.fingerprint : "";
-    forgetDraft();
-    draftRef.current = next;
-    setDraft(next);
+  async function removeRow(state: QuoteSelectionState) {
+    setBusy("removing");
     setError(null);
-    setSaveState(checked.ok ? "saved" : "idle");
+    try {
+      await removeInstrumentAndQuotes(state.instrumentIsin, { currency: state.currency });
+      await afterWrite(`Đã bỏ ${displayName(state)} khỏi danh sách giá.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không bỏ được mã này.");
+    } finally {
+      setBusy("idle");
+    }
   }
 
-  const checkedDraft = validateManualQuoteDraft(draft);
-  const stateLabel =
-    saveState === "saving"
-      ? "Đang lưu…"
-      : saveState === "dirty"
-        ? "Sẽ tự lưu"
-        : saveState === "saved"
-          ? "Đã lưu"
-          : saveState === "error"
-            ? "Cần kiểm tra"
-            : "Chưa thay đổi";
+  async function switchMode(state: QuoteSelectionState, mode: QuotePreferenceMode) {
+    if (state.mode === mode) return;
+    setBusy("switching");
+    setError(null);
+    setNote(null);
+    try {
+      await setQuotePreference(state.instrumentIsin, mode, { currency: state.currency });
+      await load();
+      await onQuotesChanged?.();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không đổi được nguồn giá.");
+    } finally {
+      setBusy("idle");
+    }
+  }
+
+  const working = busy !== "idle";
 
   return (
     <div className="settings-panel" role="tabpanel" aria-label="Giá và tài sản">
       <QuoteFeedRefresh
         onUpdated={async () => {
-          await loadAssets();
-          await onQuotesChangedRef.current?.();
+          await load();
+          await onQuotesChanged?.();
         }}
       />
 
@@ -273,120 +186,190 @@ export default function SettingsPricePanel({
           <div>
             <p className="settings-card-eyebrow">Danh mục</p>
             <h3>Giá đang dùng</h3>
-            <p>Chọn một tài sản để chỉnh giá. Mỗi ISIN luôn có giá riêng.</p>
+            <p>Chạm vào một mã để xem và sửa giá của đúng mã đó. Mỗi mã chỉ có một chỗ để sửa.</p>
           </div>
           <span className="settings-icon-bubble" aria-hidden>€</span>
         </div>
-        {instruments.length === 0 ? (
+
+        {note ? (
+          <p className="settings-inline-status success" role="status" aria-live="polite">
+            {note}
+          </p>
+        ) : null}
+
+        {states.length === 0 ? (
           <p className="settings-empty-note">Chưa có tài sản. Nhập giao dịch hoặc PDF trước.</p>
         ) : (
           <div className="asset-price-list">
-            {instruments.map((instrument) => {
-              const quote = quoteFor(instrument.isin);
-              const selected = draft.isin.replace(/\s/g, "").toUpperCase() === instrument.isin;
+            {states.map((state) => {
+              const open = openKey === state.key;
+              const name = displayName(state);
+              const effective = state.effective;
+              const removal = canRemoveFromPriceList({
+                isin: state.instrumentIsin,
+                transactions,
+              });
+              const checkedDraft = validateManualQuoteDraft({
+                isin: state.instrumentIsin,
+                price: draft.price,
+                asOf: draft.asOf,
+              });
+              const typedSomething = draft.price.trim() !== "";
+
               return (
-                <button
-                  key={instrument.isin}
-                  type="button"
-                  className={`asset-price-row${selected ? " selected" : ""}`}
-                  onClick={() => selectAsset(instrument.isin)}
-                >
-                  <span className="asset-price-name">
-                    <strong>{instrument.ticker || instrument.name || instrument.isin}</strong>
-                    <small>{instrument.isin}</small>
-                  </span>
-                  <span className="asset-price-value">
-                    <strong>{quote ? formatMoney(quote.price, quote.currency) : "Thiếu giá"}</strong>
-                    <small>
-                      {quote
-                        ? `${quote.source === "auto" ? "Tự động" : "Thủ công"} · ${formatDateVN(quote.asOf)}`
-                        : "Chạm để nhập"}
-                    </small>
-                  </span>
-                </button>
+                <div className={`asset-price-item${open ? " open" : ""}`} key={state.key}>
+                  <button
+                    type="button"
+                    className={`asset-price-row${open ? " selected" : ""}`}
+                    aria-expanded={open}
+                    onClick={() => toggleEditor(state)}
+                  >
+                    <span className="asset-price-name">
+                      <strong>{name}</strong>
+                      <small>{state.instrumentIsin}</small>
+                    </span>
+                    <span className="asset-price-value">
+                      <strong>
+                        {effective ? formatMoney(effective.price, state.currency) : "Thiếu giá"}
+                      </strong>
+                      <small>
+                        {effective
+                          ? `${effective.source === "auto" ? "Tự động" : "Thủ công"} · ${formatDateVN(effective.asOf)}`
+                          : "Chạm để nhập"}
+                      </small>
+                    </span>
+                  </button>
+
+                  {open ? (
+                    <div className="asset-price-editor">
+                      <div className="price-source-meta">
+                        <span className={state.isStale ? "source-chip warning" : "source-chip"}>
+                          Tự động: {candidateStatusLabel(state.autoStatus)}
+                        </span>
+                        <span className={state.manual ? "source-chip" : "source-chip muted-chip"}>
+                          Thủ công: {state.manual ? formatDateVN(state.manual.asOf) : "chưa có"}
+                        </span>
+                      </div>
+
+                      <div className="seg-control" role="group" aria-label={`Nguồn giá ${name}`}>
+                        <button
+                          type="button"
+                          className={state.mode === "auto" ? "seg-opt active" : "seg-opt"}
+                          disabled={working}
+                          onClick={() => void switchMode(state, "auto")}
+                        >
+                          Tự động
+                        </button>
+                        <button
+                          type="button"
+                          className={state.mode === "manual" ? "seg-opt active" : "seg-opt"}
+                          disabled={working || !state.manual}
+                          title={state.manual ? undefined : "Hãy lưu một giá thủ công trước"}
+                          onClick={() => void switchMode(state, "manual")}
+                        >
+                          Thủ công
+                        </button>
+                      </div>
+
+                      <div className="settings-field-grid quote-editor-grid">
+                        <label className="setting-field">
+                          <span>Giá thủ công (EUR)</span>
+                          <input
+                            inputMode="decimal"
+                            value={draft.price}
+                            placeholder={effective ? String(effective.price) : "167,54"}
+                            onChange={(event) => {
+                              setError(null);
+                              setDraft((prev) => ({ ...prev, price: event.target.value }));
+                            }}
+                          />
+                        </label>
+                        <label className="setting-field">
+                          <span>Ngày giá</span>
+                          <input
+                            type="date"
+                            value={draft.asOf}
+                            max={todayIso()}
+                            onChange={(event) => {
+                              setError(null);
+                              setDraft((prev) => ({ ...prev, asOf: event.target.value }));
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      {error ? (
+                        <p className="settings-error" role="alert">
+                          {error}
+                        </p>
+                      ) : null}
+                      {!error && typedSomething && !checkedDraft.ok ? (
+                        <p className="settings-form-note">{checkedDraft.message}</p>
+                      ) : null}
+
+                      <div className="editor-actions">
+                        <button
+                          type="button"
+                          className="settings-primary-action"
+                          disabled={working || !checkedDraft.ok}
+                          onClick={() => void saveManual(state)}
+                        >
+                          {busy === "saving" ? "Đang lưu…" : "Lưu"}
+                        </button>
+                        <button
+                          type="button"
+                          className="settings-secondary-action"
+                          disabled={working}
+                          onClick={closeEditor}
+                        >
+                          Hủy
+                        </button>
+                        {state.manual ? (
+                          <button
+                            type="button"
+                            className="danger-link"
+                            disabled={working}
+                            onClick={() => void clearManual(state)}
+                          >
+                            {busy === "clearing" ? "Đang xóa…" : "Xóa giá thủ công"}
+                          </button>
+                        ) : null}
+                        {removal.ok ? (
+                          confirmRemoveKey === state.key ? (
+                            <button
+                              type="button"
+                              className="danger-link"
+                              disabled={working}
+                              onClick={() => void removeRow(state)}
+                            >
+                              {busy === "removing" ? "Đang bỏ…" : "Chắc chắn bỏ mã"}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="danger-link"
+                              disabled={working}
+                              onClick={() => setConfirmRemoveKey(state.key)}
+                            >
+                              Bỏ khỏi danh sách
+                            </button>
+                          )
+                        ) : null}
+                      </div>
+
+                      <p className="editor-hint">
+                        {removal.ok
+                          ? "Không còn giao dịch nào dùng mã này nên có thể bỏ khỏi danh sách giá. Bỏ rồi thì mã không tự quay lại, trừ khi bạn nhập lại hoặc nạp một bản sao lưu cũ."
+                          : removal.message}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </div>
         )}
       </section>
-
-      <section className="settings-card manual-price-card">
-        <div className="settings-card-head compact-head">
-          <div>
-            <p className="settings-card-eyebrow">Thủ công</p>
-            <h3>Nhập giá</h3>
-            <p>Giá hợp lệ được tự lưu sau khi bạn ngừng nhập hoặc chuyển màn hình.</p>
-          </div>
-          <span className={`settings-save-pill quote-state-${saveState}`}>{stateLabel}</span>
-        </div>
-
-        <div className="settings-field-grid quote-editor-grid">
-          <label className="setting-field quote-isin-field">
-            <span>ISIN</span>
-            <input
-              list="settings-instruments"
-              value={draft.isin}
-              autoCapitalize="characters"
-              onChange={(event) => patchDraft({ isin: event.target.value })}
-            />
-            <datalist id="settings-instruments">
-              {instruments.map((instrument) => (
-                <option key={instrument.isin} value={instrument.isin}>
-                  {instrument.ticker || instrument.name}
-                </option>
-              ))}
-            </datalist>
-          </label>
-          <label className="setting-field">
-            <span>Giá (EUR)</span>
-            <input
-              inputMode="decimal"
-              value={draft.price}
-              placeholder="167,54"
-              onChange={(event) => patchDraft({ price: event.target.value })}
-              onBlur={() => void saveDraft(false)}
-            />
-          </label>
-          <label className="setting-field">
-            <span>Ngày giá</span>
-            <input
-              type="date"
-              value={draft.asOf}
-              max={todayIso()}
-              onChange={(event) => patchDraft({ asOf: event.target.value })}
-              onBlur={() => void saveDraft(false)}
-            />
-          </label>
-        </div>
-        {error ? <p className="settings-error" role="alert">{error}</p> : null}
-        {!error && !checkedDraft.ok && checkedDraft.reason !== "empty" ? (
-          <p className="settings-form-note">{checkedDraft.message}</p>
-        ) : null}
-        <div className="settings-action-row">
-          <p>Dữ liệu nhập dở cũng được giữ trong tab này cho đến khi lưu thành công.</p>
-          <button
-            type="button"
-            className="settings-secondary-action"
-            disabled={saveState === "saving"}
-            onClick={() => void saveDraft(true)}
-          >
-            Lưu ngay
-          </button>
-        </div>
-      </section>
-
-      <details className="settings-disclosure">
-        <summary>
-          <span>
-            <strong>Quy tắc chọn nguồn giá</strong>
-            <small>Chỉ cần mở khi muốn giữ giá thủ công thay cho giá tự động.</small>
-          </span>
-          <span className="disclosure-chevron" aria-hidden>›</span>
-        </summary>
-        <div className="settings-disclosure-body">
-          <QuoteSourceControls refreshKey={refreshKey} onChanged={onQuotesChanged} />
-        </div>
-      </details>
     </div>
   );
 }
