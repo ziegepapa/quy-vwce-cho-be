@@ -1,4 +1,4 @@
-/* V9 — Overview 5 blocks */
+/* V9 -- Overview 5 blocks */
 .ov {
   display: flex;
   flex-direction: column;
@@ -6,9 +6,11 @@
 }
 
 /* Hero
-   V9: bỏ max-height. Bản V8 đặt max-height:184px + overflow:hidden nên dòng
-   "Còn 1 bước để hoàn tất thiết lập" bị cắt ngang ở đáy thẻ.
-   V9 B3: màu chuyển sang biến --hero-* để đổi theo chủ đề. */
+   V9: remove max-height. V8 had max-height:184px + overflow:hidden which clipped
+   the "steps remaining" line at the bottom of the card.
+   V9 B3: colours via --hero-* vars for theme support.
+   VISUAL-POLISH-001 r2: hero-label margin increased for more breathing room
+   between label and hero number. */
 .hero-v8 {
   position: relative;
   min-height: 168px;
@@ -34,7 +36,7 @@
 }
 
 .hero-label {
-  margin: 0 0 4px;
+  margin: 0 0 8px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -118,7 +120,7 @@
   position: relative;
 }
 
-/* V9: dòng nhắc thiết lập — trước đây bị max-height cắt mất một nửa. */
+/* V9: setup steps line -- previously clipped by max-height. */
 .hero-early {
   margin: 10px 0 0;
   font-size: 12px;
@@ -156,7 +158,7 @@
   align-self: flex-start;
 }
 
-/* Stat strip — NOT a card */
+/* Stat strip -- NOT a card */
 .stat-strip {
   display: grid;
   grid-template-columns: 1fr auto 1fr auto 1fr;
@@ -334,7 +336,7 @@
   align-self: flex-start;
 }
 
-/* Next goal — one row */
+/* Next goal -- one row */
 .next-goal {
   display: flex;
   flex-direction: column;
@@ -396,7 +398,7 @@
   line-height: 1.4;
 }
 
-/* VISUAL-POLISH-001 r1 — alloc-caveat lives here so Overview.tsx carries no
+/* VISUAL-POLISH-001 r1 -- alloc-caveat lives here so Overview.tsx carries no
    inline style. Uses CSS custom properties so it adjusts with the theme. */
 .alloc-caveat-v8 {
   margin: 6px 0 0;
