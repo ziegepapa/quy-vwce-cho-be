@@ -1,4 +1,17 @@
-/* Nhịp Quỹ — one breath, four truthful answers. */
+/* Nhịp Quỹ — the section shell, its header, and the sheet tools TraceSheet gets. */
+/*
+ * DEAD-CSS-TODAY-CARD-001 r1 — #56 replaced the four pulse cards with the NHIP
+ * block, so every .today-card* rule and the rules that only existed inside those
+ * cards (grid, icon, metric, empty state, presets, sync pill, show-all, primary
+ * actions, safety detail) had no markup left to style. A search for each class
+ * name found it in stylesheets only, never in a .tsx file. What stays is what
+ * TodayCenter.tsx still renders. Two notes on the less obvious removals:
+ * the preset row keeps its style from .today-sheet-presets in pulse-locked-v2.css,
+ * which is the class the component actually renders, so the .today-presets rules
+ * removed here never matched anything; and the header description rule
+ * `.today-center-head > div:first-child > p:last-child` cannot match either,
+ * because that div now ends with the h2, so no p can be its last child.
+ */
 .today-center {
   position: relative;
   padding: 16px;
@@ -27,14 +40,6 @@
   letter-spacing: -0.035em;
 }
 
-.today-center-head > div:first-child > p:last-child {
-  max-width: 490px;
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
 .today-kicker {
   margin: 0;
   color: var(--primary-600);
@@ -44,229 +49,6 @@
   text-transform: uppercase;
 }
 
-.today-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-shrink: 0;
-}
-
-.today-show-all,
-.today-sync-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0 11px;
-  border: 1px solid var(--pulse-hairline, var(--hairline));
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-  box-shadow: none;
-}
-
-.today-show-all:hover:not(:disabled) {
-  background: var(--surface-sunken);
-}
-
-.today-sync-pill {
-  min-height: 28px;
-  min-width: 0;
-  padding: 3px 8px;
-  font-size: 9px;
-}
-
-.today-sync-pill.sync-synced { color: var(--success-600); background: var(--success-050); }
-.today-sync-pill.sync-conflict { color: var(--danger-600); background: var(--danger-050); }
-.today-sync-pill.sync-syncing { color: var(--primary-600); background: var(--primary-050); }
-
-.today-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 10px;
-}
-
-.today-card {
-  position: relative;
-  min-width: 0;
-  padding: 13px;
-  border: 1px solid var(--pulse-hairline, var(--hairline));
-  border-radius: var(--pulse-radius, 20px);
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
-  box-shadow: none;
-  overflow: hidden;
-}
-
-.today-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 2px;
-  background: transparent;
-}
-
-.today-card.is-new::before { background: var(--primary-600); }
-.today-card.is-new { border-color: color-mix(in srgb, var(--primary-600) 28%, transparent); }
-
-.today-card-pulse { background: linear-gradient(150deg, color-mix(in srgb, var(--success-050) 52%, transparent), transparent 56%), var(--surface); }
-.today-card-reconcile { background: linear-gradient(150deg, color-mix(in srgb, var(--primary-050) 58%, transparent), transparent 56%), var(--surface); }
-.today-card-whatif { background: linear-gradient(150deg, color-mix(in srgb, var(--warning-050) 54%, transparent), transparent 56%), var(--surface); }
-.today-card-safety { background: linear-gradient(150deg, color-mix(in srgb, var(--primary-050) 45%, transparent), transparent 56%), var(--surface); }
-
-.today-card-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  min-height: 48px;
-  margin-bottom: 9px;
-}
-
-.today-card-head > div { min-width: 0; }
-
-.today-card-head h3 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.2;
-  letter-spacing: -0.012em;
-}
-
-.today-card-head p {
-  display: -webkit-box;
-  margin: 3px 0 0;
-  overflow: hidden;
-  color: var(--text-tertiary);
-  font-size: 10px;
-  line-height: 1.35;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.today-card-icon {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  border-radius: 11px;
-  background: var(--primary-050);
-  color: var(--primary-600);
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.today-new-label {
-  margin-left: auto;
-  padding: 3px 6px;
-  border-radius: 999px;
-  background: var(--primary-600);
-  color: var(--color-text-inverse);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.today-main-metric {
-  display: block;
-  margin: 4px 0 2px;
-  color: var(--text-primary);
-  font-size: clamp(20px, 5vw, 27px);
-  line-height: 1.08;
-  font-weight: 760;
-  letter-spacing: -0.035em;
-  font-variant-numeric: tabular-nums;
-}
-
-.today-main-metric.positive { color: var(--success-600); }
-.today-main-metric.negative { color: var(--danger-600); }
-.today-main-metric.warning { color: var(--warning-600); }
-.today-main-metric.neutral { color: var(--text-primary); }
-
-.today-metric-caption,
-.today-empty-state span {
-  display: block;
-  margin: 4px 0 0;
-  color: var(--text-secondary);
-  font-size: 10.5px;
-  line-height: 1.38;
-}
-
-.today-empty-state {
-  display: flex;
-  min-height: 62px;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-}
-
-.today-empty-state strong { color: var(--text-primary); font-size: 13px; }
-
-.today-metric-trigger {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  min-height: 64px;
-  padding: 0;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  box-shadow: none;
-}
-
-.today-metric-trigger:hover:not(:disabled) { background: color-mix(in srgb, var(--surface-sunken) 54%, transparent); }
-
-.today-presets {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  margin-bottom: 7px;
-}
-
-.today-presets button {
-  min-width: 0;
-  min-height: 44px;
-  padding: 0 3px;
-  border: 1px solid var(--pulse-hairline, var(--hairline));
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-size: 10px;
-  font-weight: 700;
-  box-shadow: none;
-}
-
-.today-presets button.active { border-color: transparent; background: var(--primary-600); color: var(--color-text-inverse); }
-
-.today-primary-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 11px;
-}
-
-.today-primary-actions a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: 13px;
-  background: var(--primary-600);
-  color: var(--color-text-inverse);
-  font-size: 12px;
-  font-weight: 750;
-  text-decoration: none;
-}
-
-.today-primary-actions a:last-child { border: 1px solid var(--pulse-hairline, var(--hairline)); background: transparent; color: var(--primary-600); }
-
 .today-sheet-tools { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
 
 .today-sheet-amount { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; }
@@ -275,29 +57,12 @@
 .today-sheet-amount input { min-height: 42px; text-align: right; font-variant-numeric: tabular-nums; }
 .today-sheet-amount b { color: var(--text-tertiary); }
 
-.today-safety-detail { display: flex; flex-direction: column; border: 1px solid var(--pulse-hairline, var(--hairline)); border-radius: 15px; overflow: hidden; }
-.today-safety-detail > div { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 8px 11px; border-bottom: 1px solid var(--pulse-hairline, var(--hairline)); }
-.today-safety-detail > div:last-child { border-bottom: 0; }
-.today-safety-detail p { flex: 1; margin: 0; color: var(--text-secondary); font-size: 12px; }
-.today-safety-detail .ready > span { color: var(--success-600); }
-.today-safety-detail .pending > span { color: var(--warning-600); }
 .today-inline-button { min-width: 0; min-height: 36px; padding: 0 9px; border: 1px solid var(--pulse-hairline, var(--hairline)); background: var(--surface-sunken); color: var(--primary-600); font-size: 10px; box-shadow: none; }
 
 @media (max-width: 720px) {
   .today-center { padding: 14px; border-radius: 22px; }
-  .today-center-head > div:first-child > p:last-child { display: none; }
-  .today-sync-pill { display: none; }
-  .today-card { padding: 11px; }
-  .today-card-head { gap: 7px; }
-  .today-card-icon { width: 29px; height: 29px; flex-basis: 29px; }
 }
 
 @media (max-width: 339px) {
-  .today-grid { grid-template-columns: 1fr; }
   .today-center-head { align-items: center; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .today-card,
-  .today-main-metric { transition: none !important; animation: none !important; }
 }
