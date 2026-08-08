@@ -45,7 +45,7 @@ function formatMoneyRounded(n: number): string {
   const v = Math.round(n);
   const abs = Math.abs(v);
   const s = abs.toLocaleString("de-DE", { maximumFractionDigits: 0 });
-  return (v < 0 ? "−" : "") + s + " €";
+  return (v < 0 ? "\u2212" : "") + s + " \u20ac";
 }
 
 export default function Simulation() {
@@ -121,7 +121,13 @@ export default function Simulation() {
 
   const realBalance = useMemo(() => {
     const price = settings?.latestVwcePrice ?? 0;
-    return round2(portfolio.vwceQty * price + portfolio.cashBalance);
+    // When trackInAppCash is false (securities-first), mirror the hero formula:
+    // totalDisplay = securities + max(cash, 0). A negative cash balance the owner
+    // never intended to track should not drag down a 20-year projection.
+    const cash = settings?.trackInAppCash
+      ? portfolio.cashBalance
+      : Math.max(0, portfolio.cashBalance);
+    return round2(portfolio.vwceQty * price + cash);
   }, [portfolio, settings]);
 
   const realCostBasis = useMemo(
@@ -150,9 +156,9 @@ export default function Simulation() {
   const band = clamp(parseDecimal(bandInput) / 100, 0, 0.1);
   const scenarios = useMemo(
     () => [
-      { id: "cautious", label: "Thận trọng", rate: Math.max(0, baseRate - band) },
-      { id: "base", label: "Cơ sở", rate: baseRate },
-      { id: "bull", label: "Thuận lợi", rate: baseRate + band },
+      { id: "cautious", label: "Th\u1eadn tr\u1ecdng", rate: Math.max(0, baseRate - band) },
+      { id: "base", label: "C\u01a1 s\u1edf", rate: baseRate },
+      { id: "bull", label: "Thu\u1eadn l\u1ee3i", rate: baseRate + band },
     ],
     [baseRate, band],
   );
@@ -326,17 +332,17 @@ export default function Simulation() {
       if (y1Diff) {
         void applyPersist(
           { contributionY1: monthlyR },
-          `Đã đặt Góp năm 1 = ${formatMoney(monthlyR)}`,
+          `\u0110\u00e3 \u0111\u1eb7t G\u00f3p n\u0103m 1 = ${formatMoney(monthlyR)}`,
         );
       } else if (y2Diff) {
         void applyPersist(
           { contributionY2: monthlyR },
-          `Đã đặt Góp từ năm 2 = ${formatMoney(monthlyR)}`,
+          `\u0110\u00e3 \u0111\u1eb7t G\u00f3p t\u1eeb n\u0103m 2 = ${formatMoney(monthlyR)}`,
         );
       } else {
         void applyPersist(
           { vwceReturn: nR },
-          `Đã đặt Lợi nhuận VWCE = ${(nR * 100).toFixed(2)}%`,
+          `\u0110\u00e3 \u0111\u1eb7t L\u1ee3i nhu\u1eadn VWCE = ${(nR * 100).toFixed(2)}%`,
         );
       }
       return;
@@ -360,15 +366,15 @@ export default function Simulation() {
     const parts: string[] = [];
     if (writeY1 && y1D) {
       partial.contributionY1 = monthlyR;
-      parts.push(`Góp năm 1 = ${formatMoney(monthlyR)}`);
+      parts.push(`G\u00f3p n\u0103m 1 = ${formatMoney(monthlyR)}`);
     }
     if (writeY2 && y2D) {
       partial.contributionY2 = monthlyR;
-      parts.push(`Góp từ năm 2 = ${formatMoney(monthlyR)}`);
+      parts.push(`G\u00f3p t\u1eeb n\u0103m 2 = ${formatMoney(monthlyR)}`);
     }
     if (writeReturn && retD) {
       partial.vwceReturn = nR;
-      parts.push(`Lợi nhuận VWCE = ${(nR * 100).toFixed(2)}%`);
+      parts.push(`L\u1ee3i nhu\u1eadn VWCE = ${(nR * 100).toFixed(2)}%`);
     }
 
     if (parts.length === 0) {
@@ -378,8 +384,8 @@ export default function Simulation() {
 
     const message =
       parts.length === 1
-        ? `Đã đặt ${parts[0]}`
-        : `Đã lưu ${parts.length} thay đổi`;
+        ? `\u0110\u00e3 \u0111\u1eb7t ${parts[0]}`
+        : `\u0110\u00e3 l\u01b0u ${parts.length} thay \u0111\u1ed5i`;
     await applyPersist(partial, message);
   }
 
@@ -437,7 +443,7 @@ export default function Simulation() {
   }, [yearsForProject, goalYearSet, initialBalance, showAllYears]);
 
   if (loading) {
-    return <p className="muted">Đang tải…</p>;
+    return <p className="muted">\u0110ang t\u1ea3i\u2026</p>;
   }
 
   const baseRateNew = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
@@ -451,10 +457,10 @@ export default function Simulation() {
     (writeY1 && y1Diff ? 1 : 0) + (writeY2 && y2Diff ? 1 : 0) + (writeReturn && retDiff ? 1 : 0);
   const saveLabel =
     selectedCount === 0
-      ? "Chưa chọn gì"
+      ? "Ch\u01b0a ch\u1ecdn g\u00ec"
       : selectedCount === 1
-        ? "Lưu 1 thay đổi"
-        : `Lưu ${selectedCount} thay đổi`;
+        ? "L\u01b0u 1 thay \u0111\u1ed5i"
+        : `L\u01b0u ${selectedCount} thay \u0111\u1ed5i`;
 
   const useTax = taxOn && showAfterTax;
   const usePP = inflationOn && showPP;
@@ -466,10 +472,10 @@ export default function Simulation() {
     else headlineValue = primary.out.terminal;
   }
   const headlineNoteParts: string[] = [];
-  if (useTax) headlineNoteParts.push("sau thuế");
-  if (usePP) headlineNoteParts.push("giá hôm nay");
+  if (useTax) headlineNoteParts.push("sau thu\u1ebf");
+  if (usePP) headlineNoteParts.push("gi\u00e1 h\u00f4m nay");
   const headlineNote =
-    headlineNoteParts.length > 0 ? headlineNoteParts.join(" · ") : "trước thuế · danh nghĩa";
+    headlineNoteParts.length > 0 ? headlineNoteParts.join(" \u00b7 ") : "tr\u01b0\u1edbc thu\u1ebf \u00b7 danh ngh\u0129a";
 
   // L3: lãi suy từ số đang hiện — ba ô cộng khớp
   const shownInterest = primary
@@ -478,21 +484,21 @@ export default function Simulation() {
 
   const cautiousRate = scenarios.find((s) => s.id === "cautious")?.rate ?? baseRate;
   const bullRate = scenarios.find((s) => s.id === "bull")?.rate ?? baseRate;
-  const bandPctLabel = `${round2(cautiousRate * 100).toLocaleString("de-DE")} % – ${round2(bullRate * 100).toLocaleString("de-DE")} %`;
+  const bandPctLabel = `${round2(cautiousRate * 100).toLocaleString("de-DE")} % \u2013 ${round2(bullRate * 100).toLocaleString("de-DE")} %`;
 
   const advParts: string[] = [];
-  advParts.push(`biên độ ±${round2(band * 100).toLocaleString("de-DE")}`);
-  if (inflationOn) advParts.push(`lạm phát ${inflationPct}%`);
-  if (taxOn) advParts.push("có thuế");
-  else advParts.push("không thuế");
-  if (growthOn) advParts.push(`góp ${growthPct}%/năm`);
-  const advSummary = `Tùy chọn nâng cao · ${advParts.join(" · ")}`;
+  advParts.push(`bi\u00ean \u0111\u1ed9 \u00b1${round2(band * 100).toLocaleString("de-DE")}`);
+  if (inflationOn) advParts.push(`l\u1ea1m ph\u00e1t ${inflationPct}%`);
+  if (taxOn) advParts.push("c\u00f3 thu\u1ebf");
+  else advParts.push("kh\u00f4ng thu\u1ebf");
+  if (growthOn) advParts.push(`g\u00f3p ${growthPct}%/n\u0103m`);
+  const advSummary = `T\u00f9y ch\u1ecdn n\u00e2ng cao \u00b7 ${advParts.join(" \u00b7 ")}`;
 
   return (
     <div className="stack" style={{ gap: 16, paddingBottom: 96 }}>
       <div
         role="tablist"
-        aria-label="Chế độ mô phỏng"
+        aria-label="Ch\u1ebf \u0111\u1ed9 m\u00f4 ph\u1ecfng"
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr 1fr",
@@ -504,9 +510,9 @@ export default function Simulation() {
       >
         {(
           [
-            ["A", "Góp → nhận"],
-            ["B", "Muốn → góp"],
-            ["C", "Góp → khi nào"],
+            ["A", "G\u00f3p \u2192 nh\u1eadn"],
+            ["B", "Mu\u1ed1n \u2192 g\u00f3p"],
+            ["C", "G\u00f3p \u2192 khi n\u00e0o"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -537,7 +543,7 @@ export default function Simulation() {
       >
         {planUnreachable ? (
           <p style={{ margin: 0, fontSize: 16, fontWeight: 600, lineHeight: 1.35 }}>
-            Chưa có mức góp khả thi cho mục tiêu này.
+            Ch\u01b0a c\u00f3 m\u1ee9c g\u00f3p kh\u1ea3 thi cho m\u1ee5c ti\u00eau n\u00e0y.
           </p>
         ) : (
           <>
@@ -545,7 +551,7 @@ export default function Simulation() {
               {formatMoneyRounded(headlineValue)}
             </div>
             <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-              sau {yearsForProject} năm · {formatMoneyRounded(monthlyForProject)}/tháng
+              sau {yearsForProject} n\u0103m \u00b7 {formatMoneyRounded(monthlyForProject)}/th\u00e1ng
             </div>
             <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
               {headlineNote}
@@ -555,16 +561,16 @@ export default function Simulation() {
       </div>
 
       <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-        {mode === "A" && "Góp cố định mỗi tháng — xem tài sản sau N năm."}
-        {mode === "B" && "Nhập mục tiêu và năm — máy tính số cần góp mỗi tháng."}
-        {mode === "C" && "Góp cố định — máy tính bao lâu để đủ mục tiêu (tối đa 40 năm)."}
+        {mode === "A" && "G\u00f3p c\u1ed1 \u0111\u1ecbnh m\u1ed7i th\u00e1ng \u2014 xem t\u00e0i s\u1ea3n sau N n\u0103m."}
+        {mode === "B" && "Nh\u1eadp m\u1ee5c ti\u00eau v\u00e0 n\u0103m \u2014 m\u00e1y t\u00ednh s\u1ed1 c\u1ea7n g\u00f3p m\u1ed7i th\u00e1ng."}
+        {mode === "C" && "G\u00f3p c\u1ed1 \u0111\u1ecbnh \u2014 m\u00e1y t\u00ednh bao l\u00e2u \u0111\u1ec3 \u0111\u1ee7 m\u1ee5c ti\u00eau (t\u1ed1i \u0111a 40 n\u0103m)."}
       </p>
 
       {(mode === "A" || mode === "C") && (
         <div className="card">
           <div className="field">
             <label htmlFor="sim-years">
-              Thời hạn: <strong>{years} năm</strong>
+              Th\u1eddi h\u1ea1n: <strong>{years} n\u0103m</strong>
             </label>
             <input
               id="sim-years"
@@ -579,7 +585,7 @@ export default function Simulation() {
           {goals.length > 0 && (
             <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
               <span className="muted" style={{ fontSize: 12 }}>
-                Đến ngày mục tiêu
+                \u0110\u1ebfn ng\u00e0y m\u1ee5c ti\u00eau
               </span>
               {goals.map((g) => (
                 <button
@@ -589,7 +595,7 @@ export default function Simulation() {
                   style={{ minHeight: 44, textAlign: "left" }}
                   onClick={() => applyYearsFromGoal(g)}
                 >
-                  {g.name} · {g.dueDate.slice(0, 4)}
+                  {g.name} \u00b7 {g.dueDate.slice(0, 4)}
                 </button>
               ))}
             </div>
@@ -600,7 +606,7 @@ export default function Simulation() {
       {mode === "B" && (
         <div className="card">
           <div className="field">
-            <label htmlFor="sim-target">Muốn có (EUR)</label>
+            <label htmlFor="sim-target">Mu\u1ed1n c\u00f3 (EUR)</label>
             <input
               id="sim-target"
               inputMode="decimal"
@@ -610,7 +616,7 @@ export default function Simulation() {
             />
           </div>
           <div className="field">
-            <label htmlFor="sim-tyear">Vào năm</label>
+            <label htmlFor="sim-tyear">V\u00e0o n\u0103m</label>
             <input
               id="sim-tyear"
               inputMode="numeric"
@@ -620,7 +626,7 @@ export default function Simulation() {
             />
           </div>
           <p className="muted" style={{ fontSize: 12 }}>
-            Còn khoảng {yearsB} năm từ hiện tại.
+            C\u00f2n kho\u1ea3ng {yearsB} n\u0103m t\u1eeb hi\u1ec7n t\u1ea1i.
           </p>
           {goals.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -632,7 +638,7 @@ export default function Simulation() {
                   style={{ minHeight: 44, textAlign: "left" }}
                   onClick={() => applyYearsFromGoal(g)}
                 >
-                  Dùng mục tiêu: {g.name}
+                  D\u00f9ng m\u1ee5c ti\u00eau: {g.name}
                 </button>
               ))}
             </div>
@@ -643,7 +649,7 @@ export default function Simulation() {
       {mode === "C" && (
         <div className="card">
           <div className="field">
-            <label htmlFor="sim-target-c">Mục tiêu Y (EUR)</label>
+            <label htmlFor="sim-target-c">M\u1ee5c ti\u00eau Y (EUR)</label>
             <input
               id="sim-target-c"
               inputMode="decimal"
@@ -658,7 +664,7 @@ export default function Simulation() {
       <div className="card">
         {(mode === "A" || mode === "C") && (
           <div className="field">
-            <label htmlFor="sim-monthly">Góp mỗi tháng (EUR)</label>
+            <label htmlFor="sim-monthly">G\u00f3p m\u1ed7i th\u00e1ng (EUR)</label>
             <input
               id="sim-monthly"
               inputMode="decimal"
@@ -670,19 +676,19 @@ export default function Simulation() {
         )}
         {mode === "B" && requiredMonthlyBase < 0 && (
           <div className="banner" style={{ margin: "0 0 12px" }}>
-            Không đạt được mục tiêu với mức giảm này.
+            Kh\u00f4ng \u0111\u1ea1t \u0111\u01b0\u1ee3c m\u1ee5c ti\u00eau v\u1edbi m\u1ee9c gi\u1ea3m n\u00e0y.
           </div>
         )}
         {mode === "B" && requiredMonthlyBase >= 0 && (
           <p style={{ margin: "0 0 12px" }}>
-            Cần góp khoảng{" "}
-            <strong className="metric-value">{formatMoney(requiredMonthlyBase)}</strong>/tháng
-            (kịch bản cơ sở).
+            C\u1ea7n g\u00f3p kho\u1ea3ng{" "}
+            <strong className="metric-value">{formatMoney(requiredMonthlyBase)}</strong>/th\u00e1ng
+            (k\u1ecbch b\u1ea3n c\u01a1 s\u1edf).
           </p>
         )}
 
         <div className="field">
-          <label htmlFor="sim-rate">Lợi nhuận / năm (%)</label>
+          <label htmlFor="sim-rate">L\u1ee3i nhu\u1eadn / n\u0103m (%)</label>
           <input
             id="sim-rate"
             inputMode="decimal"
@@ -692,7 +698,7 @@ export default function Simulation() {
           />
           {band > 0 && (
             <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
-              khoảng {bandPctLabel}
+              kho\u1ea3ng {bandPctLabel}
             </p>
           )}
         </div>
@@ -702,7 +708,7 @@ export default function Simulation() {
         <summary style={{ minHeight: 44, cursor: "pointer", fontSize: 14 }}>{advSummary}</summary>
         <div style={{ marginTop: 12 }}>
           <div className="field">
-            <label htmlFor="sim-band">Biên độ dao động (± %)</label>
+            <label htmlFor="sim-band">Bi\u00ean \u0111\u1ed9 dao \u0111\u1ed9ng (\u00b1 %)</label>
             <input
               id="sim-band"
               inputMode="decimal"
@@ -713,7 +719,7 @@ export default function Simulation() {
           </div>
 
           <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-            <span>Góp thay đổi theo năm</span>
+            <span>G\u00f3p thay \u0111\u1ed5i theo n\u0103m</span>
             <input
               type="checkbox"
               checked={growthOn}
@@ -723,7 +729,7 @@ export default function Simulation() {
           </label>
           {growthOn && (
             <div className="field">
-              <label htmlFor="sim-growth">Thay đổi góp mỗi năm (%)</label>
+              <label htmlFor="sim-growth">Thay \u0111\u1ed5i g\u00f3p m\u1ed7i n\u0103m (%)</label>
               <input
                 id="sim-growth"
                 inputMode="decimal"
@@ -732,13 +738,13 @@ export default function Simulation() {
                 style={{ minHeight: 44 }}
               />
               <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
-                Số âm = giảm dần. Ví dụ: −5
+                S\u1ed1 \u00e2m = gi\u1ea3m d\u1ea7n. V\u00ed d\u1ee5: \u22125
               </p>
             </div>
           )}
 
           <div className="field">
-            <label htmlFor="sim-lump">Khoản lớn ban đầu (EUR)</label>
+            <label htmlFor="sim-lump">Kho\u1ea3n l\u1edbn ban \u0111\u1ea7u (EUR)</label>
             <input
               id="sim-lump"
               inputMode="decimal"
@@ -750,7 +756,7 @@ export default function Simulation() {
 
           <div className="field">
             <label htmlFor="sim-bal">
-              Số dư xuất phát — mặc định từ danh mục ({formatMoney(Math.max(0, realBalance))})
+              S\u1ed1 d\u01b0 xu\u1ea5t ph\u00e1t \u2014 m\u1eb7c \u0111\u1ecbnh t\u1eeb danh m\u1ee5c ({formatMoney(Math.max(0, realBalance))})
             </label>
             <input
               id="sim-bal"
@@ -762,13 +768,13 @@ export default function Simulation() {
             />
             {realBalance < 0 && (
               <p style={{ fontSize: 12, color: "#c47a2c", margin: "4px 0 0" }}>
-                Danh mục đang âm — tạm tính từ 0 €.
+                Danh m\u1ee5c \u0111ang \u00e2m \u2014 t\u1ea1m t\u00ednh t\u1eeb 0 \u20ac.
               </p>
             )}
           </div>
 
           <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-            <span>Hiện theo sức mua hôm nay</span>
+            <span>Hi\u1ec7n theo s\u1ee9c mua h\u00f4m nay</span>
             <input
               type="checkbox"
               checked={inflationOn}
@@ -778,7 +784,7 @@ export default function Simulation() {
           </label>
           {inflationOn && (
             <div className="field">
-              <label htmlFor="sim-inf">Lạm phát %/năm</label>
+              <label htmlFor="sim-inf">L\u1ea1m ph\u00e1t %/n\u0103m</label>
               <input
                 id="sim-inf"
                 inputMode="decimal"
@@ -789,7 +795,7 @@ export default function Simulation() {
             </div>
           )}
           <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-            <span>Chi phí & thuế Đức (TER 0,22% + thuế khi bán)</span>
+            <span>Chi ph\u00ed \u0026 thu\u1ebf \u0110\u1ee9c (TER 0,22% + thu\u1ebf khi b\u00e1n)</span>
             <input
               type="checkbox"
               checked={taxOn}
@@ -802,7 +808,7 @@ export default function Simulation() {
 
       {mode === "C" && !yearsC.reached && (
         <div className="banner" style={{ margin: 0 }}>
-          Không đạt được trong {MAX_YEARS} năm với mức góp và lợi nhuận hiện tại.
+          Kh\u00f4ng \u0111\u1ea1t \u0111\u01b0\u1ee3c trong {MAX_YEARS} n\u0103m v\u1edbi m\u1ee9c g\u00f3p v\u00e0 l\u1ee3i nhu\u1eadn hi\u1ec7n t\u1ea1i.
         </div>
       )}
 
@@ -825,7 +831,7 @@ export default function Simulation() {
                   cursor: "pointer",
                 }}
               >
-                Sau thuế
+                Sau thu\u1ebf
               </button>
             )}
             {inflationOn && (
@@ -844,7 +850,7 @@ export default function Simulation() {
                   cursor: "pointer",
                 }}
               >
-                Giá hôm nay
+                Gi\u00e1 h\u00f4m nay
               </button>
             )}
           </div>
@@ -857,22 +863,22 @@ export default function Simulation() {
             }}
           >
             <div>
-              <div className="metric-label">Cuối kỳ</div>
+              <div className="metric-label">Cu\u1ed1i k\u1ef3</div>
               <div className="metric-value" style={{ fontSize: 16 }}>
                 {formatMoneyRounded(headlineValue)}
               </div>
             </div>
             <div>
-              <div className="metric-label">Đã góp</div>
+              <div className="metric-label">\u0110\u00e3 g\u00f3p</div>
               <div className="metric-value" style={{ fontSize: 16 }}>
                 {formatMoneyRounded(primary.out.contributed)}
               </div>
               <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
-                tiền thực bỏ ra
+                ti\u1ec1n th\u1ef1c b\u1ecf ra
               </div>
             </div>
             <div>
-              <div className="metric-label">Lãi</div>
+              <div className="metric-label">L\u00e3i</div>
               <div className="metric-value" style={{ fontSize: 16 }}>
                 {formatMoneyRounded(shownInterest)}
               </div>
@@ -883,7 +889,7 @@ export default function Simulation() {
           </div>
           {initialBalance > 0 && (
             <p className="muted" style={{ fontSize: 12, margin: "10px 0 0" }}>
-              Số dư xuất phát: {formatMoney(initialBalance)}
+              S\u1ed1 d\u01b0 xu\u1ea5t ph\u00e1t: {formatMoney(initialBalance)}
             </p>
           )}
         </div>
@@ -891,7 +897,7 @@ export default function Simulation() {
 
       <div className="card">
         <p className="section-title" style={{ marginTop: 0 }}>
-          Diễn biến theo năm
+          Di\u1ec5n bi\u1ebfn theo n\u0103m
         </p>
         <ScenarioChart
           results={results}
@@ -903,19 +909,19 @@ export default function Simulation() {
       </div>
 
       <details className="card">
-        <summary style={{ minHeight: 44, cursor: "pointer" }}>Bảng theo năm</summary>
+        <summary style={{ minHeight: 44, cursor: "pointer" }}>B\u1ea3ng theo n\u0103m</summary>
         <p className="muted" style={{ fontSize: 12, margin: "8px 0" }}>
-          Trước thuế · danh nghĩa
+          Tr\u01b0\u1edbc thu\u1ebf \u00b7 danh ngh\u0129a
         </p>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "left", padding: 6 }}>Năm</th>
-                <th style={{ textAlign: "right", padding: 6 }}>Đã góp</th>
-                <th style={{ textAlign: "right", padding: 6 }}>Số dư</th>
+                <th style={{ textAlign: "left", padding: 6 }}>N\u0103m</th>
+                <th style={{ textAlign: "right", padding: 6 }}>\u0110\u00e3 g\u00f3p</th>
+                <th style={{ textAlign: "right", padding: 6 }}>S\u1ed1 d\u01b0</th>
                 {band > 0 && (
-                  <th style={{ textAlign: "right", padding: 6 }}>Khoảng</th>
+                  <th style={{ textAlign: "right", padding: 6 }}>Kho\u1ea3ng</th>
                 )}
               </tr>
             </thead>
@@ -937,7 +943,7 @@ export default function Simulation() {
                   >
                     <td style={{ padding: 6 }}>
                       {yi === 0 ? (
-                        "Hiện tại"
+                        "Hi\u1ec7n t\u1ea1i"
                       ) : (
                         <>
                           {calYear}
@@ -949,7 +955,7 @@ export default function Simulation() {
                       {isGoal && (
                         <span style={{ marginLeft: 6, fontSize: 11 }}>
                           <span aria-hidden style={{ color: "var(--primary-600, #3b6ef5)" }}>
-                            ●
+                            \u25cf
                           </span>{" "}
                           <span className="muted">{goalNameByYear.get(yi)}</span>
                         </span>
@@ -963,7 +969,7 @@ export default function Simulation() {
                     </td>
                     {band > 0 && (
                       <td style={{ textAlign: "right", padding: 6, whiteSpace: "nowrap" }}>
-                        {formatMoneyRounded(loPt?.total ?? 0)} – {formatMoneyRounded(hiPt?.total ?? 0)}
+                        {formatMoneyRounded(loPt?.total ?? 0)} \u2013 {formatMoneyRounded(hiPt?.total ?? 0)}
                       </td>
                     )}
                   </tr>
@@ -978,12 +984,12 @@ export default function Simulation() {
           style={{ minHeight: 44, marginTop: 10, width: "100%" }}
           onClick={() => setShowAllYears((v) => !v)}
         >
-          {showAllYears ? "Thu gọn" : "Hiện tất cả các năm"}
+          {showAllYears ? "Thu g\u1ecdn" : "Hi\u1ec7n t\u1ea5t c\u1ea3 c\u00e1c n\u0103m"}
         </button>
       </details>
 
       <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-        Ước tính, không phải tư vấn đầu tư hay thuế.
+        \u01adc t\u00ednh, kh\u00f4ng ph\u1ea3i t\u01b0 v\u1ea5n \u0111\u1ea7u t\u01b0 hay thu\u1ebf.
       </p>
 
       <button
@@ -993,12 +999,12 @@ export default function Simulation() {
         disabled={planUnreachable}
         onClick={openSaveConfirm}
       >
-        Lưu mức góp & lợi nhuận cơ sở vào kế hoạch
+        L\u01b0u m\u1ee9c g\u00f3p \u0026 l\u1ee3i nhu\u1eadn c\u01a1 s\u1edf v\u00e0o k\u1ebf ho\u1ea1ch
       </button>
 
       {matchMsg && !undoVisible && (
         <div className="banner" style={{ margin: 0 }}>
-          Kế hoạch đã khớp với mô phỏng — không có gì để lưu.
+          K\u1ebf ho\u1ea1ch \u0111\u00e3 kh\u1edbp v\u1edbi m\u00f4 ph\u1ecfng \u2014 kh\u00f4ng c\u00f3 g\u00ec \u0111\u1ec3 l\u01b0u.
         </div>
       )}
 
@@ -1006,7 +1012,7 @@ export default function Simulation() {
         <div className="banner" style={{ margin: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <span>{undoSnap.message}</span>
           <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={() => void undoPersist()}>
-            Hoàn tác
+            Ho\u00e0n t\u00e1c
           </button>
         </div>
       )}
@@ -1015,9 +1021,9 @@ export default function Simulation() {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="sheet-handle" aria-hidden />
-            <h2>Lưu vào kế hoạch</h2>
+            <h2>L\u01b0u v\u00e0o k\u1ebf ho\u1ea1ch</h2>
             <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
-              Chạm để chọn mục muốn ghi.
+              Ch\u1ea1m \u0111\u1ec3 ch\u1ecdn m\u1ee5c mu\u1ed1n ghi.
             </p>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0 8px" }}>
@@ -1041,7 +1047,7 @@ export default function Simulation() {
                     textAlign: "left",
                   }}
                 >
-                  <span style={{ fontSize: 12, opacity: 0.9 }}>Năm 1</span>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>N\u0103m 1</span>
                   <strong style={{ fontSize: 14 }}>{formatMoney(round2(monthlyForProject))}</strong>
                   <span
                     style={{
@@ -1054,7 +1060,7 @@ export default function Simulation() {
                       opacity: writeY1 ? 0.9 : 1,
                     }}
                   >
-                    {round2(monthlyForProject) - round2(oldY1) >= 0 ? "↑ +" : "↓ −"}
+                    {round2(monthlyForProject) - round2(oldY1) >= 0 ? "\u2191 +" : "\u2193 \u2212"}
                     {formatMoney(Math.abs(round2(monthlyForProject) - round2(oldY1))).replace(" EUR", "")}
                   </span>
                 </button>
@@ -1079,7 +1085,7 @@ export default function Simulation() {
                     textAlign: "left",
                   }}
                 >
-                  <span style={{ fontSize: 12, opacity: 0.9 }}>Từ năm 2</span>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>T\u1eeb n\u0103m 2</span>
                   <strong style={{ fontSize: 14 }}>{formatMoney(round2(monthlyForProject))}</strong>
                   <span
                     style={{
@@ -1092,7 +1098,7 @@ export default function Simulation() {
                       opacity: writeY2 ? 0.9 : 1,
                     }}
                   >
-                    {round2(monthlyForProject) - round2(oldY2) >= 0 ? "↑ +" : "↓ −"}
+                    {round2(monthlyForProject) - round2(oldY2) >= 0 ? "\u2191 +" : "\u2193 \u2212"}
                     {formatMoney(Math.abs(round2(monthlyForProject) - round2(oldY2))).replace(" EUR", "")}
                   </span>
                 </button>
@@ -1117,7 +1123,7 @@ export default function Simulation() {
                     textAlign: "left",
                   }}
                 >
-                  <span style={{ fontSize: 12, opacity: 0.9 }}>Lợi nhuận</span>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>L\u1ee3i nhu\u1eadn</span>
                   <strong style={{ fontSize: 14 }}>{(baseRateNew * 100).toFixed(2)}%</strong>
                   <span
                     style={{
@@ -1130,7 +1136,7 @@ export default function Simulation() {
                       opacity: writeReturn ? 0.9 : 1,
                     }}
                   >
-                    {baseRateNew - oldVwce >= 0 ? "↑ +" : "↓ −"}
+                    {baseRateNew - oldVwce >= 0 ? "\u2191 +" : "\u2193 \u2212"}
                     {Math.abs((baseRateNew - oldVwce) * 100).toFixed(2)}
                   </span>
                 </button>
@@ -1139,15 +1145,15 @@ export default function Simulation() {
 
             {selectedCount > 0 && (
               <p className="muted" style={{ fontSize: 12, margin: "0 0 12px" }}>
-                Từ{" "}
+                T\u1eeb{" "}
                 {[
                   writeY1 && y1Diff ? formatMoney(oldY1) : null,
                   writeY2 && y2Diff ? formatMoney(oldY2) : null,
                   writeReturn && retDiff ? `${(oldVwce * 100).toFixed(2)}%` : null,
                 ]
                   .filter(Boolean)
-                  .join(" · ")}
-                {" · hoàn tác được trong 12 giây"}
+                  .join(" \u00b7 ")}
+                {" \u00b7 ho\u00e0n t\u00e1c \u0111\u01b0\u1ee3c trong 12 gi\u00e2y"}
               </p>
             )}
 
@@ -1161,7 +1167,7 @@ export default function Simulation() {
                 {saveLabel}
               </button>
               <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={() => setSaveOpen(false)}>
-                Hủy
+                H\u1ee7y
               </button>
             </div>
           </div>
@@ -1188,23 +1194,23 @@ function buildSummary(opts: {
   unreachable?: boolean;
 }): string {
   if (opts.unreachable) {
-    return "Chưa có mức góp khả thi cho mục tiêu này.";
+    return "Ch\u01b0a c\u00f3 m\u1ee9c g\u00f3p kh\u1ea3 thi cho m\u1ee5c ti\u00eau n\u00e0y.";
   }
   if (opts.mode === "C" && !opts.reached) {
-    return `Với mức góp ${formatMoney(opts.monthly)} mỗi tháng, khả năng cao không đạt mục tiêu trong 40 năm.`;
+    return `V\u1edbi m\u1ee9c g\u00f3p ${formatMoney(opts.monthly)} m\u1ed7i th\u00e1ng, kh\u1ea3 n\u0103ng cao kh\u00f4ng \u0111\u1ea1t m\u1ee5c ti\u00eau trong 40 n\u0103m.`;
   }
   if (opts.mode === "B") {
-    return `Để đạt mục tiêu, cần góp khoảng ${formatMoney(opts.monthly)} mỗi tháng trong ${opts.years} năm — khả năng cao nhận khoảng ${formatMoney(opts.terminal)}${
-      opts.inflationOn ? ` (tương đương ${formatMoney(opts.pp)} tiền hôm nay)` : ""
+    return `\u0110\u1ec3 \u0111\u1ea1t m\u1ee5c ti\u00eau, c\u1ea7n g\u00f3p kho\u1ea3ng ${formatMoney(opts.monthly)} m\u1ed7i th\u00e1ng trong ${opts.years} n\u0103m \u2014 kh\u1ea3 n\u0103ng cao nh\u1eadn kho\u1ea3ng ${formatMoney(opts.terminal)}${
+      opts.inflationOn ? ` (t\u01b0\u01a1ng \u0111\u01b0\u01a1ng ${formatMoney(opts.pp)} ti\u1ec1n h\u00f4m nay)` : ""
     }.`;
   }
   if (opts.mode === "C") {
-    return `Góp ${formatMoney(opts.monthly)} mỗi tháng, khả năng cao đủ mục tiêu sau khoảng ${opts.years} năm — khoảng ${formatMoney(opts.terminal)}${
-      opts.inflationOn ? ` (tương đương ${formatMoney(opts.pp)} tiền hôm nay)` : ""
+    return `G\u00f3p ${formatMoney(opts.monthly)} m\u1ed7i th\u00e1ng, kh\u1ea3 n\u0103ng cao \u0111\u1ee7 m\u1ee5c ti\u00eau sau kho\u1ea3ng ${opts.years} n\u0103m \u2014 kho\u1ea3ng ${formatMoney(opts.terminal)}${
+      opts.inflationOn ? ` (t\u01b0\u01a1ng \u0111\u01b0\u01a1ng ${formatMoney(opts.pp)} ti\u1ec1n h\u00f4m nay)` : ""
     }.`;
   }
-  return `Góp ${formatMoney(opts.monthly)} mỗi tháng trong ${opts.years} năm, khả năng cao đạt ${formatMoney(opts.terminal)}${
-    opts.inflationOn ? ` — tương đương ${formatMoney(opts.pp)} tiền hôm nay` : ""
+  return `G\u00f3p ${formatMoney(opts.monthly)} m\u1ed7i th\u00e1ng trong ${opts.years} n\u0103m, kh\u1ea3 n\u0103ng cao \u0111\u1ea1t ${formatMoney(opts.terminal)}${
+    opts.inflationOn ? ` \u2014 t\u01b0\u01a1ng \u0111\u01b0\u01a1ng ${formatMoney(opts.pp)} ti\u1ec1n h\u00f4m nay` : ""
   }.`;
 }
 
@@ -1271,7 +1277,7 @@ function ScenarioChart({
   const baseEnd = base?.out.yearEnds[base.out.yearEnds.length - 1];
   const loPct = round2(Math.max(0, baseRate - band) * 100);
   const hiPct = round2((baseRate + band) * 100);
-  const bandPctText = `${loPct.toLocaleString("de-DE")}% – ${hiPct.toLocaleString("de-DE")}%`;
+  const bandPctText = `${loPct.toLocaleString("de-DE")}% \u2013 ${hiPct.toLocaleString("de-DE")}%`;
 
   return (
     <svg
@@ -1279,7 +1285,7 @@ function ScenarioChart({
       width="100%"
       height={H}
       role="img"
-      aria-label="Biểu đồ tài sản theo năm"
+      aria-label="Bi\u1ec3u \u0111\u1ed3 t\u00e0i s\u1ea3n theo n\u0103m"
       style={{ display: "block" }}
     >
       {showBand && cautious && bull && (
