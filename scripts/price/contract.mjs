@@ -206,7 +206,7 @@ export function quoteRowToLegacyV1(q, ticker = "VWCE") {
     fetchedAt: q.fetchedAt,
     provider: q.provider,
     providerUrl: q.providerUrl,
-    crossCheckedWith: q.crossCheckedWith ?? "onvista",
+    crossCheckedWith: q.crossCheckedWith,
     crossCheckDifferencePct:
       typeof q.crossCheckDifferencePct === "number" ? q.crossCheckDifferencePct : 0,
   };

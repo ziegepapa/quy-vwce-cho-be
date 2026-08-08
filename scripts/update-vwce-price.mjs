@@ -191,7 +191,7 @@ export function parseAndValidateYahoo(body, now) {
   const selected = selectClosedBar(bars, now);
   if (selected.close < PRICE_MIN || selected.close > PRICE_MAX) {
     throw new PriceFeedError(
-      `Yahoo: close ${selected.close} outside ${PRICE_MIN}–${PRICE_MAX}`,
+      `Yahoo: close ${selected.close} outside ${PRICE_MIN}\u2013${PRICE_MAX}`,
     );
   }
 
@@ -371,7 +371,7 @@ export function validateExistingPayload(data) {
   }
   if (d.price < PRICE_MIN || d.price > PRICE_MAX) {
     throw new PriceFeedError(
-      `Existing file: price ${d.price} outside ${PRICE_MIN}–${PRICE_MAX}`,
+      `Existing file: price ${d.price} outside ${PRICE_MIN}\u2013${PRICE_MAX}`,
     );
   }
   if (typeof d.asOf !== "string" || !ASOF_RE.test(d.asOf)) {
@@ -390,7 +390,7 @@ export function validateExistingPayload(data) {
   if (d.providerUrl !== EXPECTED_PROVIDER_URL) {
     throw new PriceFeedError(`Existing file: bad providerUrl ${d.providerUrl}`);
   }
-  if (d.crossCheckedWith !== EXPECTED_CROSS_CHECKED_WITH) {
+  if (d.crossCheckedWith != null && d.crossCheckedWith !== EXPECTED_CROSS_CHECKED_WITH) {
     throw new PriceFeedError(
       `Existing file: bad crossCheckedWith ${d.crossCheckedWith}`,
     );
@@ -408,7 +408,7 @@ export function validateExistingPayload(data) {
     d.crossCheckDifferencePct > CROSS_CHECK_MAX_PCT
   ) {
     throw new PriceFeedError(
-      `Existing file: crossCheckDifferencePct ${d.crossCheckDifferencePct} outside 0–${CROSS_CHECK_MAX_PCT}`,
+      `Existing file: crossCheckDifferencePct ${d.crossCheckDifferencePct} outside 0\u2013${CROSS_CHECK_MAX_PCT}`,
     );
   }
   return d;
@@ -416,8 +416,8 @@ export function validateExistingPayload(data) {
 
 /**
  * Read existing price file.
- * - Missing file → null (first seed is allowed)
- * - Present but unparseable / invalid schema → throw (never overwrite garbage silently)
+ * - Missing file \u2192 null (first seed is allowed)
+ * - Present but unparseable / invalid schema \u2192 throw (never overwrite garbage silently)
  */
 export function readExistingPayload(filePath = OUT_PATH) {
   if (!fs.existsSync(filePath)) return null;
@@ -470,7 +470,7 @@ export function decideWrite(payload, existing, now) {
   }
 
   if (sameEconomics(existing, payload)) {
-    return null; // skip empty commit — only fetchedAt may differ
+    return null; // skip empty commit \u2014 only fetchedAt may differ
   }
 
   // Same asOf but different price: only after close hour
@@ -489,7 +489,7 @@ export function decideWrite(payload, existing, now) {
     Math.abs(payload.price - existing.price) / existing.price * 100 > MAX_DAY_CHANGE_PCT
   ) {
     throw new PriceFeedError(
-      `Price jump >${MAX_DAY_CHANGE_PCT}% vs file (${existing.price} → ${payload.price})`,
+      `Price jump >${MAX_DAY_CHANGE_PCT}% vs file (${existing.price} \u2192 ${payload.price})`,
     );
   }
 
@@ -548,7 +548,7 @@ export async function runUpdate(options = {}) {
   try {
     yahoo = parseAndValidateYahoo(yahooBody, now);
   } catch (e) {
-    // C2: Yahoo failure always fails — onvista is NOT autonomous fallback
+    // C2: Yahoo failure always fails \u2014 onvista is NOT autonomous fallback
     throw e;
   }
 
@@ -594,11 +594,11 @@ if (isMain) {
         fs.readFileSync(path.join(__dirname, "fixtures/onvista-vwce.json"), "utf8"),
       );
       // Simulate after close on 2026-08-03 so Aug 3 bar is allowed if desired;
-      // For seed we use before-close so Jul 31 is selected — pass --after-close to allow today.
+      // For seed we use before-close so Jul 31 is selected \u2014 pass --after-close to allow today.
       if (process.argv.includes("--after-close")) {
         opts.now = new Date("2026-08-03T17:00:00.000Z"); // 19:00 Berlin (CEST=UTC+2)
       } else {
-        opts.now = new Date("2026-08-03T09:00:00.000Z"); // 11:00 Berlin — before close
+        opts.now = new Date("2026-08-03T09:00:00.000Z"); // 11:00 Berlin \u2014 before close
       }
       opts.fetchedAt = new Date();
     }
