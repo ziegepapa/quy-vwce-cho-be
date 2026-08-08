@@ -105,7 +105,7 @@ export function buildNhipInsights({
       );
       result.push({
         kind: "on_track",
-        text: `${recent.length} khoản góp trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua, tổng ${Math.round(total)} € — nhịp quỹ đang được duy trì.`,
+        text: `${recent.length} khoản góp trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua, tổng ${Math.round(total)} € — nhịp quỹ đang được duy trì.`,
       });
     }
   }
