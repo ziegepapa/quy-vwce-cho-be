@@ -443,7 +443,7 @@ export default function Simulation() {
   }, [yearsForProject, goalYearSet, initialBalance, showAllYears]);
 
   if (loading) {
-    return <p className="muted">\u0110ang t\u1ea3i\u2026</p>;
+    return <p className="muted">{"\u0110ang t\u1ea3i\u2026"}</p>;
   }
 
   const baseRateNew = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
@@ -543,7 +543,7 @@ export default function Simulation() {
       >
         {planUnreachable ? (
           <p style={{ margin: 0, fontSize: 16, fontWeight: 600, lineHeight: 1.35 }}>
-            Ch\u01b0a c\u00f3 m\u1ee9c g\u00f3p kh\u1ea3 thi cho m\u1ee5c ti\u00eau n\u00e0y.
+            {"Ch\u01b0a c\u00f3 m\u1ee9c g\u00f3p kh\u1ea3 thi cho m\u1ee5c ti\u00eau n\u00e0y."}
           </p>
         ) : (
           <>
@@ -551,7 +551,7 @@ export default function Simulation() {
               {formatMoneyRounded(headlineValue)}
             </div>
             <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-              sau {yearsForProject} n\u0103m \u00b7 {formatMoneyRounded(monthlyForProject)}/th\u00e1ng
+              {`sau ${yearsForProject} n\u0103m \u00b7 ${formatMoneyRounded(monthlyForProject)}/th\u00e1ng`}
             </div>
             <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
               {headlineNote}
@@ -570,7 +570,7 @@ export default function Simulation() {
         <div className="card">
           <div className="field">
             <label htmlFor="sim-years">
-              Th\u1eddi h\u1ea1n: <strong>{years} n\u0103m</strong>
+              {"Th\u1eddi h\u1ea1n: "}<strong>{years}{" n\u0103m"}</strong>
             </label>
             <input
               id="sim-years"
@@ -585,7 +585,7 @@ export default function Simulation() {
           {goals.length > 0 && (
             <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
               <span className="muted" style={{ fontSize: 12 }}>
-                \u0110\u1ebfn ng\u00e0y m\u1ee5c ti\u00eau
+                {"\u0110\u1ebfn ng\u00e0y m\u1ee5c ti\u00eau"}
               </span>
               {goals.map((g) => (
                 <button
@@ -595,7 +595,7 @@ export default function Simulation() {
                   style={{ minHeight: 44, textAlign: "left" }}
                   onClick={() => applyYearsFromGoal(g)}
                 >
-                  {g.name} \u00b7 {g.dueDate.slice(0, 4)}
+                  {`${g.name} \u00b7 ${g.dueDate.slice(0, 4)}`}
                 </button>
               ))}
             </div>
@@ -606,7 +606,7 @@ export default function Simulation() {
       {mode === "B" && (
         <div className="card">
           <div className="field">
-            <label htmlFor="sim-target">Mu\u1ed1n c\u00f3 (EUR)</label>
+            <label htmlFor="sim-target">{"Mu\u1ed1n c\u00f3 (EUR)"}</label>
             <input
               id="sim-target"
               inputMode="decimal"
@@ -616,7 +616,7 @@ export default function Simulation() {
             />
           </div>
           <div className="field">
-            <label htmlFor="sim-tyear">V\u00e0o n\u0103m</label>
+            <label htmlFor="sim-tyear">{"V\u00e0o n\u0103m"}</label>
             <input
               id="sim-tyear"
               inputMode="numeric"
@@ -626,7 +626,7 @@ export default function Simulation() {
             />
           </div>
           <p className="muted" style={{ fontSize: 12 }}>
-            C\u00f2n kho\u1ea3ng {yearsB} n\u0103m t\u1eeb hi\u1ec7n t\u1ea1i.
+            {`C\u00f2n kho\u1ea3ng ${yearsB} n\u0103m t\u1eeb hi\u1ec7n t\u1ea1i.`}
           </p>
           {goals.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -638,7 +638,7 @@ export default function Simulation() {
                   style={{ minHeight: 44, textAlign: "left" }}
                   onClick={() => applyYearsFromGoal(g)}
                 >
-                  D\u00f9ng m\u1ee5c ti\u00eau: {g.name}
+                  {`D\u00f9ng m\u1ee5c ti\u00eau: ${g.name}`}
                 </button>
               ))}
             </div>
@@ -649,7 +649,7 @@ export default function Simulation() {
       {mode === "C" && (
         <div className="card">
           <div className="field">
-            <label htmlFor="sim-target-c">M\u1ee5c ti\u00eau Y (EUR)</label>
+            <label htmlFor="sim-target-c">{"M\u1ee5c ti\u00eau Y (EUR)"}</label>
             <input
               id="sim-target-c"
               inputMode="decimal"
@@ -664,7 +664,7 @@ export default function Simulation() {
       <div className="card">
         {(mode === "A" || mode === "C") && (
           <div className="field">
-            <label htmlFor="sim-monthly">G\u00f3p m\u1ed7i th\u00e1ng (EUR)</label>
+            <label htmlFor="sim-monthly">{"G\u00f3p m\u1ed7i th\u00e1ng (EUR)"}</label>
             <input
               id="sim-monthly"
               inputMode="decimal"
@@ -676,19 +676,19 @@ export default function Simulation() {
         )}
         {mode === "B" && requiredMonthlyBase < 0 && (
           <div className="banner" style={{ margin: "0 0 12px" }}>
-            Kh\u00f4ng \u0111\u1ea1t \u0111\u01b0\u1ee3c m\u1ee5c ti\u00eau v\u1edbi m\u1ee9c gi\u1ea3m n\u00e0y.
+            {"Kh\u00f4ng \u0111\u1ea1t \u0111\u01b0\u1ee3c m\u1ee5c ti\u00eau v\u1edbi m\u1ee9c gi\u1ea3m n\u00e0y."}
           </div>
         )}
         {mode === "B" && requiredMonthlyBase >= 0 && (
           <p style={{ margin: "0 0 12px" }}>
-            C\u1ea7n g\u00f3p kho\u1ea3ng{" "}
-            <strong className="metric-value">{formatMoney(requiredMonthlyBase)}</strong>/th\u00e1ng
-            (k\u1ecbch b\u1ea3n c\u01a1 s\u1edf).
+            {"C\u1ea7n g\u00f3p kho\u1ea3ng"}{" "}
+            <strong className="metric-value">{formatMoney(requiredMonthlyBase)}</strong>
+            {"/th\u00e1ng (k\u1ecbch b\u1ea3n c\u01a1 s\u1edf)."}
           </p>
         )}
 
         <div className="field">
-          <label htmlFor="sim-rate">L\u1ee3i nhu\u1eadn / n\u0103m (%)</label>
+          <label htmlFor="sim-rate">{"L\u1ee3i nhu\u1eadn / n\u0103m (%)"}</label>
           <input
             id="sim-rate"
             inputMode="decimal"
@@ -698,7 +698,7 @@ export default function Simulation() {
           />
           {band > 0 && (
             <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
-              kho\u1ea3ng {bandPctLabel}
+              {"kho\u1ea3ng "}{bandPctLabel}
             </p>
           )}
         </div>
@@ -708,7 +708,7 @@ export default function Simulation() {
         <summary style={{ minHeight: 44, cursor: "pointer", fontSize: 14 }}>{advSummary}</summary>
         <div style={{ marginTop: 12 }}>
           <div className="field">
-            <label htmlFor="sim-band">Bi\u00ean \u0111\u1ed9 dao \u0111\u1ed9ng (\u00b1 %)</label>
+            <label htmlFor="sim-band">{"Bi\u00ean \u0111\u1ed9 dao \u0111\u1ed9ng (\u00b1 %)"}</label>
             <input
               id="sim-band"
               inputMode="decimal"
@@ -719,7 +719,7 @@ export default function Simulation() {
           </div>
 
           <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-            <span>G\u00f3p thay \u0111\u1ed5i theo n\u0103m</span>
+            <span>{"G\u00f3p thay \u0111\u1ed5i theo n\u0103m"}</span>
             <input
               type="checkbox"
               checked={growthOn}
@@ -729,7 +729,7 @@ export default function Simulation() {
           </label>
           {growthOn && (
             <div className="field">
-              <label htmlFor="sim-growth">Thay \u0111\u1ed5i g\u00f3p m\u1ed7i n\u0103m (%)</label>
+              <label htmlFor="sim-growth">{"Thay \u0111\u1ed5i g\u00f3p m\u1ed7i n\u0103m (%)"}</label>
               <input
                 id="sim-growth"
                 inputMode="decimal"
@@ -738,13 +738,13 @@ export default function Simulation() {
                 style={{ minHeight: 44 }}
               />
               <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
-                S\u1ed1 \u00e2m = gi\u1ea3m d\u1ea7n. V\u00ed d\u1ee5: \u22125
+                {"S\u1ed1 \u00e2m = gi\u1ea3m d\u1ea7n. V\u00ed d\u1ee5: \u22125"}
               </p>
             </div>
           )}
 
           <div className="field">
-            <label htmlFor="sim-lump">Kho\u1ea3n l\u1edbn ban \u0111\u1ea7u (EUR)</label>
+            <label htmlFor="sim-lump">{"Kho\u1ea3n l\u1edbn ban \u0111\u1ea7u (EUR)"}</label>
             <input
               id="sim-lump"
               inputMode="decimal"
@@ -756,7 +756,7 @@ export default function Simulation() {
 
           <div className="field">
             <label htmlFor="sim-bal">
-              S\u1ed1 d\u01b0 xu\u1ea5t ph\u00e1t \u2014 m\u1eb7c \u0111\u1ecbnh t\u1eeb danh m\u1ee5c ({formatMoney(Math.max(0, realBalance))})
+              {`S\u1ed1 d\u01b0 xu\u1ea5t ph\u00e1t \u2014 m\u1eb7c \u0111\u1ecbnh t\u1eeb danh m\u1ee5c (${formatMoney(Math.max(0, realBalance))})`}
             </label>
             <input
               id="sim-bal"
@@ -768,13 +768,13 @@ export default function Simulation() {
             />
             {realBalance < 0 && (
               <p style={{ fontSize: 12, color: "#c47a2c", margin: "4px 0 0" }}>
-                Danh m\u1ee5c \u0111ang \u00e2m \u2014 t\u1ea1m t\u00ednh t\u1eeb 0 \u20ac.
+                {"Danh m\u1ee5c \u0111ang \u00e2m \u2014 t\u1ea1m t\u00ednh t\u1eeb 0 \u20ac."}
               </p>
             )}
           </div>
 
           <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-            <span>Hi\u1ec7n theo s\u1ee9c mua h\u00f4m nay</span>
+            <span>{"Hi\u1ec7n theo s\u1ee9c mua h\u00f4m nay"}</span>
             <input
               type="checkbox"
               checked={inflationOn}
@@ -784,7 +784,7 @@ export default function Simulation() {
           </label>
           {inflationOn && (
             <div className="field">
-              <label htmlFor="sim-inf">L\u1ea1m ph\u00e1t %/n\u0103m</label>
+              <label htmlFor="sim-inf">{"L\u1ea1m ph\u00e1t %/n\u0103m"}</label>
               <input
                 id="sim-inf"
                 inputMode="decimal"
@@ -795,7 +795,7 @@ export default function Simulation() {
             </div>
           )}
           <label className="row-between" style={{ minHeight: 44, alignItems: "center" }}>
-            <span>Chi ph\u00ed \u0026 thu\u1ebf \u0110\u1ee9c (TER 0,22% + thu\u1ebf khi b\u00e1n)</span>
+            <span>{"Chi ph\u00ed & thu\u1ebf \u0110\u1ee9c (TER 0,22% + thu\u1ebf khi b\u00e1n)"}</span>
             <input
               type="checkbox"
               checked={taxOn}
@@ -808,7 +808,7 @@ export default function Simulation() {
 
       {mode === "C" && !yearsC.reached && (
         <div className="banner" style={{ margin: 0 }}>
-          Kh\u00f4ng \u0111\u1ea1t \u0111\u01b0\u1ee3c trong {MAX_YEARS} n\u0103m v\u1edbi m\u1ee9c g\u00f3p v\u00e0 l\u1ee3i nhu\u1eadn hi\u1ec7n t\u1ea1i.
+          {`Kh\u00f4ng \u0111\u1ea1t \u0111\u01b0\u1ee3c trong ${MAX_YEARS} n\u0103m v\u1edbi m\u1ee9c g\u00f3p v\u00e0 l\u1ee3i nhu\u1eadn hi\u1ec7n t\u1ea1i.`}
         </div>
       )}
 
@@ -831,7 +831,7 @@ export default function Simulation() {
                   cursor: "pointer",
                 }}
               >
-                Sau thu\u1ebf
+                {"Sau thu\u1ebf"}
               </button>
             )}
             {inflationOn && (
@@ -850,7 +850,7 @@ export default function Simulation() {
                   cursor: "pointer",
                 }}
               >
-                Gi\u00e1 h\u00f4m nay
+                {"Gi\u00e1 h\u00f4m nay"}
               </button>
             )}
           </div>
@@ -863,22 +863,22 @@ export default function Simulation() {
             }}
           >
             <div>
-              <div className="metric-label">Cu\u1ed1i k\u1ef3</div>
+              <div className="metric-label">{"Cu\u1ed1i k\u1ef3"}</div>
               <div className="metric-value" style={{ fontSize: 16 }}>
                 {formatMoneyRounded(headlineValue)}
               </div>
             </div>
             <div>
-              <div className="metric-label">\u0110\u00e3 g\u00f3p</div>
+              <div className="metric-label">{"\u0110\u00e3 g\u00f3p"}</div>
               <div className="metric-value" style={{ fontSize: 16 }}>
                 {formatMoneyRounded(primary.out.contributed)}
               </div>
               <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
-                ti\u1ec1n th\u1ef1c b\u1ecf ra
+                {"ti\u1ec1n th\u1ef1c b\u1ecf ra"}
               </div>
             </div>
             <div>
-              <div className="metric-label">L\u00e3i</div>
+              <div className="metric-label">{"L\u00e3i"}</div>
               <div className="metric-value" style={{ fontSize: 16 }}>
                 {formatMoneyRounded(shownInterest)}
               </div>
@@ -889,7 +889,7 @@ export default function Simulation() {
           </div>
           {initialBalance > 0 && (
             <p className="muted" style={{ fontSize: 12, margin: "10px 0 0" }}>
-              S\u1ed1 d\u01b0 xu\u1ea5t ph\u00e1t: {formatMoney(initialBalance)}
+              {`S\u1ed1 d\u01b0 xu\u1ea5t ph\u00e1t: ${formatMoney(initialBalance)}`}
             </p>
           )}
         </div>
@@ -897,7 +897,7 @@ export default function Simulation() {
 
       <div className="card">
         <p className="section-title" style={{ marginTop: 0 }}>
-          Di\u1ec5n bi\u1ebfn theo n\u0103m
+          {"Di\u1ec5n bi\u1ebfn theo n\u0103m"}
         </p>
         <ScenarioChart
           results={results}
@@ -909,19 +909,19 @@ export default function Simulation() {
       </div>
 
       <details className="card">
-        <summary style={{ minHeight: 44, cursor: "pointer" }}>B\u1ea3ng theo n\u0103m</summary>
+        <summary style={{ minHeight: 44, cursor: "pointer" }}>{"B\u1ea3ng theo n\u0103m"}</summary>
         <p className="muted" style={{ fontSize: 12, margin: "8px 0" }}>
-          Tr\u01b0\u1edbc thu\u1ebf \u00b7 danh ngh\u0129a
+          {"Tr\u01b0\u1edbc thu\u1ebf \u00b7 danh ngh\u0129a"}
         </p>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "left", padding: 6 }}>N\u0103m</th>
-                <th style={{ textAlign: "right", padding: 6 }}>\u0110\u00e3 g\u00f3p</th>
-                <th style={{ textAlign: "right", padding: 6 }}>S\u1ed1 d\u01b0</th>
+                <th style={{ textAlign: "left", padding: 6 }}>{"N\u0103m"}</th>
+                <th style={{ textAlign: "right", padding: 6 }}>{"\u0110\u00e3 g\u00f3p"}</th>
+                <th style={{ textAlign: "right", padding: 6 }}>{"S\u1ed1 d\u01b0"}</th>
                 {band > 0 && (
-                  <th style={{ textAlign: "right", padding: 6 }}>Kho\u1ea3ng</th>
+                  <th style={{ textAlign: "right", padding: 6 }}>{"Kho\u1ea3ng"}</th>
                 )}
               </tr>
             </thead>
@@ -955,7 +955,7 @@ export default function Simulation() {
                       {isGoal && (
                         <span style={{ marginLeft: 6, fontSize: 11 }}>
                           <span aria-hidden style={{ color: "var(--primary-600, #3b6ef5)" }}>
-                            \u25cf
+                            {"\u25cf"}
                           </span>{" "}
                           <span className="muted">{goalNameByYear.get(yi)}</span>
                         </span>
@@ -969,7 +969,7 @@ export default function Simulation() {
                     </td>
                     {band > 0 && (
                       <td style={{ textAlign: "right", padding: 6, whiteSpace: "nowrap" }}>
-                        {formatMoneyRounded(loPt?.total ?? 0)} \u2013 {formatMoneyRounded(hiPt?.total ?? 0)}
+                        {formatMoneyRounded(loPt?.total ?? 0)}{" \u2013 "}{formatMoneyRounded(hiPt?.total ?? 0)}
                       </td>
                     )}
                   </tr>
@@ -989,7 +989,7 @@ export default function Simulation() {
       </details>
 
       <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-        \u01adc t\u00ednh, kh\u00f4ng ph\u1ea3i t\u01b0 v\u1ea5n \u0111\u1ea7u t\u01b0 hay thu\u1ebf.
+        {"\u01adc t\u00ednh, kh\u00f4ng ph\u1ea3i t\u01b0 v\u1ea5n \u0111\u1ea7u t\u01b0 hay thu\u1ebf."}
       </p>
 
       <button
@@ -999,12 +999,12 @@ export default function Simulation() {
         disabled={planUnreachable}
         onClick={openSaveConfirm}
       >
-        L\u01b0u m\u1ee9c g\u00f3p \u0026 l\u1ee3i nhu\u1eadn c\u01a1 s\u1edf v\u00e0o k\u1ebf ho\u1ea1ch
+        {"L\u01b0u m\u1ee9c g\u00f3p & l\u1ee3i nhu\u1eadn c\u01a1 s\u1edf v\u00e0o k\u1ebf ho\u1ea1ch"}
       </button>
 
       {matchMsg && !undoVisible && (
         <div className="banner" style={{ margin: 0 }}>
-          K\u1ebf ho\u1ea1ch \u0111\u00e3 kh\u1edbp v\u1edbi m\u00f4 ph\u1ecfng \u2014 kh\u00f4ng c\u00f3 g\u00ec \u0111\u1ec3 l\u01b0u.
+          {"K\u1ebf ho\u1ea1ch \u0111\u00e3 kh\u1edbp v\u1edbi m\u00f4 ph\u1ecfng \u2014 kh\u00f4ng c\u00f3 g\u00ec \u0111\u1ec3 l\u01b0u."}
         </div>
       )}
 
@@ -1012,7 +1012,7 @@ export default function Simulation() {
         <div className="banner" style={{ margin: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <span>{undoSnap.message}</span>
           <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={() => void undoPersist()}>
-            Ho\u00e0n t\u00e1c
+            {"Ho\u00e0n t\u00e1c"}
           </button>
         </div>
       )}
@@ -1021,9 +1021,9 @@ export default function Simulation() {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="sheet-handle" aria-hidden />
-            <h2>L\u01b0u v\u00e0o k\u1ebf ho\u1ea1ch</h2>
+            <h2>{"L\u01b0u v\u00e0o k\u1ebf ho\u1ea1ch"}</h2>
             <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
-              Ch\u1ea1m \u0111\u1ec3 ch\u1ecdn m\u1ee5c mu\u1ed1n ghi.
+              {"Ch\u1ea1m \u0111\u1ec3 ch\u1ecdn m\u1ee5c mu\u1ed1n ghi."}
             </p>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0 8px" }}>
@@ -1047,7 +1047,7 @@ export default function Simulation() {
                     textAlign: "left",
                   }}
                 >
-                  <span style={{ fontSize: 12, opacity: 0.9 }}>N\u0103m 1</span>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>{"N\u0103m 1"}</span>
                   <strong style={{ fontSize: 14 }}>{formatMoney(round2(monthlyForProject))}</strong>
                   <span
                     style={{
@@ -1085,7 +1085,7 @@ export default function Simulation() {
                     textAlign: "left",
                   }}
                 >
-                  <span style={{ fontSize: 12, opacity: 0.9 }}>T\u1eeb n\u0103m 2</span>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>{"T\u1eeb n\u0103m 2"}</span>
                   <strong style={{ fontSize: 14 }}>{formatMoney(round2(monthlyForProject))}</strong>
                   <span
                     style={{
@@ -1123,7 +1123,7 @@ export default function Simulation() {
                     textAlign: "left",
                   }}
                 >
-                  <span style={{ fontSize: 12, opacity: 0.9 }}>L\u1ee3i nhu\u1eadn</span>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>{"L\u1ee3i nhu\u1eadn"}</span>
                   <strong style={{ fontSize: 14 }}>{(baseRateNew * 100).toFixed(2)}%</strong>
                   <span
                     style={{
@@ -1145,7 +1145,7 @@ export default function Simulation() {
 
             {selectedCount > 0 && (
               <p className="muted" style={{ fontSize: 12, margin: "0 0 12px" }}>
-                T\u1eeb{" "}
+                {"T\u1eeb"}{" "}
                 {[
                   writeY1 && y1Diff ? formatMoney(oldY1) : null,
                   writeY2 && y2Diff ? formatMoney(oldY2) : null,
@@ -1167,7 +1167,7 @@ export default function Simulation() {
                 {saveLabel}
               </button>
               <button type="button" className="secondary" style={{ minHeight: 44 }} onClick={() => setSaveOpen(false)}>
-                H\u1ee7y
+                {"H\u1ee7y"}
               </button>
             </div>
           </div>
