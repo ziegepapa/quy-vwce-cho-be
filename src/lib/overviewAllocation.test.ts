@@ -6,7 +6,10 @@ import {
   type AllocationInput,
 } from "./overviewAllocation";
 
-/** Buy recorded, matching cash_in missing: the reported production state. */
+/**
+ * Buy recorded, matching cash_in missing: the reported production state.
+ * trackInAppCash is true so the funding caveat below stays meaningful.
+ */
 const partialPortfolio: OverviewHeroInput = {
   securitiesValue: 101.65,
   cashBalance: -100,
@@ -15,6 +18,7 @@ const partialPortfolio: OverviewHeroInput = {
   costBasis: 100,
   positionValue: 101.65,
   transactionCount: 1,
+  trackInAppCash: true,
 };
 
 const emptyPortfolio: OverviewHeroInput = {
@@ -25,6 +29,7 @@ const emptyPortfolio: OverviewHeroInput = {
   costBasis: 0,
   positionValue: null,
   transactionCount: 0,
+  trackInAppCash: false,
 };
 
 /** The hero is the only allowed source of the denominator. */
@@ -103,6 +108,18 @@ describe("buildAllocationDisplay", () => {
 
     expect(display.caveats).toEqual(["missing_funding", "missing_price"]);
     expect(display.securitiesPct).toBe(100);
+  });
+
+  it("drops the funding caveat entirely in securities-first mode", () => {
+    // CASH-MODEL-OPTIONAL-001 r1: with no shortfall left to report, the caveat
+    // disappears on its own. That is why overviewAllocation.ts itself needs no
+    // change for the new mode.
+    const display = allocationOf({ ...partialPortfolio, trackInAppCash: false });
+
+    expect(display.caveats).toEqual([]);
+    expect(display.denominator).toBeCloseTo(101.65, 2);
+    expect(display.securitiesPct).toBe(100);
+    expect(describeAllocation(display).caveat).toBeNull();
   });
 
   it("refuses to divide only when there is nothing to divide", () => {

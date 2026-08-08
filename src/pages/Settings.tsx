@@ -471,6 +471,38 @@ export default function SettingsPage({
             </div>
           </section>
 
+          {/* CASH-MODEL-OPTIONAL-001 r1: the owner pays for the ETF from a bank
+              or broker account this app never sees, so the double-entry ledger
+              is the exception here and not the default. */}
+          <section className="settings-card">
+            <div className="settings-card-head">
+              <div>
+                <p className="settings-card-eyebrow">Tiền</p>
+                <h3>Ví trong app</h3>
+                <p>Quyết định app có đòi bút toán nạp tiền cho mọi lệnh mua hay không.</p>
+              </div>
+              <span className="settings-icon-bubble" aria-hidden>€</span>
+            </div>
+            <div className="setting-choice-row">
+              <div>
+                <strong>Nguồn tiền mua</strong>
+                <span>
+                  {settings.trackInAppCash === true
+                    ? "Sổ kép: mọi lệnh mua cần một khoản nạp tương ứng, thiếu thì Tổng quan sẽ báo."
+                    : "Ngoài app: chỉ theo dõi chứng khoán. Không báo thiếu nạp, hàng An toàn để trống."}
+                </span>
+              </div>
+              <Segmented
+                value={settings.trackInAppCash === true ? "ledger" : "securities"}
+                options={[
+                  { value: "securities", label: "Ngoài app" },
+                  { value: "ledger", label: "Sổ kép" },
+                ]}
+                onChange={(value) => patchSettings({ trackInAppCash: value === "ledger" })}
+              />
+            </div>
+          </section>
+
           <section className="settings-card">
             <div className="settings-card-head">
               <div>

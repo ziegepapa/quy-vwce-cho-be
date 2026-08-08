@@ -62,9 +62,15 @@ export function defaultNotfallmappe(): Notfallmappe {
   };
 }
 
+/**
+ * CASH-MODEL-OPTIONAL-001 r1 — trackInAppCash starts false because that is the
+ * owner's real funding model: the ETF is paid for from a bank or broker account
+ * this app never sees. Onboarding and the demo seed both route through here, so
+ * a new install is securities-first from its first screen.
+ */
 export function defaultSettings(): AppSettings {
   const t = nowIso();
-  return { id: "settings", planName: "Quỹ VWCE cho bé", childName: "", accountType: "parent", currency: "EUR", inflationRate: 0.02, vwceReturn: 0.05, safeReturn: 0.015, bufferPct: 0.1, endMode: "hard", startDate: "2026-07-01", endDate: "2042-06-30", latestVwcePrice: 0, latestPriceDate: "", contributionY1: 100, contributionY2: 120, disclaimerAccepted: false, onboardingDone: false, notfallmappe: defaultNotfallmappe(), createdAt: t, updatedAt: t };
+  return { id: "settings", planName: "Quỹ VWCE cho bé", childName: "", accountType: "parent", currency: "EUR", inflationRate: 0.02, vwceReturn: 0.05, safeReturn: 0.015, bufferPct: 0.1, endMode: "hard", startDate: "2026-07-01", endDate: "2042-06-30", latestVwcePrice: 0, latestPriceDate: "", contributionY1: 100, contributionY2: 120, disclaimerAccepted: false, onboardingDone: false, trackInAppCash: false, notfallmappe: defaultNotfallmappe(), createdAt: t, updatedAt: t };
 }
 export function defaultGoals(): Goal[] {
   const t = nowIso();

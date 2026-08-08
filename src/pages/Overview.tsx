@@ -156,6 +156,11 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   const cash = market.cash;
   const totalKnown = portfolioSnapshot.totalValue;
   const vwceValue = vwcePrice > 0 ? portfolio.vwceQty * vwcePrice : null;
+  // CASH-MODEL-OPTIONAL-001 r1: the owner pays for the ETF from a bank or
+  // broker account this app never sees, so a buy without a matching cash_in is
+  // not a missing deposit unless the double-entry ledger was switched on
+  // deliberately. Absent setting means securities-first.
+  const trackInAppCash = settings?.trackInAppCash === true;
   const hero = buildOverviewHero({
     securitiesValue: securitiesKnown,
     cashBalance: portfolio.cashBalance,
@@ -164,11 +169,19 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     costBasis: portfolio.vwceCostBasis,
     positionValue: vwceValue,
     transactionCount: transactions.length,
+    trackInAppCash,
   });
   const today = new Date();
   const yearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  // Without this, removing the "unfunded" status would hand the screen a fresh
+  // false alarm instead of removing one: in securities-first mode there is no
+  // cash_in to record, so a month holding a real purchase would be reported as
+  // a month without a contribution, every month, forever.
+  const contributionTypes: string[] = trackInAppCash
+    ? ["cash_in"]
+    : ["cash_in", "buy_vwce", "buy_security"];
   const hasContributionThisMonth = transactions.some(
-    (transaction) => transaction.type === "cash_in" && transaction.date.startsWith(yearMonth),
+    (transaction) => contributionTypes.includes(transaction.type) && transaction.date.startsWith(yearMonth),
   );
   const mode: "empty" | "early" | "active" =
     hero.status === "empty"
@@ -342,7 +355,9 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       </section>
 
       {/* OVERVIEW-SIMPLIFY-001: when the ledger is unfunded this is the only
-          call to action on the page. Nothing competes with it. */}
+          call to action on the page. Nothing competes with it.
+          CASH-MODEL-OPTIONAL-001 r1: in securities-first mode setupIncomplete
+          is always false, so this whole block disables itself. */}
       {cashNegative ? (
         <section className="card">
           <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Sổ đang thiếu bút toán nạp tiền</p>
@@ -377,7 +392,20 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         <section className="stat-strip" aria-label="Chi tiết phân bổ">
           <div className="stat-col"><span className="stat-label">CK đã định giá</span><span className="stat-val">{formatMoney(securitiesKnown)}</span></div>
           <div className="stat-rule" aria-hidden />
-          <div className="stat-col"><span className="stat-label">An toàn</span><span className={`stat-val${cashNegative ? " neg" : ""}`}>{formatMoney(portfolio.cashBalance)}</span></div>
+          <div className="stat-col">
+            <span className="stat-label">An toàn</span>
+            {trackInAppCash ? (
+              <span className={`stat-val${cashNegative ? " neg" : ""}`}>{formatMoney(portfolio.cashBalance)}</span>
+            ) : (
+              <>
+                {/* The column keeps its grid slot on purpose: .stat-strip is a
+                    five-track grid. A neutral dash beats "0 €", which would be
+                    a claim about a wallet this mode does not maintain. */}
+                <span className="stat-val">—</span>
+                <span className="stat-label" style={{ fontSize: 11, opacity: 0.85 }}>Không theo dõi ví trong app</span>
+              </>
+            )}
+          </div>
           <div className="stat-rule" aria-hidden />
           <div className="stat-col">
             <span className="stat-label">Lãi–lỗ VWCE</span>
