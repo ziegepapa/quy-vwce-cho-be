@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildNhipInsights, type NhipInsightInput } from "./nhipInsights";
+import {
+  buildNhipInsightInput,
+  buildNhipInsights,
+  isLedgerEmpty,
+  type NhipInsightInput,
+} from "./nhipInsights";
+import { buildTodayCenterPortfolioSnapshot } from "./todayCenterAdapter";
+import { VWCE_ISIN, type Quote, type Transaction } from "./types";
 
 // All dates are fixed so the suite is fully deterministic.
 const NOW = "2026-08-07T12:00:00.000Z";
@@ -130,5 +137,93 @@ describe("buildNhipInsights", () => {
   it("same input always produces the same output (deterministic)", () => {
     const input = base();
     expect(buildNhipInsights(input)).toEqual(buildNhipInsights(input));
+  });
+});
+
+// NHIP-UI-001 r1 — the wire itself. An all-zero snapshot is built through the
+// real adapter so these tests never hard-code calc internals.
+const zeroSnapshot = buildTodayCenterPortfolioSnapshot({ transactions: [], quotes: [] });
+
+function tx(overrides: Partial<Transaction> = {}): Transaction {
+  return {
+    id: "tx-1",
+    date: RECENT_DATE,
+    type: "cash_in",
+    amount: 100,
+    notes: "",
+    createdAt: "2026-07-25T00:00:00.000Z",
+    updatedAt: "2026-07-25T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function quote(overrides: Partial<Quote> = {}): Quote {
+  return {
+    id: "quote-1",
+    instrumentIsin: VWCE_ISIN,
+    currency: "EUR",
+    price: 168.38,
+    asOf: FRESH_ASOF,
+    source: "auto",
+    createdAt: "2026-08-07T00:00:00.000Z",
+    updatedAt: "2026-08-07T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("isLedgerEmpty", () => {
+  it("is true when nothing was recorded and the numbers are zero", () => {
+    expect(isLedgerEmpty({ transactions: [], totalValue: 0, totalQuantity: 0 })).toBe(true);
+  });
+
+  it("is false when an active transaction exists even if the numbers net to zero", () => {
+    expect(isLedgerEmpty({ transactions: [tx()], totalValue: 0, totalQuantity: 0 })).toBe(false);
+  });
+
+  it("ignores soft-deleted transactions", () => {
+    expect(
+      isLedgerEmpty({
+        transactions: [tx({ deletedAt: "2026-08-01T00:00:00.000Z" })],
+        totalValue: 0,
+        totalQuantity: 0,
+      }),
+    ).toBe(true);
+  });
+
+  it("is false while value or quantity is still held", () => {
+    expect(isLedgerEmpty({ transactions: [], totalValue: 120, totalQuantity: 0 })).toBe(false);
+    expect(isLedgerEmpty({ transactions: [], totalValue: 0, totalQuantity: 0.5 })).toBe(false);
+  });
+});
+
+describe("buildNhipInsightInput", () => {
+  it("never claims an empty start for a ledger that has activity", () => {
+    const input = buildNhipInsightInput(zeroSnapshot, [tx()], { endDate: FAR_END }, NOW);
+    expect(input.portfolioEmpty).toBe(false);
+    expect(buildNhipInsights(input).insights.some((i) => i.kind === "empty_start")).toBe(false);
+  });
+
+  it("claims an empty start only for an untouched ledger", () => {
+    const input = buildNhipInsightInput(zeroSnapshot, [], { endDate: FAR_END }, NOW);
+    expect(input.portfolioEmpty).toBe(true);
+    expect(buildNhipInsights(input).insights[0].kind).toBe("empty_start");
+  });
+
+  it("passes the quote date through so stale_price can fire", () => {
+    const snapshot = { ...zeroSnapshot, vwceQuote: quote({ asOf: STALE_ASOF }) };
+    const input = buildNhipInsightInput(snapshot, [tx()], { endDate: FAR_END }, NOW);
+    expect(input.vwceAsOf).toBe(STALE_ASOF);
+    expect(buildNhipInsights(input).insights.some((i) => i.kind === "stale_price")).toBe(true);
+  });
+
+  it("reports a null quote date when no quote is effective", () => {
+    const input = buildNhipInsightInput(zeroSnapshot, [tx()], { endDate: FAR_END }, NOW);
+    expect(input.vwceAsOf).toBeNull();
+  });
+
+  it("reads the plan end date straight from settings", () => {
+    const input = buildNhipInsightInput(zeroSnapshot, [tx()], { endDate: NEAR_END }, NOW);
+    expect(input.planEndDate).toBe(NEAR_END);
+    expect(buildNhipInsights(input).insights.some((i) => i.kind === "days_to_goal")).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import "../styles/today-center.css";
 import "../styles/pulse-polish.css";
+import "../styles/nhip-block.css";
 import { useAuth } from "../lib/auth";
 import { db } from "../lib/db";
 import { formatMoney, parseDecimal } from "../lib/calc";
@@ -12,6 +13,7 @@ import {
   type DepotReconciliationDisplay,
 } from "../lib/depotReconciliation";
 import { buildPulseDisplay } from "../lib/overviewNumbers";
+import { isLedgerEmpty, type NhipInsight } from "../lib/nhipInsights";
 import {
   markRestoreCompleted,
   portfolioPulseDelta,
@@ -48,36 +50,12 @@ type Props = {
   vwcePriceSource?: TodayCenterPriceSource;
   settings: AppSettings;
   transactions: Transaction[];
+  /**
+   * NHIP-UI-001 r1 — deterministic sentences from buildNhipInsights, built in
+   * Overview where the full portfolio snapshot (and the quote date) lives.
+   */
+  insights?: NhipInsight[];
 };
-
-type PulseIconName = "pulse" | "reconcile" | "whatif" | "safety";
-
-function PulseIcon({ name }: { name: PulseIconName }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {name === "pulse" ? (
-        <path d="M3 12h4l2.2-5 4.1 10 2.2-5H21" />
-      ) : name === "reconcile" ? (
-        <>
-          <path d="M4 8h13" />
-          <path d="m14 5 3 3-3 3" />
-          <path d="M20 16H7" />
-          <path d="m10 13-3 3 3 3" />
-        </>
-      ) : name === "whatif" ? (
-        <>
-          <circle cx="12" cy="12" r="8" />
-          <path d="M12 8v8M8 12h8" />
-        </>
-      ) : (
-        <>
-          <path d="M12 3 19 6v5.4c0 4.2-2.8 8-7 9.6-4.2-1.6-7-5.4-7-9.6V6l7-3Z" />
-          <path d="m9 12 2 2 4-4" />
-        </>
-      )}
-    </svg>
-  );
-}
 
 function signedMoney(value: number): string {
   if (Math.abs(value) < 0.005) return formatMoney(0);
@@ -98,6 +76,7 @@ export default function TodayCenter({
   vwcePriceSource,
   settings,
   transactions,
+  insights = [],
 }: Props) {
   const auth = useAuth();
   const ownerKey = auth.user?.id ?? "local";
@@ -169,10 +148,7 @@ export default function TodayCenter({
     () => buildPulseDisplay(delta, { baselineValue: pulse?.previous?.totalValue ?? null }),
     [delta, pulse],
   );
-  const portfolioEmpty =
-    transactions.length === 0 &&
-    Math.abs(totalValue) < 0.005 &&
-    Math.abs(totalQuantity) < 0.000001;
+  const portfolioEmpty = isLedgerEmpty({ transactions, totalValue, totalQuantity });
   const parsedAmount = parseDecimal(whatIfAmount);
   const rawYears = Math.max(
     0,
@@ -258,12 +234,31 @@ export default function TodayCenter({
     Math.abs(reconciliation.totalMoneyGap) >= 0.005
       ? `${reconciliation.moneyGapComplete ? "≈" : "≥"} ${formatMoney(Math.abs(reconciliation.totalMoneyGap))} theo giá trên sao kê`
       : "";
+  const reconciliationDetail =
+    [reconciliationCopy?.dateLabel, reconciliationCopy?.detail, reconciliationGapMoney]
+      .filter((part): part is string => Boolean(part))
+      .join(" · ") || "Nhập PDF để tạo mốc đối chiếu.";
 
   const deltaValue = !valueComplete
     ? "Đang chờ đủ giá"
     : delta
       ? signedMoney(delta.value)
       : "Mốc đầu tiên";
+  const deltaPercent =
+    pulseDisplay.showPercent && pulseDisplay.percent !== null
+      ? `${pulseDisplay.percent >= 0 ? "+" : ""}${pulseDisplay.percent.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`
+      : pulseDisplay.basis === "ledger_changed"
+        ? "Sổ đổi giữa hai lần mở nên không tính %"
+        : "Mốc trước chưa đủ để tính %";
+  const deltaQuantity =
+    delta && Math.abs(delta.quantity) > 0.000001
+      ? `${delta.quantity > 0 ? "+" : ""}${delta.quantity.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} đơn vị`
+      : "số lượng không đổi";
+  const deltaCaption = !valueComplete
+    ? "Không ghi mốc khi còn thiếu giá."
+    : delta
+      ? `${deltaPercent} · ${deltaQuantity}`
+      : "Lần mở tiếp theo sẽ hiện thay đổi.";
 
   const extraUnitsText = extraUnits.toLocaleString("vi-VN", { maximumFractionDigits: 4 });
   const whatIfValue = whatIf.status === "ready"
@@ -274,6 +269,13 @@ export default function TodayCenter({
   const whatIfCardValue = portfolioEmpty && whatIf.status === "ready"
     ? `≈ ${extraUnitsText} VWCE`
     : whatIfValue;
+  const whatIfCaption = whatIf.status === "ready"
+    ? portfolioEmpty
+      ? `Thử ${formatMoney(amount)} theo giá hiện tại · không phải số dư.`
+      : `Thử ${formatMoney(amount)} · ${formatMoney(futureReal)} sức mua sau ${years} năm.`
+    : whatIf.status === "missing_price"
+      ? "Cần giá hợp lệ để quy đổi."
+      : "Nhập khoản lớn hơn 0 để mô phỏng.";
 
   const pulseTraceModel = buildPulseTraceModel({
     valueComplete,
@@ -301,114 +303,65 @@ export default function TodayCenter({
     <section className="today-center" aria-labelledby="today-center-title">
       <header className="today-center-head">
         <div>
-          <p className="today-kicker">Một lần mở · bốn câu trả lời</p>
+          <p className="today-kicker">Một khối · điều đáng nói hôm nay</p>
           <h2 id="today-center-title">Nhịp Quỹ</h2>
         </div>
       </header>
 
-      <div className="today-grid">
-        <article className={`today-card today-card-pulse${pulseChanged ? " is-new" : ""}`}>
-          <header className="today-card-head">
-            <span className="today-card-icon"><PulseIcon name="pulse" /></span>
-            <h3>Đổi gì?</h3>
-            {pulseChanged ? <span className="today-new-label">Mới</span> : null}
-          </header>
-          <button
-            type="button"
-            className="today-card-detail"
-            onClick={() => setTraceOpen(true)}
-            aria-label={`Đổi gì: ${deltaValue}. Xem nguồn dữ liệu`}
-          >
-            {!valueComplete ? (
-              <span className="today-empty-state">
-                <strong>Đang chờ đủ giá</strong>
-                <span>Không ghi mốc thiếu dữ liệu.</span>
-              </span>
-            ) : delta ? (
-              <>
-                <span className={`today-main-metric ${metricTone(delta.value)}`}>{signedMoney(delta.value)}</span>
-                <span className="today-metric-caption">
-                  {pulseDisplay.showPercent && pulseDisplay.percent !== null
-                    ? `${pulseDisplay.percent >= 0 ? "+" : ""}${pulseDisplay.percent.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`
-                    : pulseDisplay.basis === "ledger_changed"
-                      ? "Sổ đổi giữa hai lần mở nên không tính %"
-                      : "Mốc trước chưa đủ để tính %"}
-                  {Math.abs(delta.quantity) > 0.000001
-                    ? ` · ${delta.quantity > 0 ? "+" : ""}${delta.quantity.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} đơn vị`
-                    : " · số lượng không đổi"}
-                </span>
-              </>
-            ) : (
-              <span className="today-empty-state">
-                <strong>Đã tạo mốc đầu tiên</strong>
-                <span>Lần mở tiếp theo sẽ hiện thay đổi.</span>
-              </span>
-            )}
-            <span className="today-detail-hint">Xem nguồn</span>
-          </button>
-        </article>
+      <div className="nhip-block">
+        {insights.length > 0 ? (
+          <ul className="nhip-list">
+            {insights.map((insight) => (
+              <li key={insight.kind} className={`nhip-item nhip-${insight.kind}`}>
+                {insight.text}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="nhip-item nhip-quiet">Chưa có nhịp nào cần nói hôm nay.</p>
+        )}
 
-        <Link
-          to="/transactions"
-          className="today-card today-card-reconcile today-card-link"
-          aria-label={`${reconciliationValue}. Mở giao dịch và đối chiếu PDF`}
+        <button
+          type="button"
+          className="nhip-meta"
+          onClick={() => setTraceOpen(true)}
+          aria-label={`Thay đổi từ lần mở trước: ${deltaValue}. Xem nguồn dữ liệu`}
         >
-          <header className="today-card-head">
-            <span className="today-card-icon"><PulseIcon name="reconcile" /></span>
-            <h3>Khớp chưa?</h3>
-            <span className="today-card-chevron" aria-hidden>›</span>
-          </header>
-          <span className={`today-main-metric ${reconciliationTone}`}>
-            {reconciliationValue}
+          <span
+            className={`nhip-meta-value ${valueComplete && delta ? metricTone(delta.value) : "neutral"}`}
+          >
+            {deltaValue}
           </span>
-          <span className="today-metric-caption">
-            {reconciliationCopy?.dateLabel ?? reconciliationCopy?.detail ?? "Nhập PDF để tạo mốc đối chiếu."}
-            {reconciliationCopy?.dateLabel && reconciliationCopy?.detail
-              ? ` · ${reconciliationCopy.detail}`
-              : ""}
-            {reconciliationGapMoney ? ` · ${reconciliationGapMoney}` : ""}
-          </span>
-        </Link>
+          {pulseChanged ? <span className="nhip-new">Mới</span> : null}
+          <span className="nhip-meta-caption">{deltaCaption}</span>
+          <span className="nhip-meta-hint">Xem nguồn</span>
+        </button>
+      </div>
 
-        <article className="today-card today-card-whatif">
-          <header className="today-card-head">
-            <span className="today-card-icon"><PulseIcon name="whatif" /></span>
-            <h3>Nếu thêm…?</h3>
-          </header>
-          <button type="button" className="today-card-detail" onClick={() => setWhatIfOpen(true)}>
-            <span className={`today-card-context${portfolioEmpty ? " is-simulation" : ""}`}>
-              {portfolioEmpty ? "Mô phỏng · chưa ghi vào quỹ" : `Thử ${formatMoney(amount)}`}
-            </span>
-            <span className="today-main-metric neutral">{whatIfCardValue}</span>
-            <span className="today-metric-caption">
-              {whatIf.status === "ready"
-                ? portfolioEmpty
-                  ? `${formatMoney(amount)} giả định theo giá hiện tại · không phải số dư.`
-                  : `${formatMoney(futureReal)} sức mua sau ${years} năm.`
-                : whatIf.status === "missing_price"
-                  ? "Cần giá hợp lệ để quy đổi."
-                  : "Nhập khoản lớn hơn 0 để mô phỏng."}
-            </span>
-            <span className="today-detail-hint">Đổi khoản thử</span>
-          </button>
-        </article>
-
-        <article className="today-card today-card-safety">
-          <header className="today-card-head">
-            <span className="today-card-icon"><PulseIcon name="safety" /></span>
-            <h3>An toàn chưa?</h3>
-          </header>
-          <button type="button" className="today-card-detail" onClick={() => setSafetyOpen(true)}>
-            <span className={`today-main-metric ${safetyScore === 4 ? "positive" : "warning"}`}>
-              {safetyScore}/4 ổn
-            </span>
-            <span className="today-metric-caption">
+      <ul className="nhip-checklist">
+        <li className={`nhip-check nhip-check-${reconciliationTone}`}>
+          <Link to="/transactions" aria-label={`Khớp sao kê: ${reconciliationValue}. Mở giao dịch và đối chiếu PDF`}>
+            <span className="nhip-check-label">Khớp sao kê</span>
+            <span className="nhip-check-value">{reconciliationValue}</span>
+            <span className="nhip-check-detail">{reconciliationDetail}</span>
+          </Link>
+        </li>
+        <li className={`nhip-check nhip-check-${safetyScore === 4 ? "positive" : "warning"}`}>
+          <button type="button" onClick={() => setSafetyOpen(true)}>
+            <span className="nhip-check-label">An toàn</span>
+            <span className="nhip-check-value">{safetyScore}/4</span>
+            <span className="nhip-check-detail">
               {highestRisk?.label ?? "Bốn lớp bảo vệ đều sẵn sàng."}
             </span>
-            <span className="today-detail-hint">Xem bốn lớp</span>
           </button>
-        </article>
-      </div>
+        </li>
+      </ul>
+
+      <button type="button" className="nhip-sim" onClick={() => setWhatIfOpen(true)}>
+        <span className="nhip-sim-label">Mô phỏng</span>
+        <span className="nhip-sim-value">{whatIfCardValue}</span>
+        <span className="nhip-sim-caption">{whatIfCaption}</span>
+      </button>
 
       <TraceSheet
         open={traceOpen}
