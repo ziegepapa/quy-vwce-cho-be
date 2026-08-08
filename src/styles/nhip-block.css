@@ -1,0 +1,172 @@
+/*
+ * NHIP-UI-001 r1 — the one block that replaced the four pulse cards.
+ * Density first: one story, one meta line, one checklist, one simulation entry.
+ */
+
+.nhip-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nhip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nhip-item {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.nhip-item.nhip-stale_price {
+  color: var(--warning-600, #b45309);
+}
+
+.nhip-quiet {
+  opacity: 0.75;
+  font-weight: 400;
+}
+
+.nhip-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 0 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.nhip-meta-value {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.nhip-meta-value.positive { color: var(--success-600, #15803d); }
+.nhip-meta-value.negative { color: var(--danger-600, #b91c1c); }
+
+.nhip-meta-caption {
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.8;
+  flex: 1 1 auto;
+}
+
+.nhip-meta-hint {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.nhip-new {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.nhip-checklist {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nhip-check > a,
+.nhip-check > button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.nhip-check-label {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.nhip-check-value {
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.nhip-check-detail {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.75;
+}
+
+.nhip-check-warning .nhip-check-value { color: var(--warning-600, #b45309); }
+.nhip-check-positive .nhip-check-value { color: var(--success-600, #15803d); }
+
+.nhip-sim {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.nhip-sim-label {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.nhip-sim-value {
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.nhip-sim-caption {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.75;
+}

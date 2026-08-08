@@ -26,6 +26,11 @@ import {
 } from "../lib/overviewCostBasis";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import { buildPortfolioTraceModel } from "../lib/todayCenterTrace";
+import {
+  buildNhipInsightInput,
+  buildNhipInsights,
+  type NhipInsight,
+} from "../lib/nhipInsights";
 import TodayCenter from "../components/TodayCenter";
 import TraceSheet from "../components/TraceSheet";
 
@@ -128,6 +133,14 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     () => buildEquitySeries(transactions, pricesByIsin[VWCE_ISIN] ?? 0, pricesByIsin),
     [transactions, pricesByIsin],
   );
+  // NHIP-UI-001 r1: the engine runs here because this is the only place that
+  // holds both the ledger and the effective quote date.
+  const nhipInsights = useMemo<NhipInsight[]>(() => {
+    if (!settings) return [];
+    return buildNhipInsights(
+      buildNhipInsightInput(portfolioSnapshot, transactions, settings),
+    ).insights;
+  }, [portfolioSnapshot, transactions, settings]);
 
   if (loading) {
     return (
@@ -328,7 +341,17 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         )}
       </section>
 
-      {nearestGoal ? (
+      {/* OVERVIEW-SIMPLIFY-001: when the ledger is unfunded this is the only
+          call to action on the page. Nothing competes with it. */}
+      {cashNegative ? (
+        <section className="card">
+          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Sổ đang thiếu bút toán nạp tiền</p>
+          <p className="muted" style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.45 }}>Đã ghi mua hoặc chi nhiều hơn số tiền nạp {formatMoney(hero.cashShortfall)}, nên số dư an toàn đang âm. Ghi khoản nạp tương ứng để tổng tài sản và lãi–lỗ khớp lại.</p>
+          <Link to="/transactions" className="action-item" style={{ minHeight: 44 }}>Ghi nạp tiền</Link>
+        </section>
+      ) : null}
+
+      {nearestGoal && !cashNegative ? (
         <Link to="/goals" className="pulse-goal-line">
           <span className="pulse-goal-label">Mốc kế tiếp</span>
           <strong>{nearestGoal.name}</strong>
@@ -346,6 +369,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
           vwcePriceSource={vwcePriceSource}
           settings={settings}
           transactions={transactions}
+          insights={nhipInsights}
         />
       ) : null}
 
@@ -385,15 +409,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         </section>
       ) : null}
 
-      {cashNegative ? (
-        <section className="card">
-          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Sổ đang thiếu bút toán nạp tiền</p>
-          <p className="muted" style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.45 }}>Đã ghi mua hoặc chi nhiều hơn số tiền nạp {formatMoney(hero.cashShortfall)}, nên số dư an toàn đang âm. Ghi khoản nạp tương ứng để tổng tài sản và lãi–lỗ khớp lại.</p>
-          <Link to="/transactions" className="action-item" style={{ minHeight: 44 }}>Ghi nạp tiền</Link>
-        </section>
-      ) : null}
-
-      {primary ? (
+      {primary && !cashNegative ? (
         <section className="action-stack">
           <Link to={primary.to} className="action-item">
             <div className={`action-icon pri-${primary.priority}`} aria-hidden>!</div>
