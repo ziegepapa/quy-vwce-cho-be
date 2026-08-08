@@ -11,6 +11,12 @@
  *    baseline even when the ledger itself changed between the two visits, so
  *    deleting or re-importing transactions produced "-1.593,10 EUR (-99,9%)".
  *
+ * CASH-MODEL-OPTIONAL-001 r1 added a third one. The owner pays for the ETF
+ * from a bank or broker account this app never sees, so "missing deposit" was
+ * ledger-true and product-false: it demanded a bookkeeping entry for money
+ * that was never meant to pass through here. `trackInAppCash` decides whether
+ * that gap exists at all; the assets line itself is identical in both modes.
+ *
  * Everything here is pure: no Date.now(), no storage, no network, no AI. The
  * UI only maps these results to text.
  */
@@ -49,6 +55,16 @@ export type OverviewHeroInput = {
   positionValue: number | null;
   /** Number of ledger entries; zero means nothing has been recorded yet. */
   transactionCount: number;
+  /**
+   * True keeps the double-entry ledger: a buy without its `cash_in` is a
+   * missing deposit worth reporting. False is securities-first, where the
+   * purchase was funded outside the app, so there is no gap to report and
+   * nothing to demand from the user.
+   *
+   * Required on purpose. A silent default is how one caller ends up reporting
+   * a funding gap that the rest of the app has already dismissed.
+   */
+  trackInAppCash: boolean;
 };
 
 export type OverviewHero = {
@@ -58,7 +74,7 @@ export type OverviewHero = {
   securitiesValue: number;
   /** Cash counted as an asset; never negative. */
   cashAsset: number;
-  /** Missing funding entries, as a positive number. */
+  /** Missing funding entries, as a positive number. Always 0 when cash is not tracked. */
   cashShortfall: number;
   /** securities + cash, kept for the trace sheet only. */
   ledgerNet: number;
@@ -70,6 +86,12 @@ export type OverviewHero = {
   pnlSuppressedReason: PnlSuppressedReason;
   /** True when the ledger is missing funding entries. */
   setupIncomplete: boolean;
+  /**
+   * False in securities-first mode, where the cash row is not a claim this app
+   * is entitled to make. The UI reads it to stay quiet instead of printing a
+   * number nobody maintains.
+   */
+  cashTracked: boolean;
 };
 
 function finite(value: number, fallback = 0): number {
@@ -92,9 +114,16 @@ export function buildOverviewHero(input: OverviewHeroInput): OverviewHero {
   const costBasis = finite(input.costBasis);
   const positionValue = finiteOrNull(input.positionValue);
   const transactionCount = Math.max(0, Math.trunc(finite(input.transactionCount)));
+  const trackInAppCash = input.trackInAppCash === true;
 
+  // The locked line: securities plus cash counted as an asset, never negative.
+  // Both modes share it; only the reporting of the gap differs.
   const cashAsset = Math.max(0, cashBalance);
-  const cashShortfall = cashBalance < 0 ? -cashBalance : 0;
+  const ledgerShortfall = cashBalance < 0 ? -cashBalance : 0;
+  // Securities-first: the deposit never belonged in this app, so there is no
+  // shortfall to report, no "unfunded" status and nothing to press the user
+  // about. The raw balance still reaches the trace sheet through ledgerNet.
+  const cashShortfall = trackInAppCash ? ledgerShortfall : 0;
   const setupIncomplete = cashShortfall > MONEY_EPSILON;
 
   let pnl: number | null = null;
@@ -137,6 +166,7 @@ export function buildOverviewHero(input: OverviewHeroInput): OverviewHero {
     pnlPct,
     pnlSuppressedReason,
     setupIncomplete,
+    cashTracked: trackInAppCash,
   };
 }
 

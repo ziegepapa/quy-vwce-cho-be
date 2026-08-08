@@ -144,6 +144,21 @@ export type AppSettings = {
   notfallmappe?: Notfallmappe;
   /** V10-C — nested to inherit settings backup/sync without a remote schema change. */
   depotStatements?: DepotStatement[];
+  /**
+   * CASH-MODEL-OPTIONAL-001 r1 — how the money that paid for a purchase is
+   * tracked.
+   *
+   * false (default): securities-first. The euros left a bank or broker account
+   * this app never sees, so a buy without a matching `cash_in` is not a missing
+   * deposit and must not be reported as one.
+   * true: the full double-entry ledger, where a buy really does need its
+   * funding entry and the gap is worth naming.
+   *
+   * Optional on purpose. Settings rows written before this field existed, and
+   * every backup file already on disk, load unchanged and read as false. That
+   * is why neither DEXIE_DB_VERSION nor BACKUP_SCHEMA_VERSION moves.
+   */
+  trackInAppCash?: boolean;
   createdAt: string; updatedAt: string;
 };
 export type Goal = {

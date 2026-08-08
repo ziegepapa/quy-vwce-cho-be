@@ -6,7 +6,11 @@ import {
   type OverviewHeroInput,
 } from "./overviewNumbers";
 
-/** Buy recorded, matching cash_in missing: the reported production state. */
+/**
+ * Buy recorded, matching cash_in missing: the reported production state.
+ * trackInAppCash is true here so every assertion below keeps its original
+ * meaning, which is the double-entry ledger.
+ */
 const partialPortfolio: OverviewHeroInput = {
   securitiesValue: 101.65,
   cashBalance: -100,
@@ -15,6 +19,7 @@ const partialPortfolio: OverviewHeroInput = {
   costBasis: 100,
   positionValue: 101.65,
   transactionCount: 1,
+  trackInAppCash: true,
 };
 
 /** Same depot after the deposit is recorded. */
@@ -32,6 +37,7 @@ const emptyPortfolio: OverviewHeroInput = {
   costBasis: 0,
   positionValue: null,
   transactionCount: 0,
+  trackInAppCash: false,
 };
 
 describe("buildOverviewHero", () => {
@@ -116,6 +122,78 @@ describe("buildOverviewHero", () => {
   });
 });
 
+/**
+ * CASH-MODEL-OPTIONAL-001 r1 — the same ledger read with the owner's real
+ * funding model: one buy, no cash_in, because the money left a bank account
+ * this app never sees. Nothing here is allowed to move the assets line.
+ */
+describe("buildOverviewHero — securities-first mode", () => {
+  const securitiesFirst: OverviewHeroInput = {
+    ...partialPortfolio,
+    trackInAppCash: false,
+  };
+
+  it("does not report a missing deposit for money that never entered the app", () => {
+    const hero = buildOverviewHero(securitiesFirst);
+
+    expect(hero.status).toBe("ready");
+    expect(hero.cashShortfall).toBe(0);
+    expect(hero.setupIncomplete).toBe(false);
+    expect(hero.cashTracked).toBe(false);
+  });
+
+  it("leaves the assets line, the cost basis and the profit and loss untouched", () => {
+    const hero = buildOverviewHero(securitiesFirst);
+    const doubleEntry = buildOverviewHero(partialPortfolio);
+
+    expect(hero.assets).toBeCloseTo(101.65, 2);
+    expect(hero.assets).toBeCloseTo(doubleEntry.assets, 2);
+    expect(hero.securitiesValue).toBeCloseTo(101.65, 2);
+    expect(hero.cashAsset).toBe(0);
+    expect(hero.pnl).toBeCloseTo(1.65, 2);
+    expect(hero.pnlPct).toBeCloseTo(1.65, 2);
+    expect(hero.pnlSuppressedReason).toBeNull();
+  });
+
+  it("still hands the raw ledger balance to the trace sheet", () => {
+    // Dropping the demand is not the same as hiding the number: "Xem nguon"
+    // must keep showing what the ledger really holds.
+    expect(buildOverviewHero(securitiesFirst).ledgerNet).toBeCloseTo(1.65, 2);
+  });
+
+  it("counts real positive cash as an asset even when cash is not tracked", () => {
+    const hero = buildOverviewHero({
+      ...securitiesFirst,
+      cashBalance: 100,
+      transactionCount: 2,
+    });
+
+    expect(hero.assets).toBeCloseTo(201.65, 2);
+    expect(hero.cashAsset).toBeCloseTo(100, 2);
+    expect(hero.status).toBe("ready");
+  });
+
+  it("leaves a missing price as the only remaining reason to interrupt", () => {
+    const hero = buildOverviewHero({
+      ...securitiesFirst,
+      missingPriceCount: 1,
+      positionValue: null,
+    });
+
+    expect(hero.status).toBe("incomplete_prices");
+    expect(hero.setupIncomplete).toBe(false);
+  });
+
+  it("returns to the funding gap the moment double-entry is switched on", () => {
+    const hero = buildOverviewHero({ ...securitiesFirst, trackInAppCash: true });
+
+    expect(hero.status).toBe("unfunded");
+    expect(hero.cashShortfall).toBeCloseTo(100, 2);
+    expect(hero.setupIncomplete).toBe(true);
+    expect(hero.cashTracked).toBe(true);
+  });
+});
+
 describe("buildPulseDisplay", () => {
   it("shows no percentage before a baseline exists", () => {
     const display = buildPulseDisplay(null);
@@ -184,6 +262,15 @@ describe("shouldShowContributionNudge", () => {
     expect(
       shouldShowContributionNudge({ status: "ready", hasContributionThisMonth: false }),
     ).toBe(true);
+    expect(
+      shouldShowContributionNudge({ status: "ready", hasContributionThisMonth: true }),
+    ).toBe(false);
+  });
+
+  it("treats a securities-first month with a purchase as a contribution", () => {
+    // The caller decides what counts as a contribution. In securities-first
+    // mode a buy is one, otherwise killing the "unfunded" status would turn
+    // this nudge into a permanent monthly false alarm.
     expect(
       shouldShowContributionNudge({ status: "ready", hasContributionThisMonth: true }),
     ).toBe(false);
