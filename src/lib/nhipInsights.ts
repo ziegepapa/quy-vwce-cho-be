@@ -28,7 +28,11 @@ export type NhipInsightsResult = {
 };
 
 const MAX_INSIGHTS = 3;
-const CONTRIBUTION_WINDOW_DAYS = 35;
+/**
+ * OVERVIEW-RHYTHM-001 r2: exported so RhythmHero and Overview can reference
+ * the same constant, keeping X_hero and X_nhip on identical periods.
+ */
+export const CONTRIBUTION_WINDOW_DAYS = 35;
 const GOAL_UPCOMING_DAYS = 365;
 const MONEY_EPSILON = 0.005;
 const QUANTITY_EPSILON = 0.000001;
@@ -105,7 +109,7 @@ export function buildNhipInsights({
       );
       result.push({
         kind: "on_track",
-        text: `${recent.length} khoản góp trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua, tổng ${Math.round(total)} € — nhịp quỹ đang được duy trì.`,
+        text: `${recent.length} khoản góp trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua, tổng ${Math.round(total)} € — nhịp quỹ đang được duy trì.`,
       });
     }
   }
