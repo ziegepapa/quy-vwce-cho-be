@@ -2,47 +2,48 @@
  * NHIP-UI-001 r1 -- the one block that replaced the four pulse cards.
  * Density first: one story, one meta line, one checklist, one simulation entry.
  *
- * VISUAL-POLISH-001 r1 -- hover/active micro-interactions, neutral tone for
- * meta-value, nhip-check-neutral value colour, nhip-sim tint + hover.
- * All purely additive; no markup changed.
+ * VISUAL-POLISH-001 r1..r3 -- hover/active micro-interactions, neutral tone
+ * for meta-value, smaller type so the block reads as secondary to the hero,
+ * and a meta row that packs left instead of stranding its hint.
  *
- * VISUAL-POLISH-001 r2 -- reduce font sizes and padding so nhip block reads
- * as secondary to the hero. Visible at rest; no hover required.
+ * OVERVIEW-PREMIUM-001 r2 -- surfaces moved to --surface / --hairline, and
+ * the three floating rows became one card.
  *
- * VISUAL-POLISH-001 r3 -- stop the meta row from stranding its hint against
- * the right edge, and give the checklist rows a caption/figure ranking so two
- * stacked rows stop reading as four equally loud things.
+ * OVERVIEW-MONO-001 r1 -- the card became three equal tiles, and every shadow
+ * on this sheet was deleted.
  *
- * OVERVIEW-PREMIUM-001 r2 -- surfaces moved from rgba(255,255,255,.03..08) to
- * --surface / --hairline, and the three floating rows became one card.
+ * OVERVIEW-EDITORIAL-001 r1 -- the boxes go.
  *
- * OVERVIEW-MONO-001 r1 -- two changes.
+ * MONO turned the page white but left every group of content inside a
+ * container: this block had a border and a 16px radius, and the three state
+ * tiles each had a sunken fill and a 14px radius. On a tinted page those
+ * containers were what separated content from background. On a white page
+ * there is nothing to separate it from, so the border stops being structure
+ * and becomes an extra line to look at, and the three grey rounded rectangles
+ * become the loudest shapes on a screen whose whole point is the number at
+ * the top.
  *
- * First, the one "Trang thai" card becomes three equal tiles. r2 was right
- * that three floating rectangles were three competing objects, but the card it
- * produced still read as an administrative checklist: three full-width rows,
- * each with a name, a figure and a sentence of explanation, stacked. A grid of
- * three equal tiles carries the same three facts in a third of the height and
- * with a stable rhythm -- the eye learns where each number lives instead of
- * reading three sentences every time. The explanations are not deleted: each
- * tile keeps the full sentence in its aria-label, and the two tiles that open
- * a TraceSheet show the complete breakdown there on tap, which is where a
- * detail belongs.
+ * What replaces them is what a printed page uses: a hairline rule, space, and
+ * a difference in type. The block is separated from the hero by one rule; the
+ * three figures are separated from each other by one hairline each. Nothing
+ * is enclosed. This also fixes the thing that made the tiles fragile -- a
+ * fill with a radius needs padding, and the padding is what squeezed
+ * "= 0,5939 VWCE" into two lines at a third of the screen width.
  *
- * Second, no shadows. On a white page a drop shadow is the fastest thing to
- * tire of, so the block is held by a hairline alone and the tiles by a sunken
- * fill. The purple "Moi" badge goes neutral with them: the accent budget for
- * this screen is the chart line, the selected tab and the selected dock icon.
+ * The sentences themselves move up, not down: 14px/1.5 at weight 500 was a
+ * status line, 15px/1.55 at 450 is a paragraph, which is what they actually
+ * are. Nothing here changes what any of them say.
  */
 
 .nhip-block {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 16px;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
+  gap: 12px;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  border-radius: 0;
+  background: none;
   box-shadow: none;
 }
 
@@ -52,14 +53,19 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 
+/* Editorial body copy: bigger, looser, lighter. A sentence the owner is meant
+   to read once a day should be set like prose, not like a table cell. */
 .nhip-item {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.55;
+  font-weight: 450;
+  letter-spacing: -0.011em;
+  text-wrap: pretty;
 }
 
 .nhip-item.nhip-stale_price {
@@ -67,7 +73,8 @@
 }
 
 .nhip-quiet {
-  opacity: 0.75;
+  color: var(--text-secondary);
+  opacity: 1;
   font-weight: 400;
 }
 
@@ -78,7 +85,7 @@
   gap: 8px;
   width: 100%;
   min-height: 44px;
-  padding: 8px 0 0;
+  padding: 10px 0 0;
   border: 0;
   border-top: 1px solid var(--hairline);
   background: none;
@@ -90,70 +97,77 @@
 
 .nhip-meta-value {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 620;
   font-variant-numeric: tabular-nums;
 }
 
 .nhip-meta-value.positive { color: var(--success-600, #15803d); }
 .nhip-meta-value.negative { color: var(--danger-600, #b91c1c); }
 /* neutral: softer so it doesn't compete with a real monetary figure */
-.nhip-meta-value.neutral  { opacity: 0.72; }
+.nhip-meta-value.neutral  { color: var(--text-secondary); }
 
 /* VISUAL-POLISH-001 r3: this was flex: 1 1 auto, so the caption swallowed every
    spare pixel in the row and pushed the hint to the far right, leaving a band
    of empty space in the middle of a line that reads as one sentence. The row
    now packs left and the hint sits next to the text it qualifies. */
 .nhip-meta-caption {
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.4;
-  opacity: 0.8;
+  opacity: 1;
   flex: 0 1 auto;
 }
 
 .nhip-meta-hint {
+  color: var(--text-tertiary);
   font-size: 12px;
   font-weight: 600;
-  opacity: 0.7;
+  opacity: 1;
   white-space: nowrap;
 }
 
-/* OVERVIEW-MONO-001 r1: was --primary-050 on --primary-600. It is a recency
-   marker, not an action, so it has no claim on the accent. */
+/* A recency marker, not an action: no accent, and now no pill either. */
 .nhip-new {
-  font-size: 11px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 10px;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: var(--surface-sunken);
-  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-/* ===== OVERVIEW-MONO-001 r1 -- three equal tiles ===== *
+/* ===== OVERVIEW-EDITORIAL-001 r1 -- three figures, no tiles ===== *
  *
- * Every tile is the same box: a label, then a figure. The tone classes are on
- * the tile itself, so only the figure is ever coloured -- warning, success or
- * plain text. There is no border and no shadow; the sunken fill is what tells
- * the eye that the three of them are one group.
+ * Same three facts, same markup, same destinations. The group is announced by
+ * one hairline above it and held together by the shared baseline of its three
+ * labels; the columns are told apart by a hairline between them, the way a
+ * newspaper separates columns. No fill, no radius, no padding to fight over.
  *
- * The rows kept their own <a> / <button> in r2 and they still do, so every
- * destination, aria-label and TraceSheet behaves exactly as before.
+ * The label is the small-caps line and the figure is the large one, which is
+ * the opposite emphasis from the old tile, where a 13px value sat under an
+ * 11px name and the two were nearly the same weight.
  */
 .state-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
+  gap: 0;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
 }
 
 .state-tile {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-height: 76px;
-  padding: 12px 10px;
+  gap: 5px;
+  min-height: 44px;
+  padding: 0 12px;
   border: 0;
-  border-radius: 14px;
-  background: var(--surface-sunken);
+  border-left: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: none;
   color: inherit;
   text-align: left;
   text-decoration: none;
@@ -162,16 +176,30 @@
   transition: opacity var(--d-fast, 160ms);
 }
 
+/* The first column starts at the text margin, the last one ends at it, so the
+   row lines up with the paragraph above instead of floating inside it. */
+.state-tile:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.state-tile:last-child {
+  padding-right: 0;
+}
+
 .state-name {
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 620;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 680;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .state-value {
-  font-size: 13px;
-  font-weight: 680;
+  font-size: 15px;
+  font-weight: 640;
   line-height: 1.25;
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
@@ -198,16 +226,18 @@
   }
 }
 
+/* Without a fill there is no padding to shave, so the narrow phone gets its
+   room back from the gutters and from one step of type. */
 @media (max-width: 340px) {
-  .state-grid {
-    gap: 6px;
-  }
-
   .state-tile {
-    padding: 10px 8px;
+    padding: 0 8px;
   }
 
   .state-value {
-    font-size: 12px;
+    font-size: 14px;
+  }
+
+  .state-name {
+    letter-spacing: 0.07em;
   }
 }

@@ -5,29 +5,32 @@
  * cards (grid, icon, metric, empty state, presets, sync pill, show-all, primary
  * actions, safety detail) had no markup left to style. A search for each class
  * name found it in stylesheets only, never in a .tsx file. What stays is what
- * TodayCenter.tsx still renders. Two notes on the less obvious removals:
- * the preset row keeps its style from .today-sheet-presets in pulse-locked-v2.css,
- * which is the class the component actually renders, so the .today-presets rules
- * removed here never matched anything; and the header description rule
- * `.today-center-head > div:first-child > p:last-child` cannot match either,
- * because that div now ends with the h2, so no p can be its last child.
+ * TodayCenter.tsx still renders.
  *
  * OVERVIEW-MONO-001 r1 — .today-kicker removed. The kicker was the paragraph
  * reading "Một khối · điều đáng nói hôm nay", a label about the block rather
  * than information from the ledger, and it was the loudest purple on the first
- * screenful. TodayCenter.tsx no longer renders it, so the rule here and its
- * twin in pulse-locked-v2.css would both be dead CSS.
+ * screenful. TodayCenter.tsx no longer renders it.
+ *
+ * OVERVIEW-EDITORIAL-001 r1 — the card shell itself is deleted, not overridden.
+ * This rule still carried the whole v9 design: a 24px radius, a hairline
+ * border, --shadow-raised, and a purple radial glow in the top-right corner.
+ * None of it has painted anything since MONO-001, because main.tsx imports
+ * ./App before the global sheets, so this file opens the bundle and
+ * pulse-locked-v2.css closes it with `padding: 2px 0 0; border: 0; background:
+ * transparent; box-shadow: none` at the same specificity. But an overridden
+ * rule is not a deleted one: it is the old design still sitting in the repo,
+ * one import-order change away from coming back, and the next person to read
+ * this file would reasonably believe the section is a glowing card. The
+ * position/overflow pair goes with it -- there is no absolutely positioned
+ * child and nothing left to clip.
+ *
+ * The @media (max-width: 720px) block that re-stated padding and radius was
+ * dead for the same reason and is gone too. Media queries add no specificity,
+ * so the later file won there as well.
  */
 .today-center {
-  position: relative;
-  padding: 16px;
-  border: 1px solid var(--pulse-hairline, var(--hairline));
-  border-radius: var(--pulse-radius-xl, 24px);
-  background:
-    radial-gradient(circle at 100% 0%, var(--pulse-glow, rgba(116, 102, 240, 0.10)), transparent 34%),
-    var(--surface-raised);
-  box-shadow: var(--pulse-shadow, var(--shadow-raised));
-  overflow: hidden;
+  display: block;
 }
 
 .today-center-head {
@@ -39,22 +42,16 @@
 }
 
 /*
- * VISUAL-POLISH-001 r4 -- font-size: 22px removed. TodayCenter.tsx imports this
- * sheet and main.tsx imports ./App before the global stylesheets, so this file
- * opens the bundle while pulse-locked-v2.css closes it. Same selector, same
- * specificity, later file wins: the heading renders at 17px, and 15px below
- * 520px, from pulse-locked-v2.css. Anyone tuning the heading here would have
- * seen no effect at all.
+ * VISUAL-POLISH-001 r4 / DEAD-CSS-AND-CODE-001 r1 -- font-size, margin,
+ * line-height and letter-spacing were all removed from this rule because
+ * pulse-locked-v2.css restates every one of them after this file at the same
+ * specificity.
  *
- * DEAD-CSS-AND-CODE-001 r1 -- margin, line-height and letter-spacing followed
- * it out, for the same reason and with the same evidence: pulse-locked-v2.css
- * restates all three after this file (1px 0 0, 1.05, -0.045em). color is the
- * single declaration that sheet does not restate, so it is the only thing this
- * rule has ever contributed to the heading, and the rule stays for its sake.
+ * OVERVIEW-EDITORIAL-001 r1 -- color follows them out. It was the single
+ * declaration that sheet did not restate, which is why the rule survived the
+ * last cleanup; the heading is now a tertiary small-caps label and that sheet
+ * sets its colour, so this rule has nothing left to contribute.
  */
-.today-center-head h2 {
-  color: var(--text-primary);
-}
 
 .today-sheet-tools { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
 
@@ -65,10 +62,6 @@
 .today-sheet-amount b { color: var(--text-tertiary); }
 
 .today-inline-button { min-width: 0; min-height: 36px; padding: 0 9px; border: 1px solid var(--pulse-hairline, var(--hairline)); background: var(--surface-sunken); color: var(--primary-600); font-size: 10px; box-shadow: none; }
-
-@media (max-width: 720px) {
-  .today-center { padding: 14px; border-radius: 22px; }
-}
 
 @media (max-width: 339px) {
   .today-center-head { align-items: center; }
