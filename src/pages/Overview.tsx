@@ -331,11 +331,11 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
           </div>
         ) : (
           <>
-            {/* OVERVIEW-PREMIUM-001 r2 -- decision (3). The figure, the delta and
-                the price-source chip used to be three stacked blocks, with the
-                chip absolutely positioned in the top-right corner: the exact
-                layout of a report header. They share one fixed row now, so the
-                number is read together with what qualifies it. */}
+            {/* OVERVIEW-EDITORIAL-TUNE-001 r1 -- (1)(2): hero is now a vertical
+                stack. Number is the primary focus; PnL sits directly below it;
+                provenance is a 12px caption. Nothing competes in a right column.
+                The .hero-meta wrapper div is removed -- its children are direct
+                children of .hero-head, which is now flex-direction: column. */}
             <div className="hero-head">
               <button type="button" className="hero-trace-trigger" onClick={() => setTraceOpen(true)}>
                 <span className="hero-label">{hasMissingPrices ? "T\u00e0i s\u1ea3n \u0111\u00e3 \u0111\u1ecbnh gi\u00e1" : "T\u1ed5ng t\u00e0i s\u1ea3n"}</span>
@@ -344,41 +344,35 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
                   <span className="hero-eur">{"\u20ac"}</span>
                 </span>
               </button>
-              <div className="hero-meta">
-                {hero.setupIncomplete ? (
-                  <span className="hero-delta">{"Ch\u01b0a ghi n\u1ea1p ti\u1ec1n "}{formatMoney(hero.cashShortfall)}</span>
-                ) : hasMissingPrices ? (
-                  <span className="hero-delta">{"+ "}{market.missingIsins.length}{" m\u00e3 thi\u1ebfu gi\u00e1"}</span>
-                ) : hero.pnl != null && hero.pnl !== 0 ? (
-                  /* OVERVIEW-MONO-001 r1: the arrow already branches on the sign
-                     here, so the class does too. CSS cannot read the sign of a
-                     number, and a gain that looks exactly like a loss is the one
-                     thing a portfolio screen may not do. */
-                  <span className={`hero-delta ${hero.pnl >= 0 ? "hero-delta-pos" : "hero-delta-neg"}`}>
-                    {hero.pnl >= 0 ? "\u2191" : "\u2193"}{" "}{formatMoney(Math.abs(hero.pnl))}{pnlPct ? ` (${pnlPct}%)` : ""}
-                  </span>
-                ) : null}
-                <button type="button" className="hero-provenance" onClick={() => setTraceOpen(true)}>
-                  <span aria-hidden />
-                  {sourceLabel}{vwceQuote?.asOf ? ` \u00b7 ${vwceQuote.asOf}` : ""}
-                </button>
-              </div>
+              {hero.setupIncomplete ? (
+                <span className="hero-delta">{"Ch\u01b0a ghi n\u1ea1p ti\u1ec1n "}{formatMoney(hero.cashShortfall)}</span>
+              ) : hasMissingPrices ? (
+                <span className="hero-delta">{"+ "}{market.missingIsins.length}{" m\u00e3 thi\u1ebfu gi\u00e1"}</span>
+              ) : hero.pnl != null && hero.pnl !== 0 ? (
+                /* OVERVIEW-MONO-001 r1: the arrow already branches on the sign
+                   here, so the class does too. CSS cannot read the sign of a
+                   number, and a gain that looks exactly like a loss is the one
+                   thing a portfolio screen may not do. */
+                <span className={`hero-delta ${hero.pnl >= 0 ? "hero-delta-pos" : "hero-delta-neg"}`}>
+                  {hero.pnl >= 0 ? "\u2191" : "\u2193"}{" "}{formatMoney(Math.abs(hero.pnl))}{pnlPct ? ` (${pnlPct}%)` : ""}
+                </span>
+              ) : null}
+              <button type="button" className="hero-provenance" onClick={() => setTraceOpen(true)}>
+                {sourceLabel}{vwceQuote?.asOf ? ` \u00b7 ${vwceQuote.asOf}` : ""}
+              </button>
             </div>
             <Sparkline points={series} />
-            {allocation.showBar ? (
-              <>
-                <div className="alloc-v8" role="img" aria-label={allocationCopy.ariaLabel}>
-                  <div className="alloc-seg-v8 vwce" style={{ flex: Math.max(allocation.securitiesPct, 1) }} />
-                  <div className="alloc-seg-v8 cash" style={{ flex: Math.max(allocation.cashPct, 1) }} />
-                </div>
-                <div className="alloc-legend-v8"><span>{allocationCopy.securitiesLabel}</span><span>{allocationCopy.cashLabel}</span></div>
-                {allocationCopy.caveat ? (
-                  <p className="alloc-caveat-v8">{allocationCopy.caveat}</p>
-                ) : null}
-              </>
-            ) : (
-              <div className="alloc-legend-v8"><span className="neg">{allocationCopy.unavailable}</span></div>
-            )}
+            {/* OVERVIEW-EDITORIAL-TUNE-001 r1 -- (3): bar removed. One text
+                caption only when cashPct > 0. In securities-first mode the hero
+                number is the whole story; an "CK 100%" line adds no information
+                and is therefore absent. */}
+            {!allocation.showBar ? (
+              <p className="hero-alloc-caption neg">{allocationCopy.unavailable}</p>
+            ) : allocation.cashPct > 0 ? (
+              <p className="hero-alloc-caption">
+                {allocationCopy.securitiesLabel}{" \u00b7 "}{allocationCopy.cashLabel}
+              </p>
+            ) : null}
           </>
         )}
       </section>

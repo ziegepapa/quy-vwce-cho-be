@@ -224,29 +224,21 @@
   display: none;
 }
 
-/* Decision (3) of r2, kept: the figure and its meta share one fixed row. The
-   provenance chip used to be absolutely positioned in the top-right corner --
-   the exact anatomy of a report header -- so it is pulled back into normal
-   flow here with position: static. */
+/* OVERVIEW-EDITORIAL-TUNE-001 r1 -- (1)(2): hero-head is now a column. The
+   number occupies its own line and is the first thing the eye lands on. PnL
+   sits directly below it; provenance is a 12px caption below that. Nothing
+   competes in a right column. The .hero-meta wrapper is gone from the JSX,
+   so the old two-column layout rule is removed with it. */
 .hero-v8:not(.hero-empty) .hero-head {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .hero-v8:not(.hero-empty) .hero-trace-trigger {
   min-width: 0;
   padding: 0;
-}
-
-.hero-v8:not(.hero-empty) .hero-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-  padding-bottom: 7px;
-  white-space: nowrap;
+  text-align: left;
 }
 
 .hero-v8:not(.hero-empty) .hero-label {
@@ -281,9 +273,10 @@
   border-radius: 0;
   background: none;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 680;
   font-variant-numeric: tabular-nums;
+  align-self: flex-start;
 }
 
 .hero-v8:not(.hero-empty) .hero-delta-pos {
@@ -294,55 +287,22 @@
   color: var(--danger-600);
 }
 
-/* OVERVIEW-EDITORIAL-001 r1: the provenance chip keeps its pill, because it
-   is the one element on the hero that is genuinely a control and not a
-   figure -- but the sunken fill goes. A grey capsule next to a 58px number
-   was the last enclosed object on the first screenful. */
+/* OVERVIEW-EDITORIAL-TUNE-001 r1: provenance is now a 12px caption below PnL
+   in the column stack, not a chip in the right column. Smaller and lighter so
+   it reads as metadata, not as a control competing with the number. The button
+   role is kept because it still opens the trace sheet on tap. */
 .hero-v8:not(.hero-empty) .hero-provenance {
   position: static;
-  min-height: 24px;
-  padding: 3px 0;
+  min-height: auto;
+  padding: 0;
   border: 0;
   border-radius: 0;
   background: none;
   color: var(--text-tertiary);
-  font-size: 10px;
-  font-weight: 620;
+  font-size: 12px;
+  font-weight: 500;
   letter-spacing: 0.02em;
-}
-
-/* OVERVIEW-MONO-001 r1: the allocation bar was --primary-600 at full strength
-   -- a purple block of paint the width of the screen, and by far the largest
-   accent left on the page. It is a proportion, not a signal, so it is drawn
-   in ink: the securities share in text colour, the safe share in a light
-   grey, on the sunken track. */
-.hero-v8:not(.hero-empty) .alloc-v8 {
-  height: 4px;
-  margin-top: 18px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: var(--surface-sunken);
-}
-
-.hero-v8:not(.hero-empty) .alloc-seg-v8.vwce {
-  background: var(--text-primary);
-}
-
-.hero-v8:not(.hero-empty) .alloc-seg-v8.cash {
-  background: color-mix(in srgb, var(--text-primary) 18%, transparent);
-}
-
-.hero-v8:not(.hero-empty) .alloc-legend-v8 {
-  margin-top: 8px;
-  color: var(--text-secondary);
-  font-size: 10px;
-  font-weight: 600;
-  opacity: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.hero-v8:not(.hero-empty) .alloc-caveat-v8 {
-  color: var(--text-tertiary);
+  align-self: flex-start;
 }
 
 /* The curve keeps order: 1, so it renders after the allocation row without
@@ -412,13 +372,34 @@
   font-weight: 720;
 }
 
-/* OVERVIEW-PREMIUM-001 r1 kept: 34-42px was sized for a card 18px in from
-   both screen edges and read as a caption. Line-height and tracking come with
-   it so the taller figure still sits on one line at 320px. */
+/* OVERVIEW-EDITORIAL-TUNE-001 r1: tightened from clamp(42px,13vw,58px) to
+   clamp(40px,11vw,48px). The old ceiling was 58px -- large enough to feel like
+   a display headline competing with the page title above it. 48px still
+   dominates the screen at a glance but leaves headroom for the PnL line below
+   it without either feeling crowded. weight: 700 is explicit because the base
+   rule in overview-v8.css sets 700 and we want the intent here to be obvious
+   to anyone reading only this sheet. */
 .hero-num {
-  font-size: clamp(42px, 13vw, 58px);
+  font-size: clamp(40px, 11vw, 48px);
+  font-weight: 700;
   line-height: 0.95;
   letter-spacing: -0.05em;
+}
+
+/* OVERVIEW-EDITORIAL-TUNE-001 r1: allocation bar replaced by one text caption.
+   Visible only when cashPct > 0 (split allocation) or when the bar cannot be
+   shown at all (missing-price notice). In securities-first mode with zero cash
+   the hero number already tells the whole story, so the caption is absent. */
+.hero-alloc-caption {
+  margin: 6px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.hero-alloc-caption.neg {
+  color: var(--warning-600);
 }
 
 .hero-provenance {
@@ -547,50 +528,25 @@
   cursor: pointer;
 }
 
-/* ===== OVERVIEW-GLASSDOCK-001 r1 -- the second and last glass surface =====
- *
- * MONO-001 took the accent off this control because it is a disclosure, not
- * an action. EDITORIAL took the boxes off everything around it. What is left
- * is the one control on the page that governs whether a whole block exists,
- * and after both of those passes it looks like a stray line of grey text.
- *
- * A pill with a frosted fill gives it back its edges without giving it back
- * a colour: it reads as a switch, not as a link, and it is the only object on
- * the scrolling page allowed to have a surface. It qualifies for glass on the
- * same test the dock passes -- it sits over content that keeps existing when
- * the block is closed.
- *
- * Note the selector reaches two buttons in Overview.tsx: "So lieu" and the
- * nested "Chi tiet" inside it. That is deliberate -- they are the same kind of
- * control at two levels -- but it does mean two pills appear when the block is
- * open, and only the outer one exists when it is closed.
- *
- * The opaque-ish fill here is the fallback; the glass is in the @supports
- * block, because a translucent pill with no blur on an engine without
- * backdrop-filter would show raw page text through the label.
- */
+/* OVERVIEW-EDITORIAL-TUNE-001 r1: the disclosure control is now a lightweight
+   hairline pill. The frosted glass from GLASSDOCK-001 is removed here: glass
+   is earned by surfaces that float over content (the dock), not by a button
+   embedded in a scrolling list. min-height 28px keeps it tappable on touch
+   targets without dominating the lower half of the screen. */
 .stat-detail-btn {
   justify-self: center;
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 16px;
+  min-height: 28px;
+  padding: 0 12px;
   border: 1px solid var(--hairline);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-sunken) 88%, transparent);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 660;
-  letter-spacing: 0.01em;
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .stat-detail-btn {
-    background: color-mix(in srgb, var(--surface-sunken) 55%, transparent);
-    backdrop-filter: blur(14px) saturate(160%);
-    -webkit-backdrop-filter: blur(14px) saturate(160%);
-    border-color: color-mix(in srgb, var(--text-primary) 8%, transparent);
-  }
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
 }
 
 /* Four primary destinations; secondary tools live in the avatar menu. */
@@ -613,39 +569,36 @@
   bottom: calc(6px + var(--safe-bottom));
 }
 
-/* This sheet closes the bundle, so this rule -- not dock.css -- is what the
-   dock actually gets. It stays nearly opaque on purpose: it is the fallback
-   for engines without backdrop-filter. The glass is in the @supports block
-   directly below, which is the only way to keep both true at once. */
+/* OVERVIEW-EDITORIAL-TUNE-001 r1: fallback changed to rgba(255,255,255,0.95)
+   per mandate -- a near-opaque white bar is the honest fallback on engines
+   without backdrop-filter, where transparency has nothing to act on. The
+   colour-mix against --color-surface-overlay was resolving to a faintly tinted
+   near-white anyway; pure white is simpler and more predictable. */
 .bottom-dock-inner {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 22rem;
   min-height: var(--dock-h);
   padding: 3px;
-  border: 1px solid var(--hairline);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 19px;
-  background: color-mix(in srgb, var(--color-surface-overlay) 97%, transparent);
-  box-shadow: 0 11px 30px -24px var(--hero-shadow);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.10);
 }
 
-/* OVERVIEW-GLASSDOCK-001 r1: 97% opaque with a blur behind it was a solid bar
-   wearing a blur it could not use. At 58% the page genuinely shows through --
-   the curve and the text slide under the dock instead of stopping at it,
-   which is the one honest reason to use glass at all.
- *
- * The inset highlight on the top edge is what makes it read as a pane rather
- * than as a washed-out rectangle: it is the only lit edge left in the app, and
- * it is one pixel. The border moves off white to a fraction of the text
- * colour, because a white border on a white page is not a border. */
+/* OVERVIEW-GLASSDOCK-001 r1: glass was added here.
+   OVERVIEW-EDITORIAL-TUNE-001 r1: blur reduced to 16px (was 24px); background
+   moved to rgba(255,255,255,0.82) for an explicit white alpha rather than a
+   colour-mix. The inset highlight is strengthened (0.90 vs 0.55) because a
+   white bar on a white page needs a brighter top edge to read as a pane. */
 @supports (backdrop-filter: blur(1px)) {
   .bottom-dock-inner {
-    background: color-mix(in srgb, var(--color-surface-overlay) 58%, transparent);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-color: color-mix(in srgb, var(--text-primary) 10%, transparent);
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border-color: rgba(0, 0, 0, 0.07);
     box-shadow:
-      0 14px 34px -22px var(--hero-shadow),
-      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+      0 8px 24px -8px rgba(0, 0, 0, 0.10),
+      inset 0 1px 0 rgba(255, 255, 255, 0.90);
   }
 }
 
