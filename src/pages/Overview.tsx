@@ -345,7 +345,11 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
                 ) : hasMissingPrices ? (
                   <span className="hero-delta">{"+ "}{market.missingIsins.length}{" m\u00e3 thi\u1ebfu gi\u00e1"}</span>
                 ) : hero.pnl != null && hero.pnl !== 0 ? (
-                  <span className="hero-delta">
+                  /* OVERVIEW-MONO-001 r1: the arrow already branches on the sign
+                     here, so the class does too. CSS cannot read the sign of a
+                     number, and a gain that looks exactly like a loss is the one
+                     thing a portfolio screen may not do. */
+                  <span className={`hero-delta ${hero.pnl >= 0 ? "hero-delta-pos" : "hero-delta-neg"}`}>
                     {hero.pnl >= 0 ? "\u2191" : "\u2193"}{" "}{formatMoney(Math.abs(hero.pnl))}{pnlPct ? ` (${pnlPct}%)` : ""}
                   </span>
                 ) : null}
