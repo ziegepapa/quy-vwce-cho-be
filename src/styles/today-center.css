@@ -40,15 +40,14 @@
  * 520px, from pulse-locked-v2.css. Anyone tuning the heading here would have
  * seen no effect at all.
  *
- * color is the one declaration left below that pulse-locked-v2 does not
- * restate, so it is the only one still doing work; margin, line-height and
- * letter-spacing are overridden there too and are queued for the follow-up.
+ * DEAD-CSS-AND-CODE-001 r1 -- margin, line-height and letter-spacing followed
+ * it out, for the same reason and with the same evidence: pulse-locked-v2.css
+ * restates all three after this file (1px 0 0, 1.05, -0.045em). color is the
+ * single declaration that sheet does not restate, so it is the only thing this
+ * rule has ever contributed to the heading, and the rule stays for its sake.
  */
 .today-center-head h2 {
-  margin: 2px 0 4px;
   color: var(--text-primary);
-  line-height: 1.08;
-  letter-spacing: -0.035em;
 }
 
 .today-kicker {
