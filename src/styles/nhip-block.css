@@ -33,6 +33,13 @@
  * The sentences themselves move up, not down: 14px/1.5 at weight 500 was a
  * status line, 15px/1.55 at 450 is a paragraph, which is what they actually
  * are. Nothing here changes what any of them say.
+ *
+ * OVERVIEW-EDITORIAL-TUNE-001 r1 -- state grid rotated 90 degrees.
+ * Three columns of (label / value) become three rows of (label -- value).
+ * The eye can scan a list faster than it can scan across three columns when
+ * the values are different lengths (VWCE quantity vs "Ổn" vs "Bắt đầu").
+ * A 1px #EAEAEC top rule separates each row; no fill, no radius.
+ * nhip-item gets a 3-line clamp so each insight reads as one sentence.
  */
 
 .nhip-block {
@@ -57,7 +64,9 @@
 }
 
 /* Editorial body copy: bigger, looser, lighter. A sentence the owner is meant
-   to read once a day should be set like prose, not like a table cell. */
+   to read once a day should be set like prose, not like a table cell.
+   OVERVIEW-EDITORIAL-TUNE-001 r1: 3-line clamp so a single insight reads as
+   one sentence rather than running into the next item. */
 .nhip-item {
   margin: 0;
   color: var(--text-primary);
@@ -66,6 +75,10 @@
   font-weight: 450;
   letter-spacing: -0.011em;
   text-wrap: pretty;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .nhip-item.nhip-stale_price {
@@ -138,34 +151,39 @@
   text-transform: uppercase;
 }
 
-/* ===== OVERVIEW-EDITORIAL-001 r1 -- three figures, no tiles ===== *
+/* ===== OVERVIEW-EDITORIAL-TUNE-001 r1 -- three rows, not three columns ===== *
  *
- * Same three facts, same markup, same destinations. The group is announced by
- * one hairline above it and held together by the shared baseline of its three
- * labels; the columns are told apart by a hairline between them, the way a
- * newspaper separates columns. No fill, no radius, no padding to fight over.
+ * Same three facts, same markup. The grid rotates from a 3-column horizontal
+ * strip to a single-column vertical list. Each tile is a flex row: label on
+ * the left (small-caps), value on the right (numeric). A 1px #EAEAEC hairline
+ * sits above every tile except the first (which is already separated from the
+ * section above by the state-grid border-top). The values right-align so all
+ * the numbers line up regardless of label length.
  *
- * The label is the small-caps line and the figure is the large one, which is
- * the opposite emphasis from the old tile, where a 13px value sat under an
- * 11px name and the two were nearly the same weight.
+ * Why #EAEAEC instead of var(--hairline)? The hairline token resolves to
+ * rgba(0,0,0,0.09) on light, which is fine for block separators that span the
+ * full width but reads as a floating line inside a narrower column. A slightly
+ * lighter fixed value keeps the rows legible without adding weight.
  */
 .state-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 0;
   margin-top: 14px;
-  padding-top: 12px;
+  padding-top: 0;
   border-top: 1px solid var(--hairline);
 }
 
 .state-tile {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-height: 44px;
-  padding: 0 12px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  padding: 8px 0;
   border: 0;
-  border-left: 1px solid var(--border-subtle);
+  border-top: 1px solid #EAEAEC;
   border-radius: 0;
   background: none;
   color: inherit;
@@ -176,11 +194,11 @@
   transition: opacity var(--d-fast, 160ms);
 }
 
-/* The first column starts at the text margin, the last one ends at it, so the
-   row lines up with the paragraph above instead of floating inside it. */
+/* Each tile is a row; the first needs no top rule because .state-grid already
+   provides the section separator above. */
 .state-tile:first-child {
   padding-left: 0;
-  border-left: 0;
+  border-top: 0;
 }
 
 .state-tile:last-child {
@@ -202,6 +220,8 @@
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .state-warning  .state-value { color: var(--warning-600); }
@@ -226,13 +246,9 @@
   }
 }
 
-/* Without a fill there is no padding to shave, so the narrow phone gets its
-   room back from the gutters and from one step of type. */
+/* State-tile padding is already 0 on mobile (no horizontal padding to shave);
+   only type adjustments remain at the narrowest breakpoint. */
 @media (max-width: 340px) {
-  .state-tile {
-    padding: 0 8px;
-  }
-
   .state-value {
     font-size: 14px;
   }
