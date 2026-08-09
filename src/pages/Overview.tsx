@@ -31,6 +31,7 @@ import {
   type NhipInsight,
 } from "../lib/nhipInsights";
 import { computeContributionStreak } from "../lib/contributionStreak";
+import { computeHeroLifetimeContribution } from "../lib/heroLifetime";
 import TodayCenter from "../components/TodayCenter";
 import TraceSheet from "../components/TraceSheet";
 import RhythmHero from "../components/RhythmHero";
@@ -123,6 +124,25 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       })
       .reduce((s, tx) => s + (Number.isFinite(tx.amount) ? tx.amount : 0), 0);
   }, [transactions]);
+
+  // OVERVIEW-HERO-LIFETIME-001 r1: X_lifetime for the hero goal lines.
+  //
+  // Not portfolio.totalContributed: that figure counts cash_in only, which is
+  // correct for the in-app wallet and legitimately 0 in securities-first mode
+  // — the state that made the hero announce "Đã góp 0,00 € / Y € kế hoạch"
+  // right next to a 35-day line reporting a real contribution.
+  //
+  // The mode expression is deliberately identical to trackInAppCash below, so
+  // the hero and the "An toàn" column can never disagree about which model the
+  // ledger is being read under.
+  const heroLifetime = useMemo(
+    () =>
+      computeHeroLifetimeContribution({
+        transactions,
+        trackInAppCash: settings?.trackInAppCash === true,
+      }),
+    [transactions, settings?.trackInAppCash],
+  );
 
   // NHIP-UI-001 r1: the engine runs here because this is the only place that
   // holds both the ledger and the effective quote date.
@@ -305,10 +325,14 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       {/* OVERVIEW-RHYTHM-001 r3: hero also renders X_lifetime / Y and Z% when a
           real goal (positive amount + parseable due date) exists. r4 leaves
           that logic exactly as merged. */}
+      {/* OVERVIEW-HERO-LIFETIME-001 r1: X_lifetime now comes from
+          heroLifetime.amount. totalContributed is still passed, unchanged in
+          meaning, for the empty-state guard. */}
       <RhythmHero
         streak={streakResult}
         goals={goals}
         totalContributed={portfolio.totalContributed}
+        heroLifetimeContribution={heroLifetime.amount}
         nhipWindowTotal={nhipWindowTotal}
         nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
       />
@@ -436,6 +460,9 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
                     <dt>{"Gi\u00e1 v\u1ed1n TB VWCE"}{costBasisCopy.provenance ? <span className="muted" style={{ display: "block", fontSize: 11 }}>{costBasisCopy.provenance}</span> : null}</dt>
                     <dd>{costBasis.avgCost != null ? formatMoney(costBasis.avgCost) : <span className="muted">{costBasisCopy.value}</span>}</dd>
                   </div>
+                  {/* OVERVIEW-HERO-LIFETIME-001 r1: still totalContributed, on
+                      purpose. This row is a bookkeeping figure about the in-app
+                      wallet, not the hero's "how much have I contributed". */}
                   <div><dt>{"V\u1ed1n \u0111\u00e3 \u0111\u00f3ng"}</dt><dd>{formatMoney(portfolio.totalContributed)}</dd></div>
                   <div><dt>{"\u0110\u00e3 r\u00fat"}</dt><dd>{formatMoney(portfolio.totalWithdrawn)}</dd></div>
                   <div><dt>{"Ph\u00ed + thu\u1ebf"}</dt><dd>{formatMoney(portfolio.totalFees + portfolio.totalTax)}</dd></div>
