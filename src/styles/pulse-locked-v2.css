@@ -438,7 +438,11 @@
    are the actual content. As a 11px small-caps rubric it names the section in
    the margin and gives every drop of emphasis back to the prose -- the same
    move a magazine makes with a standing column title. The h2 and its id are
-   untouched, so the heading outline and aria-labelledby are unchanged. */
+   untouched, so the heading outline and aria-labelledby are unchanged.
+
+   OVERVIEW-RHYTHM-001 r4: on the on-track screen this header is not rendered
+   at all (TodayCenter drops it together with the hero-owned sentence), so
+   this rule now only paints when the block actually has something to say. */
 .today-center-head h2 {
   margin: 0;
   color: var(--text-tertiary);
@@ -532,21 +536,61 @@
    hairline pill. The frosted glass from GLASSDOCK-001 is removed here: glass
    is earned by surfaces that float over content (the dock), not by a button
    embedded in a scrolling list. min-height 28px keeps it tappable on touch
-   targets without dominating the lower half of the screen. */
+   targets without dominating the lower half of the screen.
+
+   OVERVIEW-RHYTHM-001 r4: the pill goes too. A bordered capsule sitting
+   inside a bordered card was two frames around one word, and on the collapsed
+   screen that stack was the last thing above the dock -- the heaviest object
+   in the quietest part of the page. It is now plain text: accent colour, a
+   soft underline to say it is pressable, no border, no radius, no fill. The
+   underline is what replaces the border as the affordance, which is why the
+   colour moves from --text-tertiary up to --primary-600: a grey underlined
+   word reads as disabled.
+
+   min-height stays at 32px so the tap target does not shrink below what a
+   thumb needs, even though the glyphs no longer fill it. */
 .stat-detail-btn {
   justify-self: center;
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 0;
   background: none;
-  color: var(--text-tertiary);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  color: var(--primary-600);
+  font-size: 13px;
+  font-weight: 620;
+  letter-spacing: 0.01em;
+  text-decoration: underline;
+  text-decoration-thickness: from-font;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--primary-600) 40%, transparent);
   cursor: pointer;
+}
+
+/* OVERVIEW-RHYTHM-001 r4 -- the collapsed strip is not a card.
+
+   pulse-polish.css gives every .stat-strip 12px of padding, a hairline
+   border, an 18px radius and a tinted surface, and overview-v8.css gives it a
+   64px min-height. That is correct once the strip is open and actually holds
+   five columns of figures. Collapsed, it is a frame drawn around a single
+   word -- the "khung rong" in the brief -- and it also inflates the gap above
+   the dock by roughly 24px of padding plus the unused min-height.
+
+   Dropping all of it in the collapsed state does both jobs at once: the
+   control reads as a link on the page, and the space between the state rows
+   and the dock closes without touching --dock-h, --dock-pad, the glass or the
+   .app-shell clearance that r3 already tuned to 60px.
+
+   The class is only present while collapsed (see Overview.tsx), so the open
+   strip keeps its card untouched. */
+.stat-strip-collapsed {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
 }
 
 /* Four primary destinations; secondary tools live in the avatar menu. */
@@ -570,7 +614,11 @@
    still keeping the last row clear of the floating bar.
 
    Only the spacing term moves. --dock-h, --dock-pad, the glass, the blur, the
-   radius and the shadow are all untouched. */
+   radius and the shadow are all untouched.
+
+   OVERVIEW-RHYTHM-001 r4 does not change this figure. The remaining hole
+   under the strip was the collapsed card's own padding and min-height, which
+   is removed above instead. */
 .app-shell {
   padding-bottom: calc(var(--dock-h) + var(--dock-pad) + 4px + var(--safe-bottom)) !important;
 }
