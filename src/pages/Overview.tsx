@@ -302,6 +302,9 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     <div className="ov">
       {/* OVERVIEW-RHYTHM-001 r1 — Section 1: Hero "Nhịp & Hành trình" */}
       {/* OVERVIEW-RHYTHM-001 r2: also passes nhipWindowTotal + nhipWindowDays */}
+      {/* OVERVIEW-RHYTHM-001 r3: hero also renders X_lifetime / Y and Z% when a
+          real goal (positive amount + parseable due date) exists. r4 leaves
+          that logic exactly as merged. */}
       <RhythmHero
         streak={streakResult}
         goals={goals}
@@ -372,9 +375,18 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       ) : null}
 
       {mode !== "empty" ? (
-        <section className="stat-strip" aria-label={"Chi ti\u1ebft ph\u00e2n b\u1ed5"}>
+        // OVERVIEW-RHYTHM-001 r4: while collapsed the strip is a card wrapped
+        // around a single control -- the "wide frame" the brief calls out. The
+        // state class lets pulse-locked-v2.css drop the frame in that state
+        // only; expanded, the card still groups the five columns it owns.
+        <section
+          className={`stat-strip${statStripOpen ? "" : " stat-strip-collapsed"}`}
+          aria-label={"Chi ti\u1ebft ph\u00e2n b\u1ed5"}
+        >
           {/* VISUAL-POLISH-001 r2: entire stat block defaults to collapsed so
-              the first screenful is hero + nhip only. Visible at rest. */}
+              the first screenful is hero + nhip only. Visible at rest.
+              OVERVIEW-RHYTHM-001 r4: same button, same handler, same sheet —
+              only its paint changes. */}
           <button
             type="button"
             className="stat-detail-btn"

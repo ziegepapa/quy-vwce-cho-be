@@ -13,7 +13,7 @@ import {
   type DepotReconciliationDisplay,
 } from "../lib/depotReconciliation";
 import { buildPulseDisplay } from "../lib/overviewNumbers";
-import { isLedgerEmpty, type NhipInsight } from "../lib/nhipInsights";
+import { isLedgerEmpty, type NhipInsight, type NhipInsightKind } from "../lib/nhipInsights";
 import {
   markRestoreCompleted,
   portfolioPulseDelta,
@@ -35,6 +35,33 @@ import {
 } from "../lib/todayCenterTrace";
 import type { AppSettings, Transaction } from "../lib/types";
 import TraceSheet from "./TraceSheet";
+
+/**
+ * OVERVIEW-RHYTHM-001 r4 -- insight kinds the hero already says out loud.
+ *
+ * RhythmHero prints "Bạn đã góp X € trong 35 ngày qua" from the very same
+ * window, and its ring already communicates "the rhythm is holding" without
+ * words. `on_track` therefore adds nothing here except a second reading of
+ * one fact, one line apart -- exactly the duplication r4 is closing.
+ *
+ * This is a RENDER filter, not an engine change. buildNhipInsights keeps
+ * emitting on_track for every other caller and for the tests; this surface
+ * simply declines to draw it.
+ *
+ * Everything not listed here survives, because none of it is in the hero:
+ *   stale_price          -- the VWCE quote is N days old (PRICE-FRESHNESS-UI-001)
+ *   days_to_goal         -- N days left to the plan milestone
+ *   empty_start          -- the fund has not started yet
+ *   contribution_rhythm  -- the 35-day window is EMPTY, i.e. the rhythm broke
+ *
+ * Note the asymmetry that makes this safe: the rhythm branch of the engine is
+ * exclusive. It emits on_track when the window has contributions and
+ * contribution_rhythm when it has none. Dropping on_track can therefore never
+ * swallow a warning -- the only kind removed is the reassuring one.
+ */
+const HERO_OWNED_KINDS: ReadonlySet<NhipInsightKind> = new Set<NhipInsightKind>([
+  "on_track",
+]);
 
 type SafetySnapshot = {
   backupAt: string;
@@ -142,6 +169,15 @@ export default function TodayCenter({
       active = false;
     };
   }, [ownerKey, transactions]);
+
+  // OVERVIEW-RHYTHM-001 r4 -- drop the kinds the hero already owns. When the
+  // fund is simply on track this leaves an empty array, and the heading plus
+  // the sentence list are both skipped below.
+  const visibleInsights = useMemo(
+    () => insights.filter((insight) => !HERO_OWNED_KINDS.has(insight.kind)),
+    [insights],
+  );
+  const showNhipCopy = visibleInsights.length > 0;
 
   const delta = useMemo(() => portfolioPulseDelta(pulse), [pulse]);
   const pulseDisplay = useMemo(
@@ -300,28 +336,45 @@ export default function TodayCenter({
   }
 
   return (
-    <section className="today-center" aria-labelledby="today-center-title">
+    <section
+      className="today-center"
+      {...(showNhipCopy
+        ? { "aria-labelledby": "today-center-title" }
+        : { "aria-label": "Nhịp Quỹ" })}
+    >
       {/* OVERVIEW-MONO-001 r1 — the kicker "Một khối · điều đáng nói hôm nay"
           was a label about the block, not information from the ledger, and it
           sat above a heading that already says what the block is. Removed; the
-          heading and the sentences below it stay exactly as they were. */}
-      <header className="today-center-head">
-        <h2 id="today-center-title">Nhịp Quỹ</h2>
-      </header>
+          heading and the sentences below it stay exactly as they were.
+
+          OVERVIEW-RHYTHM-001 r4 — the heading itself is now conditional. A
+          standing section title with nothing under it but a delta button is
+          furniture, and on the on-track screen the only thing it introduced
+          was a sentence the hero had already said. When every insight is
+          hero-owned, the title goes with them and the section keeps its name
+          on aria-label instead, so the accessible name never disappears. */}
+      {showNhipCopy ? (
+        <header className="today-center-head">
+          <h2 id="today-center-title">Nhịp Quỹ</h2>
+        </header>
+      ) : null}
 
       <div className="nhip-block">
-        {insights.length > 0 ? (
+        {/* Only the kinds the hero does not already state. An empty list is
+            rendered as nothing at all — no placeholder sentence, because
+            "nothing to report" is itself a line to read. */}
+        {showNhipCopy ? (
           <ul className="nhip-list">
-            {insights.map((insight) => (
+            {visibleInsights.map((insight) => (
               <li key={insight.kind} className={`nhip-item nhip-${insight.kind}`}>
                 {insight.text}
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="nhip-item nhip-quiet">Chưa có nhịp nào cần nói hôm nay.</p>
-        )}
+        ) : null}
 
+        {/* The delta is never a repeat of the hero: it is the change since the
+            previous visit, which the hero does not report. It stays. */}
         <button
           type="button"
           className="nhip-meta"
@@ -349,7 +402,9 @@ export default function TodayCenter({
 
           Every destination and handler is unchanged: the first tile is still
           the same <Link to="/transactions">, the other two still open exactly
-          the same sheets. This is a container change, not a behaviour one. */}
+          the same sheets. This is a container change, not a behaviour one.
+
+          OVERVIEW-RHYTHM-001 r4 does not touch this grid. */}
       <section className="state-grid" aria-label="Trạng thái">
         <Link
           to="/transactions"
