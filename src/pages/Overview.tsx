@@ -27,6 +27,7 @@ import { buildPortfolioTraceModel } from "../lib/todayCenterTrace";
 import {
   buildNhipInsightInput,
   buildNhipInsights,
+  CONTRIBUTION_WINDOW_DAYS,
   type NhipInsight,
 } from "../lib/nhipInsights";
 import { computeContributionStreak } from "../lib/contributionStreak";
@@ -106,6 +107,22 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     () => computeContributionStreak(transactions),
     [transactions],
   );
+
+  // OVERVIEW-RHYTHM-001 r2: X_nhip = total contributions within the Nhịp Quỹ
+  // window (CONTRIBUTION_WINDOW_DAYS = 35). Uses the same filter logic as
+  // nhipInsights.ts so hero and block always report the same number.
+  const nhipWindowTotal = useMemo(() => {
+    const cutoffMs = Date.now() - CONTRIBUTION_WINDOW_DAYS * 86_400_000;
+    return transactions
+      .filter((tx) => {
+        if (tx.deletedAt) return false;
+        const t = tx.type;
+        if (t !== "cash_in" && t !== "buy_vwce" && t !== "buy_security") return false;
+        const d = Date.parse(tx.date);
+        return Number.isFinite(d) && d >= cutoffMs;
+      })
+      .reduce((s, tx) => s + (Number.isFinite(tx.amount) ? tx.amount : 0), 0);
+  }, [transactions]);
 
   // NHIP-UI-001 r1: the engine runs here because this is the only place that
   // holds both the ledger and the effective quote date.
@@ -284,10 +301,13 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   return (
     <div className="ov">
       {/* OVERVIEW-RHYTHM-001 r1 — Section 1: Hero "Nhịp & Hành trình" */}
+      {/* OVERVIEW-RHYTHM-001 r2: also passes nhipWindowTotal + nhipWindowDays */}
       <RhythmHero
         streak={streakResult}
         goals={goals}
         totalContributed={portfolio.totalContributed}
+        nhipWindowTotal={nhipWindowTotal}
+        nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
       />
 
       {/* OVERVIEW-RHYTHM-001 r1 — Section 2: Tổng tài sản (2-line text, no card) */}
