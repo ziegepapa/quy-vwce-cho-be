@@ -108,6 +108,24 @@
   margin: 0;
 }
 
+/* OVERVIEW-RHYTHM-001 r3 — the two optional journey lines.
+
+   These only render when a goal carries both a real target and a real due
+   date, so they must never look like the primary sentence. They sit one step
+   down from .rhythm-line1 in size and weight and use secondary text colour:
+   the 35-day line stays the thing the eye lands on, and these read as the
+   long-horizon context underneath it. Tabular numerals keep "/" aligned when
+   the amounts change length. */
+.rhythm-goal {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text-secondary, #6b7280);
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+}
+
 .rhythm-caption {
   font-size: 11.5px;
   color: var(--text-tertiary, #9ca3af);

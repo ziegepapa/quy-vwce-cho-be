@@ -555,8 +555,24 @@
   --dock-pad: 6px;
 }
 
+/* OVERVIEW-RHYTHM-001 r3 -- the bottom gap is tightened by 6px.
+
+   This is the rule that actually reaches the screen: dock.css declares the
+   same property with !important, but this sheet is emitted last, so the
+   figure below is the one the page uses. Editing dock.css instead would have
+   changed nothing.
+
+   The stack was 50 (dock) + 6 (dock inset) + 10 (clearance) = 66px of dead
+   space under the last block, against roughly 10px of breathing room above
+   "Tổng tài sản" at the top of the page. That asymmetry is what made the dock
+   look like it had floated away from the content. The clearance term drops
+   10px -> 4px for a 60px total, which reads as balanced against the top while
+   still keeping the last row clear of the floating bar.
+
+   Only the spacing term moves. --dock-h, --dock-pad, the glass, the blur, the
+   radius and the shadow are all untouched. */
 .app-shell {
-  padding-bottom: calc(var(--dock-h) + var(--dock-pad) + 10px + var(--safe-bottom)) !important;
+  padding-bottom: calc(var(--dock-h) + var(--dock-pad) + 4px + var(--safe-bottom)) !important;
 }
 
 .app-shell::after {

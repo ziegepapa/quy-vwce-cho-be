@@ -31,6 +31,9 @@ const MAX_INSIGHTS = 3;
 /**
  * OVERVIEW-RHYTHM-001 r2: exported so RhythmHero and Overview can reference
  * the same constant, keeping X_hero and X_nhip on identical periods.
+ *
+ * OVERVIEW-RHYTHM-001 r3: value is unchanged on purpose. r3 touches copy and
+ * layout only; the window itself is frozen.
  */
 export const CONTRIBUTION_WINDOW_DAYS = 35;
 const GOAL_UPCOMING_DAYS = 365;
@@ -86,7 +89,14 @@ export function buildNhipInsights({
     }
   }
 
-  // contribution rhythm — on_track or nudge based on recent activity
+  // Contribution rhythm.
+  //
+  // OVERVIEW-RHYTHM-001 r3 (Option B) — the hero now owns the sentence
+  // "Bạn đã góp X € trong 35 ngày qua", so repeating the same total here read
+  // as the same fact twice, one line apart. What the hero cannot show is the
+  // COUNT of contributions, so that is the only thing this line adds now.
+  // The old trailing clause "nhịp quỹ đang được duy trì" is dropped: the hero
+  // ring already says it, visually and without words.
   if (result.length < MAX_INSIGHTS) {
     const cutoffMs = Date.parse(now) - CONTRIBUTION_WINDOW_DAYS * 86_400_000;
     const recent = transactions.filter((tx) => {
@@ -100,7 +110,7 @@ export function buildNhipInsights({
     if (recent.length === 0) {
       result.push({
         kind: "contribution_rhythm",
-        text: `Chưa có khoản góp nào trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua — đây là thời điểm tốt để duy trì nhịp.`,
+        text: `Trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua: chưa có lần góp nào — thời điểm tốt để nối lại nhịp.`,
       });
     } else {
       const total = recent.reduce(
@@ -109,7 +119,7 @@ export function buildNhipInsights({
       );
       result.push({
         kind: "on_track",
-        text: `${recent.length} khoản góp trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua, tổng ${Math.round(total)} € — nhịp quỹ đang được duy trì.`,
+        text: `Trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua: ${recent.length} lần góp · tổng ${Math.round(total)} €`,
       });
     }
   }
