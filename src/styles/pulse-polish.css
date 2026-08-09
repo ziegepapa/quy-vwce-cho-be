@@ -18,8 +18,21 @@
     display: none;
   }
 
+  /*
+   * VISUAL-POLISH-001 r4 -- min-height: 176px used to be the first declaration
+   * in this rule and it never once reached the screen. main.tsx imports ./App
+   * before the global stylesheets, so the sheets TodayCenter.tsx pulls in
+   * (today-center, pulse-polish, nhip-block) are emitted near the front of the
+   * bundle while pulse-locked-v2.css lands near the end. Same selector, same
+   * specificity, later file wins: the hero is 152px, and 140px below 520px,
+   * both from pulse-locked-v2.css. Editing the number here changed nothing,
+   * which is precisely why it had to go -- it read like the live value.
+   *
+   * border-radius and box-shadow below lose to that same rule for the same
+   * reason and are equally dead. They stay this round because r4 step 1 was
+   * scoped to the three measured values; they are queued for the follow-up.
+   */
   .hero-v8 {
-    min-height: 176px;
     border-radius: var(--pulse-radius-xl);
     box-shadow: 0 20px 54px -30px var(--hero-shadow);
   }

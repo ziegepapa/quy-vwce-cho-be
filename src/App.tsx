@@ -16,7 +16,6 @@ import type { SyncStatus } from "./lib/sync/types";
 import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
-import QuoteStatusSummary from "./components/QuoteStatusSummary";
 import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
@@ -291,15 +290,18 @@ export default function App() {
         )}
         <NavActionsProvider api={navActionsApi}>
           <Routes>
-            <Route
-              path="/"
-              element={
-                <>
-                  <QuoteStatusSummary refreshKey={quoteRefreshVersion} />
-                  <Overview key={quoteRefreshVersion} />
-                </>
-              }
-            />
+            {/*
+              VISUAL-POLISH-001 r4 -- QuoteStatusSummary is no longer mounted here.
+              pulse-polish.css has hidden it with display: none since
+              UI-PULSE-LOCKED-001, so it rendered nothing on screen while still
+              paying for itself: a listQuoteSelectionStates() read against Dexie on
+              every quoteRefreshVersion change, plus the DOM it built in order to be
+              hidden. Settings > Gia has carried the same information since #58.
+              Nothing moves visually. The component file and the display: none rule
+              that hides it are removed together in the follow-up dead-code chore,
+              so that the unmount and the un-hiding can never land apart.
+            */}
+            <Route path="/" element={<Overview key={quoteRefreshVersion} />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/simulation" element={<Simulation />} />
