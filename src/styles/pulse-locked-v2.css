@@ -104,6 +104,25 @@
   gap: 12px;
 }
 
+/* OVERVIEW-PREMIUM-001 r1 -- the two numbers the bleeding hero has to cancel.
+   They are not new geometry: they are the horizontal and top padding that
+   .app-shell sets in index.css, written once here so the hero can undo them
+   without a magic number. index.css uses var(--space-4) / calc(--nav-offset +
+   --space-2) up to 900px and var(--space-6) / calc(--nav-offset + --space-4)
+   above it, and this pair mirrors that exactly. If the shell padding ever
+   changes, these two follow it and the hero stays flush. */
+:root {
+  --hero-bleed-x: var(--space-4);
+  --hero-bleed-top: calc(var(--nav-offset) + var(--space-2));
+}
+
+@media (min-width: 900px) {
+  :root {
+    --hero-bleed-x: var(--space-6);
+    --hero-bleed-top: calc(var(--nav-offset) + var(--space-4));
+  }
+}
+
 /* VISUAL-POLISH-001 r2: increased top padding for more hero breathing room;
    slightly taller min-height to give the number more space above fold.
 
@@ -122,7 +141,12 @@
    depth without a single new colour being invented here.
    This sheet is the last one emitted in the bundle (FINDING_NOTION_38), so
    this is the only file where these declarations can actually reach a pixel;
-   writing them in pulse-polish.css or overview-v8.css would be dead work. */
+   writing them in pulse-polish.css or overview-v8.css would be dead work.
+
+   OVERVIEW-PREMIUM-001 r1: this rule is left exactly as SHOULD-6 wrote it,
+   because it is now the empty-state geometry. Everything the funded hero
+   needs is declared in the .hero-v8:not(.hero-empty) block further down, so
+   the empty panel cannot be moved by accident. */
 .hero-v8 {
   min-height: 152px;
   padding: 20px 18px 16px;
@@ -153,6 +177,101 @@
     transparent 46%
   );
   opacity: 0.7;
+}
+
+/* ===== OVERVIEW-PREMIUM-001 r1 -- the funded hero stops being a card =====
+ *
+ * The complaint SHOULD-6 could not answer is that the home screen was a
+ * vertical list of rounded rectangles, and the most important one was simply
+ * the first rectangle. Lighting its edge did not change that. So the hero
+ * gives up being a card: it cancels the shell padding with negative margins
+ * built from --hero-bleed-x / --hero-bleed-top, runs to both screen edges,
+ * passes up behind the translucent navbar, and keeps a radius only where it
+ * ends. What the eye reads in the first second is a surface with the app
+ * standing on it, not an item in a list.
+ *
+ * Every rule below is scoped :not(.hero-empty) on purpose. The empty state is
+ * a quiet bordered panel and must stay one; scoping means it keeps its own
+ * geometry, border, background and shadow without a single override, and the
+ * reviewer can prove that from the selectors alone.
+ *
+ * The inset rim and the contact shadow from #67 are dropped here, and only
+ * here: an inset hairline on an edge-to-edge surface paints a 1px seam down
+ * the left and right edges of the phone, and a contact shadow makes no sense
+ * for something that is not resting on anything. The ambient drop under the
+ * bottom curve is what sells the depth now, and the ::before sheen is kept
+ * unchanged.
+ */
+.hero-v8:not(.hero-empty) {
+  display: flex;
+  flex-direction: column;
+  margin: calc(-1 * var(--hero-bleed-top)) calc(-1 * var(--hero-bleed-x)) 0;
+  min-height: calc(var(--hero-bleed-top) + 168px);
+  padding: calc(var(--hero-bleed-top) + 14px) 20px 18px;
+  border-radius: 0 0 30px 30px;
+  box-shadow:
+    0 18px 40px -30px var(--hero-shadow),
+    0 34px 70px -46px var(--hero-shadow);
+}
+
+/* Two children are sized by their content and would be stretched to the full
+   width by the flex column, which would turn the delta pill into a bar. */
+.hero-v8:not(.hero-empty) .hero-trace-trigger,
+.hero-v8:not(.hero-empty) .hero-delta {
+  align-self: flex-start;
+}
+
+/* The number leads and everything else steps back. This is the second thing
+   the eye catches after the bleed, and the reason the label and the euro sign
+   get quieter rather than louder: one loud element per screen. */
+.hero-v8:not(.hero-empty) .hero-label {
+  margin-bottom: 10px;
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  opacity: 0.55;
+}
+
+.hero-v8:not(.hero-empty) .hero-eur {
+  font-size: 21px;
+  font-weight: 620;
+  opacity: 0.55;
+}
+
+/* Full bleed would otherwise park the provenance pill underneath the fixed
+   navbar, so it drops below the nav instead of sitting at a fixed 18px. */
+.hero-v8:not(.hero-empty) .hero-provenance {
+  top: calc(var(--nav-offset) + 8px);
+  right: 18px;
+}
+
+/* The allocation row becomes a hairline instead of a chart: 6px of solid white
+   directly under a 58px number was competing with it. */
+.hero-v8:not(.hero-empty) .alloc-v8 {
+  height: 4px;
+  margin-top: 16px;
+}
+
+.hero-v8:not(.hey-empty) .alloc-legend-v8,
+.hero-v8:not(.hero-empty) .alloc-legend-v8 {
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The sparkline becomes the floor of the surface. order: 1 moves it after the
+   allocation row without touching Overview.tsx -- it is the only child given
+   an order, so every sibling keeps DOM order at the default 0 and simply
+   lands above it. The negative margins are the hero padding, so the curve
+   reaches both edges and the bottom, where overflow: hidden on the hero clips
+   it to the rounded corners. It costs nothing in height terms: the strip it
+   used to float in becomes the strip it now fills. */
+.hero-v8:not(.hero-empty) .sparkline {
+  order: 1;
+  width: auto;
+  height: 78px;
+  margin: 14px -20px -18px;
 }
 
 /* Empty is an application state, not a marketing banner. */
@@ -209,8 +328,14 @@
   font-weight: 720;
 }
 
+/* OVERVIEW-PREMIUM-001 r1: the one pre-existing declaration this PR changes.
+   34-42px was sized for a card 18px in from both screen edges; on a surface
+   that now owns the full width it read as a caption. Line-height and tracking
+   come with it so the taller figure still sits on one line at 320px. */
 .hero-num {
-  font-size: clamp(34px, 9vw, 42px);
+  font-size: clamp(42px, 13vw, 58px);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
 }
 
 .hero-provenance {
@@ -471,6 +596,25 @@
     border-radius: 19px;
   }
 
+  /* OVERVIEW-PREMIUM-001 r1: the phone variant of the bleeding hero. This has
+     to exist: .hero-v8:not(.hero-empty) outranks the .hero-v8 rule above no
+     matter which one is written first, so without these three the phone would
+     silently inherit the desktop padding and radius. */
+  .hero-v8:not(.hero-empty) {
+    min-height: calc(var(--hero-bleed-top) + 152px);
+    padding: calc(var(--hero-bleed-top) + 12px) 16px 16px;
+    border-radius: 0 0 26px 26px;
+  }
+
+  .hero-v8:not(.hero-empty) .sparkline {
+    height: 68px;
+    margin: 12px -16px -16px;
+  }
+
+  .hero-v8:not(.hero-empty) .hero-provenance {
+    right: 14px;
+  }
+
   .hero-v8.hero-empty {
     min-height: 118px;
   }
@@ -518,5 +662,13 @@
   .nav-time-date,
   .bottom-dock {
     display: none !important;
+  }
+
+  /* OVERVIEW-PREMIUM-001 r1: the negative margins exist only to cancel the
+     .app-shell padding, and the print shell in index.css already zeroes that
+     padding with !important. Left alone, the hero would be dragged off the
+     top-left corner of the sheet. */
+  .hero-v8 {
+    margin: 0 !important;
   }
 }
