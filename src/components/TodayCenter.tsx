@@ -338,30 +338,39 @@ export default function TodayCenter({
         </button>
       </div>
 
-      <ul className="nhip-checklist">
-        <li className={`nhip-check nhip-check-${reconciliationTone}`}>
-          <Link to="/transactions" aria-label={`Khớp sao kê: ${reconciliationValue}. Mở giao dịch và đối chiếu PDF`}>
-            <span className="nhip-check-label">Khớp sao kê</span>
-            <span className="nhip-check-value">{reconciliationValue}</span>
-            <span className="nhip-check-detail">{reconciliationDetail}</span>
-          </Link>
-        </li>
-        <li className={`nhip-check nhip-check-${safetyScore === 4 ? "positive" : "warning"}`}>
-          <button type="button" onClick={() => setSafetyOpen(true)}>
-            <span className="nhip-check-label">An toàn</span>
-            <span className="nhip-check-value">{safetyScore}/4</span>
-            <span className="nhip-check-detail">
-              {highestRisk?.label ?? "Bốn lớp bảo vệ đều sẵn sàng."}
-            </span>
-          </button>
-        </li>
-      </ul>
-
-      <button type="button" className="nhip-sim" onClick={() => setWhatIfOpen(true)}>
-        <span className="nhip-sim-label">Mô phỏng</span>
-        <span className="nhip-sim-value">{whatIfCardValue}</span>
-        <span className="nhip-sim-caption">{whatIfCaption}</span>
-      </button>
+      {/* OVERVIEW-PREMIUM-001 r2 — decision (2): Khớp sao kê, An toàn và Mô
+          phỏng were three separate floating rows. They are three lines of one
+          card now, divided by hairlines. Each line keeps its own link or
+          button, so every destination, aria-label and TraceSheet is unchanged;
+          only the container is new. */}
+      <section className="state-card" aria-label="Trạng thái">
+        <p className="state-card-title">Trạng thái</p>
+        <ul className="state-list">
+          <li className={`state-row state-${reconciliationTone}`}>
+            <Link to="/transactions" aria-label={`Khớp sao kê: ${reconciliationValue}. Mở giao dịch và đối chiếu PDF`}>
+              <span className="state-name">Khớp sao kê</span>
+              <span className="state-value">{reconciliationValue}</span>
+              <span className="state-detail">{reconciliationDetail}</span>
+            </Link>
+          </li>
+          <li className={`state-row state-${safetyScore === 4 ? "positive" : "warning"}`}>
+            <button type="button" onClick={() => setSafetyOpen(true)}>
+              <span className="state-name">An toàn</span>
+              <span className="state-value">{safetyScore}/4</span>
+              <span className="state-detail">
+                {highestRisk?.label ?? "Bốn lớp bảo vệ đều sẵn sàng."}
+              </span>
+            </button>
+          </li>
+          <li className="state-row state-neutral">
+            <button type="button" onClick={() => setWhatIfOpen(true)}>
+              <span className="state-name">Mô phỏng</span>
+              <span className="state-value">{whatIfCardValue}</span>
+              <span className="state-detail">{whatIfCaption}</span>
+            </button>
+          </li>
+        </ul>
+      </section>
 
       <TraceSheet
         open={traceOpen}

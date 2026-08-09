@@ -12,6 +12,23 @@
  * VISUAL-POLISH-001 r3 -- stop the meta row from stranding its hint against
  * the right edge, and give the checklist rows a caption/figure ranking so two
  * stacked rows stop reading as four equally loud things.
+ *
+ * OVERVIEW-PREMIUM-001 r2 -- two changes, both structural.
+ *
+ * First, the surfaces. Every panel in this sheet was painted with
+ * rgba(255,255,255,.03..08) on top of whatever was behind it. That is a dark
+ * theme assumption wearing a neutral disguise: on the light theme it produces
+ * a white film on a white page, which is why the blocks never looked like
+ * objects. They now use --surface and --hairline and carry --shadow-raised,
+ * so they are cards standing on the page tint that pulse-locked-v2.css paints
+ * behind them, in all three themes.
+ *
+ * Second, decision (2) of the three locked before this PR: the three separate
+ * rows -- Khop sao ke, An toan, Mo phong -- were three floating rectangles
+ * competing with the block above them. They are one "Trang thai" card now, so
+ * the whole .nhip-checklist / .nhip-check* / .nhip-sim* family is deleted here
+ * and replaced by .state-*. Those class names no longer appear in any .tsx
+ * file, so leaving the rules behind would be dead CSS.
  */
 
 .nhip-block {
@@ -20,8 +37,9 @@
   gap: 10px;
   padding: 14px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-raised);
 }
 
 .nhip-list {
@@ -58,7 +76,7 @@
   min-height: 44px;
   padding: 8px 0 0;
   border: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--hairline);
   background: none;
   color: inherit;
   text-align: left;
@@ -100,135 +118,107 @@
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--primary-050);
+  color: var(--primary-600);
 }
 
-.nhip-checklist {
+/* ===== OVERVIEW-PREMIUM-001 r2 -- one "Trang thai" card ===== *
+ *
+ * Three rows inside one bordered card, separated by hairlines rather than by
+ * gaps. A gap says "three things"; a rule says "three lines of one thing".
+ * The rows keep their own <a> / <button>, so every target, aria-label and
+ * TraceSheet behaves exactly as before -- this is a container change, not a
+ * behaviour change.
+ */
+.state-card {
+  margin-top: 12px;
+  padding: 0 14px 4px;
+  border-radius: 18px;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.state-card-title {
+  margin: 0;
+  padding: 12px 0 2px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.state-list {
   list-style: none;
-  margin: 12px 0 0;
+  margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
-.nhip-check > a,
-.nhip-check > button {
+.state-row + .state-row > a,
+.state-row + .state-row > button {
+  border-top: 1px solid var(--hairline);
+}
+
+.state-row > a,
+.state-row > button {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
   width: 100%;
-  min-height: 44px;
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+  min-height: 56px;
+  padding: 11px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
   color: inherit;
   text-align: left;
   text-decoration: none;
   font: inherit;
   cursor: pointer;
-  transition: background var(--d-fast, 120ms), border-color var(--d-fast, 120ms);
+  transition: opacity var(--d-fast, 120ms);
 }
 
-/* VISUAL-POLISH-001 r3 -- rank the row instead of shouting twice.
-   The label was 13px/600 at 0.85 and the value 14px/700, which is close enough
-   that two stacked rows read as four equally loud things: "Khop sao ke" cost
-   the reader as much attention as its own answer. The label is now plainly a
-   caption and the value is the figure being reported. Same treatment on the
-   simulation row below so all three peers rank identically. */
-.nhip-check-label {
-  font-size: 12px;
-  font-weight: 500;
-  opacity: 0.68;
-}
-
-.nhip-check-value {
+.state-name {
   font-size: 14px;
-  font-weight: 650;
-  text-align: right;
+  font-weight: 600;
 }
 
-.nhip-check-detail {
+.state-value {
+  font-size: 14px;
+  font-weight: 680;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.state-detail {
   grid-column: 1 / -1;
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.4;
-  opacity: 0.75;
 }
 
-.nhip-check-warning  .nhip-check-value { color: var(--warning-600, #b45309); }
-.nhip-check-positive .nhip-check-value { color: var(--success-600, #15803d); }
-/* neutral: slightly muted so only warning/positive pop */
-.nhip-check-neutral  .nhip-check-value { color: var(--text-secondary); opacity: 0.85; }
-
-.nhip-sim {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px 10px;
-  width: 100%;
-  min-height: 44px;
-  margin-top: 8px;
-  padding: 10px 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.18);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.02);
-  color: inherit;
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-  transition: background var(--d-fast, 120ms), border-color var(--d-fast, 120ms);
-}
-
-.nhip-sim-label {
-  font-size: 12px;
-  font-weight: 500;
-  opacity: 0.68;
-}
-
-.nhip-sim-value {
-  font-size: 14px;
-  font-weight: 650;
-  text-align: right;
-}
-
-.nhip-sim-caption {
-  grid-column: 1 / -1;
-  font-size: 12px;
-  line-height: 1.4;
-  opacity: 0.75;
-}
+.state-warning  .state-value { color: var(--warning-600); }
+.state-positive .state-value { color: var(--success-600); }
+.state-neutral  .state-value { color: var(--text-primary); }
 
 /* ------ hover / active micro-interactions ------ */
 
 @media (hover: hover) and (pointer: fine) {
-  .nhip-check > a:hover,
-  .nhip-check > button:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.18);
-  }
-
-  .nhip-sim:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.32);
+  .state-row > a:hover,
+  .state-row > button:hover {
+    opacity: 0.78;
   }
 }
 
-.nhip-check > a:active,
-.nhip-check > button:active,
-.nhip-sim:active {
-  transform: scale(0.985);
+.state-row > a:active,
+.state-row > button:active {
+  opacity: 0.6;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nhip-check > a,
-  .nhip-check > button,
-  .nhip-sim {
+  .state-row > a,
+  .state-row > button {
     transition: none !important;
-  }
-
-  .nhip-check > a:active,
-  .nhip-check > button:active,
-  .nhip-sim:active {
-    transform: none !important;
   }
 }

@@ -43,11 +43,15 @@ type Insight = {
   to: string;
 };
 
+// OVERVIEW-PREMIUM-001 r2: the curve used to be drawn in hard-coded white
+// because it only ever sat on a purple gradient. The hero is a surface card
+// now, so white would vanish on the light theme. --hero-line and --hero-area
+// are declared once in pulse-locked-v2.css and resolve per theme.
 function Sparkline({ points }: { points: { value: number }[] }) {
   if (points.length < 2) {
     return (
       <svg className="sparkline" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden>
-        <path d="M0 28 Q30 20 60 24 T120 18" fill="none" stroke="rgba(255,255,255,.25)" strokeWidth="1.5" strokeDasharray="3 3" />
+        <path d="M0 28 Q30 20 60 24 T120 18" fill="none" stroke="var(--hero-line)" strokeOpacity="0.35" strokeWidth="1.5" strokeDasharray="3 3" />
       </svg>
     );
   }
@@ -65,11 +69,11 @@ function Sparkline({ points }: { points: { value: number }[] }) {
   return (
     <svg className="sparkline" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden>
       <polygon points={`0,40 ${coordinates} 120,40`} fill="url(#spFade)" />
-      <polyline points={coordinates} fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinejoin="round" />
+      <polyline points={coordinates} fill="none" stroke="var(--hero-line)" strokeWidth="2" strokeLinejoin="round" />
       <defs>
         <linearGradient id="spFade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(255,255,255,.25)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          <stop offset="0%" stopColor="var(--hero-area)" stopOpacity="1" />
+          <stop offset="100%" stopColor="var(--hero-area)" stopOpacity="0" />
         </linearGradient>
       </defs>
     </svg>
@@ -322,26 +326,35 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
           </div>
         ) : (
           <>
-            <button type="button" className="hero-trace-trigger" onClick={() => setTraceOpen(true)}>
-              <span className="hero-label">{hasMissingPrices ? "T\u00e0i s\u1ea3n \u0111\u00e3 \u0111\u1ecbnh gi\u00e1" : "T\u1ed5ng t\u00e0i s\u1ea3n"}</span>
-              <span className="hero-amount">
-                <span className="hero-num">{formatMoney(hero.assets).replace(/\s*\u20ac$/, "")}</span>
-                <span className="hero-eur">{"\u20ac"}</span>
-              </span>
-            </button>
-            {hero.setupIncomplete ? (
-              <span className="hero-delta">{"Ch\u01b0a ghi n\u1ea1p ti\u1ec1n "}{formatMoney(hero.cashShortfall)}</span>
-            ) : hasMissingPrices ? (
-              <span className="hero-delta">{"+ "}{market.missingIsins.length}{" m\u00e3 thi\u1ebfu gi\u00e1"}</span>
-            ) : hero.pnl != null && hero.pnl !== 0 ? (
-              <span className="hero-delta">
-                {hero.pnl >= 0 ? "\u2191" : "\u2193"}{" "}{formatMoney(Math.abs(hero.pnl))}{pnlPct ? ` (${pnlPct}%)` : ""}
-              </span>
-            ) : null}
-            <button type="button" className="hero-provenance" onClick={() => setTraceOpen(true)}>
-              <span aria-hidden />
-              {sourceLabel}{vwceQuote?.asOf ? ` \u00b7 ${vwceQuote.asOf}` : ""}
-            </button>
+            {/* OVERVIEW-PREMIUM-001 r2 -- decision (3). The figure, the delta and
+                the price-source chip used to be three stacked blocks, with the
+                chip absolutely positioned in the top-right corner: the exact
+                layout of a report header. They share one fixed row now, so the
+                number is read together with what qualifies it. */}
+            <div className="hero-head">
+              <button type="button" className="hero-trace-trigger" onClick={() => setTraceOpen(true)}>
+                <span className="hero-label">{hasMissingPrices ? "T\u00e0i s\u1ea3n \u0111\u00e3 \u0111\u1ecbnh gi\u00e1" : "T\u1ed5ng t\u00e0i s\u1ea3n"}</span>
+                <span className="hero-amount">
+                  <span className="hero-num">{formatMoney(hero.assets).replace(/\s*\u20ac$/, "")}</span>
+                  <span className="hero-eur">{"\u20ac"}</span>
+                </span>
+              </button>
+              <div className="hero-meta">
+                {hero.setupIncomplete ? (
+                  <span className="hero-delta">{"Ch\u01b0a ghi n\u1ea1p ti\u1ec1n "}{formatMoney(hero.cashShortfall)}</span>
+                ) : hasMissingPrices ? (
+                  <span className="hero-delta">{"+ "}{market.missingIsins.length}{" m\u00e3 thi\u1ebfu gi\u00e1"}</span>
+                ) : hero.pnl != null && hero.pnl !== 0 ? (
+                  <span className="hero-delta">
+                    {hero.pnl >= 0 ? "\u2191" : "\u2193"}{" "}{formatMoney(Math.abs(hero.pnl))}{pnlPct ? ` (${pnlPct}%)` : ""}
+                  </span>
+                ) : null}
+                <button type="button" className="hero-provenance" onClick={() => setTraceOpen(true)}>
+                  <span aria-hidden />
+                  {sourceLabel}{vwceQuote?.asOf ? ` \u00b7 ${vwceQuote.asOf}` : ""}
+                </button>
+              </div>
+            </div>
             <Sparkline points={series} />
             {allocation.showBar ? (
               <>
