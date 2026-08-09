@@ -104,62 +104,57 @@
   gap: 12px;
 }
 
-/* ===== OVERVIEW-PREMIUM-001 r2 -- tang 1: the page itself =====
+/* ===== OVERVIEW-MONO-001 r1 -- the page is white and flat =====
  *
- * r1 answered "make it premium" by making the hero bleed to both screen edges
- * as a solid purple slab. The owner's verdict was that this is still the same
- * frame, and the verdict is right: a purple rectangle at the top of a list of
- * grey rectangles is what the app already was.
+ * r2 moved the purple off the hero and onto the page as a fixed radial wash.
+ * That was still the same answer to the same question: make the app feel
+ * expensive by adding colour. The reference the owner actually wants is the
+ * opposite -- a broker screen whose chrome is invisible, where the only thing
+ * with a colour is the number that moved. So the wash is gone, --page-tint is
+ * gone with it, and the light theme's lilac tokens are replaced by neutrals.
  *
- * So the purple leaves the hero and becomes the page. One fixed radial wash
- * behind everything, painted on the body so it never scrolls and never joins
- * the layout. It is background-image only: --bg-base from index.css still
- * supplies the colour underneath, and no box, height or scroll behaviour
- * changes anywhere. What it buys is the thing decision (1) asked for -- a
- * background with a tang, so the cards above it can read as objects standing
- * on something rather than blocks stacked on flat paint.
+ * The override lives here rather than in tokens.css for the same reason the
+ * page tint did: this sheet is emitted last, and the selectors below repeat
+ * the exact pair tokens.css uses for the light theme, so dark and premium --
+ * whose selectors carry an attribute and therefore outrank a bare :root --
+ * keep every value they had. Nothing about the dark or premium palette moves
+ * in this PR.
  *
- * --hero-line and --hero-area are the only accents the hero keeps, and both
- * derive from --primary-600, so light, dark and premium each stay inside
- * their own palette. Overview.tsx reads both for the sparkline, which used to
- * be hard-coded white and would have disappeared on the light theme the
- * moment the hero stopped being dark purple.
+ * --hero-line and --hero-area stay: the curve is one of the three places the
+ * accent is still allowed to appear, the other two being the selected tab and
+ * the selected dock icon.
  */
 :root {
   --hero-line: var(--primary-600);
   --hero-area: color-mix(in srgb, var(--primary-600) 26%, transparent);
-  --page-tint: color-mix(in srgb, var(--primary-600) 15%, transparent);
 }
 
-body {
-  background-image:
-    radial-gradient(118% 62% at 50% -12%, var(--page-tint) 0%, transparent 60%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+:root,
+:root[data-theme="light"] {
+  --bg-base: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --surface-sunken: #F4F4F6;
+  --text-secondary: #5A5A63;
+  --text-tertiary: #8C8C95;
+  --border-subtle: #E6E6EA;
+  --border-strong: #D2D2D8;
+  --hairline: rgba(0, 0, 0, 0.09);
 }
 
 /* VISUAL-POLISH-001 r2: increased top padding for more hero breathing room;
    slightly taller min-height to give the number more space above fold.
 
-   VISUAL-POLISH-SHOULD-6 r1: depth, and only depth. The single flat shadow
-   became four stops that describe one light: a contact shadow so the card
-   touches the page, the original mid shadow kept byte for byte, a wider and
-   softer ambient stop underneath it, and an inset hairline along the whole
-   edge so the rim catches light like glass instead of ending in a hard cut.
-
-   OVERVIEW-PREMIUM-001 r1 / r2: this rule is left exactly as SHOULD-6 wrote
-   it, because it is now the empty-state geometry. Everything the funded hero
-   needs is declared in the .hero-v8:not(.hero-empty) block further down, so
-   the empty panel cannot be moved by accident. */
+   OVERVIEW-MONO-001 r1: the four-stop shadow written by VISUAL-POLISH-SHOULD-6
+   is deleted. It described one light source across a contact shadow, a mid
+   shadow, an ambient stop and an inset rim -- careful work, and exactly the
+   kind of decoration that reads as "nice" once and as weight every day after.
+   Both hero states now declare their own depth, or the absence of it, below.
+   This rule keeps only the empty-state geometry. */
 .hero-v8 {
   min-height: 152px;
   padding: 20px 18px 16px;
   border-radius: 21px;
-  box-shadow:
-    inset 0 0 0 1px var(--hero-highlight),
-    0 2px 6px -3px var(--hero-shadow),
-    0 16px 38px -29px var(--hero-shadow),
-    0 30px 64px -44px var(--hero-shadow);
 }
 
 /* The sheen is a separate layer rather than another background stop so that
@@ -182,20 +177,19 @@ body {
   opacity: 0.7;
 }
 
-/* ===== OVERVIEW-PREMIUM-001 r2 -- tang 2: the hero is a card again, and the
- * brightest one on the page =====
+/* ===== OVERVIEW-MONO-001 r1 -- the hero stops being a card =====
  *
- * Decision (1) of the three locked before this PR, taken in its first form:
- * no more full-bleed solid purple. The hero is now the raised surface of the
- * page -- the same family of colour as every other card, but lifted furthest
- * off the tinted background by --shadow-overlay and given the largest radius,
- * so the eye ranks it first by depth instead of by hue. That is the part r1
- * could not deliver: a slab of colour is not a hierarchy, it is a banner.
+ * r2 turned the hero from a purple slab into the brightest card on the page:
+ * white surface, largest radius, --shadow-overlay. On a tinted page that was
+ * a real hierarchy. On a white page it is a white rectangle on white paint
+ * held up by a shadow, which is the one thing this PR is removing.
  *
- * Everything r1 wrote for the bleed is gone with it: --hero-bleed-x,
- * --hero-bleed-top, the negative margins, the 900px variable override and the
- * print rule that existed only to cancel those margins. A card that sits
- * inside the shell padding needs none of them.
+ * So the frame goes entirely. No background, no border, no shadow, no side
+ * padding: the label, the figure and the curve sit directly on the page, and
+ * the hierarchy is carried by type size alone -- a 42-58px number against a
+ * 10px label. That is how the reference screen does it, and it is the only
+ * version of this block that cannot go stale, because there is nothing left
+ * on it to notice twice.
  *
  * Every rule stays scoped :not(.hero-empty). The empty state keeps the quiet
  * bordered panel it already had, and the reviewer can prove that from the
@@ -205,12 +199,12 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 18px 18px 0;
-  border: 1px solid var(--hairline);
-  border-radius: 26px;
-  background: var(--surface-raised);
+  padding: 4px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
   color: var(--text-primary);
-  box-shadow: var(--shadow-overlay);
+  box-shadow: none;
 }
 
 /* The noise film and the sheen were built for a dark gradient. On a light
@@ -220,10 +214,10 @@ body {
   display: none;
 }
 
-/* Decision (3): the figure and its meta share one fixed row. The provenance
-   chip used to be absolutely positioned in the top-right corner -- the exact
-   anatomy of a report header -- so it is pulled back into normal flow here
-   with position: static and made a chip instead of loose white text. */
+/* Decision (3) of r2, kept: the figure and its meta share one fixed row. The
+   provenance chip used to be absolutely positioned in the top-right corner --
+   the exact anatomy of a report header -- so it is pulled back into normal
+   flow here with position: static. */
 .hero-v8:not(.hero-empty) .hero-head {
   display: flex;
   align-items: flex-end;
@@ -264,11 +258,30 @@ body {
   opacity: 1;
 }
 
+/* OVERVIEW-MONO-001 r1: the delta was a white pill inherited from the purple
+   hero -- invisible paint on a white page -- and it was --text-secondary, so
+   a gain and a loss looked identical. The pill is dropped and the sign is the
+   colour: green for a gain, red for a loss. The neutral rule stays for the
+   two branches that are not a profit and loss figure at all (an unrecorded
+   deposit, a missing price count). */
 .hero-v8:not(.hero-empty) .hero-delta {
+  margin-top: 0;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: none;
   color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 13px;
+  font-weight: 680;
   font-variant-numeric: tabular-nums;
+}
+
+.hero-v8:not(.hero-empty) .hero-delta-pos {
+  color: var(--success-600);
+}
+
+.hero-v8:not(.hero-empty) .hero-delta-neg {
+  color: var(--danger-600);
 }
 
 .hero-v8:not(.hero-empty) .hero-provenance {
@@ -283,9 +296,11 @@ body {
   font-weight: 650;
 }
 
-/* The allocation row is the only place the accent is allowed to be a block of
-   paint, and it is 4px tall. On the old purple hero these segments were white
-   on purple; on a surface card they have to name their own colours. */
+/* OVERVIEW-MONO-001 r1: the allocation bar was --primary-600 at full strength
+   -- a purple block of paint the width of the screen, and by far the largest
+   accent left on the page. It is a proportion, not a signal, so it is drawn
+   in ink: the securities share in text colour, the safe share in a light
+   grey, on the sunken track. */
 .hero-v8:not(.hero-empty) .alloc-v8 {
   height: 4px;
   margin-top: 18px;
@@ -295,11 +310,11 @@ body {
 }
 
 .hero-v8:not(.hero-empty) .alloc-seg-v8.vwce {
-  background: var(--primary-600);
+  background: var(--text-primary);
 }
 
 .hero-v8:not(.hero-empty) .alloc-seg-v8.cash {
-  background: color-mix(in srgb, var(--primary-600) 22%, transparent);
+  background: color-mix(in srgb, var(--text-primary) 18%, transparent);
 }
 
 .hero-v8:not(.hero-empty) .alloc-legend-v8 {
@@ -315,16 +330,17 @@ body {
   color: var(--text-tertiary);
 }
 
-/* The curve is the floor of the card. order: 1 moves it after the allocation
-   row without touching the DOM order in Overview.tsx -- it is the only child
-   given an order, so every sibling keeps the default 0 and lands above it.
-   The negative side margins are exactly the card padding, and the hero's own
-   overflow: hidden clips the curve into the bottom corners. */
+/* The curve keeps order: 1, so it renders after the allocation row without
+   touching the DOM order in Overview.tsx -- it is the only child given an
+   order, so every sibling keeps the default 0 and lands above it. r2 pulled
+   it out to the card edges with negative margins equal to the card padding;
+   the card has no padding now, so the margins are zero and the curve simply
+   spans the column. */
 .hero-v8:not(.hero-empty) .sparkline {
   order: 1;
-  width: auto;
+  width: 100%;
   height: 74px;
-  margin: 14px -18px 0;
+  margin: 14px 0 0;
 }
 
 /* Empty is an application state, not a marketing banner. */
@@ -416,20 +432,17 @@ body {
 }
 
 /* VISUAL-POLISH-001 r2: reduce "Nhip Quy" heading weight so it reads as
-   secondary to the hero number above it. */
+   secondary to the hero number above it.
+
+   OVERVIEW-MONO-001 r1: the .today-kicker rule that sat under this one is
+   gone. TodayCenter.tsx no longer renders the kicker paragraph, so keeping
+   its style would be dead CSS. */
 .today-center-head h2 {
   margin: 1px 0 0;
   font-size: 17px;
   font-weight: 680;
   line-height: 1.05;
   letter-spacing: -0.045em;
-}
-
-.today-kicker {
-  color: var(--primary-600);
-  font-size: 8px;
-  font-weight: 720;
-  letter-spacing: 0.14em;
 }
 
 /*
@@ -509,6 +522,13 @@ body {
   font-size: 12px;
   font-weight: 720;
   cursor: pointer;
+}
+
+/* OVERVIEW-MONO-001 r1: "So lieu" is a disclosure control, not an action, and
+   it was the last purple word on the first screenful. Accent removed; the
+   real calls to action in .action-cta keep theirs. */
+.stat-detail-btn {
+  color: var(--text-secondary);
 }
 
 /* Four primary destinations; secondary tools live in the avatar menu. */
@@ -648,18 +668,18 @@ body {
     border-radius: 19px;
   }
 
-  /* OVERVIEW-PREMIUM-001 r2: the phone variant of the surface hero. This has
+  /* OVERVIEW-MONO-001 r1: the phone variant of the frameless hero. This has
      to exist: .hero-v8:not(.hero-empty) outranks the .hero-v8 rule above no
      matter which one is written first, so without it the phone would silently
      inherit the desktop padding and radius. */
   .hero-v8:not(.hero-empty) {
-    padding: 16px 15px 0;
-    border-radius: 22px;
+    padding: 2px 0 0;
+    border-radius: 0;
   }
 
   .hero-v8:not(.hero-empty) .sparkline {
     height: 64px;
-    margin: 12px -15px 0;
+    margin: 12px 0 0;
   }
 
   .hero-v8.hero-empty {
