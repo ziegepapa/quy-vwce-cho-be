@@ -251,7 +251,6 @@
   margin-top: 16px;
 }
 
-.hero-v8:not(.hey-empty) .alloc-legend-v8,
 .hero-v8:not(.hero-empty) .alloc-legend-v8 {
   margin-top: 8px;
   font-size: 10px;
