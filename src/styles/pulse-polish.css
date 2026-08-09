@@ -14,28 +14,31 @@
     text-rendering: optimizeLegibility;
   }
 
-  section[aria-label="Trạng thái nguồn giá"] {
-    display: none;
-  }
-
   /*
-   * VISUAL-POLISH-001 r4 -- min-height: 176px used to be the first declaration
-   * in this rule and it never once reached the screen. main.tsx imports ./App
-   * before the global stylesheets, so the sheets TodayCenter.tsx pulls in
-   * (today-center, pulse-polish, nhip-block) are emitted near the front of the
-   * bundle while pulse-locked-v2.css lands near the end. Same selector, same
-   * specificity, later file wins: the hero is 152px, and 140px below 520px,
-   * both from pulse-locked-v2.css. Editing the number here changed nothing,
-   * which is precisely why it had to go -- it read like the live value.
+   * DEAD-CSS-AND-CODE-001 r1 -- two rules used to open this block and neither
+   * of them could reach a pixel any more.
    *
-   * border-radius and box-shadow below lose to that same rule for the same
-   * reason and are equally dead. They stay this round because r4 step 1 was
-   * scoped to the three measured values; they are queued for the follow-up.
+   * 1. A section[aria-label] rule hid QuoteStatusSummary with display: none.
+   *    #65 unmounted the component and this PR deletes the file, so there is
+   *    no such section in the tree left to match. The unmount and this removal
+   *    had to travel together: drop the rule while the component is still
+   *    mounted and a section nobody has looked at since UI-PULSE-LOCKED-001
+   *    reappears on the home screen. The rule sat inside @media screen, so it
+   *    never covered print -- that difference was already spent in #65 and
+   *    nothing about it changes here.
+   *
+   * 2. .hero-v8 declared border-radius and box-shadow. Both lost to
+   *    pulse-locked-v2.css exactly as min-height: 176px did in r4: main.tsx
+   *    imports ./App before the global stylesheets, so the sheets
+   *    TodayCenter.tsx pulls in are emitted near the front of the bundle while
+   *    pulse-locked-v2.css lands near the end. Same selector, same
+   *    specificity, later file wins -- the hero renders at 21px, 19px below
+   *    520px, with a 0 16px 38px -29px shadow, all from pulse-locked-v2.css.
+   *    With both declarations gone the rule held nothing at all, so the empty
+   *    shell went with them. No live declaration was removed, which is what
+   *    separates this from overview-v8.css, where the same selector still owns
+   *    the background gradient and therefore has to stay.
    */
-  .hero-v8 {
-    border-radius: var(--pulse-radius-xl);
-    box-shadow: 0 20px 54px -30px var(--hero-shadow);
-  }
 
   .hero-trace-trigger {
     position: relative;
