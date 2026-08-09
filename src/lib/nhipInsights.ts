@@ -34,6 +34,9 @@ const MAX_INSIGHTS = 3;
  *
  * OVERVIEW-RHYTHM-001 r3: value is unchanged on purpose. r3 touches copy and
  * layout only; the window itself is frozen.
+ *
+ * OVERVIEW-RHYTHM-001 r4: still frozen. r4 changes who RENDERS these insights
+ * and what one of them says, never how long the window is.
  */
 export const CONTRIBUTION_WINDOW_DAYS = 35;
 const GOAL_UPCOMING_DAYS = 365;
@@ -91,12 +94,21 @@ export function buildNhipInsights({
 
   // Contribution rhythm.
   //
-  // OVERVIEW-RHYTHM-001 r3 (Option B) — the hero now owns the sentence
-  // "Bạn đã góp X € trong 35 ngày qua", so repeating the same total here read
-  // as the same fact twice, one line apart. What the hero cannot show is the
-  // COUNT of contributions, so that is the only thing this line adds now.
-  // The old trailing clause "nhịp quỹ đang được duy trì" is dropped: the hero
-  // ring already says it, visually and without words.
+  // OVERVIEW-RHYTHM-001 r3 (Option B) — the hero owns the sentence
+  // "Bạn đã góp X € trong 35 ngày qua", so this line stopped repeating the
+  // total and kept only the count.
+  //
+  // OVERVIEW-RHYTHM-001 r4 — r3 shrank the duplicate; r4 removes it. The
+  // engine keeps producing `on_track` unchanged (other callers, the tests and
+  // any future surface still get it), but the overview no longer renders that
+  // kind at all — see HERO_OWNED_KINDS in TodayCenter.tsx. What survives on
+  // screen is the branch below it: an empty 35-day window, i.e. the rhythm is
+  // actually broken. Its copy now names that problem directly instead of
+  // narrating a period the hero already reported.
+  //
+  // No new "off track" state was invented for r4. `recent.length === 0` is a
+  // condition this engine has always evaluated; r4 only stopped burying it
+  // underneath a cheerful twin.
   if (result.length < MAX_INSIGHTS) {
     const cutoffMs = Date.parse(now) - CONTRIBUTION_WINDOW_DAYS * 86_400_000;
     const recent = transactions.filter((tx) => {
@@ -110,7 +122,7 @@ export function buildNhipInsights({
     if (recent.length === 0) {
       result.push({
         kind: "contribution_rhythm",
-        text: `Trong ${CONTRIBUTION_WINDOW_DAYS} ngày qua: chưa có lần góp nào — thời điểm tốt để nối lại nhịp.`,
+        text: `Nhịp đã đứt: không có khoản góp nào trong ${CONTRIBUTION_WINDOW_DAYS} ngày gần nhất.`,
       });
     } else {
       const total = recent.reduce(
