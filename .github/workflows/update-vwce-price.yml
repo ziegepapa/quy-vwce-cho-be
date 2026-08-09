@@ -3,9 +3,9 @@ name: Update VWCE price
 on:
   workflow_dispatch:
   schedule:
-    # 18:30 UTC Mon–Fri ≈ after Xetra close in summer; still after 18:00 Berlin in winter
+    # 18:30 UTC Mon-Fri ~= after Xetra close in summer; still after 18:00 Berlin in winter
     - cron: "30 18 * * 1-5"
-    # 06:00 UTC Tue–Sat: catch-up for a missed evening run. GitHub schedules are
+    # 06:00 UTC Tue-Sat: catch-up for a missed evening run. GitHub schedules are
     # best-effort and are dropped entirely when the queue is loaded, with no
     # make-up run, so a single daily slot means one skipped run leaves the feed
     # two sessions stale. This run still resolves the last CLOSED session, so it
@@ -50,6 +50,8 @@ jobs:
           set -euo pipefail
           QUOTES_PATH="public/data/quotes.json"
           LEGACY_PATH="public/data/vwce-price.json"
+          HISTORY_PATH="public/data/price-history/IE00BK5BQT80.json"
+
           if [ ! -f "$QUOTES_PATH" ]; then
             echo "quotes.json missing after update script"
             exit 1
@@ -59,9 +61,11 @@ jobs:
             exit 1
           fi
 
-          # Snapshot generated JSON outside the worktree before any git reset/rebase
+          # Snapshot generated files outside the worktree before any git reset/rebase.
+          # History file may not exist on first cron run (|| true handles that).
           cp "$QUOTES_PATH" "$RUNNER_TEMP/quotes.json"
           cp "$LEGACY_PATH" "$RUNNER_TEMP/vwce-price.json"
+          cp "$HISTORY_PATH" "$RUNNER_TEMP/price-history-vwce.json" 2>/dev/null || true
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -71,26 +75,36 @@ jobs:
           git pull --rebase origin main
 
           # Restore generated files after rebase
-          mkdir -p public/data
+          mkdir -p public/data public/data/price-history
           cp "$RUNNER_TEMP/quotes.json" "$QUOTES_PATH"
           cp "$RUNNER_TEMP/vwce-price.json" "$LEGACY_PATH"
+          # Restore history only if the script wrote one (VWCE quote was successful)
+          if [ -f "$RUNNER_TEMP/price-history-vwce.json" ]; then
+            cp "$RUNNER_TEMP/price-history-vwce.json" "$HISTORY_PATH"
+          fi
 
           git add -- "$QUOTES_PATH" "$LEGACY_PATH"
+          # Stage history file only if it was written and differs from HEAD
+          if [ -f "$HISTORY_PATH" ]; then
+            git add -- "$HISTORY_PATH"
+          fi
+
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No economic quote changes"
             exit 0
           fi
 
-          STAGED=$(git diff --cached --name-only | sort)
-          EXPECTED=$(printf '%s\n' "$LEGACY_PATH" "$QUOTES_PATH" | sort)
-          if [ "$STAGED" != "$EXPECTED" ]; then
+          # Guard: only the three known data files may be staged.
+          # Any extra file signals an unintended side-effect.
+          UNEXPECTED=$(git diff --cached --name-only | grep -vxF "$QUOTES_PATH" | grep -vxF "$LEGACY_PATH" | grep -vxF "$HISTORY_PATH" || true)
+          if [ -n "$UNEXPECTED" ]; then
             echo "Unexpected staged files:"
-            echo "$STAGED"
+            echo "$UNEXPECTED"
             exit 1
           fi
 
-          git commit -m "chore(data): update quotes.json and VWCE legacy mirror"
+          git commit -m "chore(data): update quotes.json, VWCE mirror, and price history"
           git push origin HEAD:main
           echo "changed=true" >> "$GITHUB_OUTPUT"
 

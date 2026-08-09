@@ -34,6 +34,7 @@ import {
   ONVISTA_MISMATCH,
 } from "./providers/onvista.mjs";
 import { hourInTz } from "./time.mjs";
+import { upsertHistoryPoint } from "./history.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../..");
@@ -43,6 +44,18 @@ export const LEGACY_VWCE_PATH = path.join(
   "public",
   "data",
   "vwce-price.json",
+);
+/**
+ * PRICE-HISTORY-PERSIST-001 r1: daily price series for VWCE.
+ * One point per trading day, appended by the cron after each successful write.
+ * Served as a static file from gh-pages; no Dexie bump required.
+ */
+export const HISTORY_PATH = path.join(
+  REPO_ROOT,
+  "public",
+  "data",
+  "price-history",
+  "IE00BK5BQT80.json",
 );
 export const VWCE_ISIN = "IE00BK5BQT80";
 
@@ -310,6 +323,7 @@ export async function resolveInstrumentQuote(instrument, options = {}) {
  * @param {object} [options]
  * @param {string} [options.quotesPath]
  * @param {string} [options.legacyPath]
+ * @param {string} [options.historyPath] - overrides HISTORY_PATH (tests)
  * @param {string} [options.registryPath]
  * @param {Date} [options.now]
  * @param {Date} [options.fetchedAt]
@@ -448,6 +462,28 @@ export async function runMultiAssetUpdate(options = {}) {
     const legacy = quoteRowToLegacyV1(vwceQuote, "VWCE");
     writeJsonAtomic(legacy, legacyPath);
     legacyWrote = true;
+  }
+
+  // PRICE-HISTORY-PERSIST-001 r1: upsert one point per trading day for VWCE.
+  // Non-fatal: the quote write already succeeded. If history fails, log and
+  // continue -- the cron result is the quote file, not the history file.
+  if (vwceQuote) {
+    const hPath = options.historyPath || HISTORY_PATH;
+    try {
+      upsertHistoryPoint(
+        hPath,
+        VWCE_ISIN,
+        "EUR",
+        vwceQuote.asOf,
+        vwceQuote.price,
+        "cron",
+      );
+    } catch (histErr) {
+      console.warn(
+        "History persist failed (non-fatal):",
+        histErr?.message || histErr,
+      );
+    }
   }
 
   return {
