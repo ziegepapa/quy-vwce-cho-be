@@ -10,10 +10,17 @@
    the "steps remaining" line at the bottom of the card.
    V9 B3: colours via --hero-* vars for theme support.
    VISUAL-POLISH-001 r2: hero-label margin increased for more breathing room
-   between label and hero number. */
+   between label and hero number.
+   VISUAL-POLISH-001 r4: min-height: 168px removed. The same property was
+   declared in three files, not two: pulse-polish said 176px, this file said
+   168px, pulse-locked-v2.css says 152px -- and pulse-locked-v2 is emitted last
+   in the bundle, so only 152px, and 140px below 520px, ever reached the screen.
+   The rest of this rule stays deliberately: position, overflow, color and the
+   background gradient are declared nowhere else and are the hero's own, while
+   padding, border-radius and box-shadow are also overridden by pulse-locked-v2
+   and are queued for the follow-up chore. */
 .hero-v8 {
   position: relative;
-  min-height: 168px;
   padding: 20px 20px 18px;
   border-radius: 18px;
   overflow: hidden;

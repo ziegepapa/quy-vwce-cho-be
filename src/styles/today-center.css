@@ -32,10 +32,21 @@
   margin-bottom: 13px;
 }
 
+/*
+ * VISUAL-POLISH-001 r4 -- font-size: 22px removed. TodayCenter.tsx imports this
+ * sheet and main.tsx imports ./App before the global stylesheets, so this file
+ * opens the bundle while pulse-locked-v2.css closes it. Same selector, same
+ * specificity, later file wins: the heading renders at 17px, and 15px below
+ * 520px, from pulse-locked-v2.css. Anyone tuning the heading here would have
+ * seen no effect at all.
+ *
+ * color is the one declaration left below that pulse-locked-v2 does not
+ * restate, so it is the only one still doing work; margin, line-height and
+ * letter-spacing are overridden there too and are queued for the follow-up.
+ */
 .today-center-head h2 {
   margin: 2px 0 4px;
   color: var(--text-primary);
-  font-size: 22px;
   line-height: 1.08;
   letter-spacing: -0.035em;
 }
