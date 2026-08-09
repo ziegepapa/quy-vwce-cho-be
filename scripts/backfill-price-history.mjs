@@ -47,9 +47,8 @@ const CURRENCY = "EUR";
 
 // Yahoo Finance v8 chart API -- range=5y, 1-day interval, no pre/post market.
 // Same domain and API version as the daily cron (query1.finance.yahoo.com/v8/finance/chart/).
-const YAHOO_URL =
-  `https://query1.finance.yahoo.com/v8/finance/chart/${YAHOO_SYMBOL}` +
-  `?range=5y&interval=1d&includePrePost=false`;
+const YAHOO_BASE = "https://query1.finance.yahoo.com/v8/finance/chart/";
+const YAHOO_URL = YAHOO_BASE + YAHOO_SYMBOL + "?range=5y&interval=1d&includePrePost=false";
 
 const UA =
   "quy-vwce-cho-be/1.0 (+https://github.com/ziegepapa/quy-vwce-cho-be; backfill-bot)";
