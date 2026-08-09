@@ -13,22 +13,26 @@
  * the right edge, and give the checklist rows a caption/figure ranking so two
  * stacked rows stop reading as four equally loud things.
  *
- * OVERVIEW-PREMIUM-001 r2 -- two changes, both structural.
+ * OVERVIEW-PREMIUM-001 r2 -- surfaces moved from rgba(255,255,255,.03..08) to
+ * --surface / --hairline, and the three floating rows became one card.
  *
- * First, the surfaces. Every panel in this sheet was painted with
- * rgba(255,255,255,.03..08) on top of whatever was behind it. That is a dark
- * theme assumption wearing a neutral disguise: on the light theme it produces
- * a white film on a white page, which is why the blocks never looked like
- * objects. They now use --surface and --hairline and carry --shadow-raised,
- * so they are cards standing on the page tint that pulse-locked-v2.css paints
- * behind them, in all three themes.
+ * OVERVIEW-MONO-001 r1 -- two changes.
  *
- * Second, decision (2) of the three locked before this PR: the three separate
- * rows -- Khop sao ke, An toan, Mo phong -- were three floating rectangles
- * competing with the block above them. They are one "Trang thai" card now, so
- * the whole .nhip-checklist / .nhip-check* / .nhip-sim* family is deleted here
- * and replaced by .state-*. Those class names no longer appear in any .tsx
- * file, so leaving the rules behind would be dead CSS.
+ * First, the one "Trang thai" card becomes three equal tiles. r2 was right
+ * that three floating rectangles were three competing objects, but the card it
+ * produced still read as an administrative checklist: three full-width rows,
+ * each with a name, a figure and a sentence of explanation, stacked. A grid of
+ * three equal tiles carries the same three facts in a third of the height and
+ * with a stable rhythm -- the eye learns where each number lives instead of
+ * reading three sentences every time. The explanations are not deleted: each
+ * tile keeps the full sentence in its aria-label, and the two tiles that open
+ * a TraceSheet show the complete breakdown there on tap, which is where a
+ * detail belongs.
+ *
+ * Second, no shadows. On a white page a drop shadow is the fastest thing to
+ * tire of, so the block is held by a hairline alone and the tiles by a sunken
+ * fill. The purple "Moi" badge goes neutral with them: the accent budget for
+ * this screen is the chart line, the selected tab and the selected dock icon.
  */
 
 .nhip-block {
@@ -36,10 +40,10 @@
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--surface);
   border: 1px solid var(--hairline);
-  box-shadow: var(--shadow-raised);
+  box-shadow: none;
 }
 
 .nhip-list {
@@ -113,89 +117,63 @@
   white-space: nowrap;
 }
 
+/* OVERVIEW-MONO-001 r1: was --primary-050 on --primary-600. It is a recency
+   marker, not an action, so it has no claim on the accent. */
 .nhip-new {
   font-size: 11px;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 999px;
-  background: var(--primary-050);
-  color: var(--primary-600);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
 }
 
-/* ===== OVERVIEW-PREMIUM-001 r2 -- one "Trang thai" card ===== *
+/* ===== OVERVIEW-MONO-001 r1 -- three equal tiles ===== *
  *
- * Three rows inside one bordered card, separated by hairlines rather than by
- * gaps. A gap says "three things"; a rule says "three lines of one thing".
- * The rows keep their own <a> / <button>, so every target, aria-label and
- * TraceSheet behaves exactly as before -- this is a container change, not a
- * behaviour change.
+ * Every tile is the same box: a label, then a figure. The tone classes are on
+ * the tile itself, so only the figure is ever coloured -- warning, success or
+ * plain text. There is no border and no shadow; the sunken fill is what tells
+ * the eye that the three of them are one group.
+ *
+ * The rows kept their own <a> / <button> in r2 and they still do, so every
+ * destination, aria-label and TraceSheet behaves exactly as before.
  */
-.state-card {
-  margin-top: 12px;
-  padding: 0 14px 4px;
-  border-radius: 18px;
-  border: 1px solid var(--hairline);
-  background: var(--surface);
-  box-shadow: var(--shadow-raised);
-}
-
-.state-card-title {
-  margin: 0;
-  padding: 12px 0 2px;
-  color: var(--text-tertiary);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-
-.state-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.state-row + .state-row > a,
-.state-row + .state-row > button {
-  border-top: 1px solid var(--hairline);
-}
-
-.state-row > a,
-.state-row > button {
+.state-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 2px 12px;
-  width: 100%;
-  min-height: 56px;
-  padding: 11px 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.state-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 76px;
+  padding: 12px 10px;
   border: 0;
-  border-radius: 0;
-  background: none;
+  border-radius: 14px;
+  background: var(--surface-sunken);
   color: inherit;
   text-align: left;
   text-decoration: none;
   font: inherit;
   cursor: pointer;
-  transition: opacity var(--d-fast, 120ms);
+  transition: opacity var(--d-fast, 160ms);
 }
 
 .state-name {
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 620;
 }
 
 .state-value {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 680;
-  text-align: right;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
-}
-
-.state-detail {
-  grid-column: 1 / -1;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.4;
 }
 
 .state-warning  .state-value { color: var(--warning-600); }
@@ -205,20 +183,31 @@
 /* ------ hover / active micro-interactions ------ */
 
 @media (hover: hover) and (pointer: fine) {
-  .state-row > a:hover,
-  .state-row > button:hover {
+  .state-tile:hover {
     opacity: 0.78;
   }
 }
 
-.state-row > a:active,
-.state-row > button:active {
+.state-tile:active {
   opacity: 0.6;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .state-row > a,
-  .state-row > button {
+  .state-tile {
     transition: none !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .state-grid {
+    gap: 6px;
+  }
+
+  .state-tile {
+    padding: 10px 8px;
+  }
+
+  .state-value {
+    font-size: 12px;
   }
 }

@@ -11,6 +11,12 @@
  * removed here never matched anything; and the header description rule
  * `.today-center-head > div:first-child > p:last-child` cannot match either,
  * because that div now ends with the h2, so no p can be its last child.
+ *
+ * OVERVIEW-MONO-001 r1 — .today-kicker removed. The kicker was the paragraph
+ * reading "Một khối · điều đáng nói hôm nay", a label about the block rather
+ * than information from the ledger, and it was the loudest purple on the first
+ * screenful. TodayCenter.tsx no longer renders it, so the rule here and its
+ * twin in pulse-locked-v2.css would both be dead CSS.
  */
 .today-center {
   position: relative;
@@ -48,15 +54,6 @@
  */
 .today-center-head h2 {
   color: var(--text-primary);
-}
-
-.today-kicker {
-  margin: 0;
-  color: var(--primary-600);
-  font-size: 10px;
-  font-weight: 760;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
 }
 
 .today-sheet-tools { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
