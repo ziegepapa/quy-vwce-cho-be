@@ -66,6 +66,9 @@
   }
 }
 
+/* This rule stays fully opaque on purpose: it is the fallback for engines
+   without backdrop-filter, where a translucent bar would put page text
+   directly behind the icons. The glass lives in the @supports block below. */
 .bottom-dock-inner {
   pointer-events: auto;
   display: flex;
@@ -81,8 +84,14 @@
   overflow: hidden;
 }
 
+/* OVERVIEW-GLASSDOCK-001 r1: the dock is one of only two surfaces in the app
+   that genuinely floats above content, so it is one of only two places where
+   glass carries information -- it tells you the page continues underneath.
+   The blur was already here; what was missing is transparency for it to act
+   on. An opaque bar with a blur behind it is just an opaque bar. */
 @supports (backdrop-filter: blur(1px)) {
   .bottom-dock-inner {
+    background: color-mix(in srgb, var(--color-surface-overlay) 60%, transparent);
     backdrop-filter: blur(var(--blur-dock)) saturate(180%);
     -webkit-backdrop-filter: blur(var(--blur-dock)) saturate(180%);
   }
