@@ -7,3 +7,10 @@ public/icons/apple-touch-icon.png
 public/icons/icon-192.png
 public/icons/icon-512.png
 public/icons/icon-maskable-512.png
+
+# Personal documents must never reach the repo.
+# Trade Republic statements are read in the browser and stored in
+# IndexedDB; nothing in the build ever needs a PDF on disk.
+# See PRE-REAL-DATA-AUDIT-001 section B-5.
+*.pdf
+*.PDF
