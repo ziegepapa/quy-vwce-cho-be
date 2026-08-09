@@ -6,10 +6,23 @@ export type RhythmHeroProps = {
   streak: ContributionStreakResult;
   goals: Goal[];
   /**
-   * portfolio.totalContributed from calc.ts — authoritative cost-basis total.
-   * Shown as X in "Đã góp X / Y € kế hoạch".
+   * portfolio.totalContributed from calc.ts — used ONLY to detect whether
+   * the ledger has ever had a contribution (empty-state guard).
+   * NOT used as the displayed X amount in hero copy.
    */
   totalContributed: number;
+  /**
+   * OVERVIEW-RHYTHM-001 r2: X_nhip = total contributions within the Nhịp Quỹ
+   * reporting window (nhipWindowDays). Hero displays this value so X_hero and
+   * X_nhip are always the same number from the same period.
+   */
+  nhipWindowTotal: number;
+  /**
+   * The window length in days used by Nhịp Quỹ (= CONTRIBUTION_WINDOW_DAYS
+   * from nhipInsights.ts). Passed explicitly so copy stays in sync if the
+   * constant ever changes.
+   */
+  nhipWindowDays: number;
 };
 
 /** Format an ISO date string as dd.mm.yyyy */
@@ -24,18 +37,26 @@ function formatDDMMYYYY(iso: string): string {
 const RING_PATH = "M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31";
 
 /**
- * OVERVIEW-RHYTHM-001 r1 — Hero "Nhịp & Hành trình"
+ * OVERVIEW-RHYTHM-001 r2 — Hero "Nhịp & Hành trình"
  *
- * Left: streak ring (consecutive contributing months).
- * Right: X / Y / Z text with full fallbacks (no fabricated numbers).
+ * X_hero is now defined as the same value Nhịp Quỹ reports:
+ * total contributions within nhipWindowDays (currently 35 days).
+ *
+ * Fallback matrix:
+ *   nhipWindowTotal > 0   → "Bạn đã góp X € trong N ngày qua"
+ *   nhipWindowTotal = 0 but totalContributed > 0
+ *     (history outside window) → "Bạn đã góp 0,00 € trong N ngày qua"
+ *                                  + caption with last contribution date
+ *   totalContributed = 0 (never contributed) → r1 empty fallback
  */
 export default function RhythmHero({
   streak,
   goals,
   totalContributed,
+  nhipWindowTotal,
+  nhipWindowDays,
 }: RhythmHeroProps) {
   // ── Compute Y (total goal target) from real Goals table only ──
-  const today = new Date();
   let goalTotalY = 0;
   for (const g of goals) {
     if (!g.amount || g.amount <= 0) continue;
@@ -49,13 +70,15 @@ export default function RhythmHero({
   }
   const hasGoals = goals.length > 0 && goalTotalY > 0;
   const Y: number | null = hasGoals ? goalTotalY : null;
-  const X = totalContributed;
-  const hasContributions = streak.streakMonths > 0 || X > 0;
 
-  // Z = contribution progress, only when Y > 0 and X > 0
+  // hasContributions: true if ledger ever recorded a contribution (lifetime).
+  // Determines whether to show empty-state or active-state copy.
+  const hasContributions = streak.streakMonths > 0 || totalContributed > 0;
+
+  // Z = goal progress (uses lifetime totalContributed; correct for journey %).
   const Z: number | null =
-    Y != null && Y > 0 && X > 0
-      ? Math.min(100, (X / Y) * 100)
+    Y != null && Y > 0 && totalContributed > 0
+      ? Math.min(100, (totalContributed / Y) * 100)
       : null;
 
   // ── Ring fill: streak capped at 12 months = full circle ──
@@ -64,6 +87,9 @@ export default function RhythmHero({
   // Minimum visible arc of 2 when streak > 0 so there's always some fill
   const arcShown = arcPct > 0 ? Math.max(2, arcPct) : 0;
   const isEmpty = streakMonths === 0;
+
+  // Period label mirrors Nhịp Quỹ copy exactly.
+  const periodLabel = `trong ${nhipWindowDays} ng\u00e0y qua`;
 
   return (
     <section className="rhythm-hero">
@@ -120,16 +146,16 @@ export default function RhythmHero({
         {/* ── Right: text body ── */}
         <div className="rhythm-body">
           {!hasContributions ? (
-            // Empty ledger: no contributions at all
+            // Empty ledger: never contributed
             <p className="rhythm-empty-copy">
-              {"Ch\u01b0a c\u00f3 kho\u1ea3n g\u00f3p n\u00e0o"}
+              {"Ch\u01b0a c\u00f3 kho\u1ea3n g\u00f3p n\u00e0o cho qu\u1ef9 n\u00e0y"}
             </p>
           ) : Y != null ? (
-            // Has goals → show X / Y (± Z)
+            // Has goals → show lifetime X / Y (goal progress uses lifetime total)
             <>
               <p className="rhythm-line1">
                 {"\u0110\u00e3 g\u00f3p "}
-                <span className="rhythm-x">{formatMoney(X)}</span>
+                <span className="rhythm-x">{formatMoney(totalContributed)}</span>
                 {" / "}
                 {formatMoney(Y)}
                 {" k\u1ebf ho\u1ea1ch"}
@@ -147,12 +173,14 @@ export default function RhythmHero({
               )}
             </>
           ) : (
-            // No goals → show X only
+            // No goals → show X_nhip with same period as Nhịp Quỹ
+            // OVERVIEW-RHYTHM-001 r2: X = nhipWindowTotal (not totalContributed)
             <>
               <p className="rhythm-line1">
                 {"B\u1ea1n \u0111\u00e3 g\u00f3p "}
-                <span className="rhythm-x">{formatMoney(X)}</span>
-                {" cho qu\u1ef9 n\u00e0y"}
+                <span className="rhythm-x">{formatMoney(nhipWindowTotal)}</span>
+                {" "}
+                {periodLabel}
               </p>
               {streak.lastContributionDate != null && (
                 <p className="rhythm-caption">
