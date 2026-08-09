@@ -8,9 +8,7 @@ import {
   listTransactions,
 } from "../lib/db";
 import type { AppSettings, Goal, Instrument, Quote, Transaction } from "../lib/types";
-import { VWCE_ISIN } from "../lib/types";
 import {
-  buildEquitySeries,
   formatMoney,
   inflate,
   monthsBetween,
@@ -31,8 +29,11 @@ import {
   buildNhipInsights,
   type NhipInsight,
 } from "../lib/nhipInsights";
+import { computeContributionStreak } from "../lib/contributionStreak";
 import TodayCenter from "../components/TodayCenter";
 import TraceSheet from "../components/TraceSheet";
+import RhythmHero from "../components/RhythmHero";
+import "../styles/rhythm-hero.css";
 
 type Insight = {
   id: string;
@@ -42,48 +43,6 @@ type Insight = {
   cta: string;
   to: string;
 };
-
-// OVERVIEW-PREMIUM-001 r2: the curve used to be drawn in hard-coded white
-// because it only ever sat on a purple gradient. The hero is a surface card
-// now, so white would vanish on the light theme. --hero-line and --hero-area
-// are declared once in pulse-locked-v2.css and resolve per theme.
-//
-// OVERVIEW-CLEANUP-002 r1: the under-two-points branch used to draw a fixed
-// dashed path -- M0 28 Q30 20 60 24 T120 18 -- in the accent colour, directly
-// under the total. Not one number in that path came from the owner's ledger;
-// it was an invented shape filling a hole, in the position where a reader is
-// most likely to read it as their own history. This app stores no daily value
-// series, so it cannot draw a real history yet, and drawing a fake one is
-// worse than drawing nothing. It now renders nothing. The real curve below
-// (two points or more) is untouched.
-function Sparkline({ points }: { points: { value: number }[] }) {
-  if (points.length < 2) {
-    return null;
-  }
-  const values = points.map((point) => point.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const coordinates = values
-    .map((value, index) => {
-      const x = (index / (values.length - 1)) * 120;
-      const y = 36 - ((value - min) / span) * 28;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-  return (
-    <svg className="sparkline" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden>
-      <polygon points={`0,40 ${coordinates} 120,40`} fill="url(#spFade)" />
-      <polyline points={coordinates} fill="none" stroke="var(--hero-line)" strokeWidth="2" strokeLinejoin="round" />
-      <defs>
-        <linearGradient id="spFade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--hero-area)" stopOpacity="1" />
-          <stop offset="100%" stopColor="var(--hero-area)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
 
 export default function Overview({ refreshKey = 0 }: { displayName?: string; refreshKey?: number }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -141,10 +100,13 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     vwceQuote,
     vwcePriceSource,
   } = portfolioSnapshot;
-  const series = useMemo(
-    () => buildEquitySeries(transactions, pricesByIsin[VWCE_ISIN] ?? 0, pricesByIsin),
-    [transactions, pricesByIsin],
+
+  // OVERVIEW-RHYTHM-001 r1: streak result for the hero ring
+  const streakResult = useMemo(
+    () => computeContributionStreak(transactions),
+    [transactions],
   );
+
   // NHIP-UI-001 r1: the engine runs here because this is the only place that
   // holds both the ledger and the effective quote date.
   const nhipInsights = useMemo<NhipInsight[]>(() => {
@@ -321,61 +283,39 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
 
   return (
     <div className="ov">
-      <section className={`hero-v8 hero-${mode}`}>
-        <div className="hero-noise" aria-hidden />
-        {mode === "empty" ? (
-          <div className="hero-empty-inner">
-            <p className="hero-label">{"T\u1ed5ng t\u00e0i s\u1ea3n"}</p>
-            <p className="hero-empty-copy">{"B\u1eaft \u0111\u1ea7u b\u1eb1ng giao d\u1ecbch \u0111\u1ea7u ti\u00ean"}</p>
-            <Link to="/transactions" className="hero-cta">{"Th\u00eam giao d\u1ecbch \u0111\u1ea7u ti\u00ean"}</Link>
-          </div>
-        ) : (
-          <>
-            {/* OVERVIEW-EDITORIAL-TUNE-001 r1 -- (1)(2): hero is now a vertical
-                stack. Number is the primary focus; PnL sits directly below it;
-                provenance is a 12px caption. Nothing competes in a right column.
-                The .hero-meta wrapper div is removed -- its children are direct
-                children of .hero-head, which is now flex-direction: column. */}
-            <div className="hero-head">
-              <button type="button" className="hero-trace-trigger" onClick={() => setTraceOpen(true)}>
-                <span className="hero-label">{hasMissingPrices ? "T\u00e0i s\u1ea3n \u0111\u00e3 \u0111\u1ecbnh gi\u00e1" : "T\u1ed5ng t\u00e0i s\u1ea3n"}</span>
-                <span className="hero-amount">
-                  <span className="hero-num">{formatMoney(hero.assets).replace(/\s*\u20ac$/, "")}</span>
-                  <span className="hero-eur">{"\u20ac"}</span>
-                </span>
-              </button>
-              {hero.setupIncomplete ? (
-                <span className="hero-delta">{"Ch\u01b0a ghi n\u1ea1p ti\u1ec1n "}{formatMoney(hero.cashShortfall)}</span>
-              ) : hasMissingPrices ? (
-                <span className="hero-delta">{"+ "}{market.missingIsins.length}{" m\u00e3 thi\u1ebfu gi\u00e1"}</span>
-              ) : hero.pnl != null && hero.pnl !== 0 ? (
-                /* OVERVIEW-MONO-001 r1: the arrow already branches on the sign
-                   here, so the class does too. CSS cannot read the sign of a
-                   number, and a gain that looks exactly like a loss is the one
-                   thing a portfolio screen may not do. */
-                <span className={`hero-delta ${hero.pnl >= 0 ? "hero-delta-pos" : "hero-delta-neg"}`}>
-                  {hero.pnl >= 0 ? "\u2191" : "\u2193"}{" "}{formatMoney(Math.abs(hero.pnl))}{pnlPct ? ` (${pnlPct}%)` : ""}
-                </span>
+      {/* OVERVIEW-RHYTHM-001 r1 — Section 1: Hero "Nhịp & Hành trình" */}
+      <RhythmHero
+        streak={streakResult}
+        goals={goals}
+        totalContributed={portfolio.totalContributed}
+      />
+
+      {/* OVERVIEW-RHYTHM-001 r1 — Section 2: Tổng tài sản (2-line text, no card) */}
+      {mode !== "empty" ? (
+        <div className="rhythm-assets">
+          <p className="rhythm-assets-label">
+            {hasMissingPrices ? "T\u00e0i s\u1ea3n \u0111\u00e3 \u0111\u1ecbnh gi\u00e1" : "T\u1ed5ng t\u00e0i s\u1ea3n"}
+          </p>
+          <button
+            type="button"
+            className="rhythm-assets-btn"
+            onClick={() => setTraceOpen(true)}
+          >
+            <span className="rhythm-assets-value">
+              {formatMoney(hero.assets)}
+              {hero.pnl != null && hero.pnl !== 0 ? (
+                <>
+                  {" \u00b7 "}
+                  <span className={hero.pnl >= 0 ? "pos" : "neg"}>
+                    {hero.pnl >= 0 ? "+" : ""}{formatMoney(Math.abs(hero.pnl))}
+                    {pnlPct ? ` (${pnlPct}%)` : ""}
+                  </span>
+                </>
               ) : null}
-              <button type="button" className="hero-provenance" onClick={() => setTraceOpen(true)}>
-                {sourceLabel}{vwceQuote?.asOf ? ` \u00b7 ${vwceQuote.asOf}` : ""}
-              </button>
-            </div>
-            <Sparkline points={series} />
-            {/* OVERVIEW-EDITORIAL-TUNE-001 r1 -- (3): bar removed. One text
-                caption only when cashPct > 0. In securities-first mode the hero
-                number is the whole story; an "CK 100%" line adds no information
-                and is therefore absent. */}
-            {!allocation.showBar ? (
-              <p className="hero-alloc-caption neg">{allocationCopy.unavailable}</p>
-            ) : allocation.cashPct > 0 ? (
-              <p className="hero-alloc-caption">
-                {allocationCopy.securitiesLabel}{" \u00b7 "}{allocationCopy.cashLabel}
-              </p>
-            ) : null}
-          </>
-        )}
-      </section>
+            </span>
+          </button>
+        </div>
+      ) : null}
 
       {/* OVERVIEW-SIMPLIFY-001: when the ledger is unfunded this is the only
           call to action on the page. Nothing competes with it.
