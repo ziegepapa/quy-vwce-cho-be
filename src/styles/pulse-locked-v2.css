@@ -99,9 +99,15 @@
   border-width: 1.5px;
 }
 
-/* Overview rhythm */
+/* Overview rhythm.
+
+   OVERVIEW-EDITORIAL-001 r1: 12px was the gap between cards, where the border
+   of each card did the separating and the gap only had to keep them apart.
+   Nothing on this page is enclosed any more, so the space between blocks is
+   the only thing left that groups them -- and 12px between two unbordered
+   groups reads as one crowded group. */
 .ov {
-  gap: 12px;
+  gap: 18px;
 }
 
 /* ===== OVERVIEW-MONO-001 r1 -- the page is white and flat =====
@@ -284,16 +290,21 @@
   color: var(--danger-600);
 }
 
+/* OVERVIEW-EDITORIAL-001 r1: the provenance chip keeps its pill, because it
+   is the one element on the hero that is genuinely a control and not a
+   figure -- but the sunken fill goes. A grey capsule next to a 58px number
+   was the last enclosed object on the first screenful. */
 .hero-v8:not(.hero-empty) .hero-provenance {
   position: static;
   min-height: 24px;
-  padding: 3px 9px;
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
-  background: var(--surface-sunken);
-  color: var(--text-secondary);
-  font-size: 9.5px;
-  font-weight: 650;
+  padding: 3px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 620;
+  letter-spacing: 0.02em;
 }
 
 /* OVERVIEW-MONO-001 r1: the allocation bar was --primary-600 at full strength
@@ -425,24 +436,32 @@
   box-shadow: none;
 }
 
+/* OVERVIEW-EDITORIAL-001 r1: the head sits flush with the text column below
+   it, because there is no card padding left to sit inside of. */
 .today-center-head {
-  align-items: flex-end;
+  align-items: baseline;
   gap: 8px;
-  margin: 0 3px 9px;
+  margin: 0 0 10px;
 }
 
-/* VISUAL-POLISH-001 r2: reduce "Nhip Quy" heading weight so it reads as
-   secondary to the hero number above it.
+/* VISUAL-POLISH-001 r2 reduced this heading's weight so it read as secondary
+   to the hero number.
 
-   OVERVIEW-MONO-001 r1: the .today-kicker rule that sat under this one is
-   gone. TodayCenter.tsx no longer renders the kicker paragraph, so keeping
-   its style would be dead CSS. */
+   OVERVIEW-EDITORIAL-001 r1: it goes one step further and stops being a
+   heading in the visual sense at all. At 17px/680 it was the second-largest
+   thing on the page and it competed with the sentences underneath it, which
+   are the actual content. As a 11px small-caps rubric it names the section in
+   the margin and gives every drop of emphasis back to the prose -- the same
+   move a magazine makes with a standing column title. The h2 and its id are
+   untouched, so the heading outline and aria-labelledby are unchanged. */
 .today-center-head h2 {
-  margin: 1px 0 0;
-  font-size: 17px;
-  font-weight: 680;
-  line-height: 1.05;
-  letter-spacing: -0.045em;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 /*
@@ -700,12 +719,17 @@
     font-size: 12px;
   }
 
+  /* OVERVIEW-EDITORIAL-001 r1: the phone keeps the same rubric, one notch
+     tighter. The old override here set font-size: 15px, which was the phone
+     step of a 17px heading and would now make the label larger than it is on
+     a wide screen. */
   .today-center-head {
-    margin-bottom: 8px;
+    margin-bottom: 9px;
   }
 
   .today-center-head h2 {
-    font-size: 15px;
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
   }
 }
 
