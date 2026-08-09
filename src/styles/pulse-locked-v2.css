@@ -105,12 +105,54 @@
 }
 
 /* VISUAL-POLISH-001 r2: increased top padding for more hero breathing room;
-   slightly taller min-height to give the number more space above fold. */
+   slightly taller min-height to give the number more space above fold.
+
+   VISUAL-POLISH-SHOULD-6 r1: depth, and only depth. The single flat shadow
+   became four stops that describe one light: a contact shadow so the card
+   touches the page, the original mid shadow kept byte for byte, a wider and
+   softer ambient stop underneath it, and an inset hairline along the whole
+   edge so the rim catches light like glass instead of ending in a hard cut.
+   The inset ring is deliberately a shadow and not a border: a border would
+   eat one pixel of the padding box and could nudge the number, while an
+   inset shadow paints inside the existing box and cannot move anything.
+   min-height, padding and border-radius are untouched on purpose -- the
+   number keeps its exact position, which is what makes this reviewable.
+   All four stops use --hero-shadow and --hero-highlight, which already exist
+   per theme in tokens.css, so light, dark and premium each get their own
+   depth without a single new colour being invented here.
+   This sheet is the last one emitted in the bundle (FINDING_NOTION_38), so
+   this is the only file where these declarations can actually reach a pixel;
+   writing them in pulse-polish.css or overview-v8.css would be dead work. */
 .hero-v8 {
   min-height: 152px;
   padding: 20px 18px 16px;
   border-radius: 21px;
-  box-shadow: 0 16px 38px -29px var(--hero-shadow);
+  box-shadow:
+    inset 0 0 0 1px var(--hero-highlight),
+    0 2px 6px -3px var(--hero-shadow),
+    0 16px 38px -29px var(--hero-shadow),
+    0 30px 64px -44px var(--hero-shadow);
+}
+
+/* The sheen is a separate layer rather than another background stop so that
+   the three-layer gradient in overview-v8.css stays exactly as it is. It is
+   absolutely positioned, inherits the radius, and is clipped by the overflow:
+   hidden the hero already carries, so it adds no box of its own. Every child
+   that paints text is position: relative and comes later in the DOM, so the
+   sheen can never sit on top of the number. Static: no transition, no hover,
+   no animation -- it looks the same in a screenshot as it does on the phone. */
+.hero-v8::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    var(--hero-highlight) 0%,
+    transparent 46%
+  );
+  opacity: 0.7;
 }
 
 /* Empty is an application state, not a marketing banner. */
@@ -122,7 +164,11 @@
   box-shadow: none;
 }
 
-.hero-v8.hero-empty .hero-noise {
+/* The empty card is a quiet panel, not a lit surface: it already drops the
+   noise layer and the shadow, so SHOULD-6 drops the sheen with them. Nothing
+   about the empty state changes in this PR. */
+.hero-v8.hero-empty .hero-noise,
+.hero-v8.hero-empty::before {
   display: none;
 }
 
