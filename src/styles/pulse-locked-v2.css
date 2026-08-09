@@ -200,6 +200,10 @@
  * Every rule stays scoped :not(.hero-empty). The empty state keeps the quiet
  * bordered panel it already had, and the reviewer can prove that from the
  * selectors alone.
+ *
+ * OVERVIEW-GLASSDOCK-001 r1 does not touch anything in this section. The
+ * mandate is explicit: glass on the dock and on the So lieu control, nowhere
+ * else. A frosted hero would undo the entire point of MONO and EDITORIAL.
  */
 .hero-v8:not(.hero-empty) {
   display: flex;
@@ -543,11 +547,50 @@
   cursor: pointer;
 }
 
-/* OVERVIEW-MONO-001 r1: "So lieu" is a disclosure control, not an action, and
-   it was the last purple word on the first screenful. Accent removed; the
-   real calls to action in .action-cta keep theirs. */
+/* ===== OVERVIEW-GLASSDOCK-001 r1 -- the second and last glass surface =====
+ *
+ * MONO-001 took the accent off this control because it is a disclosure, not
+ * an action. EDITORIAL took the boxes off everything around it. What is left
+ * is the one control on the page that governs whether a whole block exists,
+ * and after both of those passes it looks like a stray line of grey text.
+ *
+ * A pill with a frosted fill gives it back its edges without giving it back
+ * a colour: it reads as a switch, not as a link, and it is the only object on
+ * the scrolling page allowed to have a surface. It qualifies for glass on the
+ * same test the dock passes -- it sits over content that keeps existing when
+ * the block is closed.
+ *
+ * Note the selector reaches two buttons in Overview.tsx: "So lieu" and the
+ * nested "Chi tiet" inside it. That is deliberate -- they are the same kind of
+ * control at two levels -- but it does mean two pills appear when the block is
+ * open, and only the outer one exists when it is closed.
+ *
+ * The opaque-ish fill here is the fallback; the glass is in the @supports
+ * block, because a translucent pill with no blur on an engine without
+ * backdrop-filter would show raw page text through the label.
+ */
 .stat-detail-btn {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-sunken) 88%, transparent);
   color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 660;
+  letter-spacing: 0.01em;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .stat-detail-btn {
+    background: color-mix(in srgb, var(--surface-sunken) 55%, transparent);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-color: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  }
 }
 
 /* Four primary destinations; secondary tools live in the avatar menu. */
@@ -570,6 +613,10 @@
   bottom: calc(6px + var(--safe-bottom));
 }
 
+/* This sheet closes the bundle, so this rule -- not dock.css -- is what the
+   dock actually gets. It stays nearly opaque on purpose: it is the fallback
+   for engines without backdrop-filter. The glass is in the @supports block
+   directly below, which is the only way to keep both true at once. */
 .bottom-dock-inner {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 22rem;
@@ -579,6 +626,27 @@
   border-radius: 19px;
   background: color-mix(in srgb, var(--color-surface-overlay) 97%, transparent);
   box-shadow: 0 11px 30px -24px var(--hero-shadow);
+}
+
+/* OVERVIEW-GLASSDOCK-001 r1: 97% opaque with a blur behind it was a solid bar
+   wearing a blur it could not use. At 58% the page genuinely shows through --
+   the curve and the text slide under the dock instead of stopping at it,
+   which is the one honest reason to use glass at all.
+ *
+ * The inset highlight on the top edge is what makes it read as a pane rather
+ * than as a washed-out rectangle: it is the only lit edge left in the app, and
+ * it is one pixel. The border moves off white to a fraction of the text
+ * colour, because a white border on a white page is not a border. */
+@supports (backdrop-filter: blur(1px)) {
+  .bottom-dock-inner {
+    background: color-mix(in srgb, var(--color-surface-overlay) 58%, transparent);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-color: color-mix(in srgb, var(--text-primary) 10%, transparent);
+    box-shadow:
+      0 14px 34px -22px var(--hero-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
 }
 
 .dock-item {
@@ -626,6 +694,7 @@
 .today-sheet-presets button:focus-visible,
 .today-inline-button:focus-visible,
 .hero-cta:focus-visible,
+.stat-detail-btn:focus-visible,
 .dock-item:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
