@@ -6,11 +6,27 @@ export type RhythmHeroProps = {
   streak: ContributionStreakResult;
   goals: Goal[];
   /**
-   * portfolio.totalContributed from calc.ts — lifetime contributions.
-   * Used as the empty-state guard and as X_lifetime in the goal lines.
-   * Never used for the 35-day sentence; that is nhipWindowTotal.
+   * portfolio.totalContributed from calc.ts — cash that entered the in-app
+   * wallet (grows on `cash_in` only). Read here purely as one signal for the
+   * empty-state guard.
+   *
+   * OVERVIEW-HERO-LIFETIME-001 r1: this is NO LONGER X_lifetime. In
+   * securities-first mode it is legitimately 0 while the fund holds real
+   * shares, which is exactly how the hero ended up printing
+   * "\u0110\u00e3 g\u00f3p 0,00 \u20ac / Y \u20ac". Use heroLifetimeContribution for anything the
+   * user reads as "how much have I contributed".
    */
   totalContributed: number;
+  /**
+   * OVERVIEW-HERO-LIFETIME-001 r1: X_lifetime for the goal lines, already
+   * resolved for the active fund mode by lib/heroLifetime.ts.
+   *
+   *   cash-first        → Σ cash_in            (equals totalContributed)
+   *   securities-first  → Σ buy_vwce + buy_security
+   *
+   * Lifetime, not windowed. Never mixed with nhipWindowTotal.
+   */
+  heroLifetimeContribution: number;
   /**
    * OVERVIEW-RHYTHM-001 r2: X_nhip = total contributions within the Nhịp Quỹ
    * reporting window (nhipWindowDays). Hero displays this value so X_hero and
@@ -109,28 +125,52 @@ const RING_PATH = "M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31";
  *   never contributed      → "Chưa có khoản góp nào cho quỹ này"
  *   contributed            → "Bạn đã góp {X_nhip} trong {N} ngày qua"
  *     + real goal          → "Đã góp {X_lifetime} / {Y} kế hoạch"
- *                            "≈ {Z}% hành trình {H} năm"
+ *                            "≈ {Z}% hành trình"
  *     + last contribution  → "Lần góp gần nhất: dd.mm.yyyy"
+ *
+ * OVERVIEW-HERO-LIFETIME-001 r1 — X_lifetime is now heroLifetimeContribution,
+ * resolved per fund mode upstream. Only the two goal lines change; the primary
+ * 35-day sentence, the ring, and the streak are byte-for-byte the same.
  */
 export default function RhythmHero({
   streak,
   goals,
   totalContributed,
+  heroLifetimeContribution,
   nhipWindowTotal,
   nhipWindowDays,
 }: RhythmHeroProps) {
+  // X_lifetime, guarded against a corrupt upstream value.
+  const xLifetime =
+    Number.isFinite(heroLifetimeContribution) && heroLifetimeContribution > 0
+      ? heroLifetimeContribution
+      : 0;
+
   // hasContributions: true if the ledger ever recorded a contribution.
-  const hasContributions = streak.streakMonths > 0 || totalContributed > 0;
+  // xLifetime joins the test so a securities-first ledger is recognised even
+  // when totalContributed is 0 by design.
+  const hasContributions =
+    streak.streakMonths > 0 || totalContributed > 0 || xLifetime > 0;
 
   const goalPlan = buildGoalPlan(goals);
+
+  /**
+   * OVERVIEW-HERO-LIFETIME-001 r1 — the "never print 0,00 \u20ac / Y \u20ac" rule.
+   *
+   * The goal lines require BOTH a real plan and a real X. If X is 0 while the
+   * streak says contributions exist, that is a mapping fault, not a fact about
+   * the fund — so the hero stays silent about the plan instead of publishing a
+   * zero it cannot justify. The 35-day line above still carries the truth.
+   */
+  const showGoalLines = goalPlan != null && xLifetime > 0;
 
   // Z — money progress against the plan target, clamped to 0..100.
   // Deliberately NOT blended with elapsed time: a time-weighted figure would
   // move on its own every month without the owner doing anything, which is
   // the opposite of what a contribution tracker should reward.
   const Z: number | null =
-    goalPlan != null && totalContributed > 0
-      ? Math.min(100, Math.max(0, (totalContributed / goalPlan.targetY) * 100))
+    showGoalLines && goalPlan != null
+      ? Math.min(100, Math.max(0, (xLifetime / goalPlan.targetY) * 100))
       : null;
 
   // ── Ring fill: streak capped at 12 months = full circle ──
@@ -212,12 +252,12 @@ export default function RhythmHero({
                 {periodLabel}
               </p>
 
-              {/* Journey lines — only when a goal carries both Y and a due date. */}
-              {goalPlan != null && (
+              {/* Journey lines — a real goal (Y + due date) AND a real X. */}
+              {showGoalLines && goalPlan != null && (
                 <>
                   <p className="rhythm-goal">
                     {"\u0110\u00e3 g\u00f3p "}
-                    {formatMoney(totalContributed)}
+                    {formatMoney(xLifetime)}
                     {" / "}
                     {formatMoney(goalPlan.targetY)}
                     {" k\u1ebf ho\u1ea1ch"}
