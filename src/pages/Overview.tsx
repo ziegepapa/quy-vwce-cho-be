@@ -47,13 +47,18 @@ type Insight = {
 // because it only ever sat on a purple gradient. The hero is a surface card
 // now, so white would vanish on the light theme. --hero-line and --hero-area
 // are declared once in pulse-locked-v2.css and resolve per theme.
+//
+// OVERVIEW-CLEANUP-002 r1: the under-two-points branch used to draw a fixed
+// dashed path -- M0 28 Q30 20 60 24 T120 18 -- in the accent colour, directly
+// under the total. Not one number in that path came from the owner's ledger;
+// it was an invented shape filling a hole, in the position where a reader is
+// most likely to read it as their own history. This app stores no daily value
+// series, so it cannot draw a real history yet, and drawing a fake one is
+// worse than drawing nothing. It now renders nothing. The real curve below
+// (two points or more) is untouched.
 function Sparkline({ points }: { points: { value: number }[] }) {
   if (points.length < 2) {
-    return (
-      <svg className="sparkline" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden>
-        <path d="M0 28 Q30 20 60 24 T120 18" fill="none" stroke="var(--hero-line)" strokeOpacity="0.35" strokeWidth="1.5" strokeDasharray="3 3" />
-      </svg>
-    );
+    return null;
   }
   const values = points.map((point) => point.value);
   const min = Math.min(...values);
