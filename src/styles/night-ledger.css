@@ -1,0 +1,171 @@
+/* OVERVIEW-SIGNATURE-001 r1 · NIGHT LEDGER
+   One money stage, one ownership journal, quiet intelligence. This final,
+   route-scoped layer changes composition only; portfolio math stays upstream. */
+
+@media screen {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ov {
+    gap: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    gap: 0;
+    overflow: hidden;
+    margin: 0 0 7px;
+    padding: 15px 14px 0;
+    border: 1px solid color-mix(in srgb, var(--primary-600) 20%, var(--command-card-border));
+    border-radius: 22px;
+    background:
+      radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--primary-600) 11%, transparent), transparent 42%),
+      linear-gradient(145deg, color-mix(in srgb, var(--command-card-bg) 96%, var(--bg-base)), var(--command-card-bg));
+    box-shadow:
+      0 20px 42px -34px color-mix(in srgb, var(--primary-600) 46%, #000),
+      0 1px 0 color-mix(in srgb, #fff 4%, transparent) inset;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage > .rhythm-assets {
+    order: 0;
+    margin: 0;
+    padding: 0 0 14px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-assets-label {
+    margin: 0 0 7px;
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-assets-value {
+    font-size: clamp(42px, 12.5vw, 54px);
+    font-weight: 735;
+    line-height: 0.94;
+    letter-spacing: -0.055em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-assets-value :is(.pos, .neg) {
+    display: block;
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 680;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage > .rhythm-hero {
+    order: 1;
+    margin: 0;
+    padding: 9px 0 10px;
+    border: 0;
+    border-top: 1px solid var(--command-hairline, var(--hairline));
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage > .rhythm-hero::after {
+    display: none;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-hero-inner {
+    min-height: 30px;
+    gap: 9px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-ring-wrap {
+    flex-basis: 30px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-ring-svg {
+    width: 30px;
+    height: 30px;
+    max-width: 30px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-ring-track,
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-ring-fill {
+    stroke-width: 2.5;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-body {
+    gap: 2px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-line1 {
+    color: color-mix(in srgb, var(--text-secondary) 88%, var(--text-primary));
+    font-size: 11.5px;
+    font-weight: 650;
+    line-height: 1.25;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-caption {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage--empty {
+    padding-top: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage--empty > .rhythm-hero {
+    border-top: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .today-center {
+    margin: 0 0 6px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .today-center .nhip-block {
+    gap: 6px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .today-center .nhip-meta {
+    min-height: 38px;
+    padding: 8px 2px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal {
+    gap: 6px;
+    margin: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .stat-strip {
+    margin-top: 5px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .stat-strip-collapsed .stat-detail-btn {
+    min-height: 30px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ov-foot {
+    margin: 0 3px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ov > :is(.card, .pulse-goal-line, .action-stack) {
+    margin-bottom: 7px;
+  }
+}
+
+@media screen and (max-width: 430px) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage {
+    padding: 13px 12px 0;
+    border-radius: 20px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage > .rhythm-assets {
+    padding-bottom: 12px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage .rhythm-assets-value {
+    font-size: clamp(40px, 12.8vw, 50px);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .overview-money-stage > .rhythm-hero {
+    padding: 8px 0 9px;
+  }
+}
