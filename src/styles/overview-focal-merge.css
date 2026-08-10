@@ -86,3 +86,95 @@
     max-width: 58px;
   }
 }
+
+/* OVERVIEW-DARK-COMPOSE-001 r1
+   The final layer removes empty chrome and raises the contrast of the two
+   navigation surfaces. It changes no portfolio value, route, or action. */
+@media screen {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .collapse-nav {
+    background: color-mix(in srgb, var(--bg-base) 88%, transparent);
+    border-bottom-color: color-mix(in srgb, var(--primary-600) 20%, transparent);
+    box-shadow: 0 12px 30px -28px color-mix(in srgb, var(--primary-600) 55%, #000);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .nav-clock-time {
+    color: var(--text-primary);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .nav-clock-date {
+    color: color-mix(in srgb, var(--text-secondary) 88%, var(--text-primary));
+    opacity: 1;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .bottom-dock-inner {
+    background: color-mix(in srgb, var(--bg-base) 90%, var(--surface-raised));
+    border-color: color-mix(in srgb, var(--primary-600) 26%, rgba(255, 255, 255, 0.1));
+    box-shadow:
+      0 18px 42px -24px rgba(0, 0, 0, 0.96),
+      0 0 0 1px color-mix(in srgb, var(--primary-600) 6%, transparent);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .dock-item {
+    color: color-mix(in srgb, var(--text-secondary) 82%, var(--text-primary));
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .dock-item.active {
+    color: color-mix(in srgb, var(--primary-600) 76%, #fff);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .dock-item.active::before {
+    border: 1px solid color-mix(in srgb, var(--primary-600) 22%, transparent);
+    background: color-mix(in srgb, var(--primary-600) 14%, transparent);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .stat-strip-collapsed {
+    display: block;
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .stat-strip-collapsed .stat-detail-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    width: auto;
+    min-height: 34px;
+    padding: 0 2px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: color-mix(in srgb, var(--primary-600) 72%, var(--text-primary));
+    font-size: 0;
+    font-weight: 680;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .stat-strip-collapsed .stat-detail-btn::before {
+    content: "Số liệu";
+    font-size: 12.5px;
+    letter-spacing: 0.01em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .stat-strip-collapsed .stat-detail-btn::after {
+    content: "→";
+    font-size: 14px;
+    line-height: 1;
+  }
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .collapse-nav {
+    backdrop-filter: blur(var(--blur-nav)) saturate(165%);
+    -webkit-backdrop-filter: blur(var(--blur-nav)) saturate(165%);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .bottom-dock-inner {
+    backdrop-filter: blur(var(--blur-dock)) saturate(170%);
+    -webkit-backdrop-filter: blur(var(--blur-dock)) saturate(170%);
+  }
+}
