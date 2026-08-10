@@ -32,6 +32,7 @@ function describeTransaction(transaction: Transaction): string {
 export default function RecentTransactions({ transactions, limit = 3 }: Props) {
   const liveCount = transactions.filter((transaction) => !transaction.deletedAt).length;
   const recent = takeRecentTransactions(transactions, limit);
+  const showSparseCta = liveCount > 0 && liveCount < 3;
 
   return (
     <section className="ownership-journal" aria-labelledby="ownership-journal-title">
@@ -77,6 +78,12 @@ export default function RecentTransactions({ transactions, limit = 3 }: Props) {
               </Link>
             );
           })}
+          {showSparseCta ? (
+            <Link to="/transactions" className="ownership-journal-add">
+              <span>Ghi giao dịch</span>
+              <span aria-hidden>→</span>
+            </Link>
+          ) : null}
         </div>
       ) : (
         <div className="ownership-journal-empty">
