@@ -178,3 +178,192 @@
     -webkit-backdrop-filter: blur(var(--blur-dock)) saturate(170%);
   }
 }
+
+/* OVERVIEW-FOLD-DENSITY-001 r1
+   One-shot sparse-ledger cadence. The total remains the first and largest
+   signal; the journal stays second; rhythm is deliberately compact. */
+@media screen {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ov {
+    gap: 8px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-assets {
+    padding: 11px 13px 10px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero {
+    padding: 8px 11px;
+    border-radius: 16px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero-inner {
+    min-height: 54px;
+    gap: 10px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-wrap {
+    flex-basis: 48px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-svg {
+    width: 48px;
+    height: 48px;
+    max-width: 48px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-line1 {
+    font-size: 12.5px;
+    font-weight: 660;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal {
+    gap: 7px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-head {
+    align-items: center;
+    gap: 10px;
+    padding: 0 1px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-eyebrow {
+    margin-bottom: 2px;
+    font-size: 9px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-head h2 {
+    font-size: clamp(22px, 6.2vw, 25px);
+    line-height: 1;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-count {
+    min-height: 40px;
+    padding-left: 7px;
+    font-size: 11px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview :is(
+    .ownership-journal-list,
+    .ownership-journal-empty
+  ) {
+    border-radius: 17px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-row {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 9px;
+    min-height: 62px;
+    padding: 9px 10px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    font-size: 17px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-copy {
+    gap: 3px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-copy strong {
+    font-size: 13.5px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-copy > span {
+    font-size: 10.5px;
+    line-height: 1.3;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-tail {
+    gap: 4px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-amount {
+    font-size: 12.5px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-chevron {
+    font-size: 19px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-add {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 40px;
+    padding: 0 11px;
+    border-top: 1px solid var(--command-hairline, var(--hairline));
+    color: color-mix(in srgb, var(--primary-600) 72%, var(--text-primary));
+    font-size: 12px;
+    font-weight: 680;
+    text-decoration: none;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-add span:last-child {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-empty {
+    min-height: 62px;
+    padding: 10px 12px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-empty a {
+    min-height: 40px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ov-foot {
+    margin: -1px 3px 0;
+    color: var(--text-tertiary);
+    font-size: 9px;
+    line-height: 1.3;
+    opacity: 0.5;
+  }
+}
+
+@media screen and (max-width: 430px) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ov {
+    gap: 7px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-assets {
+    padding: 9px 11px 8px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero {
+    padding: 7px 10px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero-inner {
+    min-height: 50px;
+    gap: 9px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-wrap {
+    flex-basis: 44px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-svg {
+    width: 44px;
+    height: 44px;
+    max-width: 44px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-head h2 {
+    font-size: 22px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-row {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    min-height: 58px;
+    padding: 8px 9px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ownership-journal-icon {
+    width: 34px;
+    height: 34px;
+  }
+}
