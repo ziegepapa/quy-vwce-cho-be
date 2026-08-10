@@ -193,7 +193,7 @@ export default function CollapsingNavBar({
           <div className="nav-leading">
             <span className="nav-logo" aria-hidden />
             <div className="nav-title-stack">
-              {pathname === "/" ? <span className="nav-context">Quỹ VWCE cho bé</span> : null}
+              {pathname === "/" ? <span className="nav-context">Quỹ dài hạn</span> : null}
               <h1 className="collapse-nav-title">{title}</h1>
             </div>
           </div>

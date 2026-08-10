@@ -14,6 +14,7 @@ import "./styles/pulse-locked-v2.css";
 import "./styles/ai-trace.css";
 import "./styles/premium-dark-full.css";
 import "./styles/aurora-theme.css";
+import "./styles/overview-focal-merge.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
