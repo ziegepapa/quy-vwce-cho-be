@@ -1,0 +1,260 @@
+/* UI-OWNERSHIP-JOURNAL-001 r1
+   Adapts the reference's editorial ownership log to the VWCE domain. The
+   palette stays token-driven (Aurora mint/orchid), and no market/gold concepts
+   are introduced. */
+
+.ownership-journal {
+  display: grid;
+  gap: 11px;
+  margin: 0;
+}
+
+.ownership-journal-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 2px 0;
+}
+
+.ownership-journal-eyebrow {
+  margin: 0 0 3px;
+  color: var(--purple-700, var(--primary-600));
+  font-size: 10px;
+  font-weight: 780;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ownership-journal-head h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(24px, 7vw, 30px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.ownership-journal-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 2px 0 10px;
+  color: var(--primary-600);
+  font-size: 12px;
+  font-weight: 720;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ownership-journal-count span:last-child {
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.ownership-journal-list,
+.ownership-journal-empty {
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
+}
+
+.ownership-journal-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  min-height: 76px;
+  padding: 12px 13px;
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ownership-journal-row + .ownership-journal-row {
+  border-top: 1px solid var(--hairline, var(--border-subtle));
+}
+
+.ownership-journal-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 13px;
+  font-size: 19px;
+  font-weight: 760;
+  line-height: 1;
+}
+
+.ownership-journal-icon--buy,
+.ownership-journal-icon--cash-in {
+  background: var(--success-050);
+  color: var(--success-600);
+}
+
+.ownership-journal-icon--sell,
+.ownership-journal-icon--cash-out {
+  background: var(--danger-050);
+  color: var(--danger-600);
+}
+
+.ownership-journal-icon--neutral {
+  background: var(--primary-050);
+  color: var(--primary-600);
+}
+
+.ownership-journal-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.ownership-journal-copy strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ownership-journal-copy > span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ownership-journal-tail {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  min-width: 0;
+}
+
+.ownership-journal-amount {
+  font-size: 13px;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
+.ownership-journal-amount--buy,
+.ownership-journal-amount--cash-in {
+  color: var(--success-600);
+}
+
+.ownership-journal-amount--sell,
+.ownership-journal-amount--cash-out {
+  color: var(--danger-600);
+}
+
+.ownership-journal-amount--neutral {
+  color: var(--text-secondary);
+}
+
+.ownership-journal-chevron {
+  color: var(--text-tertiary);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.ownership-journal-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 74px;
+  padding: 14px;
+}
+
+.ownership-journal-empty p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.ownership-journal-empty a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--primary-600);
+  font-size: 12px;
+  font-weight: 720;
+  text-decoration: none;
+  text-align: right;
+}
+
+@media screen {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .ownership-journal-list,
+  :root:is([data-theme="premium"], [data-theme="dark"]) .ownership-journal-empty {
+    border-color: var(--command-card-border);
+    background: var(--command-card-bg);
+  }
+
+  :root[data-theme="premium"] .ownership-journal-eyebrow {
+    color: #c7b8ff;
+  }
+
+  :root[data-theme="premium"] .ownership-journal-row:active {
+    background: linear-gradient(90deg, rgba(98, 227, 188, 0.08), rgba(157, 113, 218, 0.055));
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ownership-journal-row:hover {
+    background: var(--primary-050);
+  }
+}
+
+@media screen and (max-width: 390px) {
+  .ownership-journal-row {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 9px;
+    padding-inline: 11px;
+  }
+
+  .ownership-journal-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .ownership-journal-amount {
+    max-width: 104px;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+  }
+}
+
+@media screen and (max-width: 340px) {
+  .ownership-journal-tail {
+    display: grid;
+    justify-items: end;
+    gap: 1px;
+  }
+
+  .ownership-journal-chevron {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ownership-journal-row {
+    scroll-behavior: auto;
+  }
+}

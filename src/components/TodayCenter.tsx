@@ -34,6 +34,7 @@ import {
   type SafetyTraceDisplayItem,
 } from "../lib/todayCenterTrace";
 import type { AppSettings, Transaction } from "../lib/types";
+import RecentTransactions from "./RecentTransactions";
 import TraceSheet from "./TraceSheet";
 
 /**
@@ -336,148 +337,152 @@ export default function TodayCenter({
   }
 
   return (
-    <section
-      className="today-center"
-      {...(showNhipCopy
-        ? { "aria-labelledby": "today-center-title" }
-        : { "aria-label": "Nhịp Quỹ" })}
-    >
-      {/* OVERVIEW-MONO-001 r1 — the kicker "Một khối · điều đáng nói hôm nay"
-          was a label about the block, not information from the ledger, and it
-          sat above a heading that already says what the block is. Removed; the
-          heading and the sentences below it stay exactly as they were.
+    <>
+      <section
+        className="today-center"
+        {...(showNhipCopy
+          ? { "aria-labelledby": "today-center-title" }
+          : { "aria-label": "Nhịp Quỹ" })}
+      >
+        {/* OVERVIEW-MONO-001 r1 — the kicker "Một khối · điều đáng nói hôm nay"
+            was a label about the block, not information from the ledger, and it
+            sat above a heading that already says what the block is. Removed; the
+            heading and the sentences below it stay exactly as they were.
 
-          OVERVIEW-RHYTHM-001 r4 — the heading itself is now conditional. A
-          standing section title with nothing under it but a delta button is
-          furniture, and on the on-track screen the only thing it introduced
-          was a sentence the hero had already said. When every insight is
-          hero-owned, the title goes with them and the section keeps its name
-          on aria-label instead, so the accessible name never disappears. */}
-      {showNhipCopy ? (
-        <header className="today-center-head">
-          <h2 id="today-center-title">Nhịp Quỹ</h2>
-        </header>
-      ) : null}
-
-      <div className="nhip-block">
-        {/* Only the kinds the hero does not already state. An empty list is
-            rendered as nothing at all — no placeholder sentence, because
-            "nothing to report" is itself a line to read. */}
+            OVERVIEW-RHYTHM-001 r4 — the heading itself is now conditional. A
+            standing section title with nothing under it but a delta button is
+            furniture, and on the on-track screen the only thing it introduced
+            was a sentence the hero had already said. When every insight is
+            hero-owned, the title goes with them and the section keeps its name
+            on aria-label instead, so the accessible name never disappears. */}
         {showNhipCopy ? (
-          <ul className="nhip-list">
-            {visibleInsights.map((insight) => (
-              <li key={insight.kind} className={`nhip-item nhip-${insight.kind}`}>
-                {insight.text}
-              </li>
-            ))}
-          </ul>
+          <header className="today-center-head">
+            <h2 id="today-center-title">Nhịp Quỹ</h2>
+          </header>
         ) : null}
 
-        {/* The delta is never a repeat of the hero: it is the change since the
-            previous visit, which the hero does not report. It stays. */}
-        <button
-          type="button"
-          className="nhip-meta"
-          onClick={() => setTraceOpen(true)}
-          aria-label={`Thay đổi từ lần mở trước: ${deltaValue}. Xem nguồn dữ liệu`}
-        >
-          <span
-            className={`nhip-meta-value ${valueComplete && delta ? metricTone(delta.value) : "neutral"}`}
+        <div className="nhip-block">
+          {/* Only the kinds the hero does not already state. An empty list is
+              rendered as nothing at all — no placeholder sentence, because
+              "nothing to report" is itself a line to read. */}
+          {showNhipCopy ? (
+            <ul className="nhip-list">
+              {visibleInsights.map((insight) => (
+                <li key={insight.kind} className={`nhip-item nhip-${insight.kind}`}>
+                  {insight.text}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {/* The delta is never a repeat of the hero: it is the change since the
+              previous visit, which the hero does not report. It stays. */}
+          <button
+            type="button"
+            className="nhip-meta"
+            onClick={() => setTraceOpen(true)}
+            aria-label={`Thay đổi từ lần mở trước: ${deltaValue}. Xem nguồn dữ liệu`}
           >
-            {deltaValue}
-          </span>
-          {pulseChanged ? <span className="nhip-new">Mới</span> : null}
-          <span className="nhip-meta-caption">{deltaCaption}</span>
-          <span className="nhip-meta-hint">Xem nguồn</span>
-        </button>
-      </div>
+            <span
+              className={`nhip-meta-value ${valueComplete && delta ? metricTone(delta.value) : "neutral"}`}
+            >
+              {deltaValue}
+            </span>
+            {pulseChanged ? <span className="nhip-new">Mới</span> : null}
+            <span className="nhip-meta-caption">{deltaCaption}</span>
+            <span className="nhip-meta-hint">Xem nguồn</span>
+          </button>
+        </div>
 
-      {/* OVERVIEW-MONO-001 r1 — the "Trạng thái" card became three equal tiles.
-          r2 put Khớp sao kê, An toàn and Mô phỏng into one card as three full
-          width rows, each with a name, a figure and a sentence: a checklist.
-          The three facts are the same, but a tile only shows the label and the
-          figure, so the row of them reads at a glance. The sentence is not
-          lost — it is the aria-label on every tile, and the two tiles that
-          open a TraceSheet show the full breakdown there on tap.
+        {/* OVERVIEW-MONO-001 r1 — the "Trạng thái" card became three equal tiles.
+            r2 put Khớp sao kê, An toàn and Mô phỏng into one card as three full
+            width rows, each with a name, a figure and a sentence: a checklist.
+            The three facts are the same, but a tile only shows the label and the
+            figure, so the row of them reads at a glance. The sentence is not
+            lost — it is the aria-label on every tile, and the two tiles that
+            open a TraceSheet show the full breakdown there on tap.
 
-          Every destination and handler is unchanged: the first tile is still
-          the same <Link to="/transactions">, the other two still open exactly
-          the same sheets. This is a container change, not a behaviour one.
+            Every destination and handler is unchanged: the first tile is still
+            the same <Link to="/transactions">, the other two still open exactly
+            the same sheets. This is a container change, not a behaviour one.
 
-          OVERVIEW-RHYTHM-001 r4 does not touch this grid. */}
-      <section className="state-grid" aria-label="Trạng thái">
-        <Link
-          to="/transactions"
-          className={`state-tile state-${reconciliationTone}`}
-          aria-label={`Khớp sao kê: ${reconciliationValue}. ${reconciliationDetail} Mở giao dịch và đối chiếu PDF`}
+            OVERVIEW-RHYTHM-001 r4 does not touch this grid. */}
+        <section className="state-grid" aria-label="Trạng thái">
+          <Link
+            to="/transactions"
+            className={`state-tile state-${reconciliationTone}`}
+            aria-label={`Khớp sao kê: ${reconciliationValue}. ${reconciliationDetail} Mở giao dịch và đối chiếu PDF`}
+          >
+            <span className="state-name">Sao kê</span>
+            <span className="state-value">{reconciliationValue}</span>
+          </Link>
+          <button
+            type="button"
+            className={`state-tile state-${safetyScore === 4 ? "positive" : "warning"}`}
+            onClick={() => setSafetyOpen(true)}
+            aria-label={`An toàn: ${safetyScore} trên 4. ${highestRisk?.label ?? "Bốn lớp bảo vệ đều sẵn sàng."}`}
+          >
+            <span className="state-name">An toàn</span>
+            <span className="state-value">{safetyScore}/4</span>
+          </button>
+          <button
+            type="button"
+            className="state-tile state-neutral"
+            onClick={() => setWhatIfOpen(true)}
+            aria-label={`Mô phỏng: ${whatIfCardValue}. ${whatIfCaption}`}
+          >
+            <span className="state-name">Mô phỏng</span>
+            <span className="state-value">{whatIfCardValue}</span>
+          </button>
+        </section>
+
+        <TraceSheet
+          open={traceOpen}
+          onClose={() => setTraceOpen(false)}
+          model={pulseTraceModel}
+        />
+
+        <TraceSheet
+          open={whatIfOpen}
+          onClose={() => setWhatIfOpen(false)}
+          model={whatIfTraceModel}
         >
-          <span className="state-name">Sao kê</span>
-          <span className="state-value">{reconciliationValue}</span>
-        </Link>
-        <button
-          type="button"
-          className={`state-tile state-${safetyScore === 4 ? "positive" : "warning"}`}
-          onClick={() => setSafetyOpen(true)}
-          aria-label={`An toàn: ${safetyScore} trên 4. ${highestRisk?.label ?? "Bốn lớp bảo vệ đều sẵn sàng."}`}
+          <div className="today-sheet-tools">
+            <div className="today-sheet-presets" role="group" aria-label="Khoản thử nhanh">
+              {[50, 100, 250].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  className={amount === preset ? "active" : ""}
+                  onClick={() => setWhatIfAmount(String(preset))}
+                >
+                  {preset} €
+                </button>
+              ))}
+            </div>
+            <label className="today-sheet-amount">
+              <span>Khoản tùy chọn</span>
+              <span><input inputMode="decimal" value={whatIfAmount} onChange={(event) => setWhatIfAmount(event.target.value)} /><b>€</b></span>
+            </label>
+          </div>
+        </TraceSheet>
+
+        <TraceSheet
+          open={safetyOpen}
+          onClose={() => setSafetyOpen(false)}
+          model={safetyTraceModel}
         >
-          <span className="state-name">An toàn</span>
-          <span className="state-value">{safetyScore}/4</span>
-        </button>
-        <button
-          type="button"
-          className="state-tile state-neutral"
-          onClick={() => setWhatIfOpen(true)}
-          aria-label={`Mô phỏng: ${whatIfCardValue}. ${whatIfCaption}`}
-        >
-          <span className="state-name">Mô phỏng</span>
-          <span className="state-value">{whatIfCardValue}</span>
-        </button>
+          {!restoreReady ? (
+            <div className="today-sheet-tools">
+              <button type="button" className="today-inline-button" onClick={confirmRestore}>
+                Đánh dấu đã thử khôi phục
+              </button>
+            </div>
+          ) : null}
+        </TraceSheet>
       </section>
 
-      <TraceSheet
-        open={traceOpen}
-        onClose={() => setTraceOpen(false)}
-        model={pulseTraceModel}
-      />
-
-      <TraceSheet
-        open={whatIfOpen}
-        onClose={() => setWhatIfOpen(false)}
-        model={whatIfTraceModel}
-      >
-        <div className="today-sheet-tools">
-          <div className="today-sheet-presets" role="group" aria-label="Khoản thử nhanh">
-            {[50, 100, 250].map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                className={amount === preset ? "active" : ""}
-                onClick={() => setWhatIfAmount(String(preset))}
-              >
-                {preset} €
-              </button>
-            ))}
-          </div>
-          <label className="today-sheet-amount">
-            <span>Khoản tùy chọn</span>
-            <span><input inputMode="decimal" value={whatIfAmount} onChange={(event) => setWhatIfAmount(event.target.value)} /><b>€</b></span>
-          </label>
-        </div>
-      </TraceSheet>
-
-      <TraceSheet
-        open={safetyOpen}
-        onClose={() => setSafetyOpen(false)}
-        model={safetyTraceModel}
-      >
-        {!restoreReady ? (
-          <div className="today-sheet-tools">
-            <button type="button" className="today-inline-button" onClick={confirmRestore}>
-              Đánh dấu đã thử khôi phục
-            </button>
-          </div>
-        ) : null}
-      </TraceSheet>
-    </section>
+      <RecentTransactions transactions={transactions} />
+    </>
   );
 }
