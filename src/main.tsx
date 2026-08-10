@@ -15,6 +15,7 @@ import "./styles/ai-trace.css";
 import "./styles/premium-dark-full.css";
 import "./styles/aurora-theme.css";
 import "./styles/overview-focal-merge.css";
+import "./styles/dark-screen-finish.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
