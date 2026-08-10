@@ -1,9 +1,8 @@
 /**
  * Chủ đề giao diện — ba lựa chọn tường minh, không theo iOS.
  *
- * Vì sao bỏ "Hệ thống": khi để hệ điều hành quyết định, người dùng
- * không bao giờ biết mình đang xem bản nào, và chủ đề Premium — thứ đáng
- * để mặc định nhất — không có chỗ nào để xếp vào.
+ * `premium` được giữ làm khóa nội bộ để mọi thiết bị đã lưu lựa chọn cũ tiếp
+ * tục hoạt động. Tên sản phẩm và visual language mới của khóa này là Aurora.
  */
 export type ThemeChoice = "light" | "dark" | "premium";
 
@@ -14,7 +13,7 @@ const DEFAULT_THEME: ThemeChoice = "premium";
 export const THEME_LABEL: Record<ThemeChoice, string> = {
   light: "Sáng",
   dark: "Tối",
-  premium: "Premium",
+  premium: "Aurora",
 };
 
 export const THEME_OPTIONS: Array<{ value: ThemeChoice; label: string }> = [
@@ -37,7 +36,7 @@ export function readTheme(): ThemeChoice {
   }
 }
 
-/** Ghi thuộc tính data-theme lên thẻ html; tokens.css đọc thuộc tính này. */
+/** Ghi thuộc tính data-theme lên thẻ html; các stylesheet đọc thuộc tính này. */
 export function applyTheme(t: ThemeChoice): void {
   document.documentElement.dataset.theme = t;
 }
@@ -52,5 +51,5 @@ export function persistTheme(t: ThemeChoice): void {
 }
 
 // Chạy ngay khi module được nạp, trước khung hình đầu tiên, nên không bị
-// nháy trắng rồi mới đổi sang tối.
+// nháy trắng rồi mới đổi sang theme mặc định Aurora.
 applyTheme(readTheme());

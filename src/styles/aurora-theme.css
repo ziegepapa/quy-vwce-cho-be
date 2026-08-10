@@ -1,0 +1,327 @@
+/* UI-AURORA-RHYTHM-001 r1
+   Aurora replaces the product-facing Premium theme while preserving the
+   internal `premium` key for stored-setting compatibility.
+
+   Visual language: deep spruce atmosphere, mint light and a restrained orchid
+   horizon. Dark remains the cool cyan/navy command theme; Light is untouched.
+   Amber is still reserved for semantic warning states only. */
+
+:root[data-theme="premium"] {
+  color-scheme: dark;
+
+  --bg-base: #05100e;
+  --surface: #0a1916;
+  --surface-raised: #10231f;
+  --surface-sunken: #071411;
+  --text-primary: #f2fbf7;
+  --text-secondary: #abc6bd;
+  --text-tertiary: #73958b;
+  --border-subtle: rgba(137, 235, 207, 0.11);
+  --border-strong: rgba(150, 239, 214, 0.22);
+
+  --primary-600: #62e3bc;
+  --primary-500: #99efd4;
+  --primary-050: rgba(98, 227, 188, 0.13);
+  --success-600: #77ddb2;
+  --success-050: rgba(119, 221, 178, 0.12);
+  --warning-600: #efb85a;
+  --warning-050: rgba(239, 184, 90, 0.12);
+  --danger-600: #ff859d;
+  --danger-050: rgba(255, 133, 157, 0.12);
+  --focus-ring: #86ebcf;
+
+  --hero-from: #071713;
+  --hero-mid: #14382f;
+  --hero-to: #3c2a55;
+  --hero-glow: rgba(98, 227, 188, 0.35);
+  --hero-highlight: rgba(205, 188, 255, 0.14);
+  --hero-shadow: rgba(0, 8, 7, 0.82);
+  --hero-cta-text: #04130f;
+
+  --color-bg: var(--bg-base);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-sunken);
+  --color-text: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-tertiary);
+  --color-border: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary-600);
+  --color-primary-hover: #7ce9c8;
+  --color-primary-muted: var(--primary-050);
+  --color-surface-overlay: rgba(7, 21, 18, 0.94);
+  --color-surface-translucent: rgba(7, 20, 18, 0.76);
+  --color-text-inverse: #04130f;
+  --on-primary: #04130f;
+  --hairline: rgba(151, 232, 210, 0.11);
+
+  --purple-100: rgba(197, 174, 255, 0.14);
+  --purple-600: #aa94f4;
+  --purple-700: #c7b8ff;
+
+  --command-card-border: rgba(143, 235, 209, 0.13);
+  --command-card-bg:
+    linear-gradient(145deg, rgba(223, 255, 244, 0.045), transparent 46%),
+    linear-gradient(180deg, rgba(15, 36, 31, 0.98), rgba(7, 20, 17, 0.98));
+  --command-muted-bg: rgba(5, 18, 15, 0.72);
+  --command-hairline: rgba(143, 235, 209, 0.09);
+
+  --shadow-raised:
+    0 1px 0 rgba(235, 255, 248, 0.04) inset,
+    0 1px 2px rgba(0, 7, 5, 0.55),
+    0 17px 38px -29px rgba(0, 8, 6, 0.96);
+  --shadow-overlay:
+    0 1px 0 rgba(241, 255, 249, 0.055) inset,
+    0 22px 54px -28px rgba(0, 7, 5, 0.97),
+    0 36px 82px -46px rgba(145, 103, 210, 0.34);
+  --shadow-dock:
+    0 1px 0 rgba(241, 255, 249, 0.065) inset,
+    0 20px 50px -25px rgba(0, 7, 5, 0.96),
+    0 30px 68px -42px rgba(98, 227, 188, 0.30);
+  --shadow-popover:
+    0 1px 0 rgba(241, 255, 249, 0.055) inset,
+    0 24px 58px -28px rgba(0, 7, 5, 0.98);
+  --shadow-fab: 0 14px 32px -14px rgba(98, 227, 188, 0.66);
+}
+
+@media screen {
+  :root[data-theme="premium"] body {
+    background:
+      radial-gradient(64rem 42rem at -14% -12%, rgba(72, 213, 172, 0.17), transparent 59%),
+      radial-gradient(54rem 40rem at 112% 4%, rgba(154, 112, 218, 0.16), transparent 63%),
+      radial-gradient(38rem 30rem at 54% 112%, rgba(55, 176, 153, 0.09), transparent 66%),
+      linear-gradient(180deg, #040d0c 0%, #061310 50%, #07100f 100%);
+    background-attachment: fixed;
+  }
+
+  :root[data-theme="premium"] body::before {
+    opacity: 0.24;
+    background-image:
+      linear-gradient(rgba(170, 239, 219, 0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(170, 239, 219, 0.018) 1px, transparent 1px);
+  }
+
+  :root[data-theme="premium"] ::selection {
+    background: rgba(98, 227, 188, 0.30);
+    color: #ffffff;
+  }
+
+  :root[data-theme="premium"] :is(
+    .card,
+    .surface-raised,
+    .bento-tile,
+    .insight-card,
+    .action-item,
+    .next-goal-row,
+    .settings-card,
+    .settings-disclosure,
+    .modal,
+    .action-menu-panel,
+    .avatar-menu-portal
+  ) {
+    border-color: rgba(143, 235, 209, 0.13);
+    background:
+      linear-gradient(145deg, rgba(223, 255, 244, 0.045), transparent 46%),
+      linear-gradient(180deg, rgba(15, 36, 31, 0.98), rgba(7, 20, 17, 0.98));
+    box-shadow: var(--shadow-raised);
+  }
+
+  :root[data-theme="premium"] :is(
+    .rhythm-hero,
+    .goals-hero,
+    .settings-hero,
+    .hero-v8,
+    .mesh-hero,
+    .bento-hero,
+    .premium-screen-simulation [role="tablist"] + div
+  ) {
+    border-color: rgba(161, 241, 218, 0.17);
+    background:
+      radial-gradient(78% 110% at 96% 0%, rgba(106, 235, 197, 0.28), transparent 60%),
+      radial-gradient(72% 95% at 0% 108%, rgba(159, 116, 220, 0.25), transparent 61%),
+      linear-gradient(145deg, #061612 0%, #153a31 54%, #3b2954 100%) !important;
+    box-shadow:
+      0 1px 0 rgba(242, 255, 250, 0.08) inset,
+      0 28px 66px -42px rgba(98, 227, 188, 0.52),
+      0 30px 74px -48px rgba(155, 111, 217, 0.38) !important;
+  }
+
+  :root[data-theme="premium"] .rhythm-hero::after {
+    border-color: rgba(202, 184, 255, 0.13);
+  }
+
+  :root[data-theme="premium"] :is(
+    .rhythm-ring-fill,
+    .ring-fg
+  ) {
+    stroke: #69e5c0;
+    filter: drop-shadow(0 0 5px rgba(98, 227, 188, 0.34));
+  }
+
+  :root[data-theme="premium"] .rhythm-ring-track {
+    stroke: rgba(185, 238, 221, 0.14);
+  }
+
+  :root[data-theme="premium"] .rhythm-ring-num {
+    fill: #f1fff9;
+  }
+
+  :root[data-theme="premium"] .rhythm-ring-sub {
+    fill: #a8c9bf;
+  }
+
+  :root[data-theme="premium"] .rhythm-line1 {
+    color: #f1fff9;
+  }
+
+  :root[data-theme="premium"] .rhythm-caption {
+    color: #9cbab1;
+  }
+
+  :root[data-theme="premium"] :is(
+    .rhythm-assets,
+    .pulse-goal-line,
+    .today-center,
+    .stat-strip:not(.stat-strip-collapsed)
+  ) {
+    border-color: rgba(143, 235, 209, 0.13);
+    background: var(--command-card-bg);
+  }
+
+  :root[data-theme="premium"] :is(input, select, textarea) {
+    border-color: rgba(143, 235, 209, 0.15);
+    background:
+      linear-gradient(180deg, rgba(231, 255, 247, 0.02), transparent),
+      rgba(4, 16, 13, 0.84);
+  }
+
+  :root[data-theme="premium"] :is(input, select, textarea):focus {
+    border-color: rgba(98, 227, 188, 0.76);
+    box-shadow: 0 0 0 3px rgba(98, 227, 188, 0.12);
+  }
+
+  :root[data-theme="premium"] :is(
+    .settings-primary-action,
+    .btn-link,
+    .fab
+  ) {
+    border: 1px solid rgba(219, 255, 244, 0.34);
+    background: linear-gradient(135deg, #a0f3d8 0%, #58dcb3 58%, #8e70d3 142%);
+    color: #04130f;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.26) inset,
+      0 15px 30px -17px rgba(98, 227, 188, 0.82);
+  }
+
+  :root[data-theme="premium"] :is(
+    button.secondary,
+    .settings-secondary-action,
+    .hero-cta
+  ) {
+    border-color: rgba(135, 232, 205, 0.25);
+    background: rgba(98, 227, 188, 0.075);
+    color: #9af0d5;
+  }
+
+  :root[data-theme="premium"] :is(
+    button.secondary,
+    .settings-secondary-action,
+    .hero-cta
+  ):hover:not(:disabled) {
+    border-color: rgba(135, 232, 205, 0.36);
+    background: rgba(98, 227, 188, 0.14);
+  }
+
+  :root[data-theme="premium"] .collapse-nav.is-condensed {
+    border-bottom-color: rgba(148, 236, 211, 0.10);
+    background: linear-gradient(180deg, rgba(5, 17, 14, 0.92), rgba(5, 17, 14, 0.74));
+    box-shadow: 0 14px 40px -31px rgba(98, 227, 188, 0.46);
+  }
+
+  :root[data-theme="premium"] .nav-logo {
+    border-color: rgba(211, 252, 240, 0.31);
+    background:
+      radial-gradient(circle at 29% 22%, rgba(241, 255, 250, 0.46), transparent 25%),
+      linear-gradient(145deg, #69e5c0 0%, #36a995 56%, #8f6fd0 122%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.23) inset,
+      0 9px 24px -11px rgba(98, 227, 188, 0.74);
+  }
+
+  :root[data-theme="premium"] .sidebar {
+    border-right-color: rgba(148, 236, 211, 0.09);
+    background: linear-gradient(180deg, rgba(13, 34, 29, 0.97), rgba(5, 16, 13, 0.99));
+    box-shadow: 22px 0 54px -44px rgba(98, 227, 188, 0.38);
+  }
+
+  :root[data-theme="premium"] .sidebar-nav a.active {
+    background: linear-gradient(135deg, rgba(98, 227, 188, 0.13), rgba(157, 113, 218, 0.09));
+    color: #a0f1d8;
+  }
+
+  :root[data-theme="premium"] .bottom-dock-inner {
+    border-color: rgba(149, 237, 212, 0.16);
+    background:
+      linear-gradient(145deg, rgba(232, 255, 248, 0.05), transparent 48%),
+      rgba(5, 18, 15, 0.91);
+    box-shadow: var(--shadow-dock);
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    :root[data-theme="premium"] .bottom-dock-inner {
+      background: rgba(5, 18, 15, 0.72);
+      backdrop-filter: blur(28px) saturate(165%);
+      -webkit-backdrop-filter: blur(28px) saturate(165%);
+    }
+  }
+
+  :root[data-theme="premium"] :is(
+    .dock-item.active::before,
+    .settings-tab.active,
+    .seg-opt.active,
+    .premium-screen-simulation [role="tab"][aria-selected="true"]
+  ) {
+    border-color: rgba(159, 241, 218, 0.14);
+    background: linear-gradient(135deg, rgba(98, 227, 188, 0.17), rgba(157, 113, 218, 0.11));
+    color: #b5f5df;
+    box-shadow: 0 0 0 1px rgba(159, 241, 218, 0.075) inset;
+  }
+
+  :root[data-theme="premium"] .settings-tabs {
+    border-color: rgba(149, 237, 212, 0.14);
+    background: rgba(5, 18, 15, 0.80);
+  }
+
+  :root[data-theme="premium"] :is(
+    .tx-icon,
+    .action-icon.pri-low,
+    .settings-icon-bubble
+  ) {
+    background: rgba(98, 227, 188, 0.11);
+    color: #82e9ca;
+    box-shadow: 0 0 0 1px rgba(98, 227, 188, 0.06) inset;
+  }
+
+  :root[data-theme="premium"] :is(
+    .progress-track > span,
+    .alloc-vwce,
+    .alloc-seg-v8.vwce
+  ) {
+    background: linear-gradient(90deg, #52d9b0, #8ff0d1);
+    box-shadow: 0 0 15px rgba(98, 227, 188, 0.29);
+  }
+
+  :root[data-theme="premium"] .menu-scrim {
+    background: rgba(1, 9, 7, 0.52);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="premium"] *,
+  :root[data-theme="premium"] *::before,
+  :root[data-theme="premium"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
