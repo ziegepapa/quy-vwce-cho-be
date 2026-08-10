@@ -1,0 +1,245 @@
+/* OVERVIEW-DARK-FINISH-001 r1
+   Final, route-scoped composition for the three secondary product screens.
+   App.tsx already supplies the premium-screen-* classes used below. This layer
+   changes hierarchy and density only: no formula, persistence or engine rules. */
+
+@media screen {
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .premium-screen-transactions,
+    .premium-screen-goals,
+    .premium-screen-simulation
+  ) {
+    --finish-gap: 10px;
+    --finish-radius: 18px;
+    --finish-panel: color-mix(in srgb, var(--surface-raised) 88%, var(--bg-base));
+    --finish-hairline: color-mix(in srgb, var(--primary-600) 13%, var(--hairline));
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .premium-screen-transactions,
+    .premium-screen-goals,
+    .premium-screen-simulation
+  ) :is(.card, .surface-raised, details.card) {
+    margin: 0;
+    border-color: var(--finish-hairline);
+    border-radius: var(--finish-radius);
+  }
+
+  /* Transactions: one compact control deck followed by a broker-style ledger. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div {
+    display: grid;
+    gap: var(--finish-gap);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .row-between:first-child {
+    min-height: 48px;
+    padding: 0 2px 2px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .page-title {
+    font-size: 24px;
+    font-weight: 760;
+    letter-spacing: -0.04em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .field {
+    margin: 0;
+    padding: 12px 12px 10px;
+    border: 1px solid var(--finish-hairline);
+    border-radius: var(--finish-radius) var(--finish-radius) 7px 7px;
+    background: var(--finish-panel);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .grid2 {
+    gap: 8px;
+    margin-top: calc(var(--finish-gap) * -1);
+    padding: 9px 12px 12px;
+    border: 1px solid var(--finish-hairline);
+    border-top-color: transparent;
+    border-radius: 0 0 var(--finish-radius) var(--finish-radius);
+    background: var(--finish-panel);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .grid2 .field {
+    margin: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions :is(.field > label, .grid2 label) {
+    margin-bottom: 5px;
+    color: color-mix(in srgb, var(--text-secondary) 86%, var(--text-primary));
+    font-size: 10px;
+    font-weight: 740;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .card:not(.empty) {
+    overflow: hidden;
+    padding: 2px 12px !important;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-row {
+    min-height: 64px;
+    gap: 10px;
+    padding: 10px 1px;
+    border-bottom-color: var(--finish-hairline);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-body {
+    min-width: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-body > .row-between:first-child {
+    gap: 10px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-body > .row-between:first-child strong {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-body .metric-value {
+    flex: 0 0 auto;
+    font-size: 17px !important;
+    font-weight: 760;
+    letter-spacing: -0.025em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-body .muted {
+    color: color-mix(in srgb, var(--text-secondary) 76%, var(--bg-base));
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  /* Goals: the aggregate number stays dominant; individual goals read as rows. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals > div {
+    display: grid;
+    gap: var(--finish-gap);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero {
+    min-height: 126px;
+    padding: 16px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero .hero-money {
+    font-size: clamp(32px, 9vw, 40px) !important;
+    line-height: 1;
+    letter-spacing: -0.045em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .timeline {
+    gap: 8px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goal-card {
+    padding: 13px 14px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goal-card .progress-ring {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goal-card > .row-between:first-child strong {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goal-card .progress-track {
+    height: 6px;
+    margin: 8px 0 6px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goal-card .story-caption {
+    margin-top: 7px !important;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .story-banner {
+    padding: 11px 13px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  /* Simulation: mode, large outcome and assumptions share one compact cadence. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation > .stack {
+    gap: 9px !important;
+    padding-bottom: 86px !important;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tablist"] {
+    margin: 0;
+    border-radius: 15px !important;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tab"] {
+    min-height: 40px !important;
+    font-size: 11.5px !important;
+    font-weight: 680;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tablist"] + div {
+    margin: 0 !important;
+    padding: 15px !important;
+    border-radius: 20px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tablist"] + div > div:first-child {
+    font-size: clamp(34px, 10vw, 44px) !important;
+    line-height: 1 !important;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation .card {
+    padding: 13px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation .field {
+    margin-bottom: 10px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation .field > label {
+    color: color-mix(in srgb, var(--text-secondary) 88%, var(--text-primary));
+    font-size: 11.5px;
+    font-weight: 650;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation details.card > summary {
+    min-height: 42px !important;
+    font-size: 13px !important;
+    line-height: 1.35;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation table {
+    font-size: 11.5px !important;
+  }
+}
+
+@media screen and (max-width: 430px) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .field {
+    padding-inline: 11px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .grid2 {
+    padding-inline: 11px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero {
+    min-height: 116px;
+    padding: 14px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero .progress-ring {
+    width: 72px;
+    height: 72px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tab"] {
+    padding-inline: 2px !important;
+  }
+}

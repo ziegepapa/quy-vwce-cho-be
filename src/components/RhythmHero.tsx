@@ -44,9 +44,7 @@ export default function RhythmHero({
       : "Chờ nhịp góp tiếp theo";
   const rhythmCaption = !hasContributions
     ? "Ghi khoản góp đầu tiên để bắt đầu."
-    : hasActiveStreak
-      ? "Không cần thao tác lúc này."
-      : "Chuỗi sẽ cập nhật ở tháng góp tiếp theo.";
+    : null;
 
   return (
     <section className="rhythm-hero">
@@ -92,7 +90,7 @@ export default function RhythmHero({
 
         <div className="rhythm-body">
           <p className="rhythm-line1">{rhythmCopy}</p>
-          <p className="rhythm-caption">{rhythmCaption}</p>
+          {rhythmCaption && <p className="rhythm-caption">{rhythmCaption}</p>}
         </div>
       </div>
     </section>
