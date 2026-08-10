@@ -1,0 +1,88 @@
+/* OVERVIEW-MERGE-CORRECTION-001 r1
+   Loaded after the global theme layers so the merged Overview hierarchy wins
+   the real Aurora/Dark cascade instead of only the component-local sheet. */
+
+@media screen {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero {
+    padding: 12px 14px;
+    border-radius: 18px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero::after {
+    right: -30px;
+    bottom: -54px;
+    width: 104px;
+    height: 104px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero-inner {
+    min-height: 72px;
+    gap: 12px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-wrap {
+    flex: 0 0 64px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-svg {
+    width: 64px;
+    height: 64px;
+    max-width: 64px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-line1 {
+    font-size: 13.5px;
+    font-weight: 680;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-caption {
+    font-size: 11px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .today-center {
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .today-center .nhip-block {
+    gap: 10px;
+    padding: 0;
+    border-top: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .today-center .nhip-meta {
+    min-height: 46px;
+    padding: 11px 2px;
+    border-top: 1px solid var(--command-hairline, var(--hairline));
+    border-bottom: 1px solid var(--command-hairline, var(--hairline));
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+@media screen and (max-width: 430px) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero {
+    padding: 11px 13px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero-inner {
+    min-height: 68px;
+    gap: 11px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-wrap {
+    flex-basis: 60px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-svg {
+    width: 58px;
+    height: 58px;
+    max-width: 58px;
+  }
+}
