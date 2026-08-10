@@ -3,12 +3,13 @@
  * Per-instrument isolation: one failure keeps prior valid quote for that key
  * and never deletes other instruments' quotes.
  *
- * Price source policy (PRICE-FALLBACK-001):
+ * Price source policy (PRICE-SOURCE-FRESHEST-001):
  *   - each instrument has an ordered chain: primary, declared fallbacks, then
  *     the cross-check provider if it can stand on its own
- *   - the first source that parses wins and is recorded honestly in `provider`
- *   - a cross-check that cannot be read only drops the cross-check stamp
- *   - a cross-check that disagrees beyond the tolerance stops the write
+ *   - every usable source is fetched and parsed on each workflow run
+ *   - the newest CLOSED session wins; chain order breaks same-day ties
+ *   - a same-day cross-check disagreement beyond tolerance stops the write
+ *   - a missing second opinion only marks the winning quote degraded
  *   - every source down means keep the previous quote, never an empty feed
  */
 
@@ -213,8 +214,10 @@ export function decideQuoteWrite(next, existing, instrument, now) {
 }
 
 /**
- * Resolve one instrument quote by walking its price source chain, then
- * cross-checking the winner against a different provider when possible.
+ * Resolve one instrument by reading every configured source. The freshest
+ * closed-session candidate wins; the registry order is only a same-date
+ * tie-breaker. This prevents a stale-but-schema-valid primary from hiding a
+ * newer closed quote already available from the fallback provider.
  *
  * Returned object carries `degraded` and `warnings` for logging only; the
  * contract validator drops them before anything reaches disk.
@@ -231,35 +234,64 @@ export async function resolveInstrumentQuote(instrument, options = {}) {
     );
   }
 
+  // Start every request in registry order, but do not let network completion
+  // order choose the winner. Promise.all keeps the result array deterministic.
+  const attempts = await Promise.all(
+    chain.map(async ({ cfg, role }, index) => {
+      const adapter = getPrimaryAdapter(cfg.id);
+      let body;
+      try {
+        if (adapter.requiresSymbol && !cfg.symbol) {
+          throw new OrchestratorError(
+            `No verified ${cfg.id} symbol for ${instrument.isin}`,
+          );
+        }
+        body = options[adapter.bodyKey];
+        if (body === undefined) {
+          // Canonical contract: every request URL comes from the registry.
+          body = await fetchJson(cfg.url);
+        }
+        const parsed = adapter.parse(body, now, instrument);
+        return { ok: true, cfg, role, index, adapter, body, parsed };
+      } catch (error) {
+        return { ok: false, cfg, role, index, adapter, body, error };
+      }
+    }),
+  );
+
   /** @type {string[]} */
   const warnings = [];
-  let picked = null;
-
-  for (const { cfg, role } of chain) {
-    const adapter = getPrimaryAdapter(cfg.id);
-    try {
-      if (adapter.requiresSymbol && !cfg.symbol) {
-        throw new OrchestratorError(
-          `No verified ${cfg.id} symbol for ${instrument.isin}`,
-        );
-      }
-      let body = options[adapter.bodyKey];
-      if (!body) {
-        // Canonical contract: the request URL always comes from the registry
-        body = await fetchJson(cfg.url);
-      }
-      const parsed = adapter.parse(body, now, instrument);
-      picked = { cfg, role, parsed };
-      break;
-    } catch (e) {
-      warnings.push(`${cfg.id} (${role}) unusable: ${e?.message || e}`);
+  for (const attempt of attempts) {
+    if (!attempt.ok) {
+      warnings.push(
+        `${attempt.cfg.id} (${attempt.role}) unusable: ${attempt.error?.message || attempt.error}`,
+      );
     }
   }
 
-  if (!picked) {
+  const successful = attempts.filter((attempt) => attempt.ok);
+  if (!successful.length) {
     throw new OrchestratorError(
       `All price sources failed for ${instrument.isin}: ${warnings.join(" | ")}`,
     );
+  }
+
+  // Attempts stay in chain order. Replace the current winner only for a newer
+  // date, never for an equal date, so primary/fallback priority remains stable.
+  let picked = successful[0];
+  for (const candidate of successful.slice(1)) {
+    if (candidate.parsed.asOf > picked.parsed.asOf) picked = candidate;
+  }
+
+  for (const candidate of successful) {
+    if (
+      candidate.cfg.id !== picked.cfg.id &&
+      candidate.parsed.asOf < picked.parsed.asOf
+    ) {
+      warnings.push(
+        `${picked.cfg.id} selected: closed session ${picked.parsed.asOf} is newer than ${candidate.cfg.id} ${candidate.parsed.asOf}`,
+      );
+    }
   }
 
   const chosenId = picked.cfg.id;
@@ -271,7 +303,6 @@ export async function resolveInstrumentQuote(instrument, options = {}) {
     // Never validate a source against itself: that proves nothing.
     warnings.push(`cross-check skipped: ${chosenId} is already the price source`);
   } else if (ccCfg?.id) {
-    // Canonical discriminator is provider.id (never kind)
     if (ccCfg.id !== "onvista") {
       throw new OrchestratorError(
         `Unsupported crossCheckProvider.id "${ccCfg.id}" for ${instrument.isin}`,
@@ -283,9 +314,17 @@ export async function resolveInstrumentQuote(instrument, options = {}) {
       );
     }
     try {
-      let onvistaBody = options.onvistaBody;
-      if (!onvistaBody) {
-        // Canonical contract: use configured funds/stocks endpoint
+      // Reuse the body already fetched for candidate selection. A failed fetch
+      // is not retried inside the same run; the morning schedule is the retry.
+      const ccAttempt = attempts.find((attempt) => attempt.cfg.id === ccCfg.id);
+      let onvistaBody;
+      if (ccAttempt?.body !== undefined) {
+        onvistaBody = ccAttempt.body;
+      } else if (ccAttempt?.error) {
+        throw ccAttempt.error;
+      } else if (options.onvistaBody !== undefined) {
+        onvistaBody = options.onvistaBody;
+      } else {
         onvistaBody = await fetchJson(ccCfg.url);
       }
       const onvista = parseOnvistaSnapshot(onvistaBody, instrument, ccCfg);
