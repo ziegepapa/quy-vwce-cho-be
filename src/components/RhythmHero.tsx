@@ -16,22 +16,12 @@ export type RhythmHeroProps = {
   nhipWindowDays: number;
 };
 
-/** Format an ISO date string as dd.mm.yyyy. */
-function formatDDMMYYYY(iso: string): string {
-  const s = iso.slice(0, 10);
-  const [y, m, d] = s.split("-");
-  return `${d}.${m}.${y}`;
-}
-
 // SVG arc path: circle r=15.5 in viewBox 0 0 36 36.
 const RING_PATH = "M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31";
 
 /**
- * Hero nhịp tối giản.
- *
- * - Ring chỉ biểu diễn chuỗi tháng góp liên tiếp.
- * - Text chỉ nói trạng thái nhịp và lần góp gần nhất.
- * - Không còn câu “X trong 35 ngày”, goal plan, phần trăm hay số năm.
+ * Hero nhịp tối giản: ring là streak, phần chữ là trạng thái.
+ * Ngày giao dịch gần nhất thuộc ownership journal nên không lặp lại ở đây.
  */
 export default function RhythmHero({
   streak,
@@ -48,10 +38,15 @@ export default function RhythmHero({
   const arcShown = arcPct > 0 ? Math.max(2, arcPct) : 0;
 
   const rhythmCopy = !hasContributions
-    ? "Bắt đầu nhịp góp đầu tiên"
+    ? "Chưa có nhịp góp"
     : hasActiveStreak
-      ? "Nhịp quỹ đang được giữ đều"
-      : "Sẵn sàng cho nhịp góp tiếp theo";
+      ? "Đang giữ nhịp đều"
+      : "Chờ nhịp góp tiếp theo";
+  const rhythmCaption = !hasContributions
+    ? "Ghi khoản góp đầu tiên để bắt đầu."
+    : hasActiveStreak
+      ? "Không cần thao tác lúc này."
+      : "Chuỗi sẽ cập nhật ở tháng góp tiếp theo.";
 
   return (
     <section className="rhythm-hero">
@@ -97,15 +92,7 @@ export default function RhythmHero({
 
         <div className="rhythm-body">
           <p className="rhythm-line1">{rhythmCopy}</p>
-          {streak.lastContributionDate != null ? (
-            <p className="rhythm-caption">
-              Lần góp gần nhất: {formatDDMMYYYY(streak.lastContributionDate)}
-            </p>
-          ) : (
-            <p className="rhythm-caption">
-              Ghi một khoản góp để mở vòng nhịp.
-            </p>
-          )}
+          <p className="rhythm-caption">{rhythmCaption}</p>
         </div>
       </div>
     </section>
