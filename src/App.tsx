@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./lib/auth";
 import {
   clearUserBusinessData,
@@ -26,6 +26,7 @@ import Notfallmappe from "./pages/Notfallmappe";
 import Onboarding from "./pages/Onboarding";
 import AuthPage from "./pages/Auth";
 import MigrateWizard from "./pages/MigrateWizard";
+import "./styles/premium-command-layout.css";
 
 /** V10-A — khiên, cho mục Hồ sơ khẩn cấp. Để cục bộ ở đây để không phải sửa Icons.tsx. */
 function IconShield() {
@@ -59,6 +60,7 @@ const NAV: { to: string; label: string; icon: ReactNode }[] = [
 export default function App() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [ready, setReady] = useState(false);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
@@ -253,6 +255,7 @@ export default function App() {
     (auth.user?.user_metadata?.display_name as string) ||
     auth.user?.email?.split("@")[0] ||
     settings.planName;
+  const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
 
   return (
     <div className="app-layout">
@@ -289,36 +292,38 @@ export default function App() {
           />
         )}
         <NavActionsProvider api={navActionsApi}>
-          <Routes>
-            {/*
-              VISUAL-POLISH-001 r4 -- QuoteStatusSummary is no longer mounted here.
-              pulse-polish.css has hidden it with display: none since
-              UI-PULSE-LOCKED-001, so it rendered nothing on screen while still
-              paying for itself: a listQuoteSelectionStates() read against Dexie on
-              every quoteRefreshVersion change, plus the DOM it built in order to be
-              hidden. Settings > Gia has carried the same information since #58.
-              Nothing moves visually. The component file and the display: none rule
-              that hides it are removed together in the follow-up dead-code chore,
-              so that the unmount and the un-hiding can never land apart.
-            */}
-            <Route path="/" element={<Overview key={quoteRefreshVersion} />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/goals" element={<Goals />} />
-            <Route path="/simulation" element={<Simulation />} />
-            <Route path="/notfallmappe" element={<Notfallmappe />} />
-            <Route
-              path="/settings"
-              element={
-                <SettingsPage
-                  onReload={reload}
-                  onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined}
-                  refreshKey={quoteRefreshVersion}
-                  onQuotesChanged={handleQuotesChanged}
-                  onSettingsChanged={handleSettingsChanged}
-                />
-              }
-            />
-          </Routes>
+          <main className={`premium-screen premium-screen-${screenName}`}>
+            <Routes>
+              {/*
+                VISUAL-POLISH-001 r4 -- QuoteStatusSummary is no longer mounted here.
+                pulse-polish.css has hidden it with display: none since
+                UI-PULSE-LOCKED-001, so it rendered nothing on screen while still
+                paying for itself: a listQuoteSelectionStates() read against Dexie on
+                every quoteRefreshVersion change, plus the DOM it built in order to be
+                hidden. Settings > Gia has carried the same information since #58.
+                Nothing moves visually. The component file and the display: none rule
+                that hides it are removed together in the follow-up dead-code chore,
+                so that the unmount and the un-hiding can never land apart.
+              */}
+              <Route path="/" element={<Overview key={quoteRefreshVersion} />} />
+              <Route path="/transactions" element={<Transactions />} />
+              <Route path="/goals" element={<Goals />} />
+              <Route path="/simulation" element={<Simulation />} />
+              <Route path="/notfallmappe" element={<Notfallmappe />} />
+              <Route
+                path="/settings"
+                element={
+                  <SettingsPage
+                    onReload={reload}
+                    onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined}
+                    refreshKey={quoteRefreshVersion}
+                    onQuotesChanged={handleQuotesChanged}
+                    onSettingsChanged={handleSettingsChanged}
+                  />
+                }
+              />
+            </Routes>
+          </main>
         </NavActionsProvider>
       </div>
 
