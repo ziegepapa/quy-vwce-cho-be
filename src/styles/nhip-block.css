@@ -1,50 +1,7 @@
-/*
- * NHIP-UI-001 r1 -- the one block that replaced the four pulse cards.
- * Density first: one story, one meta line, one checklist, one simulation entry.
- *
- * VISUAL-POLISH-001 r1..r3 -- hover/active micro-interactions, neutral tone
- * for meta-value, smaller type so the block reads as secondary to the hero,
- * and a meta row that packs left instead of stranding its hint.
- *
- * OVERVIEW-PREMIUM-001 r2 -- surfaces moved to --surface / --hairline, and
- * the three floating rows became one card.
- *
- * OVERVIEW-MONO-001 r1 -- the card became three equal tiles, and every shadow
- * on this sheet was deleted.
- *
- * OVERVIEW-EDITORIAL-001 r1 -- the boxes go.
- *
- * MONO turned the page white but left every group of content inside a
- * container: this block had a border and a 16px radius, and the three state
- * tiles each had a sunken fill and a 14px radius. On a tinted page those
- * containers were what separated content from background. On a white page
- * there is nothing to separate it from, so the border stops being structure
- * and becomes an extra line to look at, and the three grey rounded rectangles
- * become the loudest shapes on a screen whose whole point is the number at
- * the top.
- *
- * What replaces them is what a printed page uses: a hairline rule, space, and
- * a difference in type. The block is separated from the hero by one rule; the
- * three figures are separated from each other by one hairline each. Nothing
- * is enclosed. This also fixes the thing that made the tiles fragile -- a
- * fill with a radius needs padding, and the padding is what squeezed
- * "= 0,5939 VWCE" into two lines at a third of the screen width.
- *
- * The sentences themselves move up, not down: 14px/1.5 at weight 500 was a
- * status line, 15px/1.55 at 450 is a paragraph, which is what they actually
- * are. Nothing here changes what any of them say.
- *
- * OVERVIEW-EDITORIAL-TUNE-001 r1 -- state grid rotated 90 degrees.
- * Three columns of (label / value) become three rows of (label -- value).
- * The eye can scan a list faster than it can scan across three columns when
- * the values are different lengths (VWCE quantity vs "Ổn" vs "Bắt đầu").
- * A 1px #EAEAEC top rule separates each row; no fill, no radius.
- * nhip-item gets a 3-line clamp so each insight reads as one sentence.
- *
- * OVERVIEW-RHYTHM-001 r3 (Option B) -- the hero above this block now owns the
- * sentence about the 35-day window, so this block is demoted from prose to
- * footnote. See .nhip-item below.
- */
+/* NHIP-UI-001 + OVERVIEW-FOCAL-REFRESH-001
+   One quiet pulse line beneath the asset focal. The old Sao kê / An toàn /
+   Mô phỏng shortcut grid was removed from Overview because those destinations
+   already exist in primary navigation. */
 
 .nhip-block {
   display: flex;
@@ -67,33 +24,20 @@
   gap: 9px;
 }
 
-/* OVERVIEW-RHYTHM-001 r3 -- Option B: this is a footnote, not a second hero.
-
-   EDITORIAL-TUNE set these sentences at 15px/1.55/450 because they were the
-   main content of the first screenful. They are not any more: the hero states
-   the 35-day total in 14px semibold directly above, and this block now only
-   adds what the hero cannot show (the contribution COUNT, a stale-price
-   warning, an approaching plan date).
-
-   At 15px it was LARGER than the hero's own primary line, which is what made
-   the page read as two heroes stacked. 13px/1.5/400 in secondary colour puts
-   it a clear step below the hero without making it hard to read. The 3-line
-   clamp stays so one insight still reads as one sentence. */
 .nhip-item {
+  display: -webkit-box;
+  overflow: hidden;
   margin: 0;
   color: var(--text-secondary);
   font-size: 13px;
-  line-height: 1.5;
   font-weight: 400;
+  line-height: 1.5;
   letter-spacing: -0.005em;
   text-wrap: pretty;
-  display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-/* A stale price is the one insight that must still catch the eye. */
 .nhip-item.nhip-stale_price {
   color: var(--warning-600, #b45309);
   font-weight: 500;
@@ -130,19 +74,14 @@
 
 .nhip-meta-value.positive { color: var(--success-600, #15803d); }
 .nhip-meta-value.negative { color: var(--danger-600, #b91c1c); }
-/* neutral: softer so it doesn't compete with a real monetary figure */
-.nhip-meta-value.neutral  { color: var(--text-secondary); }
+.nhip-meta-value.neutral { color: var(--text-secondary); }
 
-/* VISUAL-POLISH-001 r3: this was flex: 1 1 auto, so the caption swallowed every
-   spare pixel in the row and pushed the hint to the far right, leaving a band
-   of empty space in the middle of a line that reads as one sentence. The row
-   now packs left and the hint sits next to the text it qualifies. */
 .nhip-meta-caption {
+  flex: 0 1 auto;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.4;
   opacity: 1;
-  flex: 0 1 auto;
 }
 
 .nhip-meta-hint {
@@ -153,7 +92,6 @@
   white-space: nowrap;
 }
 
-/* A recency marker, not an action: no accent, and now no pill either. */
 .nhip-new {
   padding: 0;
   border-radius: 0;
@@ -163,126 +101,4 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-}
-
-/* ===== OVERVIEW-EDITORIAL-TUNE-001 r1 -- three rows, not three columns ===== *
- *
- * Same three facts, same markup. The grid rotates from a 3-column horizontal
- * strip to a single-column vertical list. Each tile is a flex row: label on
- * the left (small-caps), value on the right (numeric). A 1px #EAEAEC hairline
- * sits above every tile except the first (which is already separated from the
- * section above by the state-grid border-top). The values right-align so all
- * the numbers line up regardless of label length.
- *
- * Why #EAEAEC instead of var(--hairline)? The hairline token resolves to
- * rgba(0,0,0,0.09) on light, which is fine for block separators that span the
- * full width but reads as a floating line inside a narrower column. A slightly
- * lighter fixed value keeps the rows legible without adding weight.
- *
- * ===== OVERVIEW-RHYTHM-001 r3 -- the three rows are already uniform =====
- *
- * r3 asked for Sao kê / An toàn / Mô phỏng to share one shape: small-caps
- * label left, accent-coloured value right, and specifically NO full-width
- * progress bar behind the An toàn score. That is exactly what the rules below
- * already produce, and a search of every sheet in src/styles for a safety bar
- * (a track/fill pair, a sunken row fill, a percentage-width child) found none
- * -- the bar was removed with the tiles in EDITORIAL-001 and left no orphan
- * rule behind. So r3 adds no CSS here and deletes none.
- *
- * This note exists so the next person does not have to repeat that search.
- * The An toàn score is coloured by the .state-warning / .state-positive pair
- * at the bottom of this section: amber while any of the four layers is not
- * ready, green at 4/4. That colour IS the whole visual treatment, by design.
- */
-.state-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
-  margin-top: 14px;
-  padding-top: 0;
-  border-top: 1px solid var(--hairline);
-}
-
-.state-tile {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 40px;
-  padding: 8px 0;
-  border: 0;
-  border-top: 1px solid #EAEAEC;
-  border-radius: 0;
-  background: none;
-  color: inherit;
-  text-align: left;
-  text-decoration: none;
-  font: inherit;
-  cursor: pointer;
-  transition: opacity var(--d-fast, 160ms);
-}
-
-/* Each tile is a row; the first needs no top rule because .state-grid already
-   provides the section separator above. */
-.state-tile:first-child {
-  padding-left: 0;
-  border-top: 0;
-}
-
-.state-tile:last-child {
-  padding-right: 0;
-}
-
-.state-name {
-  color: var(--text-tertiary);
-  font-size: 10px;
-  font-weight: 680;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.state-value {
-  font-size: 15px;
-  font-weight: 640;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-  overflow-wrap: anywhere;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.state-warning  .state-value { color: var(--warning-600); }
-.state-positive .state-value { color: var(--success-600); }
-.state-neutral  .state-value { color: var(--text-primary); }
-
-/* ------ hover / active micro-interactions ------ */
-
-@media (hover: hover) and (pointer: fine) {
-  .state-tile:hover {
-    opacity: 0.78;
-  }
-}
-
-.state-tile:active {
-  opacity: 0.6;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .state-tile {
-    transition: none !important;
-  }
-}
-
-/* State-tile padding is already 0 on mobile (no horizontal padding to shave);
-   only type adjustments remain at the narrowest breakpoint. */
-@media (max-width: 340px) {
-  .state-value {
-    font-size: 14px;
-  }
-
-  .state-name {
-    letter-spacing: 0.07em;
-  }
 }

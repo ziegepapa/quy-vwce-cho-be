@@ -63,4 +63,20 @@ describe("transaction presentation", () => {
       "newest",
     ]);
   });
+
+  it("keeps a ledger over 100 rows bounded to the requested preview", () => {
+    const ledger = Array.from({ length: 150 }, (_, index) =>
+      transaction(
+        `tx-${index}`,
+        "2026-08-10",
+        "buy_vwce",
+        new Date(Date.UTC(2026, 7, 10, 0, index)).toISOString(),
+      ),
+    );
+
+    const preview = takeRecentTransactions(ledger, 3);
+    expect(preview).toHaveLength(3);
+    expect(preview.map((row) => row.id)).toEqual(["tx-149", "tx-148", "tx-147"]);
+    expect(ledger).toHaveLength(150);
+  });
 });
