@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import type { SyncStatus } from "../lib/sync/types";
 import { SYNC_STATUS_LABEL } from "../lib/sync/types";
 import AvatarMenu, { avatarGradient } from "./AvatarMenu";
+import "../styles/overview-focus.css";
 
 const TITLES: Record<string, string> = {
   "/": "Tổng quan",
@@ -18,12 +19,6 @@ type BerlinClock = {
   date: string;
 };
 
-/*
- * VISUAL-POLISH-001 r3 -- this is a wall clock, not a stopwatch. Seconds were
- * dropped for two reasons: HH:mm:ss reads as a running timer sitting next to
- * the page title, and it is three characters wider than HH:mm. The width it
- * gives back is what pays for a legible date line in pulse-locked-v2.css.
- */
 function readBerlinClock(): BerlinClock {
   const now = new Date();
   return {
@@ -49,9 +44,6 @@ function TimeDate() {
   useEffect(() => {
     const tick = () => setClock(readBerlinClock());
     tick();
-    // Without seconds on screen there is nothing a 1s tick can show. 30s keeps
-    // the displayed minute at most half a minute stale and drops the header
-    // from 60 re-renders a minute to 2.
     const id = window.setInterval(tick, 30_000);
     return () => window.clearInterval(id);
   }, []);
@@ -112,12 +104,22 @@ function IconScenario() {
   );
 }
 
+function IconRefresh() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+      <path d="M20 4v7h-7" />
+    </svg>
+  );
+}
+
 export default function CollapsingNavBar({
   displayName,
   syncStatus,
   pending,
   onSignOut,
   onSyncNow,
+  onUpdatePrice,
   onSearch,
   onFilter,
   onAddGoal,
@@ -190,29 +192,43 @@ export default function CollapsingNavBar({
         <div className="collapse-nav-inner">
           <div className="nav-leading">
             <span className="nav-logo" aria-hidden />
-            <h1 className="collapse-nav-title">{title}</h1>
+            <div className="nav-title-stack">
+              {pathname === "/" ? <span className="nav-context">Quỹ VWCE cho bé</span> : null}
+              <h1 className="collapse-nav-title">{title}</h1>
+            </div>
           </div>
 
           <TimeDate />
 
           <div className="collapse-nav-right">
+            {pathname === "/" && onUpdatePrice ? (
+              <button
+                type="button"
+                className="nav-price-action"
+                aria-label="Mở cập nhật giá"
+                onClick={onUpdatePrice}
+              >
+                <IconRefresh />
+                <span>Cập nhật</span>
+              </button>
+            ) : null}
             {pathname === "/transactions" && onSearch ? (
-              <button type="button" className="icon-btn" aria-label={"Tìm kiếm giao dịch"} onClick={onSearch}>
+              <button type="button" className="icon-btn" aria-label="Tìm kiếm giao dịch" onClick={onSearch}>
                 <IconSearch />
               </button>
             ) : null}
             {pathname === "/transactions" && onFilter ? (
-              <button type="button" className="icon-btn" aria-label={"Lọc giao dịch"} onClick={onFilter}>
+              <button type="button" className="icon-btn" aria-label="Lọc giao dịch" onClick={onFilter}>
                 <IconFilter />
               </button>
             ) : null}
             {pathname === "/goals" && onAddGoal ? (
-              <button type="button" className="icon-btn" aria-label={"Thêm mục tiêu"} onClick={onAddGoal}>
+              <button type="button" className="icon-btn" aria-label="Thêm mục tiêu" onClick={onAddGoal}>
                 <IconPlus />
               </button>
             ) : null}
             {pathname === "/simulation" && onChangeScenario ? (
-              <button type="button" className="icon-btn" aria-label={"Đổi kịch bản"} onClick={onChangeScenario}>
+              <button type="button" className="icon-btn" aria-label="Đổi kịch bản" onClick={onChangeScenario}>
                 <IconScenario />
               </button>
             ) : null}

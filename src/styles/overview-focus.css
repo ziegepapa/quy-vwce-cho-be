@@ -1,0 +1,120 @@
+/* OVERVIEW-FOCAL-REFRESH-001 r1
+   Small, route-scoped chrome for the Overview header. It fixes the existing
+   onUpdatePrice wire without changing price ingestion or freshness semantics. */
+
+.nav-title-stack {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.nav-context {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 8px;
+  font-weight: 760;
+  line-height: 1;
+  letter-spacing: 0.11em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.nav-title-stack .collapse-nav-title {
+  line-height: 1.05;
+}
+
+.nav-price-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--primary-600) 24%, var(--border-subtle));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--primary-600) 10%, var(--surface-raised));
+  color: var(--primary-600);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 740;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-price-action svg {
+  flex: 0 0 auto;
+}
+
+.nav-price-action:active {
+  background: color-mix(in srgb, var(--primary-600) 16%, var(--surface-raised));
+}
+
+.collapse-nav.is-condensed .nav-context {
+  display: none;
+}
+
+@media screen {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .nav-price-action {
+    border-color: var(--command-card-border, rgba(255, 255, 255, 0.12));
+    background: color-mix(in srgb, var(--primary-600) 14%, transparent);
+  }
+
+  :root[data-theme="premium"] .nav-context {
+    color: #c7b8ff;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-price-action:hover {
+    background: color-mix(in srgb, var(--primary-600) 16%, var(--surface-raised));
+  }
+}
+
+@media (max-width: 520px) {
+  .nav-context {
+    max-width: 82px;
+    font-size: 7.5px;
+    letter-spacing: 0.08em;
+  }
+
+  .nav-price-action {
+    gap: 4px;
+    min-height: 32px;
+    padding-inline: 7px;
+    font-size: 9.5px;
+  }
+
+  .nav-price-action svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 350px) {
+  .nav-context {
+    display: none;
+  }
+
+  .nav-price-action span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-price-action {
+    transition: none;
+  }
+}
+
+@media print {
+  .nav-price-action {
+    display: none;
+  }
+}
