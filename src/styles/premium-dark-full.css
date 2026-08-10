@@ -1,0 +1,545 @@
+/* UI-PREMIUM-DARK-FULL-001 r1
+   One visual language across the complete app: ink depth, cool luminous glass,
+   calm typography and a single cyan/teal accent. Gold remains reserved for
+   semantic warning content; it is not the product colour, CTA colour or chrome. */
+
+:root[data-theme="premium"],
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-base: #060912;
+  --surface: #0c121e;
+  --surface-raised: #111a29;
+  --surface-sunken: #080d16;
+  --text-primary: #f4f8fc;
+  --text-secondary: #aab8c8;
+  --text-tertiary: #718197;
+  --border-subtle: rgba(151, 211, 231, 0.10);
+  --border-strong: rgba(151, 211, 231, 0.20);
+
+  --primary-600: #58d5e7;
+  --primary-500: #8be6f1;
+  --primary-050: rgba(88, 213, 231, 0.13);
+  --success-600: #5bd6aa;
+  --success-050: rgba(91, 214, 170, 0.12);
+  --warning-600: #efb85a;
+  --warning-050: rgba(239, 184, 90, 0.12);
+  --danger-600: #ff7f96;
+  --danger-050: rgba(255, 127, 150, 0.12);
+  --focus-ring: #73deeb;
+
+  --hero-from: #08111f;
+  --hero-mid: #102b3d;
+  --hero-to: #1c3556;
+  --hero-glow: rgba(64, 210, 229, 0.34);
+  --hero-highlight: rgba(199, 241, 247, 0.12);
+  --hero-shadow: rgba(0, 5, 14, 0.76);
+  --hero-cta-text: #06121d;
+
+  --color-surface-overlay: rgba(11, 18, 30, 0.92);
+  --color-surface-translucent: rgba(10, 17, 29, 0.76);
+  --color-text-inverse: #06121d;
+  --hairline: rgba(169, 224, 240, 0.11);
+
+  --shadow-raised:
+    0 1px 0 rgba(255, 255, 255, 0.035) inset,
+    0 1px 2px rgba(0, 4, 12, 0.50),
+    0 14px 34px -24px rgba(0, 4, 12, 0.92);
+  --shadow-overlay:
+    0 1px 0 rgba(255, 255, 255, 0.045) inset,
+    0 18px 44px -22px rgba(0, 3, 12, 0.88),
+    0 36px 84px -42px rgba(17, 107, 134, 0.36);
+  --shadow-dock:
+    0 1px 0 rgba(255, 255, 255, 0.055) inset,
+    0 18px 48px -24px rgba(0, 3, 12, 0.94),
+    0 26px 64px -38px rgba(38, 188, 211, 0.30);
+  --shadow-popover:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 22px 56px -24px rgba(0, 3, 12, 0.96);
+  --shadow-fab: 0 12px 30px -12px rgba(88, 213, 231, 0.62);
+
+  --r-control: 13px;
+  --r-card: 22px;
+  --r-tile: 24px;
+  --r-hero: 30px;
+  --r-sheet: 30px;
+  --r-dock: 28px;
+}
+
+@media screen {
+  :root:is([data-theme="premium"], [data-theme="dark"]) body {
+    background:
+      radial-gradient(72rem 46rem at -18% -16%, rgba(59, 196, 224, 0.14), transparent 58%),
+      radial-gradient(58rem 42rem at 112% 8%, rgba(86, 103, 220, 0.11), transparent 62%),
+      radial-gradient(44rem 34rem at 48% 116%, rgba(37, 174, 181, 0.08), transparent 64%),
+      linear-gradient(180deg, #050811 0%, var(--bg-base) 46%, #070b13 100%);
+    background-attachment: fixed;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.30;
+    background-image:
+      linear-gradient(rgba(159, 224, 240, 0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(159, 224, 240, 0.018) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, black, transparent 76%);
+    -webkit-mask-image: linear-gradient(to bottom, black, transparent 76%);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) ::selection {
+    background: rgba(88, 213, 231, 0.28);
+    color: #ffffff;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .app-shell {
+    position: relative;
+  }
+
+  /* Shared surfaces. Tokens already cover every screen; these rules provide
+     the same edge light and depth to the main reusable surface families. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .card,
+    .surface-raised,
+    .bento-tile,
+    .insight-card,
+    .action-item,
+    .next-goal-row,
+    .settings-card,
+    .settings-disclosure,
+    .modal,
+    .action-menu-panel,
+    .avatar-menu-portal
+  ) {
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 44%),
+      linear-gradient(180deg, rgba(17, 26, 41, 0.97), rgba(10, 16, 27, 0.97));
+    border-color: rgba(154, 220, 237, 0.12);
+    box-shadow: var(--shadow-raised);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .card,
+    .surface-raised,
+    .bento-tile,
+    .insight-card,
+    .action-item,
+    .next-goal-row,
+    .settings-card,
+    .settings-disclosure
+  ):hover {
+    border-color: rgba(154, 220, 237, 0.19);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .card,
+    .surface-raised,
+    .bento-tile,
+    .insight-card,
+    .action-item,
+    .next-goal-row,
+    .settings-card,
+    .settings-disclosure,
+    .modal
+  ) {
+    border-radius: var(--r-card);
+  }
+
+  /* Typography is bright but not stark; labels carry cool separation rather
+     than turning the interface into a yellow ornamental theme. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .page-title,
+    .section-title,
+    .collapse-nav-title,
+    .metric-value,
+    .stat-val,
+    .action-title,
+    .next-goal-name,
+    .settings-card-head h3
+  ) {
+    color: var(--text-primary);
+    text-wrap: balance;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .metric-label,
+    .stat-label,
+    .settings-card-eyebrow,
+    .settings-hero-kicker,
+    .hero-label
+  ) {
+    color: #8ba8bb;
+    letter-spacing: 0.095em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .metric-value,
+    .stat-val,
+    .hero-num,
+    .hero-money,
+    .money-lg,
+    .money-md
+  ) {
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 18px rgba(194, 238, 247, 0.045);
+  }
+
+  /* Controls */
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(input, select, textarea) {
+    border-color: rgba(151, 211, 231, 0.13);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+      rgba(6, 11, 20, 0.80);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.025) inset;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(input, select, textarea):hover {
+    border-color: rgba(151, 211, 231, 0.22);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(input, select, textarea):focus {
+    border-color: rgba(88, 213, 231, 0.72);
+    box-shadow: 0 0 0 3px rgba(88, 213, 231, 0.11);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) button:not(.danger):not(.ghost):not(.secondary):not(.icon-btn) {
+    box-shadow: 0 10px 24px -17px rgba(88, 213, 231, 0.72);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .settings-primary-action,
+    .btn-link,
+    .fab
+  ) {
+    background: linear-gradient(135deg, #75e3ed 0%, #41bfd4 54%, #5489e6 135%);
+    color: #06121d;
+    border: 1px solid rgba(205, 249, 255, 0.34);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.25) inset,
+      0 14px 28px -16px rgba(60, 204, 225, 0.78);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    button.secondary,
+    .settings-secondary-action,
+    .hero-cta
+  ) {
+    border-color: rgba(130, 219, 235, 0.24);
+    background: rgba(96, 205, 224, 0.08);
+    color: #9ae8f0;
+    box-shadow: none;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    button.secondary,
+    .settings-secondary-action,
+    .hero-cta
+  ):hover:not(:disabled) {
+    background: rgba(96, 205, 224, 0.14);
+    border-color: rgba(130, 219, 235, 0.34);
+  }
+
+  /* Fixed chrome: restrained glass with a cool edge, never a golden bar. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .collapse-nav.is-condensed {
+    background:
+      linear-gradient(180deg, rgba(8, 14, 24, 0.90), rgba(8, 14, 24, 0.72));
+    border-bottom-color: rgba(159, 224, 240, 0.10);
+    box-shadow: 0 12px 38px -30px rgba(47, 190, 214, 0.50);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .nav-logo {
+    background:
+      radial-gradient(circle at 28% 22%, rgba(232, 252, 255, 0.42), transparent 26%),
+      linear-gradient(145deg, #54d5e5 0%, #397fc7 58%, #5045a8 118%);
+    border: 1px solid rgba(183, 239, 249, 0.30);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.22) inset,
+      0 8px 22px -10px rgba(65, 202, 224, 0.72);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .avatar-sm {
+    border-color: rgba(168, 228, 241, 0.18);
+    box-shadow: 0 0 0 3px rgba(88, 213, 231, 0.055);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .menu-scrim {
+    background: rgba(1, 5, 13, 0.48);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .avatar-menu-portal,
+    .action-menu-panel,
+    .modal
+  ) {
+    border-color: rgba(153, 220, 237, 0.16);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.045), transparent 42%),
+      rgba(9, 15, 26, 0.94);
+    box-shadow: var(--shadow-overlay);
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+      .avatar-menu-portal,
+      .action-menu-panel,
+      .modal
+    ) {
+      backdrop-filter: blur(24px) saturate(145%);
+      -webkit-backdrop-filter: blur(24px) saturate(145%);
+    }
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .avatar-menu-portal .avatar-menu-item:hover {
+    background: rgba(88, 213, 231, 0.075);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .sidebar {
+    background:
+      linear-gradient(180deg, rgba(15, 24, 39, 0.96), rgba(7, 12, 21, 0.98));
+    border-right-color: rgba(159, 224, 240, 0.09);
+    box-shadow: 22px 0 52px -44px rgba(43, 191, 216, 0.42);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .sidebar-nav a.active {
+    background: rgba(88, 213, 231, 0.11);
+    color: #8be6f1;
+    box-shadow: 0 0 0 1px rgba(88, 213, 231, 0.08) inset;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .bottom-dock-inner {
+    border-color: rgba(156, 224, 240, 0.15);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.045), transparent 46%),
+      rgba(8, 14, 24, 0.90);
+    box-shadow: var(--shadow-dock);
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    :root:is([data-theme="premium"], [data-theme="dark"]) .bottom-dock-inner {
+      background: rgba(8, 14, 24, 0.70);
+      backdrop-filter: blur(28px) saturate(160%);
+      -webkit-backdrop-filter: blur(28px) saturate(160%);
+    }
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .dock-item.active::before {
+    background:
+      linear-gradient(135deg, rgba(88, 213, 231, 0.17), rgba(84, 137, 230, 0.10));
+    box-shadow: 0 0 0 1px rgba(121, 222, 237, 0.075) inset;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .app-shell::after {
+    background: linear-gradient(
+      to top,
+      var(--bg-base) 0%,
+      rgba(6, 9, 18, 0.70) 48%,
+      transparent 100%
+    );
+  }
+
+  /* Hero family: midnight, cyan aurora and a quiet violet undertone. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .hero-v8,
+    .settings-hero,
+    .mesh-hero,
+    .bento-hero
+  ) {
+    border: 1px solid rgba(151, 224, 240, 0.15);
+    background:
+      radial-gradient(ellipse 68% 62% at 94% 3%, rgba(94, 226, 238, 0.24), transparent 58%),
+      radial-gradient(ellipse 58% 52% at 2% 102%, rgba(96, 91, 205, 0.20), transparent 60%),
+      linear-gradient(145deg, #07101d 0%, #10283a 50%, #172d4d 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.075) inset,
+      0 26px 64px -34px rgba(0, 3, 12, 0.98),
+      0 28px 66px -48px rgba(53, 201, 224, 0.64);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .hero-noise {
+    opacity: 0.035;
+    mix-blend-mode: soft-light;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .hero-delta,
+    .hero-delta-pill,
+    .settings-save-pill
+  ) {
+    border: 1px solid rgba(183, 237, 246, 0.12);
+    background: rgba(3, 11, 20, 0.28);
+    color: rgba(239, 251, 253, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .alloc-bar,
+    .alloc-v8
+  ) {
+    background: rgba(204, 241, 247, 0.10);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .alloc-vwce,
+    .alloc-seg-v8.vwce
+  ) {
+    background: linear-gradient(90deg, #87e7ef, #b4f3f5);
+    box-shadow: 0 0 14px rgba(88, 213, 231, 0.30);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .alloc-cash,
+    .alloc-seg-v8.cash
+  ) {
+    background: rgba(183, 202, 218, 0.36);
+  }
+
+  /* Overview and content rows */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .stat-strip {
+    padding: 12px 10px 2px;
+    border: 1px solid rgba(151, 211, 231, 0.075);
+    border-radius: 18px;
+    background: rgba(10, 16, 27, 0.48);
+    box-shadow: 0 14px 38px -32px rgba(0, 3, 12, 0.92);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .tx-row,
+    .switch-row,
+    .asset-price-item,
+    .group-action,
+    .checklist-list,
+    .settings-disclosure-body,
+    .stat-detail-list
+  ) {
+    border-color: rgba(151, 211, 231, 0.085);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .tx-icon,
+    .action-icon.pri-low,
+    .settings-icon-bubble
+  ) {
+    background: rgba(88, 213, 231, 0.105);
+    color: #78dfeb;
+    box-shadow: 0 0 0 1px rgba(88, 213, 231, 0.055) inset;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .asset-price-item.open,
+    .asset-price-row:hover:not(:disabled),
+    .group-action:hover:not(:disabled),
+    .settings-tab:hover:not(:disabled)
+  ) {
+    background: rgba(88, 213, 231, 0.055);
+  }
+
+  /* Settings gets the same language instead of a separate ornamental skin. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .settings-tabs {
+    border-color: rgba(151, 211, 231, 0.13);
+    background: rgba(8, 14, 24, 0.76);
+    box-shadow: var(--shadow-raised);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .settings-tab.active {
+    background: linear-gradient(145deg, rgba(88, 213, 231, 0.14), rgba(84, 137, 230, 0.09));
+    color: #9ae8f0;
+    box-shadow: 0 0 0 1px rgba(88, 213, 231, 0.09) inset;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .assumption-tile,
+    .settings-inline-status,
+    .settings-form-note,
+    .settings-empty-note
+  ) {
+    border: 1px solid rgba(151, 211, 231, 0.075);
+    background: rgba(5, 10, 18, 0.58);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .seg-control {
+    border: 1px solid rgba(151, 211, 231, 0.075);
+    background: rgba(5, 10, 18, 0.68);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .seg-opt.active {
+    background: rgba(88, 213, 231, 0.11);
+    color: #dffafe;
+    box-shadow: 0 0 0 1px rgba(88, 213, 231, 0.08) inset;
+  }
+
+  /* Semantic states keep their meaning; warning amber is intentionally local
+     and cannot become the app-wide accent. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .banner,
+    .pill,
+    .status-chip,
+    .source-chip,
+    .sync-badge
+  ) {
+    border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .progress-track {
+    background: rgba(164, 205, 220, 0.09);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .progress-track > span {
+    background: linear-gradient(90deg, #4fcbdc, #77e2e9);
+    box-shadow: 0 0 14px rgba(88, 213, 231, 0.26);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .ring-fg {
+    stroke: #58d5e7;
+    filter: drop-shadow(0 0 4px rgba(88, 213, 231, 0.28));
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .timeline-dot {
+    border-color: #0b121e;
+    box-shadow: 0 0 0 3px rgba(88, 213, 231, 0.10);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(119, 156, 177, 0.07) 25%,
+      rgba(140, 209, 224, 0.14) 50%,
+      rgba(119, 156, 177, 0.07) 75%
+    );
+    background-size: 200% 100%;
+  }
+}
+
+@media screen and (max-width: 520px) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .hero-v8,
+    .settings-hero,
+    .mesh-hero,
+    .bento-hero
+  ) {
+    border-radius: 24px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .hero-num {
+    letter-spacing: -0.035em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) :is(
+    .card,
+    .surface-raised,
+    .bento-tile,
+    .insight-card,
+    .action-item,
+    .next-goal-row,
+    button
+  ) {
+    transition: none !important;
+  }
+}
