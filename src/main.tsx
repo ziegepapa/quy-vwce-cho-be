@@ -12,6 +12,7 @@ import "./styles/overview-v8.css";
 import "./styles/settings-v9.css";
 import "./styles/pulse-locked-v2.css";
 import "./styles/ai-trace.css";
+import "./styles/premium-dark-full.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
