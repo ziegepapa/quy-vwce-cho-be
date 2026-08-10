@@ -1,13 +1,15 @@
 /**
- * PRICE-FALLBACK-001 — provider failover behaviour.
+ * PRICE-FALLBACK-001 + PRICE-SOURCE-FRESHEST-001 provider behaviour.
  * Run: node --test scripts/price-fallback.test.mjs
  *
- * Four branches:
- *   FIX_1 cross-check unreadable  -> keep the primary price, drop the stamp
- *   FIX_1 cross-check disagrees   -> refuse to write
- *   FIX_2 provider adapters       -> table driven, no hardcoded id checks
- *   FIX_3 primary down            -> onvista becomes the recorded source
- *   FIX_4 every source down       -> keep the previous quote, no empty feed
+ * Covered branches:
+ *   cross-check unreadable       -> keep the primary price, drop the stamp
+ *   cross-check disagrees        -> refuse to write
+ *   provider adapters            -> table driven, no hardcoded id checks
+ *   primary down                 -> onvista becomes the recorded source
+ *   primary stale but valid      -> the fresher closed onvista session wins
+ *   before close                 -> neither source may promote today's quote
+ *   every source down            -> keep the previous quote, no empty feed
  * Plus: the three decideQuoteWrite gates still apply to fallback quotes.
  */
 import { describe, it } from "node:test";
@@ -40,6 +42,8 @@ const AFTER_CLOSE = new Date("2026-08-03T17:00:00.000Z");
 // 11:00 Europe/Berlin — mid session, today must not be used.
 const PRE_CLOSE = new Date("2026-08-03T09:00:00.000Z");
 const FETCHED_AT = new Date("2026-08-03T17:05:00.000Z");
+const MONDAY_AFTER_CLOSE = new Date("2026-08-10T17:00:00.000Z");
+const MONDAY_PRE_CLOSE = new Date("2026-08-10T14:30:00.000Z");
 
 function vwce() {
   const reg = loadRegistry(REGISTRY);
@@ -52,13 +56,41 @@ function yahooFixture() {
   return JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
 }
 
+function yahooBodyForSession({ asOf, close }) {
+  return {
+    chart: {
+      error: null,
+      result: [
+        {
+          meta: {
+            symbol: "VWCE.DE",
+            currency: "EUR",
+            fullExchangeName: "XETRA",
+            exchangeName: "GER",
+            instrumentType: "ETF",
+            longName: "Vanguard FTSE All-World UCITS ETF USD Accumulating",
+          },
+          timestamp: [Date.parse(`${asOf}T16:30:00.000Z`) / 1000],
+          indicators: { quote: [{ close: [close] }] },
+        },
+      ],
+    },
+  };
+}
+
 /** What the Yahoo adapter makes of the fixture, so tests never hardcode a price. */
 function yahooExpected() {
   return parseYahooChart(yahooFixture(), AFTER_CLOSE, vwce());
 }
 
 /** Structurally valid onvista snapshot body. */
-function onvistaBody({ last, previousLast = null }) {
+function onvistaBody({
+  last,
+  previousLast = null,
+  datetimeLast = "2026-08-03T17:35:00+02:00",
+  datetimePreviousLast =
+    previousLast == null ? null : "2026-07-31T17:35:00+02:00",
+}) {
   return {
     instrument: { isin: "IE00BK5BQT80" },
     quoteList: {
@@ -68,9 +100,8 @@ function onvistaBody({ last, previousLast = null }) {
           isoCurrency: "EUR",
           last,
           previousLast,
-          datetimeLast: "2026-08-03T17:35:00+02:00",
-          datetimePreviousLast:
-            previousLast == null ? null : "2026-07-31T17:35:00+02:00",
+          datetimeLast,
+          datetimePreviousLast,
         },
       ],
     },
@@ -164,6 +195,49 @@ describe("FIX_1 — an unreadable cross-check no longer kills the price", () => 
         }),
       (e) => e.code === ONVISTA_MISMATCH,
     );
+  });
+});
+
+describe("PRICE-SOURCE-FRESHEST-001 — newest closed session wins", () => {
+  it("promotes onvista when Yahoo is valid but one closed session behind", async () => {
+    const resolved = await resolveInstrumentQuote(vwce(), {
+      now: MONDAY_AFTER_CLOSE,
+      fetchedAt: new Date("2026-08-10T17:05:00.000Z"),
+      yahooBody: yahooBodyForSession({ asOf: "2026-08-07", close: 168.38 }),
+      onvistaBody: onvistaBody({
+        last: 169.12,
+        previousLast: 168.38,
+        datetimeLast: "2026-08-10T18:05:00+02:00",
+        datetimePreviousLast: "2026-08-07T17:35:00+02:00",
+      }),
+    });
+
+    assert.equal(resolved.provider, "onvista");
+    assert.equal(resolved.price, 169.12);
+    assert.equal(resolved.asOf, "2026-08-10");
+    assert.equal(resolved.crossCheckedWith, undefined);
+    assert.equal(resolved.degraded, true);
+    assert.ok(resolved.warnings.some((w) => /newer than yahoo/i.test(w)));
+  });
+
+  it("before close refuses today's onvista quote and keeps the shared Friday session", async () => {
+    const resolved = await resolveInstrumentQuote(vwce(), {
+      now: MONDAY_PRE_CLOSE,
+      fetchedAt: new Date("2026-08-10T14:35:00.000Z"),
+      yahooBody: yahooBodyForSession({ asOf: "2026-08-07", close: 168.38 }),
+      onvistaBody: onvistaBody({
+        last: 169.12,
+        previousLast: 168.38,
+        datetimeLast: "2026-08-10T16:20:00+02:00",
+        datetimePreviousLast: "2026-08-07T17:35:00+02:00",
+      }),
+    });
+
+    assert.equal(resolved.provider, "yahoo_finance_chart");
+    assert.equal(resolved.price, 168.38);
+    assert.equal(resolved.asOf, "2026-08-07");
+    assert.equal(resolved.crossCheckedWith, "onvista");
+    assert.equal(resolved.degraded, false);
   });
 });
 
