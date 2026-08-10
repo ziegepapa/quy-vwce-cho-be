@@ -4,6 +4,7 @@ import {
   buildFeedFreshness,
   describeFetchAge,
   describeRefreshResult,
+  formatBotTimestamp,
   formatSessionDate,
 } from "./quoteFreshness";
 import type { QuoteFeedIngestResult } from "./quoteFeed";
@@ -42,6 +43,11 @@ function ingested(overrides: Partial<QuoteFeedIngestResult> = {}): QuoteFeedInge
 describe("feed freshness", () => {
   it("reads a session date as a Vietnamese calendar date", () => {
     expect(formatSessionDate("2026-08-06")).toBe("06/08/2026");
+  });
+
+  it("formats the bot timestamp in Europe/Berlin", () => {
+    expect(formatBotTimestamp("2026-08-07T19:28:54.672Z")).toBe("07/08 lúc 21:28");
+    expect(formatBotTimestamp("not a date")).toBeNull();
   });
 
   it("names the session and its age for the last close", () => {
@@ -95,13 +101,31 @@ describe("feed freshness", () => {
 });
 
 describe("refresh result wording", () => {
-  it("never claims the price is the newest when nothing was written", () => {
-    const { message, level } = describeRefreshResult(ingested(), { now: NOW });
-    expect(message).not.toMatch(/mới nhất/);
+  it("reports an unchanged feed without claiming a market fact", () => {
+    const result = ingested();
+    const { message, level } = describeRefreshResult(result, { now: NOW });
+    expect(message).not.toMatch(/mới nhất|Chưa có phiên mới/);
     expect(level).toBe("current");
-    expect(message).toContain(`phiên ${formatSessionDate(sessionDaysAgo(1))}`);
-    expect(message).toContain("bot lấy 4 giờ trước");
-    expect(message).toContain("1 mã không đổi");
+    expect(message).toContain("Feed chưa thay đổi");
+    expect(message).toContain(`phiên gần nhất ${formatSessionDate(sessionDaysAgo(1))}`);
+    expect(message).toContain(`bot cập nhật ${formatBotTimestamp(result.newestFetchedAt!)}`);
+    expect(message).not.toContain("mã không đổi");
+  });
+
+  it("does not mix calendar-day age with elapsed 24-hour age after a weekend", () => {
+    const { message, level } = describeRefreshResult(
+      ingested({
+        newestAsOf: "2026-08-07",
+        newestFetchedAt: "2026-08-07T19:28:54.672Z",
+        feedGeneratedAt: "2026-08-07T19:28:55.559Z",
+      }),
+      { now: new Date("2026-08-10T14:52:00.000Z") },
+    );
+    expect(level).toBe("aging");
+    expect(message).toBe(
+      "Feed chưa thay đổi · phiên gần nhất 07/08/2026 · bot cập nhật 07/08 lúc 21:28",
+    );
+    expect(message).not.toMatch(/2 ngày|3 ngày|mã không đổi|Chưa có phiên mới/);
   });
 
   it("warns loudly when the feed itself is older than STALE_DAYS", () => {
@@ -116,7 +140,7 @@ describe("refresh result wording", () => {
     );
     expect(level).toBe("stale");
     expect(message).toContain("Nguồn giá đang cũ");
-    expect(message).toContain(`quá ${STALE_DAYS} ngày`);
+    expect(message).toContain(`đã quá ${STALE_DAYS} ngày`);
   });
 
   it("counts only what it actually wrote", () => {
@@ -125,7 +149,16 @@ describe("refresh result wording", () => {
       { now: NOW },
     );
     expect(message).toContain("2 mã đã cập nhật");
-    expect(message).not.toContain("không đổi");
+    expect(message).not.toContain("giữ nguyên");
+  });
+
+  it("keeps an unchanged count only for mixed update results", () => {
+    const { message } = describeRefreshResult(
+      ingested({ updated: 1, unchanged: 1, totalRows: 2, acceptedRows: 2 }),
+      { now: NOW },
+    );
+    expect(message).toContain("1 mã đã cập nhật");
+    expect(message).toContain("1 mã giữ nguyên");
   });
 
   it("keeps the offline and failure sentences unchanged", () => {

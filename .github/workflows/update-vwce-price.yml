@@ -3,8 +3,10 @@ name: Update VWCE price
 on:
   workflow_dispatch:
   schedule:
-    # 18:30 UTC Mon-Fri ~= after Xetra close in summer; still after 18:00 Berlin in winter
-    - cron: "30 18 * * 1-5"
+    # 17:30 UTC Mon-Fri = 19:30 Berlin in summer / 18:30 in winter.
+    # Both are after the registry's 18:00 local closed-session gate, while
+    # publishing one hour earlier than the previous 18:30 UTC slot.
+    - cron: "30 17 * * 1-5"
     # 06:00 UTC Tue-Sat: catch-up for a missed evening run. GitHub schedules are
     # best-effort and are dropped entirely when the queue is loaded, with no
     # make-up run, so a single daily slot means one skipped run leaves the feed
