@@ -56,8 +56,6 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   const [detailOpen, setDetailOpen] = useState(false);
   const [moreActions, setMoreActions] = useState(false);
   const [traceOpen, setTraceOpen] = useState(false);
-  // VISUAL-POLISH-001 r2: stat block collapses by default so the first
-  // screenful focuses on hero + nhip only. Visible at rest; no hover needed.
   const [statStripOpen, setStatStripOpen] = useState(false);
 
   useEffect(() => {
@@ -103,15 +101,11 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     vwcePriceSource,
   } = portfolioSnapshot;
 
-  // OVERVIEW-RHYTHM-001 r1: streak result for the hero ring
   const streakResult = useMemo(
     () => computeContributionStreak(transactions),
     [transactions],
   );
 
-  // OVERVIEW-RHYTHM-001 r2: X_nhip = total contributions within the Nhịp Quỹ
-  // window (CONTRIBUTION_WINDOW_DAYS = 35). Uses the same filter logic as
-  // nhipInsights.ts so hero and block always report the same number.
   const nhipWindowTotal = useMemo(() => {
     const cutoffMs = Date.now() - CONTRIBUTION_WINDOW_DAYS * 86_400_000;
     return transactions
@@ -125,16 +119,6 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       .reduce((s, tx) => s + (Number.isFinite(tx.amount) ? tx.amount : 0), 0);
   }, [transactions]);
 
-  // OVERVIEW-HERO-LIFETIME-001 r1: X_lifetime for the hero goal lines.
-  //
-  // Not portfolio.totalContributed: that figure counts cash_in only, which is
-  // correct for the in-app wallet and legitimately 0 in securities-first mode
-  // — the state that made the hero announce "Đã góp 0,00 € / Y € kế hoạch"
-  // right next to a 35-day line reporting a real contribution.
-  //
-  // The mode expression is deliberately identical to trackInAppCash below, so
-  // the hero and the "An toàn" column can never disagree about which model the
-  // ledger is being read under.
   const heroLifetime = useMemo(
     () =>
       computeHeroLifetimeContribution({
@@ -144,8 +128,6 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     [transactions, settings?.trackInAppCash],
   );
 
-  // NHIP-UI-001 r1: the engine runs here because this is the only place that
-  // holds both the ledger and the effective quote date.
   const nhipInsights = useMemo<NhipInsight[]>(() => {
     if (!settings) return [];
     return buildNhipInsights(
@@ -167,10 +149,6 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   const cash = market.cash;
   const totalKnown = portfolioSnapshot.totalValue;
   const vwceValue = vwcePrice > 0 ? portfolio.vwceQty * vwcePrice : null;
-  // CASH-MODEL-OPTIONAL-001 r1: the owner pays for the ETF from a bank or
-  // broker account this app never sees, so a buy without a matching cash_in is
-  // not a missing deposit unless the double-entry ledger was switched on
-  // deliberately. Absent setting means securities-first.
   const trackInAppCash = settings?.trackInAppCash === true;
   const hero = buildOverviewHero({
     securitiesValue: securitiesKnown,
@@ -184,17 +162,9 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   });
   const today = new Date();
   const yearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-  // VISUAL-POLISH-001 r3: a contribution is a cash_in again, plainly. The old
-  // list also counted buy_vwce and buy_security, but that existed only to stop
-  // the monthly nudge firing forever in securities-first mode -- and the nudge
-  // is now suppressed outright in that mode by the guard below, so the
-  // workaround has nothing left to protect against.
   const hasContributionThisMonth = transactions.some(
     (transaction) => transaction.type === "cash_in" && transaction.date.startsWith(yearMonth),
   );
-  // VISUAL-POLISH-001 r3: "early" no longer prints a setup countdown. It is
-  // kept because it still drives the hero-${mode} class name, which pairs with
-  // the .hero-empty rule; "early" and "active" are deliberately unstyled.
   const mode: "empty" | "early" | "active" =
     hero.status === "empty"
       ? "empty"
@@ -203,17 +173,13 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         : "active";
 
   const insights: Insight[] = [];
-  // VISUAL-POLISH-001 r3: in securities-first mode the money arrives in a bank
-  // account this app never sees, so it has no standing to tell anyone they
-  // forgot to contribute this month. The nudge is for people who opted into
-  // tracking the wallet here.
   if (trackInAppCash && shouldShowContributionNudge({ status: hero.status, hasContributionThisMonth })) {
     insights.push({
       id: "contribution",
       priority: "high",
-      title: "Ch\u01b0a ghi nh\u1eadn \u0111\u00f3ng g\u00f3p th\u00e1ng n\u00e0y",
-      why: "Nh\u1ecbp \u0111\u00f3ng g\u00f3p \u0111\u1ec1u gi\u00fap gi\u1eef \u0111\u00fang k\u1ebf ho\u1ea1ch d\u00e0i h\u1ea1n.",
-      cta: "Ghi nh\u1eadn",
+      title: "Chưa ghi nhận đóng góp tháng này",
+      why: "Nhịp đóng góp đều giúp giữ đúng kế hoạch dài hạn.",
+      cta: "Ghi nhận",
       to: "/transactions",
     });
   }
@@ -221,18 +187,18 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     insights.push({
       id: "price-missing",
       priority: "high",
-      title: `Thi\u1ebfu gi\u00e1 cho ${market.missingIsins.length} m\u00e3`,
-      why: "T\u1ed5ng t\u00e0i s\u1ea3n ch\u01b0a \u0111\u1ea7y \u0111\u1ee7 cho \u0111\u1ebfn khi c\u00f3 gi\u00e1 t\u1eebng ISIN.",
-      cta: "C\u1eadp nh\u1eadt",
+      title: `Thiếu giá cho ${market.missingIsins.length} mã`,
+      why: "Tổng tài sản chưa đầy đủ cho đến khi có giá từng ISIN.",
+      cta: "Cập nhật",
       to: "/settings?tab=prices",
     });
   } else if (!vwcePrice && mode !== "empty" && portfolio.vwceQty > 0) {
     insights.push({
       id: "price",
       priority: "high",
-      title: "Ch\u01b0a c\u1eadp nh\u1eadt gi\u00e1 VWCE",
-      why: "S\u1ed1 li\u1ec7u t\u00e0i s\u1ea3n c\u00f3 th\u1ec3 l\u1ec7ch th\u1ef1c t\u1ebf.",
-      cta: "C\u1eadp nh\u1eadt",
+      title: "Chưa cập nhật giá VWCE",
+      why: "Số liệu tài sản có thể lệch thực tế.",
+      cta: "Cập nhật",
       to: "/settings?tab=prices",
     });
   }
@@ -248,8 +214,8 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       insights.push({
         id: `goal-${goal.id}`,
         priority: "high",
-        title: `${goal.name}: ch\u1eadm ti\u1ebfn \u0111\u1ed9`,
-        why: `C\u00f2n ${months} th\u00e1ng \u00b7 \u0111\u00e3 b\u1ea3o v\u1ec7 ${Math.round((goal.protectedAmount / (adjusted || 1)) * 100)}%.`,
+        title: `${goal.name}: chậm tiến độ`,
+        why: `Còn ${months} tháng · đã bảo vệ ${Math.round((goal.protectedAmount / (adjusted || 1)) * 100)}%.`,
         cta: "Xem",
         to: "/goals",
       });
@@ -257,12 +223,8 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   }
 
   const cashNegative = hero.setupIncomplete;
-  // DEBT_1: the ratio is taken on the same denominator the hero shows, and the
-  // copy always names what it does not include yet.
   const allocation = buildAllocationDisplay(hero);
   const allocationCopy = describeAllocation(allocation);
-  // DEBT_2: the cost basis names the ledger entries behind it, and a withheld
-  // profit and loss names its reason instead of showing a bare dash.
   const costBasis = buildCostBasisDisplay({
     costBasis: portfolio.vwceCostBasis,
     quantity: portfolio.vwceQty,
@@ -299,12 +261,12 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     return instrument?.ticker || instrument?.name || isin;
   };
   const sourceLabel = vwcePriceSource === "manual_quote"
-    ? "Tay \u0111ang th\u1eafng"
+    ? "Tay đang thắng"
     : vwcePriceSource === "auto_quote"
       ? "Auto"
       : vwcePriceSource === "legacy_quote"
-        ? "Gi\u00e1 t\u01b0\u01a1ng th\u00edch c\u0169"
-        : "Ch\u01b0a c\u00f3 gi\u00e1";
+        ? "Giá tương thích cũ"
+        : "Chưa có giá";
   const portfolioTraceModel = buildPortfolioTraceModel({
     totalValue: hero.assets,
     securities: securitiesKnown,
@@ -320,14 +282,6 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
 
   return (
     <div className="ov">
-      {/* OVERVIEW-RHYTHM-001 r1 — Section 1: Hero "Nhịp & Hành trình" */}
-      {/* OVERVIEW-RHYTHM-001 r2: also passes nhipWindowTotal + nhipWindowDays */}
-      {/* OVERVIEW-RHYTHM-001 r3: hero also renders X_lifetime / Y and Z% when a
-          real goal (positive amount + parseable due date) exists. r4 leaves
-          that logic exactly as merged. */}
-      {/* OVERVIEW-HERO-LIFETIME-001 r1: X_lifetime now comes from
-          heroLifetime.amount. totalContributed is still passed, unchanged in
-          meaning, for the empty-state guard. */}
       <RhythmHero
         streak={streakResult}
         goals={goals}
@@ -337,11 +291,10 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
       />
 
-      {/* OVERVIEW-RHYTHM-001 r1 — Section 2: Tổng tài sản (2-line text, no card) */}
       {mode !== "empty" ? (
         <div className="rhythm-assets">
           <p className="rhythm-assets-label">
-            {hasMissingPrices ? "T\u00e0i s\u1ea3n \u0111\u00e3 \u0111\u1ecbnh gi\u00e1" : "T\u1ed5ng t\u00e0i s\u1ea3n"}
+            {hasMissingPrices ? "Tài sản đã định giá" : "Tổng tài sản"}
           </p>
           <button
             type="button"
@@ -351,37 +304,30 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
             <span className="rhythm-assets-value">
               {formatMoney(hero.assets)}
               {hero.pnl != null && hero.pnl !== 0 ? (
-                <>
-                  {" \u00b7 "}
-                  <span className={hero.pnl >= 0 ? "pos" : "neg"}>
-                    {hero.pnl >= 0 ? "+" : ""}{formatMoney(Math.abs(hero.pnl))}
-                    {pnlPct ? ` (${pnlPct}%)` : ""}
-                  </span>
-                </>
+                <span className={hero.pnl >= 0 ? "pos" : "neg"}>
+                  {hero.pnl >= 0 ? "+" : ""}{formatMoney(Math.abs(hero.pnl))}
+                  {pnlPct ? ` (${pnlPct}%)` : ""}
+                </span>
               ) : null}
             </span>
           </button>
         </div>
       ) : null}
 
-      {/* OVERVIEW-SIMPLIFY-001: when the ledger is unfunded this is the only
-          call to action on the page. Nothing competes with it.
-          CASH-MODEL-OPTIONAL-001 r1: in securities-first mode setupIncomplete
-          is always false, so this whole block disables itself. */}
       {cashNegative ? (
         <section className="card">
-          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>{"S\u1ed5 \u0111ang thi\u1ebfu b\u00fat to\u00e1n n\u1ea1p ti\u1ec1n"}</p>
-          <p className="muted" style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.45 }}>{"\u0110\u00e3 ghi mua ho\u1eb7c chi nhi\u1ec1u h\u01a1n s\u1ed1 ti\u1ec1n n\u1ea1p "}{formatMoney(hero.cashShortfall)}{"\u002c n\u00ean s\u1ed1 d\u01b0 an to\u00e0n \u0111ang \u00e2m. Ghi kho\u1ea3n n\u1ea1p t\u01b0\u01a1ng \u1ee9ng \u0111\u1ec3 t\u1ed5ng t\u00e0i s\u1ea3n v\u00e0 l\u00e3i\u2013l\u1ed7 kh\u1edbp l\u1ea1i."}</p>
-          <Link to="/transactions" className="action-item" style={{ minHeight: 44 }}>{"Ghi n\u1ea1p ti\u1ec1n"}</Link>
+          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Sổ đang thiếu bút toán nạp tiền</p>
+          <p className="muted" style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.45 }}>Đã ghi mua hoặc chi nhiều hơn số tiền nạp {formatMoney(hero.cashShortfall)}, nên số dư an toàn đang âm. Ghi khoản nạp tương ứng để tổng tài sản và lãi–lỗ khớp lại.</p>
+          <Link to="/transactions" className="action-item" style={{ minHeight: 44 }}>Ghi nạp tiền</Link>
         </section>
       ) : null}
 
       {nearestGoal && !cashNegative ? (
         <Link to="/goals" className="pulse-goal-line">
-          <span className="pulse-goal-label">{"M\u1ed1c k\u1ebf ti\u1ebfp"}</span>
+          <span className="pulse-goal-label">Mốc kế tiếp</span>
           <strong>{nearestGoal.name}</strong>
-          <span className="pulse-goal-meta">{"C\u00f2n "}{formatMoney(nearestGap)}{" \u00b7 "}{nearestMonths}{" th\u00e1ng"}</span>
-          <span aria-hidden>{"\u203a"}</span>
+          <span className="pulse-goal-meta">Còn {formatMoney(nearestGap)} · {nearestMonths} tháng</span>
+          <span aria-hidden>›</span>
         </Link>
       ) : null}
 
@@ -399,73 +345,59 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       ) : null}
 
       {mode !== "empty" ? (
-        // OVERVIEW-RHYTHM-001 r4: while collapsed the strip is a card wrapped
-        // around a single control -- the "wide frame" the brief calls out. The
-        // state class lets pulse-locked-v2.css drop the frame in that state
-        // only; expanded, the card still groups the five columns it owns.
         <section
           className={`stat-strip${statStripOpen ? "" : " stat-strip-collapsed"}`}
-          aria-label={"Chi ti\u1ebft ph\u00e2n b\u1ed5"}
+          aria-label="Chi tiết phân bổ"
         >
-          {/* VISUAL-POLISH-001 r2: entire stat block defaults to collapsed so
-              the first screenful is hero + nhip only. Visible at rest.
-              OVERVIEW-RHYTHM-001 r4: same button, same handler, same sheet —
-              only its paint changes. */}
           <button
             type="button"
             className="stat-detail-btn"
             onClick={() => setStatStripOpen((open) => !open)}
             aria-expanded={statStripOpen}
           >
-            {"S\u1ed1 li\u1ec7u "}{statStripOpen ? "\u25b4" : "\u25be"}
+            Số liệu {statStripOpen ? "▴" : "▾"}
           </button>
           {statStripOpen ? (
             <>
-              <div className="stat-col"><span className="stat-label">{"CK \u0111\u00e3 \u0111\u1ecbnh gi\u00e1"}</span><span className="stat-val">{formatMoney(securitiesKnown)}</span></div>
+              <div className="stat-col"><span className="stat-label">CK đã định giá</span><span className="stat-val">{formatMoney(securitiesKnown)}</span></div>
               <div className="stat-rule" aria-hidden />
               <div className="stat-col">
-                <span className="stat-label">{"An to\u00e0n"}</span>
+                <span className="stat-label">An toàn</span>
                 {trackInAppCash ? (
                   <span className={`stat-val${cashNegative ? " neg" : ""}`}>{formatMoney(portfolio.cashBalance)}</span>
                 ) : (
                   <>
-                    {/* The column keeps its grid slot on purpose: .stat-strip is a
-                        five-track grid. A neutral dash beats "0 \u20ac", which would be
-                        a claim about a wallet this mode does not maintain. */}
-                    <span className="stat-val">{"\u2014"}</span>
-                    <span className="stat-label" style={{ fontSize: 11, opacity: 0.85 }}>{"Kh\u00f4ng theo d\u00f5i v\u00ed trong app"}</span>
+                    <span className="stat-val">—</span>
+                    <span className="stat-label" style={{ fontSize: 11, opacity: 0.85 }}>Không theo dõi ví trong app</span>
                   </>
                 )}
               </div>
               <div className="stat-rule" aria-hidden />
               <div className="stat-col">
-                <span className="stat-label">{"L\u00e3i\u2013l\u1ed7 VWCE"}</span>
-                <span className={`stat-val ${hero.pnl == null ? "" : hero.pnl >= 0 ? "pos" : "neg"}`}>{hero.pnl != null ? formatMoney(hero.pnl) : "\u2014"}</span>
+                <span className="stat-label">Lãi–lỗ VWCE</span>
+                <span className={`stat-val ${hero.pnl == null ? "" : hero.pnl >= 0 ? "pos" : "neg"}`}>{hero.pnl != null ? formatMoney(hero.pnl) : "—"}</span>
                 {hero.pnl == null && pnlSuppression ? (
                   <span className="stat-label" style={{ fontSize: 11, opacity: 0.85 }}>{pnlSuppression}</span>
                 ) : null}
               </div>
               <button type="button" className="stat-detail-btn" onClick={() => setDetailOpen((open) => !open)} aria-expanded={detailOpen}>
-                {"Chi ti\u1ebft "}{detailOpen ? "\u25b4" : "\u25be"}
+                Chi tiết {detailOpen ? "▴" : "▾"}
               </button>
               {detailOpen ? (
                 <dl className="stat-detail-list">
                   {Object.entries(market.byIsin).map(([isin, row]) => (
                     <div key={isin}>
                       <dt>{instrumentName(isin)}<span className="muted" style={{ display: "block", fontSize: 11 }}>{isin}</span></dt>
-                      <dd>{row.qty.toFixed(4)}{" \u00d7 "}{row.price != null ? formatMoney(row.price) : <span style={{ color: "var(--warning-600)" }}>{"Thi\u1ebfu gi\u00e1"}</span>}{row.value != null ? ` = ${formatMoney(row.value)}` : ""}</dd>
+                      <dd>{row.qty.toFixed(4)} × {row.price != null ? formatMoney(row.price) : <span style={{ color: "var(--warning-600)" }}>Thiếu giá</span>}{row.value != null ? ` = ${formatMoney(row.value)}` : ""}</dd>
                     </div>
                   ))}
                   <div>
-                    <dt>{"Gi\u00e1 v\u1ed1n TB VWCE"}{costBasisCopy.provenance ? <span className="muted" style={{ display: "block", fontSize: 11 }}>{costBasisCopy.provenance}</span> : null}</dt>
+                    <dt>Giá vốn TB VWCE{costBasisCopy.provenance ? <span className="muted" style={{ display: "block", fontSize: 11 }}>{costBasisCopy.provenance}</span> : null}</dt>
                     <dd>{costBasis.avgCost != null ? formatMoney(costBasis.avgCost) : <span className="muted">{costBasisCopy.value}</span>}</dd>
                   </div>
-                  {/* OVERVIEW-HERO-LIFETIME-001 r1: still totalContributed, on
-                      purpose. This row is a bookkeeping figure about the in-app
-                      wallet, not the hero's "how much have I contributed". */}
-                  <div><dt>{"V\u1ed1n \u0111\u00e3 \u0111\u00f3ng"}</dt><dd>{formatMoney(portfolio.totalContributed)}</dd></div>
-                  <div><dt>{"\u0110\u00e3 r\u00fat"}</dt><dd>{formatMoney(portfolio.totalWithdrawn)}</dd></div>
-                  <div><dt>{"Ph\u00ed + thu\u1ebf"}</dt><dd>{formatMoney(portfolio.totalFees + portfolio.totalTax)}</dd></div>
+                  <div><dt>Vốn đã đóng</dt><dd>{formatMoney(portfolio.totalContributed)}</dd></div>
+                  <div><dt>Đã rút</dt><dd>{formatMoney(portfolio.totalWithdrawn)}</dd></div>
+                  <div><dt>Phí + thuế</dt><dd>{formatMoney(portfolio.totalFees + portfolio.totalTax)}</dd></div>
                 </dl>
               ) : null}
             </>
@@ -477,15 +409,15 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         <section className="action-stack">
           <Link to={primary.to} className="action-item">
             <div className={`action-icon pri-${primary.priority}`} aria-hidden>!</div>
-            <div className="action-body"><p className="action-title">{primary.title}</p><p className="action-why">{primary.why}</p><span className="action-cta">{primary.cta}{" \u2192"}</span></div>
+            <div className="action-body"><p className="action-title">{primary.title}</p><p className="action-why">{primary.why}</p><span className="action-cta">{primary.cta} →</span></div>
           </Link>
           {remainingInsights.length > 0 ? (
             <>
-              <button type="button" className="action-more" onClick={() => setMoreActions((open) => !open)}>{moreActions ? "Thu g\u1ecdn" : `+${remainingInsights.length} vi\u1ec7c kh\u00e1c`}</button>
+              <button type="button" className="action-more" onClick={() => setMoreActions((open) => !open)}>{moreActions ? "Thu gọn" : `+${remainingInsights.length} việc khác`}</button>
               {moreActions ? remainingInsights.map((insight) => (
                 <Link key={insight.id} to={insight.to} className="action-item action-item-sm">
                   <div className={`action-icon pri-${insight.priority}`} aria-hidden>i</div>
-                  <div className="action-body"><p className="action-title">{insight.title}</p><span className="action-cta">{insight.cta}{" \u2192"}</span></div>
+                  <div className="action-body"><p className="action-title">{insight.title}</p><span className="action-cta">{insight.cta} →</span></div>
                 </Link>
               )) : null}
             </>
@@ -493,7 +425,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         </section>
       ) : null}
 
-      <p className="ov-foot">{"Kh\u00f4ng ph\u1ea3i t\u01b0 v\u1ea5n \u0111\u1ea7u t\u01b0. What-if l\u00e0 \u01b0\u1edbc t\u00ednh; giao d\u1ecbch v\u1eabn l\u1ea5y t\u1eeb s\u1ed5 local."}</p>
+      <p className="ov-foot">Không phải tư vấn đầu tư. What-if là ước tính; giao dịch vẫn lấy từ sổ local.</p>
 
       <TraceSheet
         open={traceOpen}
