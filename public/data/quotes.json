@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-07T19:28:55.559Z",
+  "generatedAt": "2026-08-10T18:12:40.788Z",
   "quotes": [
     {
       "instrumentIsin": "IE00BK5BQT80",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 168.38,
-      "asOf": "2026-08-07",
-      "fetchedAt": "2026-08-07T19:28:54.672Z",
+      "price": 168.48,
+      "asOf": "2026-08-10",
+      "fetchedAt": "2026-08-10T18:12:40.146Z",
       "source": "auto",
       "provider": "yahoo_finance_chart",
       "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",

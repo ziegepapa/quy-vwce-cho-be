@@ -2,5 +2,16 @@
   "schemaVersion": 1,
   "isin": "IE00BK5BQT80",
   "currency": "EUR",
-  "points": []
+  "points": [
+    {
+      "date": "2026-08-03",
+      "price": 164.36,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-10",
+      "price": 168.48,
+      "source": "cron"
+    }
+  ]
 }
