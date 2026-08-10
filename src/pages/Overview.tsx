@@ -282,37 +282,42 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
 
   return (
     <div className="ov">
-      <RhythmHero
-        streak={streakResult}
-        goals={goals}
-        totalContributed={portfolio.totalContributed}
-        heroLifetimeContribution={heroLifetime.amount}
-        nhipWindowTotal={nhipWindowTotal}
-        nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
-      />
+      <section
+        className={`overview-money-stage${mode === "empty" ? " overview-money-stage--empty" : ""}`}
+        aria-label="Tổng tài sản và nhịp đóng góp"
+      >
+        {mode !== "empty" ? (
+          <div className="rhythm-assets">
+            <p className="rhythm-assets-label">
+              {hasMissingPrices ? "Tài sản đã định giá" : "Tổng tài sản"}
+            </p>
+            <button
+              type="button"
+              className="rhythm-assets-btn"
+              onClick={() => setTraceOpen(true)}
+            >
+              <span className="rhythm-assets-value">
+                {formatMoney(hero.assets)}
+                {hero.pnl != null && hero.pnl !== 0 ? (
+                  <span className={hero.pnl >= 0 ? "pos" : "neg"}>
+                    {hero.pnl >= 0 ? "+" : ""}{formatMoney(Math.abs(hero.pnl))}
+                    {pnlPct ? ` (${pnlPct}%)` : ""}
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          </div>
+        ) : null}
 
-      {mode !== "empty" ? (
-        <div className="rhythm-assets">
-          <p className="rhythm-assets-label">
-            {hasMissingPrices ? "Tài sản đã định giá" : "Tổng tài sản"}
-          </p>
-          <button
-            type="button"
-            className="rhythm-assets-btn"
-            onClick={() => setTraceOpen(true)}
-          >
-            <span className="rhythm-assets-value">
-              {formatMoney(hero.assets)}
-              {hero.pnl != null && hero.pnl !== 0 ? (
-                <span className={hero.pnl >= 0 ? "pos" : "neg"}>
-                  {hero.pnl >= 0 ? "+" : ""}{formatMoney(Math.abs(hero.pnl))}
-                  {pnlPct ? ` (${pnlPct}%)` : ""}
-                </span>
-              ) : null}
-            </span>
-          </button>
-        </div>
-      ) : null}
+        <RhythmHero
+          streak={streakResult}
+          goals={goals}
+          totalContributed={portfolio.totalContributed}
+          heroLifetimeContribution={heroLifetime.amount}
+          nhipWindowTotal={nhipWindowTotal}
+          nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
+        />
+      </section>
 
       {cashNegative ? (
         <section className="card">
