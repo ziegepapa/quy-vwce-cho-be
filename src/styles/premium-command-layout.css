@@ -1,0 +1,668 @@
+/* UI-PREMIUM-DARK-FULL-002 r1
+   Structural command-center layer. Unlike the colour skin, this sheet gives
+   every primary screen the same density, hierarchy, list rhythm and large-
+   number language. It never touches domain math, persistence or print. */
+
+@media screen {
+  :root:is([data-theme="premium"], [data-theme="dark"]) {
+    --command-gap: 12px;
+    --command-card-radius: 20px;
+    --command-card-pad: 16px;
+    --command-card-border: rgba(154, 220, 237, 0.12);
+    --command-card-bg:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.032), transparent 46%),
+      linear-gradient(180deg, rgba(16, 25, 40, 0.97), rgba(9, 15, 25, 0.98));
+    --command-muted-bg: rgba(7, 13, 23, 0.66);
+    --command-hairline: rgba(154, 220, 237, 0.09);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .app-shell {
+    width: 100%;
+    max-width: 31rem;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen {
+    width: 100%;
+    min-width: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen > * {
+    min-width: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen :is(
+    .card,
+    .surface-raised,
+    .settings-card,
+    .settings-disclosure,
+    details.card
+  ) {
+    margin-bottom: 0;
+    border: 1px solid var(--command-card-border);
+    border-radius: var(--command-card-radius);
+    background: var(--command-card-bg);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.038) inset,
+      0 16px 38px -30px rgba(0, 3, 12, 0.96);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen :is(
+    .metric-value,
+    .hero-money,
+    .rhythm-assets-value,
+    .stat-val,
+    .pct-input
+  ) {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.025em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen :is(
+    .metric-label,
+    .stat-label,
+    .settings-card-eyebrow
+  ) {
+    color: #87a4b8;
+    font-size: 10px;
+    font-weight: 760;
+    letter-spacing: 0.11em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen :is(
+    input,
+    select,
+    textarea
+  ) {
+    min-height: 44px;
+    border-width: 1px;
+    border-radius: 12px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen .field {
+    margin-bottom: 12px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen .field:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Overview: one command surface, then a large portfolio number and dense rows. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .ov {
+    gap: var(--command-gap);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero {
+    position: relative;
+    overflow: hidden;
+    margin: 0;
+    padding: 18px;
+    border: 1px solid rgba(161, 229, 242, 0.16);
+    border-radius: 24px;
+    background:
+      radial-gradient(72% 88% at 96% 0%, rgba(91, 224, 236, 0.22), transparent 60%),
+      radial-gradient(70% 80% at 2% 108%, rgba(90, 91, 202, 0.22), transparent 62%),
+      linear-gradient(145deg, #07111e 0%, #10283a 54%, #182d4b 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.07) inset,
+      0 28px 64px -42px rgba(54, 203, 224, 0.56),
+      0 22px 52px -34px rgba(0, 3, 12, 0.98);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero::after {
+    content: "";
+    position: absolute;
+    inset: auto -48px -74px auto;
+    width: 178px;
+    height: 178px;
+    border: 1px solid rgba(191, 239, 247, 0.10);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero-inner {
+    position: relative;
+    z-index: 1;
+    min-height: 118px;
+    gap: 18px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-wrap {
+    flex-basis: 35%;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-svg {
+    max-width: 124px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-track {
+    stroke: rgba(169, 222, 235, 0.13);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-fill {
+    stroke: #65d9e8;
+    filter: drop-shadow(0 0 5px rgba(88, 213, 231, 0.32));
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-num {
+    fill: #eefcff;
+    font-size: 10.5px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-sub,
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview :is(
+    .rhythm-line2,
+    .rhythm-goal,
+    .rhythm-caption,
+    .rhythm-empty-copy
+  ) {
+    fill: #9bb4c5;
+    color: #9bb4c5;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-line1 {
+    color: #f4fbfd;
+    font-size: 15px;
+    font-weight: 720;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-line1 .rhythm-x {
+    color: #8be6f1;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-assets {
+    display: grid;
+    gap: 3px;
+    margin: 0;
+    padding: 16px 17px;
+    border: 1px solid var(--command-card-border);
+    border-radius: var(--command-card-radius);
+    background: var(--command-card-bg);
+    box-shadow: var(--shadow-raised);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-assets-label {
+    margin: 0;
+    color: #87a4b8;
+    font-size: 10px;
+    font-weight: 760;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-assets-value {
+    display: block;
+    color: #f5fbfd;
+    font-size: clamp(32px, 9vw, 42px);
+    font-weight: 760;
+    line-height: 1.05;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-assets-value :is(.pos, .neg) {
+    display: block;
+    margin-top: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview :is(
+    .pulse-goal-line,
+    .today-center,
+    .stat-strip:not(.stat-strip-collapsed)
+  ) {
+    margin: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--command-card-border);
+    border-radius: 18px;
+    background: var(--command-card-bg);
+    box-shadow: var(--shadow-raised);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .pulse-goal-line {
+    min-height: 58px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .today-center {
+    padding-top: 14px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .action-stack {
+    gap: 8px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .action-item {
+    min-height: 62px;
+    padding: 12px 14px;
+    border-radius: 17px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .stat-strip {
+    padding-inline: 12px;
+  }
+
+  /* Transactions: filters become a compact control deck and rows a broker list. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div {
+    display: grid;
+    gap: 10px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .row-between:first-child {
+    min-height: 52px;
+    padding: 2px 2px 4px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .page-title {
+    margin: 0;
+    font-size: 25px;
+    font-weight: 760;
+    letter-spacing: -0.04em;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .fab {
+    width: 46px;
+    height: 46px;
+    border-radius: 15px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions section[aria-label="Nhập PDF Trade Republic"] {
+    margin: 0 !important;
+    padding: 10px;
+    border: 1px solid var(--command-card-border);
+    border-radius: 16px;
+    background: var(--command-muted-bg);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions section[aria-label="Nhập PDF Trade Republic"] > button {
+    min-height: 44px;
+    border-style: solid;
+    border-width: 1px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .callout-toggle {
+    margin: 0;
+    min-height: 46px;
+    border: 1px solid var(--command-card-border);
+    border-radius: 15px;
+    background: var(--command-muted-bg);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .field,
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .grid2 {
+    margin: 0;
+    padding: 12px;
+    border: 1px solid var(--command-card-border);
+    border-radius: 17px;
+    background: var(--command-card-bg);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .grid2 {
+    gap: 8px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .grid2 .field {
+    margin: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions > div > .card {
+    padding: 3px 12px !important;
+    overflow: hidden;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-row {
+    min-height: 68px;
+    align-items: center;
+    padding: 11px 2px;
+    border-bottom-color: var(--command-hairline);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    font-size: 16px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-body > .row-between:first-child strong {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-body .metric-value {
+    font-size: 17px !important;
+    font-weight: 760;
+    white-space: nowrap;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-body .muted {
+    display: -webkit-box;
+    overflow: hidden;
+    color: #7e96aa;
+    font-size: 11px;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* Goals: replace the old rail with a dense portfolio-style goal list. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals > div {
+    display: grid;
+    gap: 10px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero {
+    position: relative;
+    overflow: hidden;
+    margin: 0;
+    padding: 18px;
+    border-color: rgba(160, 228, 241, 0.16);
+    border-radius: 24px;
+    background:
+      radial-gradient(75% 105% at 100% 0%, rgba(91, 224, 236, 0.21), transparent 62%),
+      linear-gradient(145deg, #08121f, #10283b 58%, #172c4b);
+    box-shadow: var(--shadow-overlay);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero .progress-ring {
+    width: 88px;
+    height: 88px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero .hero-money {
+    color: #f5fbfd !important;
+    font-size: clamp(30px, 8vw, 38px) !important;
+    font-weight: 760;
+    line-height: 1.05;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .story-banner {
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--command-card-border);
+    border-radius: 16px;
+    background: rgba(71, 186, 206, 0.07);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .timeline {
+    display: grid;
+    gap: 9px;
+    padding-left: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .timeline::before,
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .timeline-dot {
+    display: none;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .timeline-item {
+    margin: 0;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goal-card {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goal-card > div:nth-of-type(2) .metric-value {
+    font-size: 20px;
+    font-weight: 760;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goal-card .progress-track {
+    height: 7px;
+    margin: 10px 0 7px;
+  }
+
+  /* Simulation: a persistent result hero followed by a dense assumption stack. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation > .stack {
+    gap: 10px !important;
+    padding-bottom: 86px !important;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tablist"] {
+    gap: 4px !important;
+    padding: 4px !important;
+    border: 1px solid var(--command-card-border);
+    border-radius: 16px !important;
+    background: rgba(7, 13, 23, 0.80) !important;
+    box-shadow: var(--shadow-raised);
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tab"] {
+    min-width: 0;
+    min-height: 42px !important;
+    padding: 6px 3px !important;
+    border-radius: 12px;
+    box-shadow: none;
+    font-size: 11.5px !important;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tab"][aria-selected="true"] {
+    border: 1px solid rgba(176, 235, 245, 0.16);
+    background: linear-gradient(135deg, rgba(88, 213, 231, 0.18), rgba(84, 137, 230, 0.12));
+    color: #c9f7fb;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tablist"] + div {
+    top: calc(var(--nav-offset) + 4px) !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    border: 1px solid rgba(160, 228, 241, 0.16);
+    border-radius: 22px;
+    background:
+      radial-gradient(75% 115% at 100% 0%, rgba(91, 224, 236, 0.20), transparent 62%),
+      linear-gradient(145deg, rgba(9, 20, 34, 0.97), rgba(17, 40, 58, 0.97) 58%, rgba(24, 45, 75, 0.97)) !important;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 20px 48px -34px rgba(52, 203, 224, 0.58) !important;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tablist"] + div > div:first-child {
+    color: #f4fbfd;
+    font-size: clamp(34px, 10vw, 44px) !important;
+    font-weight: 780 !important;
+    line-height: 1 !important;
+    letter-spacing: -0.05em !important;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation .card {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation details.card > summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px !important;
+    color: #c8d8e4;
+    font-weight: 680;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation .card .metric-value {
+    font-weight: 760;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation :is(th, td) {
+    border-bottom: 1px solid var(--command-hairline);
+  }
+
+  /* Settings: same hero/card cadence as the four primary dock destinations. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-page {
+    gap: 10px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-hero {
+    min-height: 132px;
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-hero h2 {
+    max-width: 300px;
+    font-size: 28px;
+    font-weight: 760;
+    line-height: 1.06;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-tabs {
+    top: calc(var(--nav-total) + 5px);
+    border-radius: 16px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-panel {
+    gap: 10px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-card {
+    padding: 15px;
+    border-radius: 18px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-card-head {
+    margin-bottom: 12px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-card-head h3 {
+    font-size: 17px;
+    font-weight: 720;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .assumption-grid {
+    gap: 8px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .assumption-tile {
+    padding: 11px;
+    border-radius: 14px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .pct-input {
+    min-height: 34px !important;
+    font-size: 23px !important;
+    font-weight: 780;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings :is(
+    .setting-choice-row,
+    .switch-row,
+    .group-action,
+    .asset-price-row
+  ) {
+    min-height: 54px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-disclosure {
+    border-radius: 18px;
+  }
+
+  /* The secondary emergency screen inherits the same card rhythm without a redesign. */
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-notfallmappe :is(.nfm-sec, .nfm-sec-static) {
+    border-color: var(--command-card-border);
+    border-radius: 18px;
+  }
+}
+
+@media screen and (max-width: 430px) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .app-shell {
+    padding-left: max(12px, var(--safe-left)) !important;
+    padding-right: max(12px, var(--safe-right)) !important;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen {
+    --command-gap: 10px;
+    --command-card-radius: 18px;
+    --command-card-pad: 14px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-hero-inner {
+    gap: 13px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-svg {
+    max-width: 108px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-body {
+    gap: 4px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-goal {
+    font-size: 11.5px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero {
+    gap: 13px;
+    padding: 16px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero .progress-ring {
+    width: 76px;
+    height: 76px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-hero {
+    flex-direction: row;
+    min-height: 132px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-save-pill {
+    align-self: flex-start;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-wrap {
+    flex-basis: 32%;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-ring-svg {
+    max-width: 94px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-overview .rhythm-line1 {
+    font-size: 13px;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-hero {
+    flex-direction: column;
+  }
+}
+
+@media screen and (min-width: 760px) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .app-shell {
+    max-width: 52rem;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .settings-health-card,
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-settings .danger-disclosure {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen *,
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen *::before,
+  :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen *::after {
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  .premium-screen {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
