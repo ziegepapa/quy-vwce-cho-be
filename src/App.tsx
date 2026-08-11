@@ -23,6 +23,14 @@ import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
 import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
+import {
+  conflictCtaLabel,
+  hasLogoutBlockers,
+  openSyncConflictSection,
+  readSyncConflictFocusToken,
+  reconcileVisibleLogoutBlockers,
+  type LogoutBlockerCounts,
+} from "./components/SyncConflictSection";
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
 import Goals from "./pages/Goals";
@@ -83,15 +91,7 @@ const NAV: { to: string; label: string; icon: ReactNode }[] = [
   { to: "/settings", label: "Cài đặt", icon: <IconSettings /> },
 ];
 
-type LogoutBlockers = {
-  pending: number;
-  dead: number;
-  conflicts: number;
-};
-
-function hasLogoutBlockers(value: LogoutBlockers): boolean {
-  return value.pending > 0 || value.dead > 0 || value.conflicts > 0;
-}
+type LogoutBlockers = LogoutBlockerCounts;
 
 function describeLogoutBlockers(value: LogoutBlockers): string {
   const parts: string[] = [];
@@ -117,7 +117,8 @@ async function readLogoutBlockers(): Promise<LogoutBlockers> {
 export default function App() {
   const auth = useAuth();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
   const [ready, setReady] = useState(false);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
@@ -144,6 +145,20 @@ export default function App() {
     else setSyncStatus("synced");
     setPending(p);
   }, []);
+
+  const handleConflictResolved = useCallback(async () => {
+    await refreshSyncBadge();
+    const refreshedBlockers = await readLogoutBlockers();
+    setLogoutBlockers((current) => reconcileVisibleLogoutBlockers(current, refreshedBlockers));
+  }, [refreshSyncBadge]);
+
+  const handleOpenSyncConflicts = useCallback(() => {
+    openSyncConflictSection({
+      pathname: location.pathname,
+      search: location.search,
+      navigate: (to, options) => navigate(to, options),
+    });
+  }, [location.pathname, location.search, navigate]);
 
   const handleSettingsChanged = useCallback(async () => {
     setSettings(await getSettings());
@@ -420,6 +435,7 @@ export default function App() {
     auth.user?.email?.split("@")[0] ||
     settings.planName;
   const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
+  const focusConflictRequest = readSyncConflictFocusToken(location.state);
 
   return (
     <div className="app-layout">
@@ -473,9 +489,9 @@ export default function App() {
                 <button
                   type="button"
                   className="ghost"
-                  onClick={() => navigate("/settings?tab=data")}
+                  onClick={handleOpenSyncConflicts}
                 >
-                  Mở trạng thái dữ liệu
+                  {conflictCtaLabel(logoutBlockers.conflicts)}
                 </button>
               ) : null}
             </div>
@@ -504,6 +520,8 @@ export default function App() {
                     refreshKey={quoteRefreshVersion}
                     onQuotesChanged={handleQuotesChanged}
                     onSettingsChanged={handleSettingsChanged}
+                    onConflictResolved={handleConflictResolved}
+                    focusConflictRequest={focusConflictRequest}
                   />
                 }
               />
