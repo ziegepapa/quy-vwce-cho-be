@@ -288,7 +288,11 @@ export default function SyncConflictSection({
       }
 
       setPendingChoice(null);
-      setCardFeedback((current) => ({ ...current, [choice.conflictId]: result.reason }));
+      const reason =
+        result.status === "needs-network-verification" || result.status === "failed"
+          ? result.reason
+          : "Không thể áp dụng lựa chọn; dữ liệu được giữ nguyên.";
+      setCardFeedback((current) => ({ ...current, [choice.conflictId]: reason }));
       returnFocusToTrigger();
     } catch {
       setPendingChoice(null);
