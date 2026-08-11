@@ -16,10 +16,13 @@ import { saveSyncMeta } from "../lib/sync/engine";
 type Props = {
   userId: string;
   onDone: () => void;
-  onSkip: () => void;
+  /** Soft dismiss only — must not mark recovery complete or clear local data. */
+  onBack: () => void;
 };
 
-export default function MigrateWizard({ userId, onDone, onSkip }: Props) {
+type Phase = "review" | "confirm";
+
+export default function MigrateWizard({ userId, onDone, onBack }: Props) {
   const [counts, setCounts] = useState({
     settings: 0,
     goals: 0,
@@ -32,6 +35,8 @@ export default function MigrateWizard({ userId, onDone, onSkip }: Props) {
   const [vwceQty, setVwceQty] = useState(0);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [phase, setPhase] = useState<Phase>("review");
+  const [backupReady, setBackupReady] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -68,13 +73,31 @@ export default function MigrateWizard({ userId, onDone, onSkip }: Props) {
     a.click();
   }
 
-  async function confirmMigrate() {
-    if (!confirm("Xác nhận đẩy dữ liệu local lên tài khoản? Đã tải backup chưa?")) return;
+  async function beginRestore() {
+    if (busy || total === 0) return;
     setBusy(true);
     setMsg("");
     try {
       await downloadBackup();
-      // enqueue all local rows for push
+      setBackupReady(true);
+      setPhase("confirm");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Không tạo được bản sao lưu.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmRestore() {
+    if (busy || total === 0) return;
+    setBusy(true);
+    setMsg("");
+    try {
+      if (!backupReady) {
+        await downloadBackup();
+        setBackupReady(true);
+      }
+      // enqueue all local rows for push — conflict-safe on server mismatch
       const settings = await db.settings.toArray();
       for (const row of settings) {
         await enqueueOutbox("settings", row.id, "upsert", row, 1);
@@ -101,29 +124,30 @@ export default function MigrateWizard({ userId, onDone, onSkip }: Props) {
       );
       onDone();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Lỗi nhập");
+      setMsg(e instanceof Error ? e.message : "Lỗi khôi phục");
     } finally {
       setBusy(false);
     }
   }
 
-  async function skip() {
-    await saveSyncMeta({ userId, migrateWizardSkipped: true });
-    onSkip();
+  function handleBack() {
+    // Soft dismiss only — local data and recovery requirement stay intact.
+    setPhase("review");
+    setMsg("Dữ liệu trên thiết bị vẫn được giữ. Hãy khôi phục khi bạn sẵn sàng.");
+    onBack();
   }
 
   return (
     <div className="app-shell">
       <div className="card">
-        <h1 className="page-title">Nhập dữ liệu local</h1>
+        <h1 className="page-title">Khôi phục dữ liệu trên thiết bị</h1>
         <p className="muted">
-          Phát hiện dữ liệu trên thiết bị này (bản MVP). Xem trước rồi xác nhận — không tự động
-          ghi đè cloud.
+          Đã tìm thấy dữ liệu trên thiết bị này. Khôi phục để dùng lại với tài khoản của bạn.
         </p>
         <table style={{ width: "100%", fontSize: ".9rem" }}>
           <tbody>
             <tr>
-              <td>Settings</td>
+              <td>Cài đặt</td>
               <td>{counts.settings}</td>
             </tr>
             <tr>
@@ -148,14 +172,43 @@ export default function MigrateWizard({ userId, onDone, onSkip }: Props) {
         <p className="muted">
           Vốn đã đóng (ước tính): {formatMoney(contrib)} · VWCE SL: {vwceQty.toFixed(4)}
         </p>
-        {msg && <div className="banner">{msg}</div>}
+        {msg && (
+          <div className="banner" role="status">
+            {msg}
+          </div>
+        )}
         <div className="stack">
-          <button type="button" disabled={busy || total === 0} onClick={confirmMigrate}>
-            {busy ? "Đang xử lý…" : "Backup + nhập vào tài khoản"}
-          </button>
-          <button type="button" className="secondary" disabled={busy} onClick={skip}>
-            Bỏ qua (có thể mở lại trong Cài đặt)
-          </button>
+          {phase === "review" ? (
+            <>
+              <button type="button" disabled={busy || total === 0} onClick={() => void beginRestore()}>
+                {busy ? "Đang chuẩn bị…" : "Khôi phục dữ liệu trên thiết bị"}
+              </button>
+              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>
+                Quay lại — chưa khôi phục dữ liệu
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="muted">
+                Bản sao lưu an toàn đã được tải. Xác nhận để xếp hàng dữ liệu local vào tài khoản.
+                Không tự ghi đè cloud — xung đột sẽ được tạo nếu server khác phiên bản.
+              </p>
+              <button type="button" disabled={busy || total === 0} onClick={() => void confirmRestore()}>
+                {busy ? "Đang khôi phục…" : "Xác nhận khôi phục dữ liệu"}
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={busy}
+                onClick={() => {
+                  setPhase("review");
+                  setMsg("Chưa khôi phục. Dữ liệu trên thiết bị vẫn được giữ.");
+                }}
+              >
+                Quay lại — chưa khôi phục dữ liệu
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
