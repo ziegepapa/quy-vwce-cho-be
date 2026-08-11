@@ -39,6 +39,19 @@ export type OutboxItem = {
 
 export type ConflictResolution = "local" | "remote" | "remote-deleted";
 
+export type LocalSyncPendingReason = "offline" | "sync-temporarily-unavailable";
+export type LocalPendingConflictReason =
+  | "server-version-changed"
+  | "guarded-update-not-applied";
+export type NetworkVerificationReason =
+  | "offline"
+  | "remote-verification-unavailable"
+  | "remote-version-unavailable";
+export type ConflictResolutionFailureReason =
+  | "conflict-not-found"
+  | "local-state-unavailable"
+  | "atomic-resolution-failed";
+
 export type ConflictRecord = {
   id: string;
   table: EntityTable;
@@ -57,15 +70,26 @@ export type ConflictRecord = {
   remoteDeletedAt?: string | null;
   /** Display-only hint read from the local payload when present. */
   localUpdatedAt?: string | null;
+  /** Safe internal diagnostics only. Never render this code or payloads. */
+  reasonCategory?: LocalPendingConflictReason;
+  /** Exact guarded outbox item that produced this replacement conflict. */
+  sourceOutboxId?: string;
+  /** Original conflict that was atomically resolved local. */
+  supersedesConflictId?: string;
   resolved?: ConflictResolution;
 };
 
 export type ResolveConflictResult =
   | { status: "resolved-local" }
+  | { status: "resolved-local-sync-pending"; reason: LocalSyncPendingReason }
+  | {
+      status: "resolved-local-pending-conflict";
+      reason: LocalPendingConflictReason;
+    }
   | { status: "resolved-remote" }
   | { status: "remote-deleted" }
-  | { status: "needs-network-verification"; reason: string }
-  | { status: "failed"; reason: string };
+  | { status: "needs-network-verification"; reason: NetworkVerificationReason }
+  | { status: "failed"; reason: ConflictResolutionFailureReason };
 
 export type SyncMeta = {
   id: string; // `user_${userId}`

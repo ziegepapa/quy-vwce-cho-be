@@ -5,6 +5,8 @@ import { nowIso, uid } from "../defaults";
 import type {
   ConflictRecord,
   EntityTable,
+  LocalPendingConflictReason,
+  LocalSyncPendingReason,
   OutboxItem,
   ResolveConflictResult,
   SyncMeta,
@@ -30,7 +32,17 @@ const TABLES: EntityTable[] = [
   "monthlySnapshots",
 ];
 
+const userSyncTails = new Map<string, Promise<void>>();
+
 type SyncEntity = Record<string, unknown> & { id: string };
+type SyncLockContext = { networkAllowed: boolean };
+type BrowserLockManager = {
+  request<T>(
+    name: string,
+    options: { mode: "exclusive" },
+    callback: () => Promise<T>,
+  ): Promise<T>;
+};
 
 type VerifiedRemote = {
   state: "present" | "deleted";
@@ -56,11 +68,62 @@ export type ResolveConflictOptions = {
   pushAfterResolve?: boolean;
 };
 
+type SelectedGuardedOutbox = Pick<
+  OutboxItem,
+  "id" | "table" | "entityId" | "version" | "expectedRemoteVersion"
+>;
+
+type PushItemOutcome =
+  | { kind: "confirmed" }
+  | { kind: "sync-pending"; reason: LocalSyncPendingReason; dead: boolean }
+  | {
+      kind: "pending-conflict";
+      reason: LocalPendingConflictReason;
+      dead: boolean;
+    };
+
 class ConditionalWriteMismatchError extends Error {
   constructor() {
-    super("Remote version changed; conditional sync did not update exactly one row.");
+    super("Conditional write mismatch");
     this.name = "ConditionalWriteMismatchError";
   }
+}
+
+function browserLockManager(): BrowserLockManager | null {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return null;
+  const locks = (navigator as Navigator & { locks?: BrowserLockManager }).locks;
+  return locks && typeof locks.request === "function" ? locks : null;
+}
+
+async function enqueueUserSync<T>(userId: string, operation: () => Promise<T>): Promise<T> {
+  const previous = userSyncTails.get(userId) ?? Promise.resolve();
+  let release = () => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const tail = previous.catch(() => undefined).then(() => gate);
+  userSyncTails.set(userId, tail);
+  await previous.catch(() => undefined);
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (userSyncTails.get(userId) === tail) userSyncTails.delete(userId);
+  }
+}
+
+async function withUserSyncLock<T>(
+  userId: string,
+  operation: (context: SyncLockContext) => Promise<T>,
+): Promise<T> {
+  return enqueueUserSync(userId, async () => {
+    if (typeof window === "undefined") return operation({ networkAllowed: true });
+    const locks = browserLockManager();
+    if (!locks) return operation({ networkAllowed: false });
+    return locks.request(`vwce-sync:${userId}`, { mode: "exclusive" }, () =>
+      operation({ networkAllowed: true }),
+    );
+  });
 }
 
 function entityStore(table: EntityTable): Table<SyncEntity, string> {
@@ -126,11 +189,32 @@ function isV2Conflict(conflict: ConflictRecord): boolean {
   );
 }
 
-function priorResolution(conflict: ConflictRecord): ResolveConflictResult | null {
-  if (conflict.resolved === "local") return { status: "resolved-local" };
+async function priorResolution(
+  conflict: ConflictRecord,
+  online: boolean,
+): Promise<ResolveConflictResult | null> {
   if (conflict.resolved === "remote") return { status: "resolved-remote" };
   if (conflict.resolved === "remote-deleted") return { status: "remote-deleted" };
-  return null;
+  if (conflict.resolved !== "local") return null;
+
+  const records = await db.conflicts.where("entityId").equals(conflict.entityId).toArray();
+  const replacement = records.find(
+    (record) => record.table === conflict.table && !record.resolved,
+  );
+  if (replacement) {
+    return {
+      status: "resolved-local-pending-conflict",
+      reason: replacement.reasonCategory ?? "guarded-update-not-applied",
+    };
+  }
+  const pending = await db.outbox.where("entityId").equals(conflict.entityId).toArray();
+  if (pending.some((item) => item.table === conflict.table)) {
+    return {
+      status: "resolved-local-sync-pending",
+      reason: online ? "sync-temporarily-unavailable" : "offline",
+    };
+  }
+  return { status: "resolved-local" };
 }
 
 function withRemoteMetadata(
@@ -152,9 +236,15 @@ async function putUnresolvedConflict(
   entityId: string,
   localPending: OutboxItem,
   remote: VerifiedRemote,
-): Promise<void> {
+  options: {
+    reasonCategory: LocalPendingConflictReason;
+    supersedesConflictId?: string;
+  },
+): Promise<{ conflict: ConflictRecord; created: boolean }> {
   const records = await db.conflicts.where("entityId").equals(entityId).toArray();
-  const existing = records.find((record) => record.table === table && !record.resolved);
+  const matching = records.filter((record) => record.table === table && !record.resolved);
+  const existing =
+    matching.find((record) => record.sourceOutboxId === localPending.id) ?? matching[0];
   const next: ConflictRecord = {
     id: existing?.id ?? uid(),
     table,
@@ -167,8 +257,16 @@ async function putUnresolvedConflict(
     remoteUpdatedAt: remote.updatedAt,
     remoteDeletedAt: remote.deletedAt,
     localUpdatedAt: payloadUpdatedAt(localPending.payload),
+    reasonCategory: options.reasonCategory,
+    sourceOutboxId: localPending.id,
+    ...(options.supersedesConflictId
+      ? { supersedesConflictId: options.supersedesConflictId }
+      : existing?.supersedesConflictId
+        ? { supersedesConflictId: existing.supersedesConflictId }
+        : {}),
   };
   await db.conflicts.put(next);
+  return { conflict: next, created: !existing };
 }
 
 export function computeSyncStatus(opts: {
@@ -216,7 +314,7 @@ export async function fetchCurrentRemote(
   table: EntityTable,
   entityId: string,
 ): Promise<RemoteFetchResult> {
-  if (!supabase) return { state: "unavailable", reason: "Supabase chưa cấu hình." };
+  if (!supabase) return { state: "unavailable", reason: "unavailable" };
   try {
     const { data, error } = await supabase
       .from(REMOTE_TABLE[table])
@@ -224,22 +322,17 @@ export async function fetchCurrentRemote(
       .eq("user_id", userId)
       .eq("id", entityId)
       .maybeSingle();
-    if (error) {
-      return { state: "unavailable", reason: "Không thể xác minh bản server." };
-    }
+    if (error) return { state: "unavailable", reason: "unavailable" };
     if (!data) return { state: "not-found" };
     const parsed = parseRemoteRow(data);
-    if (!parsed) {
-      return { state: "unavailable", reason: "Metadata bản server không hợp lệ." };
-    }
-    return parsed;
+    return parsed ?? { state: "unavailable", reason: "invalid-metadata" };
   } catch {
-    return { state: "unavailable", reason: "Không thể xác minh bản server." };
+    return { state: "unavailable", reason: "unavailable" };
   }
 }
 
 async function pushOne(userId: string, item: OutboxItem): Promise<void> {
-  if (!supabase) throw new Error("Supabase chưa cấu hình");
+  if (!supabase) throw new Error("Sync unavailable");
   const remote = REMOTE_TABLE[item.table];
   if (item.op === "delete") {
     const { error } = await supabase
@@ -247,18 +340,17 @@ async function pushOne(userId: string, item: OutboxItem): Promise<void> {
       .update({ deleted_at: nowIso() })
       .eq("user_id", userId)
       .eq("id", item.entityId);
-    if (error) throw error;
+    if (error) throw new Error("Sync failed");
     return;
   }
 
   if (item.expectedRemoteVersion !== undefined) {
     const cleanPayload = withoutDeletionMarkers(item.payload);
-    if (!cleanPayload) throw new Error("Conditional sync payload không hợp lệ");
+    if (!cleanPayload) throw new Error("Sync failed");
     const mutation = {
       data: cleanPayload,
       version: item.version,
       updated_at: nowIso(),
-      // Local-win against a tombstone is an explicit restore.
       deleted_at: null,
     };
     const { data, error } = await supabase
@@ -268,7 +360,7 @@ async function pushOne(userId: string, item: OutboxItem): Promise<void> {
       .eq("id", item.entityId)
       .eq("version", item.expectedRemoteVersion)
       .select("id");
-    if (error) throw error;
+    if (error) throw new Error("Sync failed");
     if (!data || data.length !== 1) throw new ConditionalWriteMismatchError();
     return;
   }
@@ -282,20 +374,86 @@ async function pushOne(userId: string, item: OutboxItem): Promise<void> {
     deleted_at: null,
   };
   const { error } = await supabase.from(remote).upsert(row, { onConflict: "user_id,id" });
-  if (error) throw error;
+  if (error) throw new Error("Sync failed");
 }
 
-async function refreshConflictAfterConditionalMismatch(
-  userId: string,
-  item: OutboxItem,
-): Promise<void> {
-  const remote = await fetchCurrentRemote(userId, item.table, item.entityId);
-  if (remote.state === "present" || remote.state === "deleted") {
-    await putUnresolvedConflict(item.table, item.entityId, item, remote);
+async function markOutboxFailure(itemId: string): Promise<boolean> {
+  const current = await db.outbox.get(itemId);
+  if (!current) return false;
+  const attempts = current.attempts + 1;
+  const dead = attempts >= 8;
+  await db.outbox.put({
+    ...current,
+    attempts,
+    lastError: "Sync failed",
+    dead: dead ? true : current.dead,
+  });
+  return dead;
+}
+
+async function closeReplacementConflicts(item: OutboxItem): Promise<void> {
+  const records = await db.conflicts.where("entityId").equals(item.entityId).toArray();
+  for (const conflict of records) {
+    if (
+      conflict.table === item.table &&
+      !conflict.resolved &&
+      conflict.sourceOutboxId === item.id
+    ) {
+      await db.conflicts.put({ ...conflict, resolved: "local" });
+    }
   }
 }
 
-export async function pushOutbox(
+async function attemptOutboxItem(
+  userId: string,
+  expectedItem: OutboxItem,
+  supersedesConflictId?: string,
+): Promise<PushItemOutcome> {
+  const item = await db.outbox.get(expectedItem.id);
+  if (
+    !item ||
+    item.table !== expectedItem.table ||
+    item.entityId !== expectedItem.entityId ||
+    item.version !== expectedItem.version ||
+    item.expectedRemoteVersion !== expectedItem.expectedRemoteVersion
+  ) {
+    return { kind: "sync-pending", reason: "sync-temporarily-unavailable", dead: false };
+  }
+
+  try {
+    await pushOne(userId, item);
+    await db.transaction("rw", [db.outbox, db.conflicts], async () => {
+      await db.outbox.delete(item.id);
+      await closeReplacementConflicts(item);
+    });
+    return { kind: "confirmed" };
+  } catch (error) {
+    const dead = await markOutboxFailure(item.id);
+    if (!(error instanceof ConditionalWriteMismatchError)) {
+      return { kind: "sync-pending", reason: "sync-temporarily-unavailable", dead };
+    }
+
+    try {
+      const remote = await fetchCurrentRemote(userId, item.table, item.entityId);
+      if (remote.state !== "present" && remote.state !== "deleted") {
+        return { kind: "sync-pending", reason: "sync-temporarily-unavailable", dead };
+      }
+      const reason: LocalPendingConflictReason =
+        remote.version !== item.expectedRemoteVersion
+          ? "server-version-changed"
+          : "guarded-update-not-applied";
+      await putUnresolvedConflict(item.table, item.entityId, item, remote, {
+        reasonCategory: reason,
+        supersedesConflictId,
+      });
+      return { kind: "pending-conflict", reason, dead };
+    } catch {
+      return { kind: "sync-pending", reason: "sync-temporarily-unavailable", dead };
+    }
+  }
+}
+
+async function pushOutboxUnlocked(
   userId: string,
 ): Promise<{ pushed: number; errors: number; dead: number }> {
   if (!supabase) return { pushed: 0, errors: 0, dead: 0 };
@@ -308,35 +466,28 @@ export async function pushOutbox(
       dead += 1;
       continue;
     }
-    try {
-      await pushOne(userId, item);
-      await db.outbox.delete(item.id);
-      pushed += 1;
-    } catch (error) {
+    const outcome = await attemptOutboxItem(userId, item);
+    if (outcome.kind === "confirmed") pushed += 1;
+    else {
       errors += 1;
-      const attempts = item.attempts + 1;
-      const markDead = attempts >= 8;
-      await db.outbox.put({
-        ...item,
-        attempts,
-        lastError: error instanceof Error ? error.message : "Sync failed",
-        dead: markDead ? true : item.dead,
-      });
-      if (error instanceof ConditionalWriteMismatchError) {
-        try {
-          await refreshConflictAfterConditionalMismatch(userId, item);
-        } catch {
-          // The guarded outbox remains authoritative until verification succeeds.
-        }
-      }
-      if (markDead) dead += 1;
+      if (outcome.dead) dead += 1;
     }
   }
   if (pushed > 0) await saveSyncMeta({ userId, lastPushedAt: nowIso() });
   return { pushed, errors, dead };
 }
 
-export async function pullDelta(userId: string): Promise<{ pulled: number; conflicts: number }> {
+export async function pushOutbox(
+  userId: string,
+): Promise<{ pushed: number; errors: number; dead: number }> {
+  return withUserSyncLock(userId, ({ networkAllowed }) =>
+    networkAllowed
+      ? pushOutboxUnlocked(userId)
+      : Promise.resolve({ pushed: 0, errors: 0, dead: 0 }),
+  );
+}
+
+async function pullDeltaUnlocked(userId: string): Promise<{ pulled: number; conflicts: number }> {
   if (!supabase) return { pulled: 0, conflicts: 0 };
   const meta = await getSyncMeta(userId);
   let pulled = 0;
@@ -351,25 +502,42 @@ export async function pullDelta(userId: string): Promise<{ pulled: number; confl
       .eq("user_id", userId)
       .gt("updated_at", since)
       .order("updated_at", { ascending: true });
-    if (error) throw error;
+    if (error) throw new Error("Sync failed");
     if (!data?.length) continue;
 
     for (const row of data) {
       const entityId = String(row.id);
       const currentRemote = parseRemoteRow(row);
-      if (!currentRemote) throw new Error("Remote sync metadata không hợp lệ");
+      if (!currentRemote) throw new Error("Sync failed");
 
       const pending = await db.outbox.where("entityId").equals(entityId).toArray();
       const localPending = pending.find((item) => item.table === table);
 
       if (localPending && localPending.op === "upsert") {
-        const targetVersionChanged = localPending.version !== currentRemote.version;
-        const guardedVersionChanged =
-          localPending.expectedRemoteVersion !== undefined &&
-          localPending.expectedRemoteVersion !== currentRemote.version;
-        if (targetVersionChanged || guardedVersionChanged) {
-          await putUnresolvedConflict(table, entityId, localPending, currentRemote);
-          conflicts += 1;
+        if (localPending.expectedRemoteVersion !== undefined) {
+          if (localPending.expectedRemoteVersion !== currentRemote.version) {
+            const result = await putUnresolvedConflict(
+              table,
+              entityId,
+              localPending,
+              currentRemote,
+              { reasonCategory: "server-version-changed" },
+            );
+            if (result.created) conflicts += 1;
+          }
+          // A guarded target is intentionally expected+1. Never pull the
+          // expected remote over it while the exact outbox item is pending.
+          continue;
+        }
+        if (localPending.version !== currentRemote.version) {
+          const result = await putUnresolvedConflict(
+            table,
+            entityId,
+            localPending,
+            currentRemote,
+            { reasonCategory: "server-version-changed" },
+          );
+          if (result.created) conflicts += 1;
           continue;
         }
       }
@@ -404,7 +572,7 @@ export async function pullDelta(userId: string): Promise<{ pulled: number; confl
       }
 
       const remotePayload = withoutDeletionMarkers(currentRemote.data);
-      if (!remotePayload) throw new Error("Remote entity payload không hợp lệ");
+      if (!remotePayload) throw new Error("Sync failed");
       const payload = {
         ...remotePayload,
         id: entityId,
@@ -423,19 +591,25 @@ export async function pullDelta(userId: string): Promise<{ pulled: number; confl
   return { pulled, conflicts };
 }
 
-export async function runSync(userId: string): Promise<{
-  status: SyncStatus;
-  pushed: number;
-  pulled: number;
-  conflicts: number;
-}> {
+export async function pullDelta(userId: string): Promise<{ pulled: number; conflicts: number }> {
+  return withUserSyncLock(userId, ({ networkAllowed }) =>
+    networkAllowed
+      ? pullDeltaUnlocked(userId)
+      : Promise.resolve({ pulled: 0, conflicts: 0 }),
+  );
+}
+
+async function runSyncUnlocked(
+  userId: string,
+  networkAllowed: boolean,
+): Promise<{ status: SyncStatus; pushed: number; pulled: number; conflicts: number }> {
   const online = isOnline();
-  if (!online || !supabase) {
+  if (!online || !supabase || !networkAllowed) {
     const pending = await outboxCount();
     const conflicts = (await listConflicts()).length;
     return {
       status: computeSyncStatus({
-        online: false,
+        online: online && networkAllowed,
         syncing: false,
         conflictCount: conflicts,
         pendingOutbox: pending,
@@ -445,8 +619,8 @@ export async function runSync(userId: string): Promise<{
       conflicts,
     };
   }
-  const push = await pushOutbox(userId);
-  const pull = await pullDelta(userId);
+  const push = await pushOutboxUnlocked(userId);
+  const pull = await pullDeltaUnlocked(userId);
   const pending = await outboxCount();
   const conflicts = (await listConflicts()).length;
   return {
@@ -460,6 +634,17 @@ export async function runSync(userId: string): Promise<{
     pulled: pull.pulled,
     conflicts,
   };
+}
+
+export async function runSync(userId: string): Promise<{
+  status: SyncStatus;
+  pushed: number;
+  pulled: number;
+  conflicts: number;
+}> {
+  return withUserSyncLock(userId, ({ networkAllowed }) =>
+    runSyncUnlocked(userId, networkAllowed),
+  );
 }
 
 async function applyRemoteDeletion(
@@ -486,18 +671,20 @@ async function applyRemoteDeletion(
   await store.delete(entityId);
 }
 
-export async function resolveConflict(
+async function resolveConflictUnlocked(
   conflictId: string,
   choice: "local" | "remote",
   userId: string,
-  options: ResolveConflictOptions = {},
+  options: ResolveConflictOptions,
+  networkAllowed: boolean,
 ): Promise<ResolveConflictResult> {
   const initial = await db.conflicts.get(conflictId);
-  if (!initial) return { status: "failed", reason: "Không tìm thấy xung đột." };
-  const alreadyResolved = priorResolution(initial);
+  if (!initial) return { status: "failed", reason: "conflict-not-found" };
+  const actualOnline = isOnline(options.online);
+  const alreadyResolved = await priorResolution(initial, actualOnline);
   if (alreadyResolved) return alreadyResolved;
 
-  const online = isOnline(options.online);
+  const online = actualOnline && networkAllowed;
   const legacy = !isV2Conflict(initial);
   const mustFetch = choice === "remote" || legacy || typeof initial.remoteVersion !== "number";
   let currentRemote: VerifiedRemote | null = null;
@@ -506,7 +693,7 @@ export async function resolveConflict(
     if (!online) {
       return {
         status: "needs-network-verification",
-        reason: "Không thể xác minh bản server; giữ nguyên dữ liệu và thử lại khi online.",
+        reason: actualOnline ? "remote-verification-unavailable" : "offline",
       };
     }
     const fetchRemote = options.fetchRemote ?? fetchCurrentRemote;
@@ -514,7 +701,7 @@ export async function resolveConflict(
     if (fetched.state === "unavailable" || fetched.state === "not-found") {
       return {
         status: "needs-network-verification",
-        reason: "Không thể xác minh bản server; giữ nguyên dữ liệu và thử lại khi online.",
+        reason: "remote-verification-unavailable",
       };
     }
     currentRemote = fetched;
@@ -524,28 +711,33 @@ export async function resolveConflict(
   if (choice === "local" && typeof expectedRemoteVersion !== "number") {
     return {
       status: "needs-network-verification",
-      reason: "Không thể xác minh version server; xung đột chưa được thay đổi.",
+      reason: "remote-version-unavailable",
     };
   }
 
   const store = entityStore(initial.table);
   try {
-    const result = await db.transaction(
+    const transactionResult = await db.transaction(
       "rw",
       [store, db.outbox, db.conflicts],
-      async (): Promise<ResolveConflictResult> => {
+      async (): Promise<
+        | { kind: "result"; result: ResolveConflictResult }
+        | { kind: "local"; item: OutboxItem; originalConflictId: string }
+      > => {
         const conflict = await db.conflicts.get(conflictId);
-        if (!conflict) return { status: "failed", reason: "Không tìm thấy xung đột." };
-        const prior = priorResolution(conflict);
-        if (prior) return prior;
+        if (!conflict) {
+          return { kind: "result", result: { status: "failed", reason: "conflict-not-found" } };
+        }
+        const prior = await priorResolution(conflict, actualOnline);
+        if (prior) return { kind: "result", result: prior };
 
         if (choice === "local") {
           const currentLocal = await store.get(conflict.entityId);
           const cleanLocal = withoutDeletionMarkers(currentLocal);
           if (!cleanLocal) {
             return {
-              status: "failed",
-              reason: "Không tìm thấy bản local hiện tại; xung đột được giữ nguyên.",
+              kind: "result",
+              result: { status: "failed", reason: "local-state-unavailable" },
             };
           }
           const nextVersion =
@@ -564,17 +756,33 @@ export async function resolveConflict(
             nextVersion,
             { expectedRemoteVersion: expectedRemoteVersion as number },
           );
+          const candidates = await db.outbox.where("entityId").equals(conflict.entityId).toArray();
+          const selected = candidates.filter(
+            (item) =>
+              item.table === conflict.table &&
+              item.op === "upsert" &&
+              item.version === nextVersion &&
+              item.expectedRemoteVersion === expectedRemoteVersion,
+          );
+          if (selected.length !== 1) throw new Error("Guarded outbox selection failed");
           const resolved = currentRemote
             ? withRemoteMetadata(conflict, currentRemote)
             : conflict;
           await db.conflicts.put({ ...resolved, resolved: "local" });
-          return { status: "resolved-local" };
+          return {
+            kind: "local",
+            item: selected[0],
+            originalConflictId: conflict.id,
+          };
         }
 
         if (!currentRemote) {
           return {
-            status: "needs-network-verification",
-            reason: "Không thể xác minh bản server; xung đột chưa được thay đổi.",
+            kind: "result",
+            result: {
+              status: "needs-network-verification",
+              reason: "remote-verification-unavailable",
+            },
           };
         }
 
@@ -585,13 +793,11 @@ export async function resolveConflict(
             ...withRemoteMetadata(conflict, currentRemote),
             resolved: "remote-deleted",
           });
-          return { status: "remote-deleted" };
+          return { kind: "result", result: { status: "remote-deleted" } };
         }
 
         const cleanRemote = withoutDeletionMarkers(currentRemote.data);
-        if (!cleanRemote) {
-          throw new Error("Remote entity payload không hợp lệ");
-        }
+        if (!cleanRemote) throw new Error("Invalid remote entity");
         await store.put({
           ...cleanRemote,
           id: conflict.entityId,
@@ -601,24 +807,52 @@ export async function resolveConflict(
           ...withRemoteMetadata(conflict, currentRemote),
           resolved: "remote",
         });
-        return { status: "resolved-remote" };
+        return { kind: "result", result: { status: "resolved-remote" } };
       },
     );
 
-    if (
-      result.status === "resolved-local" &&
-      online &&
-      options.pushAfterResolve !== false
-    ) {
-      await pushOutbox(userId);
+    if (transactionResult.kind === "result") return transactionResult.result;
+    if (!actualOnline) {
+      return { status: "resolved-local-sync-pending", reason: "offline" };
     }
-    return result;
+    if (!networkAllowed || !supabase || options.pushAfterResolve === false) {
+      return {
+        status: "resolved-local-sync-pending",
+        reason: "sync-temporarily-unavailable",
+      };
+    }
+
+    const outcome = await attemptOutboxItem(
+      userId,
+      transactionResult.item,
+      transactionResult.originalConflictId,
+    );
+    if (outcome.kind === "confirmed") {
+      try {
+        await saveSyncMeta({ userId, lastPushedAt: nowIso() });
+      } catch {
+        // Sync confirmation is based on guarded write + exact outbox removal.
+      }
+      return { status: "resolved-local" };
+    }
+    if (outcome.kind === "pending-conflict") {
+      return { status: "resolved-local-pending-conflict", reason: outcome.reason };
+    }
+    return { status: "resolved-local-sync-pending", reason: outcome.reason };
   } catch {
-    return {
-      status: "failed",
-      reason: "Không thể áp dụng resolution atomically; dữ liệu được giữ nguyên.",
-    };
+    return { status: "failed", reason: "atomic-resolution-failed" };
   }
+}
+
+export async function resolveConflict(
+  conflictId: string,
+  choice: "local" | "remote",
+  userId: string,
+  options: ResolveConflictOptions = {},
+): Promise<ResolveConflictResult> {
+  return withUserSyncLock(userId, ({ networkAllowed }) =>
+    resolveConflictUnlocked(conflictId, choice, userId, options, networkAllowed),
+  );
 }
 
 export async function listDeadOutbox(): Promise<OutboxItem[]> {
