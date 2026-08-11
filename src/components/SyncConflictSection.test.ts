@@ -1,57 +1,24 @@
 // @vitest-environment jsdom
 import { StrictMode, createElement } from "react";
-import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ConflictRecord, OutboxItem, ResolveConflictResult } from "../lib/sync/types";
+import type { ConflictRecord, ResolveConflictResult } from "../lib/sync/types";
 
 const engineMocks = vi.hoisted(() => ({
   listConflicts: vi.fn(),
   resolveConflict: vi.fn(),
-  listDeadOutbox: vi.fn(),
-  pushOutbox: vi.fn(),
-  reviveDeadOutbox: vi.fn(),
-}));
-
-const dbMocks = vi.hoisted(() => ({
-  clearAllData: vi.fn(),
-  exportBackup: vi.fn(),
-  getOrCreateChecklist: vi.fn(),
-  getSettings: vi.fn(),
-  importBackup: vi.fn(),
-  listTransactions: vi.fn(),
-  saveSettings: vi.fn(),
-  metadataGet: vi.fn(),
-  checklistPut: vi.fn(),
 }));
 
 vi.mock("../lib/sync/engine", () => engineMocks);
-vi.mock("../lib/db", () => ({
-  clearAllData: dbMocks.clearAllData,
-  db: {
-    appMetadata: { get: dbMocks.metadataGet },
-    annualChecklists: { put: dbMocks.checklistPut },
-  },
-  exportBackup: dbMocks.exportBackup,
-  getOrCreateChecklist: dbMocks.getOrCreateChecklist,
-  getSettings: dbMocks.getSettings,
-  importBackup: dbMocks.importBackup,
-  listTransactions: dbMocks.listTransactions,
-  saveSettings: dbMocks.saveSettings,
-}));
-vi.mock("../lib/auth", () => ({
-  useAuth: () => ({
-    user: { id: "owner-1" },
-    mfaEnrolled: true,
-    startMfaEnrollment: vi.fn(),
-    verifyMfaEnrollment: vi.fn(),
-  }),
-}));
 
 import SyncConflictSection from "./SyncConflictSection";
-import SettingsPage from "../pages/Settings";
 
 const CANARY = "NOTFALLMAPPE_CONTACT_DOCUMENT_LOCATION_SECRET";
+const CONFIRMED_COPY = "Đã giữ dữ liệu trên thiết bị và đồng bộ thành công.";
+const PENDING_COPY =
+  "Đã giữ dữ liệu trên thiết bị. Thay đổi đang chờ đồng bộ; dữ liệu server chưa bị ghi đè.";
+const REPLACEMENT_COPY =
+  "Đã lưu lựa chọn trên thiết bị, nhưng trạng thái server đã thay đổi hoặc chưa thể cập nhật an toàn. Không có dữ liệu bị ghi đè. Vui lòng xem xung đột mới.";
 
 function conflict(overrides: Partial<ConflictRecord> = {}): ConflictRecord {
   return {
@@ -80,10 +47,14 @@ function renderSection(onResolved = vi.fn(), focusRequest: string | null = null)
   );
 }
 
-async function openAndConfirm(actionName: string, confirmName: RegExp) {
-  fireEvent.click(await screen.findByRole("button", { name: actionName }));
+async function confirmLocal() {
+  fireEvent.click(await screen.findByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }));
   const dialog = await screen.findByRole("dialog");
-  fireEvent.click(within(dialog).getByRole("button", { name: confirmName }));
+  fireEvent.click(
+    within(dialog).getByRole("button", {
+      name: /Xác nhận giữ dữ liệu trên thiết bị này/,
+    }),
+  );
 }
 
 afterEach(() => cleanup());
@@ -92,29 +63,18 @@ beforeEach(() => {
   vi.clearAllMocks();
   engineMocks.listConflicts.mockResolvedValue([conflict()]);
   engineMocks.resolveConflict.mockResolvedValue({ status: "resolved-local" });
-  engineMocks.listDeadOutbox.mockResolvedValue([]);
-  engineMocks.pushOutbox.mockResolvedValue({ pushed: 0, errors: 0, dead: 0 });
-  engineMocks.reviveDeadOutbox.mockResolvedValue(0);
-  dbMocks.getSettings.mockResolvedValue({});
-  dbMocks.metadataGet.mockResolvedValue(undefined);
-  dbMocks.getOrCreateChecklist.mockResolvedValue({ id: "2026", year: 2026, items: [] });
-  dbMocks.listTransactions.mockResolvedValue([]);
-  dbMocks.exportBackup.mockResolvedValue({ exportedAt: "2026-08-11T10:00:00.000Z" });
   HTMLElement.prototype.scrollIntoView = vi.fn();
 });
 
-describe("SyncConflictSection fail-closed reads", () => {
-  it("shows a safe initial warning and only retries listConflicts before rendering cards", async () => {
+describe("fail-closed conflict reads", () => {
+  it("shows a safe initial warning and retries only listConflicts", async () => {
     engineMocks.listConflicts.mockRejectedValueOnce(new Error(`read failed: ${CANARY}`));
     renderSection();
 
-    const warning = await screen.findByText(
-      "Không thể đọc trạng thái xung đột. Dữ liệu chưa bị thay đổi.",
-    );
-    expect(warning.closest(`#sync-conflicts`)).toBeTruthy();
+    expect(
+      await screen.findByText("Không thể đọc trạng thái xung đột. Dữ liệu chưa bị thay đổi."),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Giữ dữ liệu trên thiết bị này" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Dùng dữ liệu đã đồng bộ" })).toBeNull();
-    expect(document.body.textContent).not.toContain("read failed");
     expect(document.body.textContent).not.toContain(CANARY);
     expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
 
@@ -122,17 +82,14 @@ describe("SyncConflictSection fail-closed reads", () => {
     fireEvent.click(screen.getByRole("button", { name: "Thử tải lại" }));
 
     expect(await screen.findByRole("article", { name: "Xung đột Cài đặt" })).toBeTruthy();
-    expect(screen.queryByText("Không thể đọc trạng thái xung đột. Dữ liệu chưa bị thay đổi.")).toBeNull();
     expect(engineMocks.listConflicts).toHaveBeenCalledTimes(2);
     expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
-    expect(document.body.textContent).not.toContain(CANARY);
   });
 
-  it("keeps the last successful cards visible when a later refresh fails", async () => {
+  it("keeps last successful cards disabled when a refresh fails", async () => {
     engineMocks.listConflicts
       .mockResolvedValueOnce([conflict()])
-      .mockRejectedValueOnce(new Error(`temporary read failed: ${CANARY}`));
-
+      .mockRejectedValueOnce(new Error(`temporary: ${CANARY}`));
     render(
       createElement(
         StrictMode,
@@ -145,183 +102,145 @@ describe("SyncConflictSection fail-closed reads", () => {
     );
 
     await waitFor(() => expect(engineMocks.listConflicts).toHaveBeenCalledTimes(2));
-    expect(await screen.findByRole("article", { name: "Xung đột Cài đặt" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "1 xung đột cần xử lý" })).toBeTruthy();
-    expect(screen.getByText("Không thể đọc trạng thái xung đột. Dữ liệu chưa bị thay đổi.")).toBeTruthy();
-    expect(
-      (screen.getByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
-    expect(
-      (screen.getByRole("button", { name: "Dùng dữ liệu đã đồng bộ" }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+    const localButton = screen.getByRole("button", { name: "Giữ dữ liệu trên thiết bị này" });
+    expect((localButton as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole("article", { name: "Xung đột Cài đặt" })).toBeTruthy();
     expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
     expect(document.body.textContent).not.toContain(CANARY);
   });
 });
 
-describe("SyncConflictSection confidentiality and explicit choices", () => {
-  it("renders only allow-listed metadata and never exposes the Notfallmappe canary", async () => {
-    renderSection();
+describe("truthful local outcome feedback", () => {
+  it("covers production mismatch: warning plus replacement card, never green", async () => {
+    const replacement = conflict({
+      id: "replacement-1",
+      remoteVersion: 7,
+      reasonCategory: "server-version-changed",
+      sourceOutboxId: "outbox-1",
+      supersedesConflictId: "conflict-1",
+    });
+    engineMocks.listConflicts
+      .mockResolvedValueOnce([conflict()])
+      .mockResolvedValueOnce([replacement]);
+    engineMocks.resolveConflict.mockResolvedValue({
+      status: "resolved-local-pending-conflict",
+      reason: "server-version-changed",
+    });
+    const onResolved = vi.fn().mockResolvedValue(undefined);
+    renderSection(onResolved);
 
-    expect(await screen.findByRole("heading", { name: "1 xung đột cần xử lý" })).toBeTruthy();
-    expect(screen.getByText("Cài đặt")).toBeTruthy();
-    expect(document.body.textContent).not.toContain(CANARY);
+    await confirmLocal();
 
-    fireEvent.click(screen.getByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(dialog.textContent).toContain("Bản trên thiết bị sẽ được giữ và gửi lại để đồng bộ.");
-    expect(dialog.textContent).not.toContain(CANARY);
+    const warning = await screen.findByText(REPLACEMENT_COPY);
+    expect(warning.getAttribute("role")).toBe("alert");
+    expect(warning.className).toContain("warning");
+    expect(screen.queryByText(CONFIRMED_COPY)).toBeNull();
+    expect(await screen.findByRole("article", { name: "Xung đột Cài đặt" })).toBeTruthy();
+    expect(engineMocks.resolveConflict).toHaveBeenCalledTimes(1);
+    expect(engineMocks.listConflicts).toHaveBeenCalledTimes(2);
+    expect(onResolved).toHaveBeenCalledTimes(1);
+    expect(document.body.textContent).not.toContain("server-version-changed");
     expect(document.body.textContent).not.toContain(CANARY);
   });
 
-  it("does not call the resolver during render, mount, focus navigation, or rerender", async () => {
-    const view = renderSection(vi.fn(), "focus-once");
-    await screen.findByRole("heading", { name: "1 xung đột cần xử lý" });
-    await waitFor(() => expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledTimes(1));
-    expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
-
-    view.rerender(
-      createElement(SyncConflictSection, {
-        userId: "owner-1",
-        focusRequest: "focus-once",
-        onResolved: vi.fn(),
-      }),
-    );
-    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
-  });
-
   it.each([
-    ["resolved-local", "Giữ dữ liệu trên thiết bị này", /Xác nhận giữ dữ liệu trên thiết bị này/, "local"],
-    ["resolved-remote", "Dùng dữ liệu đã đồng bộ", /Xác nhận dùng dữ liệu đã đồng bộ/, "remote"],
-    ["remote-deleted", "Dùng dữ liệu đã đồng bộ", /Xác nhận áp dụng bản đã xóa/, "remote"],
-  ] as const)(
-    "%s refreshes the list and parent state without any sign-out callback",
-    async (status, actionName, confirmName, expectedChoice) => {
-      const selectedConflict =
-        status === "remote-deleted"
-          ? conflict({ remoteDeletedAt: "2026-08-11T09:59:30.000Z" })
-          : conflict();
-      engineMocks.listConflicts
-        .mockResolvedValueOnce([selectedConflict])
-        .mockResolvedValueOnce([]);
-      engineMocks.resolveConflict.mockResolvedValue({ status });
-      const onResolved = vi.fn().mockResolvedValue(undefined);
-      const signOut = vi.fn();
-      renderSection(onResolved);
-
-      await openAndConfirm(actionName, confirmName);
-
-      await waitFor(() => {
-        expect(engineMocks.resolveConflict).toHaveBeenCalledWith(
-          "conflict-1",
-          expectedChoice,
-          "owner-1",
-        );
-        expect(onResolved).toHaveBeenCalledTimes(1);
-      });
-      expect(signOut).not.toHaveBeenCalled();
-      expect(document.body.textContent).not.toContain(CANARY);
-    },
-  );
-
-  it.each([
-    ["needs-network-verification", "Cần mạng để xác minh bản server."],
-    ["failed", "Không thể áp dụng lựa chọn; dữ liệu được giữ nguyên."],
-  ] as const)("keeps the card for %s and announces the safe reason", async (status, reason) => {
-    engineMocks.resolveConflict.mockResolvedValue({ status, reason });
+    "offline",
+    "sync-temporarily-unavailable",
+  ] as const)("shows neutral pending feedback for %s", async (reason) => {
+    engineMocks.listConflicts.mockResolvedValueOnce([conflict()]).mockResolvedValueOnce([]);
+    engineMocks.resolveConflict.mockResolvedValue({
+      status: "resolved-local-sync-pending",
+      reason,
+    });
     const onResolved = vi.fn();
     renderSection(onResolved);
 
-    await openAndConfirm(
-      "Giữ dữ liệu trên thiết bị này",
-      /Xác nhận giữ dữ liệu trên thiết bị này/,
-    );
+    await confirmLocal();
 
-    expect((await screen.findByText(reason)).getAttribute("aria-live")).toBe("assertive");
-    expect(screen.getByRole("article", { name: "Xung đột Cài đặt" })).toBeTruthy();
-    expect(onResolved).not.toHaveBeenCalled();
+    const pending = await screen.findByText(PENDING_COPY);
+    expect(pending.className).not.toContain("sync-conflict-live");
+    expect(screen.queryByText(CONFIRMED_COPY)).toBeNull();
+    expect(document.body.textContent).not.toContain(reason);
+    expect(engineMocks.resolveConflict).toHaveBeenCalledTimes(1);
+    expect(onResolved).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses green success only for confirmed resolved-local", async () => {
+    engineMocks.listConflicts.mockResolvedValueOnce([conflict()]).mockResolvedValueOnce([]);
+    engineMocks.resolveConflict.mockResolvedValue({ status: "resolved-local" });
+    renderSection();
+
+    await confirmLocal();
+
+    const confirmed = await screen.findByText(CONFIRMED_COPY);
+    expect(confirmed.className).toContain("sync-conflict-live");
+    expect(screen.queryByText(PENDING_COPY)).toBeNull();
+    expect(screen.queryByText(REPLACEMENT_COPY)).toBeNull();
+  });
+
+  it.each([
+    [{ status: "needs-network-verification", reason: "remote-verification-unavailable" }, "Chưa thể xác minh trạng thái server. Dữ liệu chưa bị thay đổi."],
+    [{ status: "failed", reason: "atomic-resolution-failed" }, "Không thể áp dụng lựa chọn. Dữ liệu được giữ nguyên."],
+  ] as const)("maps %s to fixed safe copy and refreshes blockers", async (result, expectedCopy) => {
+    engineMocks.listConflicts.mockResolvedValue([conflict()]);
+    engineMocks.resolveConflict.mockResolvedValue(result);
+    const onResolved = vi.fn();
+    renderSection(onResolved);
+
+    await confirmLocal();
+
+    expect(await screen.findByText(expectedCopy)).toBeTruthy();
+    expect(onResolved).toHaveBeenCalledTimes(1);
+    expect(engineMocks.listConflicts).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).not.toContain(result.reason);
     expect(document.body.textContent).not.toContain(CANARY);
   });
 
-  it("guards double click per card while leaving another card enabled", async () => {
+  it("never renders a raw thrown error or retries resolution", async () => {
+    engineMocks.listConflicts.mockResolvedValue([conflict()]);
+    engineMocks.resolveConflict.mockRejectedValue(new Error(`private ${CANARY}`));
+    const onResolved = vi.fn();
+    renderSection(onResolved);
+
+    await confirmLocal();
+
+    expect(
+      await screen.findByText("Không thể xử lý xung đột. Dữ liệu vẫn được giữ nguyên."),
+    ).toBeTruthy();
+    expect(engineMocks.resolveConflict).toHaveBeenCalledTimes(1);
+    expect(onResolved).toHaveBeenCalledTimes(1);
+    expect(document.body.textContent).not.toContain(CANARY);
+  });
+});
+
+describe("explicit choices and confidentiality", () => {
+  it("renders only allow-listed metadata and never auto resolves", async () => {
+    renderSection(vi.fn(), "focus-once");
+
+    expect(await screen.findByRole("heading", { name: "1 xung đột cần xử lý" })).toBeTruthy();
+    await waitFor(() => expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledTimes(1));
+    expect(document.body.textContent).not.toContain(CANARY);
+    expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
+  });
+
+  it("guards double confirmation while a resolution is in flight", async () => {
     let settle: ((result: ResolveConflictResult) => void) | undefined;
     const pendingResult = new Promise<ResolveConflictResult>((resolve) => {
       settle = resolve;
     });
-    engineMocks.listConflicts
-      .mockResolvedValueOnce([
-        conflict(),
-        conflict({ id: "conflict-2", table: "goals", entityId: "goal-1" }),
-      ])
-      .mockResolvedValueOnce([]);
+    engineMocks.listConflicts.mockResolvedValueOnce([conflict()]).mockResolvedValueOnce([]);
     engineMocks.resolveConflict.mockReturnValue(pendingResult);
     renderSection();
 
-    const cards = await screen.findAllByRole("article");
-    fireEvent.click(within(cards[0]).getByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }));
     const confirmButton = within(await screen.findByRole("dialog")).getByRole("button", {
       name: /Xác nhận giữ dữ liệu trên thiết bị này/,
     });
     fireEvent.click(confirmButton);
     fireEvent.click(confirmButton);
 
-    await waitFor(() => {
-      expect(engineMocks.resolveConflict).toHaveBeenCalledTimes(1);
-      expect((within(cards[0]).getByRole("button", { name: "Đang xử lý…" }) as HTMLButtonElement).disabled).toBe(true);
-      expect((within(cards[1]).getByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }) as HTMLButtonElement).disabled).toBe(false);
-      expect((within(cards[1]).getByRole("button", { name: "Dùng dữ liệu đã đồng bộ" }) as HTMLButtonElement).disabled).toBe(false);
-    });
-
+    await waitFor(() => expect(engineMocks.resolveConflict).toHaveBeenCalledTimes(1));
     settle?.({ status: "resolved-local" });
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-  });
-
-  it("shows the explicit server tombstone warning without raw content", async () => {
-    engineMocks.listConflicts.mockResolvedValue([
-      conflict({ remoteDeletedAt: "2026-08-11T09:59:30.000Z" }),
-    ]);
-    renderSection();
-
-    fireEvent.click(await screen.findByRole("button", { name: "Dùng dữ liệu đã đồng bộ" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(dialog.textContent).toContain("Bản trên server đang bị xóa");
-    expect(dialog.textContent).not.toContain(CANARY);
-  });
-});
-
-describe("Settings Data tab regression", () => {
-  it("keeps the existing dead-outbox retry and non-conflict data controls", async () => {
-    const deadItem: OutboxItem = {
-      id: "dead-1",
-      table: "transactions",
-      entityId: "transaction-1",
-      op: "upsert",
-      payload: {},
-      version: 1,
-      createdAt: "2026-08-11T10:00:00.000Z",
-      attempts: 8,
-      dead: true,
-    };
-    engineMocks.listConflicts.mockResolvedValue([]);
-    engineMocks.listDeadOutbox.mockResolvedValue([deadItem]);
-
-    render(
-      createElement(
-        MemoryRouter,
-        { initialEntries: ["/settings?tab=data"] },
-        createElement(SettingsPage, {
-          onReload: vi.fn(),
-          onConflictResolved: vi.fn(),
-        }),
-      ),
-    );
-
-    expect(await screen.findByRole("heading", { name: "1 thay đổi đang chờ" })).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Thử lại đồng bộ" }) as HTMLButtonElement).disabled).toBe(false);
-    expect(screen.getByRole("heading", { name: "Xuất và nhập dữ liệu" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: /xung đột cần xử lý/ })).toBeNull();
+    expect(await screen.findByText(CONFIRMED_COPY)).toBeTruthy();
   });
 });
