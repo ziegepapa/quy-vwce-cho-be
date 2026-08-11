@@ -97,10 +97,16 @@ function browserLockManager(): BrowserLockManager | null {
 
 async function enqueueUserSync<T>(userId: string, operation: () => Promise<T>): Promise<T> {
   const previous = userSyncTails.get(userId) ?? Promise.resolve();
-  let release = () => undefined;
+  let releaseGate: (() => void) | undefined;
+  let released = false;
   const gate = new Promise<void>((resolve) => {
-    release = resolve;
+    releaseGate = () => resolve();
   });
+  const release = (): void => {
+    if (released) return;
+    released = true;
+    releaseGate?.();
+  };
   const tail = previous.catch(() => undefined).then(() => gate);
   userSyncTails.set(userId, tail);
   await previous.catch(() => undefined);
