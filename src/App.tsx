@@ -43,6 +43,8 @@ import MigrateWizard from "./pages/MigrateWizard";
 import "./styles/premium-command-layout.css";
 
 const LOGOUT_CLEANUP_PENDING_KEY = "vwce:logout-cleanup-pending";
+const LOGOUT_BLOCKED_MESSAGE =
+  "Bạn còn dữ liệu chưa đồng bộ. Hãy khôi phục hoặc sao lưu trước khi đăng xuất.";
 
 function readLogoutCleanupPending(): boolean {
   if (typeof window === "undefined") return false;
@@ -101,6 +103,23 @@ function describeLogoutBlockers(value: LogoutBlockers): string {
   return parts.join(" · ");
 }
 
+function hasLocalBusinessData(counts: {
+  settings: number;
+  goals: number;
+  transactions: number;
+  annualChecklists: number;
+  monthlySnapshots: number;
+}): boolean {
+  return (
+    counts.settings +
+      counts.goals +
+      counts.transactions +
+      counts.annualChecklists +
+      counts.monthlySnapshots >
+    0
+  );
+}
+
 async function readLogoutBlockers(): Promise<LogoutBlockers> {
   const [outboxTotal, dead, conflicts] = await Promise.all([
     outboxCount(),
@@ -124,6 +143,7 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
   const [pending, setPending] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
+  const [recoveryRequired, setRecoveryRequired] = useState(false);
   const [quoteRefreshVersion, setQuoteRefreshVersion] = useState(0);
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [logoutBlockers, setLogoutBlockers] = useState<LogoutBlockers | null>(null);
@@ -222,10 +242,12 @@ export default function App() {
       if (auth.user) {
         const meta = await getSyncMeta(auth.user.id);
         const counts = await countLocalData();
-        const hasLocal = counts.goals + counts.transactions + counts.settings > 0;
-        if (hasLocal && !meta.migrateWizardDone && !meta.migrateWizardSkipped) {
-          setShowWizard(true);
-        }
+        const hasLocal = hasLocalBusinessData(counts);
+        // Recovery is required until migrateWizardDone — skip flag must not
+        // open the path to sample/empty onboarding while local data remains.
+        const needsRecovery = hasLocal && !meta.migrateWizardDone;
+        setRecoveryRequired(needsRecovery);
+        setShowWizard(needsRecovery);
         try {
           setSyncStatus("syncing");
           await runSync(auth.user.id);
@@ -233,6 +255,9 @@ export default function App() {
           /* network */
         }
         await refreshSyncBadge();
+      } else {
+        setRecoveryRequired(false);
+        setShowWizard(false);
       }
     })();
   }, [
@@ -269,9 +294,38 @@ export default function App() {
 
   async function handleSignOut() {
     setLogoutNotice(null);
+
+    // Fresh re-check immediately before any cleanup — never trust banner state.
     const blockers = await readLogoutBlockers();
-    if (hasLogoutBlockers(blockers)) {
-      setLogoutBlockers(blockers);
+    const counts = await countLocalData();
+    const hasLocal = hasLocalBusinessData(counts);
+    let recoveryPending = recoveryRequired;
+    if (auth.user) {
+      try {
+        const meta = await getSyncMeta(auth.user.id);
+        recoveryPending = hasLocal && !meta.migrateWizardDone;
+      } catch {
+        recoveryPending = hasLocal || recoveryRequired;
+      }
+    }
+
+    if (hasLogoutBlockers(blockers) || recoveryPending) {
+      setLogoutBlockers(
+        hasLogoutBlockers(blockers)
+          ? blockers
+          : { pending: 0, dead: 0, conflicts: 0 },
+      );
+      setLogoutNoticeKind("error");
+      setLogoutNotice(LOGOUT_BLOCKED_MESSAGE);
+      return;
+    }
+
+    // Second re-check right before clear — no click/navigation may bypass this.
+    const blockersAgain = await readLogoutBlockers();
+    if (hasLogoutBlockers(blockersAgain)) {
+      setLogoutBlockers(blockersAgain);
+      setLogoutNoticeKind("error");
+      setLogoutNotice(LOGOUT_BLOCKED_MESSAGE);
       return;
     }
 
@@ -296,6 +350,8 @@ export default function App() {
 
     persistLogoutCleanupPending(false);
     setLogoutCleanupPending(false);
+    setRecoveryRequired(false);
+    setShowWizard(false);
   }
 
   async function retryLogoutCleanup() {
@@ -337,6 +393,8 @@ export default function App() {
       const next = await readLogoutBlockers();
       if (hasLogoutBlockers(next)) {
         setLogoutBlockers(next);
+        setLogoutNoticeKind("error");
+        setLogoutNotice(LOGOUT_BLOCKED_MESSAGE);
       } else {
         setLogoutBlockers(null);
         setLogoutNoticeKind("info");
@@ -404,17 +462,23 @@ export default function App() {
     return <AuthPage />;
   }
 
-  if (auth.user && showWizard) {
+  // Recovery gate: local business data must not reach sample/empty onboarding.
+  if (auth.user && (showWizard || recoveryRequired)) {
     return (
       <MigrateWizard
         userId={auth.user.id}
         onDone={async () => {
           setShowWizard(false);
+          setRecoveryRequired(false);
           if (auth.user) await runSync(auth.user.id);
           await refreshSyncBadge();
           await reload();
         }}
-        onSkip={() => setShowWizard(false)}
+        onBack={() => {
+          // Soft only — recovery remains required on reload / next navigation.
+          setShowWizard(true);
+          setRecoveryRequired(true);
+        }}
       />
     );
   }
@@ -474,8 +538,11 @@ export default function App() {
 
         {logoutBlockers ? (
           <div className="banner error" role="alert">
-            <strong>Chưa thể đăng xuất.</strong> {describeLogoutBlockers(logoutBlockers)}. Dữ liệu local
-            và outbox chưa bị xóa.
+            <strong>Chưa thể đăng xuất.</strong>{" "}
+            {hasLogoutBlockers(logoutBlockers)
+              ? `${describeLogoutBlockers(logoutBlockers)}. `
+              : ""}
+            {logoutNotice ?? LOGOUT_BLOCKED_MESSAGE} Dữ liệu local và outbox chưa bị xóa.
             <div className="stack" style={{ marginTop: 8 }}>
               <button
                 type="button"
@@ -497,7 +564,7 @@ export default function App() {
             </div>
           </div>
         ) : null}
-        {logoutNotice ? (
+        {logoutNotice && !logoutBlockers ? (
           <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">
             {logoutNotice}
           </div>
@@ -516,7 +583,14 @@ export default function App() {
                 element={
                   <SettingsPage
                     onReload={reload}
-                    onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined}
+                    onOpenMigrate={
+                      auth.user
+                        ? () => {
+                            setShowWizard(true);
+                            setRecoveryRequired(true);
+                          }
+                        : undefined
+                    }
                     refreshKey={quoteRefreshVersion}
                     onQuotesChanged={handleQuotesChanged}
                     onSettingsChanged={handleSettingsChanged}
