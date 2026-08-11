@@ -24,7 +24,7 @@ test("production build boots in an isolated browser environment", async ({ page 
   expect(failedLocalRequests).toEqual([]);
 });
 
-test("authentication entry point remains usable", async ({ page }) => {
+test("private-vault authentication entry point remains usable", async ({ page }) => {
   await page.goto("./", { waitUntil: "domcontentloaded" });
 
   const loginHeading = page.getByRole("heading", { name: "Đăng nhập", exact: true });
@@ -36,8 +36,10 @@ test("authentication entry point remains usable", async ({ page }) => {
   if (await loginHeading.isVisible()) {
     await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByLabel("Mật khẩu")).toBeVisible();
+    await expect(page.getByText("Tối thiểu 14 ký tự")).toBeVisible();
+    await expect(page.getByText(/Kho gia đình riêng tư/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Đăng nhập", exact: true })).toBeEnabled();
-    await expect(page.getByRole("button", { name: "Tạo tài khoản mới" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Tạo tài khoản mới" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Quên mật khẩu?" })).toBeVisible();
   } else {
     await expect(missingConfigHeading).toBeVisible();

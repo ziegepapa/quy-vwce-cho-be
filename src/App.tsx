@@ -10,7 +10,13 @@ import {
   runPendingMigrations,
 } from "./lib/db";
 import type { AppSettings } from "./lib/types";
-import { getSyncMeta, listConflicts, runSync } from "./lib/sync/engine";
+import {
+  getSyncMeta,
+  listConflicts,
+  listDeadOutbox,
+  reviveDeadOutbox,
+  runSync,
+} from "./lib/sync/engine";
 import { outboxCount } from "./lib/sync/outbox";
 import type { SyncStatus } from "./lib/sync/types";
 import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
@@ -28,7 +34,6 @@ import AuthPage from "./pages/Auth";
 import MigrateWizard from "./pages/MigrateWizard";
 import "./styles/premium-command-layout.css";
 
-/** V10-A — khiên, cho mục Hồ sơ khẩn cấp. Để cục bộ ở đây để không phải sửa Icons.tsx. */
 function IconShield() {
   return (
     <svg
@@ -57,6 +62,37 @@ const NAV: { to: string; label: string; icon: ReactNode }[] = [
   { to: "/settings", label: "Cài đặt", icon: <IconSettings /> },
 ];
 
+type LogoutBlockers = {
+  pending: number;
+  dead: number;
+  conflicts: number;
+};
+
+function hasLogoutBlockers(value: LogoutBlockers): boolean {
+  return value.pending > 0 || value.dead > 0 || value.conflicts > 0;
+}
+
+function describeLogoutBlockers(value: LogoutBlockers): string {
+  const parts: string[] = [];
+  if (value.pending > 0) parts.push(`${value.pending} thay đổi đang chờ`);
+  if (value.dead > 0) parts.push(`${value.dead} thay đổi cần thử lại`);
+  if (value.conflicts > 0) parts.push(`${value.conflicts} xung đột chưa xử lý`);
+  return parts.join(" · ");
+}
+
+async function readLogoutBlockers(): Promise<LogoutBlockers> {
+  const [outboxTotal, dead, conflicts] = await Promise.all([
+    outboxCount(),
+    listDeadOutbox(),
+    listConflicts(),
+  ]);
+  return {
+    pending: Math.max(0, outboxTotal - dead.length),
+    dead: dead.length,
+    conflicts: conflicts.length,
+  };
+}
+
 export default function App() {
   const auth = useAuth();
   const navigate = useNavigate();
@@ -67,8 +103,10 @@ export default function App() {
   const [pending, setPending] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
   const [quoteRefreshVersion, setQuoteRefreshVersion] = useState(0);
-  /** Fail-closed: migration must succeed before settings/sync use schema v3. */
   const [migrationError, setMigrationError] = useState<string | null>(null);
+  const [logoutBlockers, setLogoutBlockers] = useState<LogoutBlockers | null>(null);
+  const [logoutNotice, setLogoutNotice] = useState<string | null>(null);
+  const [logoutRetrying, setLogoutRetrying] = useState(false);
 
   const { api: navActionsApi, navAction } = useNavActionRegistry();
 
@@ -98,9 +136,9 @@ export default function App() {
     setMigrationError(null);
     try {
       await runPendingMigrations();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setMigrationError(msg || "Migration failed");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setMigrationError(message || "Migration failed");
       setReady(true);
       return;
     }
@@ -111,24 +149,23 @@ export default function App() {
 
   useEffect(() => {
     if (!auth.ready) return;
-    if (auth.configured && !auth.user) {
+    if (auth.configured && (!auth.user || !auth.vaultReady)) {
       setReady(true);
       return;
     }
-    (async () => {
+    void (async () => {
       try {
         await runPendingMigrations();
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        setMigrationError(msg || "Migration failed");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setMigrationError(message || "Migration failed");
         setReady(true);
         return;
       }
-      const s = await getSettings();
-      setSettings(s);
+      const currentSettings = await getSettings();
+      setSettings(currentSettings);
       setReady(true);
 
-      // Non-blocking startup refresh. Offline/network/schema failures preserve local quotes.
       void ingestQuotesFeed()
         .then(async (result) => {
           if (result.status === "ok" || result.status === "partial") {
@@ -136,7 +173,7 @@ export default function App() {
           }
         })
         .catch(() => {
-          /* fail-safe: local quote cache remains authoritative while offline */
+          /* local quote cache remains authoritative while offline */
         });
 
       if (auth.user) {
@@ -155,12 +192,22 @@ export default function App() {
         await refreshSyncBadge();
       }
     })();
-  }, [auth.ready, auth.configured, auth.user, handleQuotesChanged, refreshSyncBadge]);
+  }, [
+    auth.ready,
+    auth.configured,
+    auth.user,
+    auth.vaultReady,
+    handleQuotesChanged,
+    refreshSyncBadge,
+  ]);
 
   useEffect(() => {
     const on = () => {
-      if (auth.user) runSync(auth.user.id).then(() => refreshSyncBadge());
-      else refreshSyncBadge();
+      if (auth.user && auth.vaultReady) {
+        void runSync(auth.user.id).then(() => refreshSyncBadge());
+      } else {
+        void refreshSyncBadge();
+      }
     };
     const off = () => setSyncStatus("offline");
     window.addEventListener("online", on);
@@ -169,24 +216,24 @@ export default function App() {
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };
-  }, [auth.user, refreshSyncBadge]);
+  }, [auth.user, auth.vaultReady, refreshSyncBadge]);
 
   async function handleSignOut() {
-    const p = await outboxCount();
-    if (p > 0) {
-      if (
-        !confirm(
-          `Còn ${p} thao tác chưa đồng bộ. Đăng xuất sẽ xóa cache local trên máy này. Tiếp tục?`,
-        )
-      )
-        return;
+    setLogoutNotice(null);
+    const blockers = await readLogoutBlockers();
+    if (hasLogoutBlockers(blockers)) {
+      setLogoutBlockers(blockers);
+      return;
     }
+
+    setLogoutBlockers(null);
     await clearUserBusinessData();
-    await auth.signOut();
+    const result = await auth.signOut();
+    if (result.error) setLogoutNotice(result.error);
   }
 
   async function handleSyncNow() {
-    if (!auth.user) return;
+    if (!auth.user || !auth.vaultReady) return;
     setSyncStatus("syncing");
     try {
       await runSync(auth.user.id);
@@ -196,7 +243,29 @@ export default function App() {
     await refreshSyncBadge();
   }
 
-  if (!auth.ready || !ready) {
+  async function retryLogoutBlockers() {
+    if (!auth.user || !auth.vaultReady) return;
+    setLogoutRetrying(true);
+    setLogoutNotice(null);
+    try {
+      await reviveDeadOutbox();
+      await runSync(auth.user.id);
+      const next = await readLogoutBlockers();
+      if (hasLogoutBlockers(next)) {
+        setLogoutBlockers(next);
+      } else {
+        setLogoutBlockers(null);
+        setLogoutNotice("Đồng bộ đã sạch. Chọn Đăng xuất lần nữa để rời kho.");
+      }
+    } catch {
+      setLogoutNotice("Chưa đồng bộ xong. Dữ liệu local vẫn được giữ nguyên.");
+    } finally {
+      setLogoutRetrying(false);
+      await refreshSyncBadge();
+    }
+  }
+
+  if (!auth.ready || !ready || (auth.user && !auth.mfaReady)) {
     return (
       <div className="app-shell">
         <p className="muted">Đang tải…</p>
@@ -211,9 +280,7 @@ export default function App() {
         <p className="muted">
           Ứng dụng dừng lại để tránh dùng dữ liệu nửa migrate. Đồng bộ và ghi mới bị tạm khóa.
         </p>
-        <p>
-          <code>{migrationError}</code>
-        </p>
+        <p><code>{migrationError}</code></p>
         <button type="button" className="btn primary" onClick={() => void reload()}>
           Thử lại migration
         </button>
@@ -221,7 +288,7 @@ export default function App() {
     );
   }
 
-  if (auth.configured && !auth.user) {
+  if (auth.configured && (!auth.user || !auth.vaultReady)) {
     return <AuthPage />;
   }
 
@@ -277,7 +344,7 @@ export default function App() {
       </aside>
 
       <div className="app-shell">
-        {auth.user && (
+        {auth.user ? (
           <CollapsingNavBar
             displayName={displayName}
             syncStatus={syncStatus}
@@ -290,21 +357,38 @@ export default function App() {
             onAddGoal={navAction("addGoal")}
             onChangeScenario={navAction("changeScenario")}
           />
-        )}
+        ) : null}
+
+        {logoutBlockers ? (
+          <div className="banner error" role="alert">
+            <strong>Chưa thể đăng xuất.</strong> {describeLogoutBlockers(logoutBlockers)}. Dữ liệu local
+            và outbox chưa bị xóa.
+            <div className="stack" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="secondary"
+                disabled={logoutRetrying}
+                onClick={() => void retryLogoutBlockers()}
+              >
+                {logoutRetrying ? "Đang thử lại…" : "Đồng bộ / thử lại"}
+              </button>
+              {logoutBlockers.conflicts > 0 ? (
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => navigate("/settings?tab=data")}
+                >
+                  Mở trạng thái dữ liệu
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+        {logoutNotice ? <div className="banner" role="status">{logoutNotice}</div> : null}
+
         <NavActionsProvider api={navActionsApi}>
           <main className={`premium-screen premium-screen-${screenName}`}>
             <Routes>
-              {/*
-                VISUAL-POLISH-001 r4 -- QuoteStatusSummary is no longer mounted here.
-                pulse-polish.css has hidden it with display: none since
-                UI-PULSE-LOCKED-001, so it rendered nothing on screen while still
-                paying for itself: a listQuoteSelectionStates() read against Dexie on
-                every quoteRefreshVersion change, plus the DOM it built in order to be
-                hidden. Settings > Gia has carried the same information since #58.
-                Nothing moves visually. The component file and the display: none rule
-                that hides it are removed together in the follow-up dead-code chore,
-                so that the unmount and the un-hiding can never land apart.
-              */}
               <Route path="/" element={<Overview key={quoteRefreshVersion} />} />
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/goals" element={<Goals />} />
