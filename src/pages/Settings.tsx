@@ -157,7 +157,7 @@ export default function SettingsPage({
   const [checklist, setChecklist] = useState<AnnualChecklist | null>(null);
   const [checklistYear, setChecklistYear] = useState(new Date().getFullYear());
   const [deleteStep, setDeleteStep] = useState(0);
-  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = "";
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
   const [dead, setDead] = useState<OutboxItem[]>([]);
   const [deadRetrying, setDeadRetrying] = useState(false);
@@ -340,8 +340,7 @@ export default function SettingsPage({
       const current = await exportBackup();
       downloadJson(
         current,
-        `vwce-auto-before-import-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`,
-      );
+        `vwce-auto-before-import-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
     } catch {
       /* */
     }
@@ -600,7 +599,7 @@ export default function SettingsPage({
               value={theme}
               options={THEME_OPTIONS}
               onChange={(value) => pickTheme(value as ThemeChoice)}
-            />
+            </div>
           </section>
 
           <section className="settings-card">
@@ -808,7 +807,6 @@ export default function SettingsPage({
                   }}
                 >
                   {deadRetrying ? "Đang thử lại…" : "Thử lại đồng bộ"}
-                </button>
               ) : (
                 <p className="settings-inline-status success">Mọi thay đổi đã lên máy chủ.</p>
               )}
