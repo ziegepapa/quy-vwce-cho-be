@@ -309,9 +309,17 @@ describe("App conflict banner routing and blocker state", () => {
     expect(screen.queryByText("Đã giữ dữ liệu trên thiết bị và đồng bộ thành công.")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
-    const banner = await screen.findByRole("alert");
-    expect(banner.textContent).toContain("1 thay đổi đang chờ");
-    expect(banner.textContent).toContain("1 xung đột chưa xử lý");
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("alert").some((alert) =>
+          alert.textContent?.includes("1 thay đổi đang chờ"),
+        ),
+      ).toBe(true);
+    });
+    const banner = screen
+      .getAllByRole("alert")
+      .find((alert) => alert.textContent?.includes("1 thay đổi đang chờ"));
+    expect(banner?.textContent).toContain("1 xung đột chưa xử lý");
     expect(authMocks.signOut).not.toHaveBeenCalled();
     expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
   });
