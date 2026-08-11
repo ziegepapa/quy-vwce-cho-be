@@ -12,7 +12,7 @@ import { supabase, supabaseConfigured } from "./supabase";
 
 export const MIN_PASSWORD_LENGTH = 14;
 
-type AssuranceLevel = "aal1" | "aal2" | null;
+type AssuranceLevel = string | null;
 
 type AuthActionResult<T = undefined> = {
   data?: T;
