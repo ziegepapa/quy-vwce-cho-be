@@ -93,7 +93,7 @@ import {
   reconcileVisibleLogoutBlockers,
 } from "./components/SyncConflictSection";
 
-function conflict(): ConflictRecord {
+function conflict(overrides: Partial<ConflictRecord> = {}): ConflictRecord {
   return {
     id: "conflict-1",
     table: "settings",
@@ -105,6 +105,7 @@ function conflict(): ConflictRecord {
     remoteVersion: 3,
     remoteUpdatedAt: "2026-08-11T09:59:00.000Z",
     remoteDeletedAt: null,
+    ...overrides,
   };
 }
 
@@ -218,7 +219,7 @@ describe("App conflict banner routing and blocker state", () => {
     ).toEqual({ pending: 0, dead: 1, conflicts: 0 });
   });
 
-  it("re-reads all blockers after a successful conflict callback and never signs out automatically", async () => {
+  it("re-reads all blockers after a confirmed conflict callback and never signs out automatically", async () => {
     engineMocks.listConflicts.mockResolvedValue([conflict()]);
     outboxMocks.outboxCount.mockResolvedValue(1);
 
@@ -264,6 +265,53 @@ describe("App conflict banner routing and blocker state", () => {
     expect(outboxMocks.outboxCount).toHaveBeenCalledTimes(2);
     expect(engineMocks.listDeadOutbox).toHaveBeenCalledTimes(1);
     expect(engineMocks.listConflicts).toHaveBeenCalledTimes(3);
+    expect(authMocks.signOut).not.toHaveBeenCalled();
+    expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
+  });
+
+  it("keeps logout blocked after a pending replacement conflict and never auto signs out", async () => {
+    const replacement = conflict({
+      id: "replacement-1",
+      remoteVersion: 7,
+      reasonCategory: "server-version-changed",
+      sourceOutboxId: "outbox-1",
+      supersedesConflictId: "conflict-1",
+    });
+    engineMocks.listConflicts
+      .mockResolvedValueOnce([conflict()])
+      .mockResolvedValue([replacement]);
+    engineMocks.resolveConflict.mockResolvedValue({
+      status: "resolved-local-pending-conflict",
+      reason: "server-version-changed",
+    });
+    outboxMocks.outboxCount.mockResolvedValue(1);
+
+    render(
+      createElement(
+        MemoryRouter,
+        { initialEntries: ["/settings?tab=data"] },
+        createElement(App),
+      ),
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /Xác nhận giữ dữ liệu trên thiết bị này/,
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Đã lưu lựa chọn trên thiết bị, nhưng trạng thái server đã thay đổi hoặc chưa thể cập nhật an toàn. Không có dữ liệu bị ghi đè. Vui lòng xem xung đột mới.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("Đã giữ dữ liệu trên thiết bị và đồng bộ thành công.")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
+    const banner = await screen.findByRole("alert");
+    expect(banner.textContent).toContain("1 thay đổi đang chờ");
+    expect(banner.textContent).toContain("1 xung đột chưa xử lý");
     expect(authMocks.signOut).not.toHaveBeenCalled();
     expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
   });
