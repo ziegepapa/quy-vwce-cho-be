@@ -81,6 +81,7 @@ describe("complete recovery journey", () => {
   });
 
   it("initiates a friendly backup before showing the explicit in-app dialog", async () => {
+    renderWizard();
     const dialog = await openConfirmation();
     expect(dbMocks.exportBackup).toHaveBeenCalledTimes(1);
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
