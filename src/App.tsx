@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "./lib/auth";
+import { signOutBeforeLocalClear, useAuth } from "./lib/auth";
 import {
   clearUserBusinessData,
   countLocalData,
@@ -33,6 +33,27 @@ import Onboarding from "./pages/Onboarding";
 import AuthPage from "./pages/Auth";
 import MigrateWizard from "./pages/MigrateWizard";
 import "./styles/premium-command-layout.css";
+
+const LOGOUT_CLEANUP_PENDING_KEY = "vwce:logout-cleanup-pending";
+
+function readLogoutCleanupPending(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(LOGOUT_CLEANUP_PENDING_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function persistLogoutCleanupPending(pending: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    if (pending) window.localStorage.setItem(LOGOUT_CLEANUP_PENDING_KEY, "1");
+    else window.localStorage.removeItem(LOGOUT_CLEANUP_PENDING_KEY);
+  } catch {
+    /* the in-memory gate still prevents business data from rendering */
+  }
+}
 
 function IconShield() {
   return (
@@ -106,7 +127,10 @@ export default function App() {
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [logoutBlockers, setLogoutBlockers] = useState<LogoutBlockers | null>(null);
   const [logoutNotice, setLogoutNotice] = useState<string | null>(null);
+  const [logoutNoticeKind, setLogoutNoticeKind] = useState<"info" | "error">("info");
   const [logoutRetrying, setLogoutRetrying] = useState(false);
+  const [logoutGate, setLogoutGate] = useState(false);
+  const [logoutCleanupPending, setLogoutCleanupPending] = useState(readLogoutCleanupPending);
 
   const { api: navActionsApi, navAction } = useNavActionRegistry();
 
@@ -149,6 +173,10 @@ export default function App() {
 
   useEffect(() => {
     if (!auth.ready) return;
+    if (logoutGate || logoutCleanupPending) {
+      setReady(true);
+      return;
+    }
     if (auth.configured && (!auth.user || !auth.vaultReady)) {
       setReady(true);
       return;
@@ -198,14 +226,16 @@ export default function App() {
     auth.user,
     auth.vaultReady,
     handleQuotesChanged,
+    logoutCleanupPending,
+    logoutGate,
     refreshSyncBadge,
   ]);
 
   useEffect(() => {
     const on = () => {
-      if (auth.user && auth.vaultReady) {
+      if (auth.user && auth.vaultReady && !logoutGate && !logoutCleanupPending) {
         void runSync(auth.user.id).then(() => refreshSyncBadge());
-      } else {
+      } else if (!logoutGate && !logoutCleanupPending) {
         void refreshSyncBadge();
       }
     };
@@ -216,7 +246,11 @@ export default function App() {
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };
-  }, [auth.user, auth.vaultReady, refreshSyncBadge]);
+  }, [auth.user, auth.vaultReady, logoutCleanupPending, logoutGate, refreshSyncBadge]);
+
+  useEffect(() => {
+    if (logoutGate && !logoutCleanupPending && !auth.user) setLogoutGate(false);
+  }, [auth.user, logoutCleanupPending, logoutGate]);
 
   async function handleSignOut() {
     setLogoutNotice(null);
@@ -227,13 +261,48 @@ export default function App() {
     }
 
     setLogoutBlockers(null);
-    await clearUserBusinessData();
-    const result = await auth.signOut();
-    if (result.error) setLogoutNotice(result.error);
+    setLogoutGate(true);
+    const result = await signOutBeforeLocalClear(auth.signOut, clearUserBusinessData);
+    if (result.status === "sign_out_failed") {
+      setLogoutNoticeKind("error");
+      setLogoutNotice(result.error);
+      setLogoutGate(false);
+      return;
+    }
+    if (result.status === "cleanup_failed") {
+      persistLogoutCleanupPending(true);
+      setLogoutCleanupPending(true);
+      setLogoutNoticeKind("error");
+      setLogoutNotice(
+        "Phiên cloud đã kết thúc nhưng cache local chưa xóa được. Dữ liệu sẽ không được mở lại; hãy thử xóa cache lại hoặc mở lại ứng dụng.",
+      );
+      return;
+    }
+
+    persistLogoutCleanupPending(false);
+    setLogoutCleanupPending(false);
+  }
+
+  async function retryLogoutCleanup() {
+    setLogoutRetrying(true);
+    setLogoutNoticeKind("error");
+    try {
+      await clearUserBusinessData();
+      persistLogoutCleanupPending(false);
+      setLogoutCleanupPending(false);
+      setLogoutNotice(null);
+      if (!auth.user) setLogoutGate(false);
+    } catch {
+      setLogoutNotice(
+        "Phiên cloud đã kết thúc nhưng cache local vẫn chưa xóa được. Hãy đóng và mở lại ứng dụng rồi thử lại.",
+      );
+    } finally {
+      setLogoutRetrying(false);
+    }
   }
 
   async function handleSyncNow() {
-    if (!auth.user || !auth.vaultReady) return;
+    if (!auth.user || !auth.vaultReady || logoutGate || logoutCleanupPending) return;
     setSyncStatus("syncing");
     try {
       await runSync(auth.user.id);
@@ -255,9 +324,11 @@ export default function App() {
         setLogoutBlockers(next);
       } else {
         setLogoutBlockers(null);
+        setLogoutNoticeKind("info");
         setLogoutNotice("Đồng bộ đã sạch. Chọn Đăng xuất lần nữa để rời kho.");
       }
     } catch {
+      setLogoutNoticeKind("error");
       setLogoutNotice("Chưa đồng bộ xong. Dữ liệu local vẫn được giữ nguyên.");
     } finally {
       setLogoutRetrying(false);
@@ -269,6 +340,32 @@ export default function App() {
     return (
       <div className="app-shell">
         <p className="muted">Đang tải…</p>
+      </div>
+    );
+  }
+
+  if (logoutGate || logoutCleanupPending) {
+    return (
+      <div className="app-shell" role={logoutCleanupPending ? "alert" : "status"}>
+        <div className={logoutCleanupPending ? "banner error" : "banner"}>
+          <h1 className="page-title">
+            {logoutCleanupPending ? "Phiên cloud đã kết thúc" : "Đang đóng kho…"}
+          </h1>
+          <p>
+            {logoutNotice ??
+              "Đang kết thúc phiên cloud trước khi xóa cache local. Dữ liệu business không được render trong lúc này."}
+          </p>
+          {logoutCleanupPending ? (
+            <button
+              type="button"
+              className="secondary"
+              disabled={logoutRetrying}
+              onClick={() => void retryLogoutCleanup()}
+            >
+              {logoutRetrying ? "Đang xóa lại…" : "Thử xóa cache lại"}
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -384,7 +481,11 @@ export default function App() {
             </div>
           </div>
         ) : null}
-        {logoutNotice ? <div className="banner" role="status">{logoutNotice}</div> : null}
+        {logoutNotice ? (
+          <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">
+            {logoutNotice}
+          </div>
+        ) : null}
 
         <NavActionsProvider api={navActionsApi}>
           <main className={`premium-screen premium-screen-${screenName}`}>

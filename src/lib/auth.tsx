@@ -25,6 +25,11 @@ export type MfaEnrollment = {
   secret: string;
 };
 
+export type LogoutSequenceResult =
+  | { status: "success" }
+  | { status: "sign_out_failed"; error: string }
+  | { status: "cleanup_failed" };
+
 type AuthState = {
   ready: boolean;
   configured: boolean;
@@ -75,6 +80,31 @@ export function requiresMfaChallenge(
 ): boolean {
   if (!hasVerifiedFactor) return false;
   return currentLevel !== "aal2" || nextLevel !== "aal2";
+}
+
+export async function signOutBeforeLocalClear(
+  signOut: () => Promise<{ error?: string }>,
+  clearLocal: () => Promise<void>,
+): Promise<LogoutSequenceResult> {
+  let signOutResult: { error?: string };
+  try {
+    signOutResult = await signOut();
+  } catch {
+    return {
+      status: "sign_out_failed",
+      error: "Không kết thúc được phiên đăng nhập. Hãy thử lại.",
+    };
+  }
+  if (signOutResult.error) {
+    return { status: "sign_out_failed", error: signOutResult.error };
+  }
+
+  try {
+    await clearLocal();
+    return { status: "success" };
+  } catch {
+    return { status: "cleanup_failed" };
+  }
 }
 
 function redirectTo(hashPath: "/" | "/settings"): string | undefined {
