@@ -599,7 +599,7 @@ export default function SettingsPage({
               value={theme}
               options={THEME_OPTIONS}
               onChange={(value) => pickTheme(value as ThemeChoice)}
-            </div>
+            />
           </section>
 
           <section className="settings-card">
@@ -807,6 +807,7 @@ export default function SettingsPage({
                   }}
                 >
                   {deadRetrying ? "Đang thử lại…" : "Thử lại đồng bộ"}
+                </button>
               ) : (
                 <p className="settings-inline-status success">Mọi thay đổi đã lên máy chủ.</p>
               )}
