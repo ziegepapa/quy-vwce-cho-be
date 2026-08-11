@@ -132,9 +132,8 @@ describe("truthful local outcome feedback", () => {
     await confirmLocal();
 
     const warning = await screen.findByText(REPLACEMENT_COPY);
-    expect(warning.getAttribute("role")).toBeNull();
-    expect(warning.parentElement?.getAttribute("role")).toBe("alert");
-    expect(warning.parentElement?.className).toContain("warning");
+    expect(warning.getAttribute("role")).toBe("alert");
+    expect(warning.className).toContain("warning");
     expect(screen.queryByText(CONFIRMED_COPY)).toBeNull();
     expect(await screen.findByRole("article", { name: "Xung đột Cài đặt" })).toBeTruthy();
     expect(engineMocks.resolveConflict).toHaveBeenCalledTimes(1);
@@ -159,7 +158,7 @@ describe("truthful local outcome feedback", () => {
     await confirmLocal();
 
     const pending = await screen.findByText(PENDING_COPY);
-    expect(pending.parentElement?.className ?? pending.className).not.toContain("sync-conflict-live");
+    expect(pending.className).not.toContain("sync-conflict-live");
     expect(screen.queryByText(CONFIRMED_COPY)).toBeNull();
     expect(document.body.textContent).not.toContain(reason);
     expect(engineMocks.resolveConflict).toHaveBeenCalledTimes(1);
@@ -174,7 +173,7 @@ describe("truthful local outcome feedback", () => {
     await confirmLocal();
 
     const confirmed = await screen.findByText(CONFIRMED_COPY);
-    expect(confirmed.parentElement?.className ?? confirmed.className).toContain("sync-conflict-live");
+    expect(confirmed.className).toContain("sync-conflict-live");
     expect(screen.queryByText(PENDING_COPY)).toBeNull();
     expect(screen.queryByText(REPLACEMENT_COPY)).toBeNull();
   });
