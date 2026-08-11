@@ -640,6 +640,165 @@
   border: 0;
 }
 
+/* Conflict UI keeps all raw payloads outside the render boundary. */
+.sync-conflict-section {
+  grid-column: 1 / -1;
+  scroll-margin-top: calc(var(--nav-total) + 76px);
+  border-color: color-mix(in srgb, var(--warning-600) 34%, var(--hairline));
+}
+
+.sync-conflict-section:focus {
+  outline: 3px solid color-mix(in srgb, var(--primary-500) 58%, transparent);
+  outline-offset: 4px;
+}
+
+.sync-conflict-live:empty { display: none; }
+.sync-conflict-live:not(:empty) {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--success-050);
+  color: var(--success-600);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.sync-conflict-list {
+  display: grid;
+  gap: 10px;
+}
+
+.sync-conflict-card {
+  padding: 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 15px;
+  background: var(--surface-sunken);
+}
+
+.sync-conflict-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sync-conflict-card-head strong {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.sync-conflict-deleted {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 4px 9px;
+  border: 1px solid color-mix(in srgb, var(--danger-600) 32%, transparent);
+  border-radius: 999px;
+  background: var(--danger-050);
+  color: var(--danger-600);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.sync-conflict-meta {
+  display: grid;
+  gap: 7px;
+  margin: 11px 0 0;
+}
+
+.sync-conflict-meta > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sync-conflict-meta dt,
+.sync-conflict-meta dd {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.sync-conflict-meta dt { color: var(--text-tertiary); }
+.sync-conflict-meta dd {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.sync-conflict-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.sync-conflict-actions .settings-primary-action,
+.sync-conflict-actions .settings-secondary-action {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 11px;
+  line-height: 1.3;
+}
+
+.sync-conflict-result { margin-bottom: 0; }
+
+.sync-conflict-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(14px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(14px, env(safe-area-inset-left));
+  background: rgba(2, 7, 14, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.sync-conflict-dialog {
+  width: min(100%, 430px);
+  padding: 19px;
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-overlay);
+}
+
+.sync-conflict-dialog h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.sync-conflict-dialog > p:not(.settings-card-eyebrow) {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.sync-conflict-dialog-actions {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 8px;
+  margin-top: 17px;
+}
+
+.sync-conflict-dialog-actions .settings-primary-action,
+.sync-conflict-dialog-actions .settings-secondary-action {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 10px;
+  line-height: 1.3;
+}
+
 @media (min-width: 620px) {
   .settings-field-grid { grid-template-columns: 1fr 1fr; }
   .setting-choice-row { grid-template-columns: minmax(0, 1fr) minmax(220px, 0.85fr); align-items: center; }
@@ -650,6 +809,15 @@
   .checklist-list { margin: 0 -20px -20px; }
   .switch-row { padding-left: 20px; padding-right: 20px; }
   .group-action { width: calc(100% + 40px); margin-left: -20px; margin-right: -20px; padding-left: 20px; padding-right: 20px; }
+}
+
+@media (max-width: 430px) {
+  .sync-conflict-actions,
+  .sync-conflict-dialog-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .sync-conflict-dialog-actions .settings-secondary-action { order: 2; }
 }
 
 @media (max-width: 390px) {
