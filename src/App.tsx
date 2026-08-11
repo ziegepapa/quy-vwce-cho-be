@@ -16,6 +16,7 @@ import {
   listDeadOutbox,
   reviveDeadOutbox,
   runSync,
+  saveSyncMeta,
 } from "./lib/sync/engine";
 import { outboxCount } from "./lib/sync/outbox";
 import type { SyncStatus } from "./lib/sync/types";
@@ -44,7 +45,8 @@ import "./styles/premium-command-layout.css";
 
 const LOGOUT_CLEANUP_PENDING_KEY = "vwce:logout-cleanup-pending";
 const LOGOUT_BLOCKED_MESSAGE =
-  "Bạn còn dữ liệu chưa đồng bộ. Hãy khôi phục hoặc sao lưu trước khi đăng xuất.";
+  "Bạn còn dữ liệu chưa đồng bộ hoặc chưa khôi phục. Hãy khôi phục hoặc sao lưu trước khi đăng xuất.";
+const RECOVERY_SYNC_PENDING_MESSAGE = "Cần hoàn tất đồng bộ trước khi đăng xuất.";
 
 function readLogoutCleanupPending(): boolean {
   if (typeof window === "undefined") return false;
@@ -67,17 +69,7 @@ function persistLogoutCleanupPending(pending: boolean) {
 
 function IconShield() {
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M12 3l7 3v5.5c0 4.3-2.9 8.2-7 9.5-4.1-1.3-7-5.2-7-9.5V6l7-3z" />
       <path d="M9.2 12.2l2 2 3.6-3.9" />
     </svg>
@@ -94,29 +86,25 @@ const NAV: { to: string; label: string; icon: ReactNode }[] = [
 ];
 
 type LogoutBlockers = LogoutBlockerCounts;
-
-function describeLogoutBlockers(value: LogoutBlockers): string {
-  const parts: string[] = [];
-  if (value.pending > 0) parts.push(`${value.pending} thay đổi đang chờ`);
-  if (value.dead > 0) parts.push(`${value.dead} thay đổi cần thử lại`);
-  if (value.conflicts > 0) parts.push(`${value.conflicts} xung đột chưa xử lý`);
-  return parts.join(" · ");
-}
-
-function hasLocalBusinessData(counts: {
+type LocalBusinessCounts = {
   settings: number;
   goals: number;
   transactions: number;
   annualChecklists: number;
   monthlySnapshots: number;
-}): boolean {
+};
+type LogoutSafetySnapshot = {
+  blockers: LogoutBlockers;
+  recoveryPending: boolean;
+  readFailed: boolean;
+};
+
+const EMPTY_LOGOUT_BLOCKERS: LogoutBlockers = { pending: 0, dead: 0, conflicts: 0 };
+
+function hasLocalBusinessData(counts: LocalBusinessCounts): boolean {
   return (
-    counts.settings +
-      counts.goals +
-      counts.transactions +
-      counts.annualChecklists +
-      counts.monthlySnapshots >
-    0
+    counts.settings + counts.goals + counts.transactions +
+      counts.annualChecklists + counts.monthlySnapshots > 0
   );
 }
 
@@ -133,6 +121,27 @@ async function readLogoutBlockers(): Promise<LogoutBlockers> {
   };
 }
 
+async function readLogoutSafety(userId: string): Promise<LogoutSafetySnapshot> {
+  try {
+    const [blockers, counts, meta] = await Promise.all([
+      readLogoutBlockers(),
+      countLocalData(),
+      getSyncMeta(userId),
+    ]);
+    return {
+      blockers,
+      recoveryPending: hasLocalBusinessData(counts) && !meta.migrateWizardDone,
+      readFailed: false,
+    };
+  } catch {
+    return {
+      blockers: EMPTY_LOGOUT_BLOCKERS,
+      recoveryPending: true,
+      readFailed: true,
+    };
+  }
+}
+
 export default function App() {
   const auth = useAuth();
   const navigate = useNavigate();
@@ -144,6 +153,7 @@ export default function App() {
   const [pending, setPending] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
   const [recoveryRequired, setRecoveryRequired] = useState(false);
+  const [recoveryChecked, setRecoveryChecked] = useState(false);
   const [quoteRefreshVersion, setQuoteRefreshVersion] = useState(0);
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [logoutBlockers, setLogoutBlockers] = useState<LogoutBlockers | null>(null);
@@ -152,7 +162,6 @@ export default function App() {
   const [logoutRetrying, setLogoutRetrying] = useState(false);
   const [logoutGate, setLogoutGate] = useState(false);
   const [logoutCleanupPending, setLogoutCleanupPending] = useState(readLogoutCleanupPending);
-
   const { api: navActionsApi, navAction } = useNavActionRegistry();
 
   const refreshSyncBadge = useCallback(async () => {
@@ -195,9 +204,8 @@ export default function App() {
     setMigrationError(null);
     try {
       await runPendingMigrations();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setMigrationError(message || "Migration failed");
+    } catch {
+      setMigrationError("Không thể nâng cấp dữ liệu local. Dữ liệu chưa bị thay đổi.");
       setReady(true);
       return;
     }
@@ -213,69 +221,68 @@ export default function App() {
       return;
     }
     if (auth.configured && (!auth.user || !auth.vaultReady)) {
+      setRecoveryChecked(false);
       setReady(true);
       return;
     }
+    if (auth.user) setRecoveryChecked(false);
     void (async () => {
       try {
         await runPendingMigrations();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        setMigrationError(message || "Migration failed");
+      } catch {
+        setMigrationError("Không thể nâng cấp dữ liệu local. Dữ liệu chưa bị thay đổi.");
         setReady(true);
         return;
       }
       const currentSettings = await getSettings();
       setSettings(currentSettings);
-      setReady(true);
 
       void ingestQuotesFeed()
         .then(async (result) => {
-          if (result.status === "ok" || result.status === "partial") {
-            await handleQuotesChanged();
-          }
+          if (result.status === "ok" || result.status === "partial") await handleQuotesChanged();
         })
         .catch(() => {
           /* local quote cache remains authoritative while offline */
         });
 
       if (auth.user) {
-        const meta = await getSyncMeta(auth.user.id);
-        const counts = await countLocalData();
-        const hasLocal = hasLocalBusinessData(counts);
-        // Recovery is required until migrateWizardDone — skip flag must not
-        // open the path to sample/empty onboarding while local data remains.
-        const needsRecovery = hasLocal && !meta.migrateWizardDone;
-        setRecoveryRequired(needsRecovery);
-        setShowWizard(needsRecovery);
         try {
-          setSyncStatus("syncing");
-          await runSync(auth.user.id);
+          const [meta, counts] = await Promise.all([
+            getSyncMeta(auth.user.id),
+            countLocalData(),
+          ]);
+          const needsRecovery = hasLocalBusinessData(counts) && !meta.migrateWizardDone;
+          setRecoveryRequired(needsRecovery);
+          setShowWizard(needsRecovery);
+          setRecoveryChecked(true);
+          if (!needsRecovery) {
+            try {
+              setSyncStatus("syncing");
+              await runSync(auth.user.id);
+            } catch {
+              /* network */
+            }
+            await refreshSyncBadge();
+          }
         } catch {
-          /* network */
+          setRecoveryRequired(true);
+          setShowWizard(true);
+          setRecoveryChecked(true);
         }
-        await refreshSyncBadge();
       } else {
         setRecoveryRequired(false);
         setShowWizard(false);
+        setRecoveryChecked(true);
       }
+      setReady(true);
     })();
-  }, [
-    auth.ready,
-    auth.configured,
-    auth.user,
-    auth.vaultReady,
-    handleQuotesChanged,
-    logoutCleanupPending,
-    logoutGate,
-    refreshSyncBadge,
-  ]);
+  }, [auth.ready, auth.configured, auth.user, auth.vaultReady, handleQuotesChanged, logoutCleanupPending, logoutGate, refreshSyncBadge]);
 
   useEffect(() => {
     const on = () => {
-      if (auth.user && auth.vaultReady && !logoutGate && !logoutCleanupPending) {
+      if (auth.user && auth.vaultReady && !recoveryRequired && !logoutGate && !logoutCleanupPending) {
         void runSync(auth.user.id).then(() => refreshSyncBadge());
-      } else if (!logoutGate && !logoutCleanupPending) {
+      } else if (!recoveryRequired && !logoutGate && !logoutCleanupPending) {
         void refreshSyncBadge();
       }
     };
@@ -286,7 +293,7 @@ export default function App() {
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };
-  }, [auth.user, auth.vaultReady, logoutCleanupPending, logoutGate, refreshSyncBadge]);
+  }, [auth.user, auth.vaultReady, recoveryRequired, logoutCleanupPending, logoutGate, refreshSyncBadge]);
 
   useEffect(() => {
     if (logoutGate && !logoutCleanupPending && !auth.user) setLogoutGate(false);
@@ -294,36 +301,16 @@ export default function App() {
 
   async function handleSignOut() {
     setLogoutNotice(null);
+    if (!auth.user) return;
 
-    // Fresh re-check immediately before any cleanup — never trust banner state.
-    const blockers = await readLogoutBlockers();
-    const counts = await countLocalData();
-    const hasLocal = hasLocalBusinessData(counts);
-    let recoveryPending = recoveryRequired;
-    if (auth.user) {
-      try {
-        const meta = await getSyncMeta(auth.user.id);
-        recoveryPending = hasLocal && !meta.migrateWizardDone;
-      } catch {
-        recoveryPending = hasLocal || recoveryRequired;
-      }
-    }
-
-    if (hasLogoutBlockers(blockers) || recoveryPending) {
-      setLogoutBlockers(
-        hasLogoutBlockers(blockers)
-          ? blockers
-          : { pending: 0, dead: 0, conflicts: 0 },
-      );
-      setLogoutNoticeKind("error");
-      setLogoutNotice(LOGOUT_BLOCKED_MESSAGE);
-      return;
-    }
-
-    // Second re-check right before clear — no click/navigation may bypass this.
-    const blockersAgain = await readLogoutBlockers();
-    if (hasLogoutBlockers(blockersAgain)) {
-      setLogoutBlockers(blockersAgain);
+    // This is the final awaited operation before sign-out/cleanup. Banner state is never trusted.
+    const snapshot = await readLogoutSafety(auth.user.id);
+    if (
+      snapshot.readFailed ||
+      snapshot.recoveryPending ||
+      hasLogoutBlockers(snapshot.blockers)
+    ) {
+      setLogoutBlockers(snapshot.blockers);
       setLogoutNoticeKind("error");
       setLogoutNotice(LOGOUT_BLOCKED_MESSAGE);
       return;
@@ -334,7 +321,7 @@ export default function App() {
     const result = await signOutBeforeLocalClear(auth.signOut, clearUserBusinessData);
     if (result.status === "sign_out_failed") {
       setLogoutNoticeKind("error");
-      setLogoutNotice(result.error);
+      setLogoutNotice("Không kết thúc được phiên đăng nhập. Hãy thử lại.");
       setLogoutGate(false);
       return;
     }
@@ -342,9 +329,7 @@ export default function App() {
       persistLogoutCleanupPending(true);
       setLogoutCleanupPending(true);
       setLogoutNoticeKind("error");
-      setLogoutNotice(
-        "Phiên cloud đã kết thúc nhưng cache local chưa xóa được. Dữ liệu sẽ không được mở lại; hãy thử xóa cache lại hoặc mở lại ứng dụng.",
-      );
+      setLogoutNotice("Phiên cloud đã kết thúc nhưng cache local chưa xóa được. Dữ liệu local không được mở lại.");
       return;
     }
 
@@ -352,6 +337,7 @@ export default function App() {
     setLogoutCleanupPending(false);
     setRecoveryRequired(false);
     setShowWizard(false);
+    setRecoveryChecked(false);
   }
 
   async function retryLogoutCleanup() {
@@ -364,16 +350,14 @@ export default function App() {
       setLogoutNotice(null);
       if (!auth.user) setLogoutGate(false);
     } catch {
-      setLogoutNotice(
-        "Phiên cloud đã kết thúc nhưng cache local vẫn chưa xóa được. Hãy đóng và mở lại ứng dụng rồi thử lại.",
-      );
+      setLogoutNotice("Cache local vẫn chưa xóa được. Dữ liệu local không được mở lại.");
     } finally {
       setLogoutRetrying(false);
     }
   }
 
   async function handleSyncNow() {
-    if (!auth.user || !auth.vaultReady || logoutGate || logoutCleanupPending) return;
+    if (!auth.user || !auth.vaultReady || recoveryRequired || logoutGate || logoutCleanupPending) return;
     setSyncStatus("syncing");
     try {
       await runSync(auth.user.id);
@@ -390,9 +374,9 @@ export default function App() {
     try {
       await reviveDeadOutbox();
       await runSync(auth.user.id);
-      const next = await readLogoutBlockers();
-      if (hasLogoutBlockers(next)) {
-        setLogoutBlockers(next);
+      const next = await readLogoutSafety(auth.user.id);
+      if (next.readFailed || next.recoveryPending || hasLogoutBlockers(next.blockers)) {
+        setLogoutBlockers(next.blockers);
         setLogoutNoticeKind("error");
         setLogoutNotice(LOGOUT_BLOCKED_MESSAGE);
       } else {
@@ -402,39 +386,29 @@ export default function App() {
       }
     } catch {
       setLogoutNoticeKind("error");
-      setLogoutNotice("Chưa đồng bộ xong. Dữ liệu local vẫn được giữ nguyên.");
+      setLogoutNotice(LOGOUT_BLOCKED_MESSAGE);
     } finally {
       setLogoutRetrying(false);
-      await refreshSyncBadge();
+      try {
+        await refreshSyncBadge();
+      } catch {
+        /* fail closed on the next logout read */
+      }
     }
   }
 
-  if (!auth.ready || !ready || (auth.user && !auth.mfaReady)) {
-    return (
-      <div className="app-shell">
-        <p className="muted">Đang tải…</p>
-      </div>
-    );
+  if (!auth.ready || !ready || (auth.user && (!auth.mfaReady || !recoveryChecked))) {
+    return <div className="app-shell"><p className="muted">Đang tải…</p></div>;
   }
 
   if (logoutGate || logoutCleanupPending) {
     return (
       <div className="app-shell" role={logoutCleanupPending ? "alert" : "status"}>
         <div className={logoutCleanupPending ? "banner error" : "banner"}>
-          <h1 className="page-title">
-            {logoutCleanupPending ? "Phiên cloud đã kết thúc" : "Đang đóng kho…"}
-          </h1>
-          <p>
-            {logoutNotice ??
-              "Đang kết thúc phiên cloud trước khi xóa cache local. Dữ liệu business không được render trong lúc này."}
-          </p>
+          <h1 className="page-title">{logoutCleanupPending ? "Phiên cloud đã kết thúc" : "Đang đóng kho…"}</h1>
+          <p>{logoutNotice ?? "Đang kết thúc phiên cloud trước khi xóa cache local."}</p>
           {logoutCleanupPending ? (
-            <button
-              type="button"
-              className="secondary"
-              disabled={logoutRetrying}
-              onClick={() => void retryLogoutCleanup()}
-            >
+            <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutCleanup()}>
               {logoutRetrying ? "Đang xóa lại…" : "Thử xóa cache lại"}
             </button>
           ) : null}
@@ -447,35 +421,46 @@ export default function App() {
     return (
       <div className="app-shell" role="alert">
         <h1>Không thể nâng cấp dữ liệu local</h1>
-        <p className="muted">
-          Ứng dụng dừng lại để tránh dùng dữ liệu nửa migrate. Đồng bộ và ghi mới bị tạm khóa.
-        </p>
-        <p><code>{migrationError}</code></p>
-        <button type="button" className="btn primary" onClick={() => void reload()}>
-          Thử lại migration
-        </button>
+        <p className="muted">Ứng dụng dừng lại để tránh dùng dữ liệu nửa migrate. Đồng bộ và ghi mới bị tạm khóa.</p>
+        <p>{migrationError}</p>
+        <button type="button" className="btn primary" onClick={() => void reload()}>Thử lại migration</button>
       </div>
     );
   }
 
-  if (auth.configured && (!auth.user || !auth.vaultReady)) {
-    return <AuthPage />;
-  }
+  if (auth.configured && (!auth.user || !auth.vaultReady)) return <AuthPage />;
 
-  // Recovery gate: local business data must not reach sample/empty onboarding.
   if (auth.user && (showWizard || recoveryRequired)) {
+    const recoveryUserId = auth.user.id;
     return (
       <MigrateWizard
-        userId={auth.user.id}
+        userId={recoveryUserId}
         onDone={async () => {
+          // Update history first. The gate remains mounted until the completion marker succeeds.
+          navigate("/settings?tab=data", { replace: true });
+          const refreshedCounts = await countLocalData();
+          if (!hasLocalBusinessData(refreshedCounts)) throw new Error("Recovery state unavailable");
+          await saveSyncMeta({
+            userId: recoveryUserId,
+            migrateWizardDone: true,
+            migrateWizardSkipped: false,
+          });
+          const safety = await readLogoutSafety(recoveryUserId);
           setShowWizard(false);
           setRecoveryRequired(false);
-          if (auth.user) await runSync(auth.user.id);
-          await refreshSyncBadge();
+          setRecoveryChecked(true);
+          if (safety.readFailed || hasLogoutBlockers(safety.blockers)) {
+            setLogoutBlockers(safety.blockers);
+            setLogoutNoticeKind("info");
+            setLogoutNotice(RECOVERY_SYNC_PENDING_MESSAGE);
+          } else {
+            setLogoutBlockers(null);
+            setLogoutNoticeKind("info");
+            setLogoutNotice(null);
+          }
           await reload();
         }}
         onBack={() => {
-          // Soft only — recovery remains required on reload / next navigation.
           setShowWizard(true);
           setRecoveryRequired(true);
         }}
@@ -484,20 +469,11 @@ export default function App() {
   }
 
   if (!settings?.onboardingDone) {
-    return (
-      <Onboarding
-        onDone={async (seed) => {
-          await ensureInitialized(seed);
-          await reload();
-        }}
-      />
-    );
+    return <Onboarding onDone={async (seed) => { await ensureInitialized(seed); await reload(); }} />;
   }
 
   const displayName =
-    (auth.user?.user_metadata?.display_name as string) ||
-    auth.user?.email?.split("@")[0] ||
-    settings.planName;
+    (auth.user?.user_metadata?.display_name as string) || auth.user?.email?.split("@")[0] || settings.planName;
   const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
   const focusConflictRequest = readSyncConflictFocusToken(location.state);
 
@@ -507,14 +483,8 @@ export default function App() {
         <div className="sidebar-brand">Quỹ VWCE</div>
         <nav className="sidebar-nav">
           {NAV.map(({ to, label, icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              className={({ isActive }) => (isActive ? "active" : "")}
-            >
-              {icon}
-              {label}
+            <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => (isActive ? "active" : "")}>
+              {icon}{label}
             </NavLink>
           ))}
         </nav>
@@ -538,26 +508,21 @@ export default function App() {
 
         {logoutBlockers ? (
           <div className="banner error" role="alert">
-            <strong>Chưa thể đăng xuất.</strong>{" "}
-            {hasLogoutBlockers(logoutBlockers)
-              ? `${describeLogoutBlockers(logoutBlockers)}. `
-              : ""}
-            {logoutNotice ?? LOGOUT_BLOCKED_MESSAGE} Dữ liệu local và outbox chưa bị xóa.
+            <strong>Chưa thể đăng xuất.</strong>
+            <p>{LOGOUT_BLOCKED_MESSAGE}</p>
+            {logoutNotice === RECOVERY_SYNC_PENDING_MESSAGE ? <p>{RECOVERY_SYNC_PENDING_MESSAGE}</p> : null}
             <div className="stack" style={{ marginTop: 8 }}>
-              <button
-                type="button"
-                className="secondary"
-                disabled={logoutRetrying}
-                onClick={() => void retryLogoutBlockers()}
-              >
-                {logoutRetrying ? "Đang thử lại…" : "Đồng bộ / thử lại"}
-              </button>
+              {hasLogoutBlockers(logoutBlockers) ? (
+                <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutBlockers()}>
+                  {logoutRetrying ? "Đang thử lại…" : "Đồng bộ / thử lại"}
+                </button>
+              ) : (
+                <button type="button" className="secondary" onClick={() => { setShowWizard(true); setRecoveryRequired(true); }}>
+                  Khôi phục dữ liệu trên thiết bị
+                </button>
+              )}
               {logoutBlockers.conflicts > 0 ? (
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={handleOpenSyncConflicts}
-                >
+                <button type="button" className="ghost" onClick={handleOpenSyncConflicts}>
                   {conflictCtaLabel(logoutBlockers.conflicts)}
                 </button>
               ) : null}
@@ -565,9 +530,7 @@ export default function App() {
           </div>
         ) : null}
         {logoutNotice && !logoutBlockers ? (
-          <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">
-            {logoutNotice}
-          </div>
+          <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">{logoutNotice}</div>
         ) : null}
 
         <NavActionsProvider api={navActionsApi}>
@@ -578,32 +541,21 @@ export default function App() {
               <Route path="/goals" element={<Goals />} />
               <Route path="/simulation" element={<Simulation />} />
               <Route path="/notfallmappe" element={<Notfallmappe />} />
-              <Route
-                path="/settings"
-                element={
-                  <SettingsPage
-                    onReload={reload}
-                    onOpenMigrate={
-                      auth.user
-                        ? () => {
-                            setShowWizard(true);
-                            setRecoveryRequired(true);
-                          }
-                        : undefined
-                    }
-                    refreshKey={quoteRefreshVersion}
-                    onQuotesChanged={handleQuotesChanged}
-                    onSettingsChanged={handleSettingsChanged}
-                    onConflictResolved={handleConflictResolved}
-                    focusConflictRequest={focusConflictRequest}
-                  />
-                }
-              />
+              <Route path="/settings" element={
+                <SettingsPage
+                  onReload={reload}
+                  onOpenMigrate={auth.user ? () => { setShowWizard(true); setRecoveryRequired(true); } : undefined}
+                  refreshKey={quoteRefreshVersion}
+                  onQuotesChanged={handleQuotesChanged}
+                  onSettingsChanged={handleSettingsChanged}
+                  onConflictResolved={handleConflictResolved}
+                  focusConflictRequest={focusConflictRequest}
+                />
+              } />
             </Routes>
           </main>
         </NavActionsProvider>
       </div>
-
       <BottomDock items={NAV} />
     </div>
   );

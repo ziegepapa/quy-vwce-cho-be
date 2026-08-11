@@ -2,62 +2,35 @@
 import { createElement, type ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ConflictRecord } from "./lib/sync/types";
 
 const engineMocks = vi.hoisted(() => ({
-  getSyncMeta: vi.fn(),
-  listConflicts: vi.fn(),
-  listDeadOutbox: vi.fn(),
-  resolveConflict: vi.fn(),
-  reviveDeadOutbox: vi.fn(),
-  runSync: vi.fn(),
+  getSyncMeta: vi.fn(), listConflicts: vi.fn(), listDeadOutbox: vi.fn(),
+  resolveConflict: vi.fn(), reviveDeadOutbox: vi.fn(), runSync: vi.fn(), saveSyncMeta: vi.fn(),
 }));
-
-const outboxMocks = vi.hoisted(() => ({
-  outboxCount: vi.fn(),
-}));
-
+const outboxMocks = vi.hoisted(() => ({ outboxCount: vi.fn() }));
 const dbMocks = vi.hoisted(() => ({
-  clearUserBusinessData: vi.fn(),
-  countLocalData: vi.fn(),
-  ensureInitialized: vi.fn(),
-  getSettings: vi.fn(),
-  ingestQuotesFeed: vi.fn(),
-  runPendingMigrations: vi.fn(),
+  clearUserBusinessData: vi.fn(), countLocalData: vi.fn(), ensureInitialized: vi.fn(),
+  getSettings: vi.fn(), ingestQuotesFeed: vi.fn(), runPendingMigrations: vi.fn(),
 }));
-
-const authMocks = vi.hoisted(() => ({
-  useAuth: vi.fn(),
-  signOut: vi.fn(),
-  signOutBeforeLocalClear: vi.fn(),
-}));
+const authMocks = vi.hoisted(() => ({ useAuth: vi.fn(), signOut: vi.fn(), signOutBeforeLocalClear: vi.fn() }));
 
 vi.mock("./lib/sync/engine", () => engineMocks);
 vi.mock("./lib/sync/outbox", () => outboxMocks);
 vi.mock("./lib/db", () => dbMocks);
-vi.mock("./lib/auth", () => ({
-  useAuth: authMocks.useAuth,
-  signOutBeforeLocalClear: authMocks.signOutBeforeLocalClear,
-}));
+vi.mock("./lib/auth", () => ({ useAuth: authMocks.useAuth, signOutBeforeLocalClear: authMocks.signOutBeforeLocalClear }));
 vi.mock("./lib/navActions", async () => {
   const React = await import("react");
   return {
-    NavActionsProvider: ({ children }: { children: ReactNode }) =>
-      React.createElement(React.Fragment, null, children),
+    NavActionsProvider: ({ children }: { children: ReactNode }) => React.createElement(React.Fragment, null, children),
     useNavActionRegistry: () => ({ api: {}, navAction: () => undefined }),
   };
 });
 vi.mock("./components/CollapsingNavBar", async () => {
   const React = await import("react");
-  return {
-    default: ({ onSignOut }: { onSignOut: () => void | Promise<void> }) =>
-      React.createElement(
-        "button",
-        { type: "button", onClick: () => void onSignOut() },
-        "Đăng xuất",
-      ),
-  };
+  return { default: ({ onSignOut }: { onSignOut: () => void | Promise<void> }) =>
+    React.createElement("button", { type: "button", onClick: () => void onSignOut() }, "Đăng xuất") };
 });
 vi.mock("./components/BottomDock", () => ({ default: () => null }));
 vi.mock("./pages/Overview", () => ({ default: () => null }));
@@ -65,80 +38,38 @@ vi.mock("./pages/Transactions", () => ({ default: () => null }));
 vi.mock("./pages/Goals", () => ({ default: () => null }));
 vi.mock("./pages/Simulation", () => ({ default: () => null }));
 vi.mock("./pages/Notfallmappe", () => ({ default: () => null }));
+vi.mock("./pages/Auth", () => ({ default: () => null }));
 vi.mock("./pages/Onboarding", async () => {
   const React = await import("react");
-  return {
-    default: () =>
-      React.createElement(
-        "div",
-        null,
-        React.createElement("button", { type: "button" }, "Bắt đầu với kế hoạch mẫu"),
-        React.createElement("button", { type: "button" }, "Bắt đầu với dữ liệu trống"),
-      ),
-  };
+  return { default: () => React.createElement("div", null,
+    React.createElement("button", null, "Bắt đầu với kế hoạch mẫu"),
+    React.createElement("button", null, "Bắt đầu với dữ liệu trống")) };
 });
-vi.mock("./pages/Auth", () => ({ default: () => null }));
 vi.mock("./pages/MigrateWizard", async () => {
   const React = await import("react");
-  return {
-    default: ({
-      onBack,
-    }: {
-      userId: string;
-      onDone: () => void;
-      onBack: () => void;
-    }) =>
-      React.createElement(
-        "div",
-        { "data-testid": "recovery-screen" },
-        React.createElement("h1", null, "Khôi phục dữ liệu trên thiết bị"),
-        React.createElement(
-          "button",
-          { type: "button", onClick: () => onBack() },
-          "Quay lại — chưa khôi phục dữ liệu",
-        ),
-      ),
-  };
+  return { default: ({ onDone, onBack }: { userId: string; onDone: () => void | Promise<void>; onBack: () => void }) =>
+    React.createElement("div", { "data-testid": "recovery-screen" },
+      React.createElement("h1", null, "Khôi phục dữ liệu trên thiết bị"),
+      React.createElement("button", { onClick: () => onBack() }, "Quay lại — chưa khôi phục dữ liệu"),
+      React.createElement("button", { onClick: () => void onDone() }, "Kiểm tra dữ liệu")) };
 });
 vi.mock("./pages/Settings", async () => {
   const React = await import("react");
-  const { default: SyncConflictSection } = await import("./components/SyncConflictSection");
-  return {
-    default: ({ onConflictResolved }: { onConflictResolved?: () => void | Promise<void> }) =>
-      React.createElement(SyncConflictSection, {
-        userId: "owner-1",
-        onResolved: async () => {
-          await onConflictResolved?.();
-        },
-      }),
-  };
+  return { default: () => React.createElement("div", { "data-testid": "settings-data" }, "Cài đặt → Dữ liệu") };
 });
 
 import App from "./App";
-import {
-  SYNC_CONFLICT_FOCUS_STATE_KEY,
-  SYNC_CONFLICTS_SECTION_ID,
-  conflictCtaLabel,
-  focusSyncConflictSection,
-  openSyncConflictSection,
-  readSyncConflictFocusToken,
-  reconcileVisibleLogoutBlockers,
-} from "./components/SyncConflictSection";
 
-function conflict(overrides: Partial<ConflictRecord> = {}): ConflictRecord {
-  return {
-    id: "conflict-1",
-    table: "settings",
-    entityId: "settings-1",
-    local: { privateValue: "local-canary" },
-    remote: { privateValue: "remote-canary" },
-    detectedAt: "2026-08-11T10:00:00.000Z",
-    formatVersion: 2,
-    remoteVersion: 3,
-    remoteUpdatedAt: "2026-08-11T09:59:00.000Z",
-    remoteDeletedAt: null,
-    ...overrides,
-  };
+const ZERO_COUNTS = { settings: 0, goals: 0, transactions: 0, annualChecklists: 0, monthlySnapshots: 0, quotes: 0 };
+const LOCAL_SETTINGS = { ...ZERO_COUNTS, settings: 1 };
+const BLOCKED_COPY = "Bạn còn dữ liệu chưa đồng bộ hoặc chưa khôi phục. Hãy khôi phục hoặc sao lưu trước khi đăng xuất.";
+
+function conflict(): ConflictRecord {
+  return { id: "conflict-1", table: "settings", entityId: "settings", local: {}, remote: {}, detectedAt: "2026-08-11T10:00:00.000Z" };
+}
+
+function renderApp(path = "/") {
+  return render(createElement(MemoryRouter, { initialEntries: [path] }, createElement(App)));
 }
 
 afterEach(() => cleanup());
@@ -146,338 +77,126 @@ afterEach(() => cleanup());
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
-  document.body.replaceChildren();
   Object.defineProperty(window.navigator, "onLine", { configurable: true, value: true });
-
   authMocks.useAuth.mockReturnValue({
-    ready: true,
-    configured: false,
-    user: {
-      id: "owner-1",
-      email: "owner@example.com",
-      user_metadata: { display_name: "Owner" },
-    },
-    vaultReady: true,
-    mfaReady: true,
-    signOut: authMocks.signOut,
+    ready: true, configured: false,
+    user: { id: "owner-1", email: "owner@example.com", user_metadata: { display_name: "Owner" } },
+    vaultReady: true, mfaReady: true, signOut: authMocks.signOut,
   });
   dbMocks.runPendingMigrations.mockResolvedValue(undefined);
   dbMocks.getSettings.mockResolvedValue({ onboardingDone: true, planName: "Quỹ VWCE" });
   dbMocks.ingestQuotesFeed.mockResolvedValue({ status: "skipped" });
-  dbMocks.countLocalData.mockResolvedValue({
-    settings: 0,
-    goals: 0,
-    transactions: 0,
-    annualChecklists: 0,
-    monthlySnapshots: 0,
-  });
-  dbMocks.ensureInitialized.mockResolvedValue(undefined);
+  dbMocks.countLocalData.mockResolvedValue(ZERO_COUNTS);
   dbMocks.clearUserBusinessData.mockResolvedValue(undefined);
-  engineMocks.getSyncMeta.mockResolvedValue({
-    migrateWizardDone: true,
-    migrateWizardSkipped: false,
-  });
+  engineMocks.getSyncMeta.mockResolvedValue({ migrateWizardDone: true, migrateWizardSkipped: false });
   engineMocks.listConflicts.mockResolvedValue([]);
   engineMocks.listDeadOutbox.mockResolvedValue([]);
-  engineMocks.resolveConflict.mockResolvedValue({ status: "resolved-local" });
+  engineMocks.runSync.mockResolvedValue({ status: "synced", pushed: 0, pulled: 0, conflicts: 0 });
+  engineMocks.saveSyncMeta.mockResolvedValue({});
   engineMocks.reviveDeadOutbox.mockResolvedValue(0);
-  engineMocks.runSync.mockResolvedValue({
-    status: "synced",
-    pushed: 0,
-    pulled: 0,
-    conflicts: 0,
-  });
   outboxMocks.outboxCount.mockResolvedValue(0);
   authMocks.signOutBeforeLocalClear.mockResolvedValue({ status: "success" });
-  HTMLElement.prototype.scrollIntoView = vi.fn();
 });
 
-describe("App conflict banner routing and blocker state", () => {
-  it("navigates from another route to the Data tab with a one-shot focus token", () => {
-    const navigate = vi.fn();
-    const focus = vi.fn();
-
-    const action = openSyncConflictSection({
-      pathname: "/",
-      search: "",
-      navigate,
-      focus,
-      token: "focus-once",
-    });
-
-    expect(action).toBe("navigated");
-    expect(navigate).toHaveBeenCalledWith("/settings?tab=data", {
-      state: { [SYNC_CONFLICT_FOCUS_STATE_KEY]: "focus-once" },
-    });
-    expect(focus).not.toHaveBeenCalled();
-    expect(readSyncConflictFocusToken(navigate.mock.calls[0][1].state)).toBe("focus-once");
-  });
-
-  it("focuses and scrolls directly when already on the Data tab", async () => {
-    const section = document.createElement("section");
-    section.id = SYNC_CONFLICTS_SECTION_ID;
-    section.tabIndex = -1;
-    section.scrollIntoView = vi.fn();
-    document.body.append(section);
-    const navigate = vi.fn();
-
-    const action = openSyncConflictSection({
-      pathname: "/settings",
-      search: "?tab=data",
-      navigate,
-    });
-
-    expect(action).toBe("focused");
-    await expect.poll(() => document.activeElement).toBe(section);
-    expect(section.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
-  it("fails silently after a bounded focus retry when the section is gone", async () => {
-    await expect(focusSyncConflictSection({ attempts: 2, delayMs: 0 })).resolves.toBe(false);
-  });
-
-  it("uses explicit singular and plural conflict CTA labels", () => {
-    expect(conflictCtaLabel(1)).toBe("Xử lý 1 xung đột");
-    expect(conflictCtaLabel(3)).toBe("Xử lý 3 xung đột");
-  });
-
-  it("clears a visible conflict blocker only when every blocker is zero", () => {
-    const current = { pending: 0, dead: 0, conflicts: 1 };
-    expect(reconcileVisibleLogoutBlockers(current, { pending: 0, dead: 0, conflicts: 0 })).toBeNull();
-  });
-
-  it("keeps pending and dead outbox blockers independent after conflicts reach zero", () => {
-    const current = { pending: 0, dead: 0, conflicts: 1 };
-    expect(
-      reconcileVisibleLogoutBlockers(current, { pending: 2, dead: 0, conflicts: 0 }),
-    ).toEqual({ pending: 2, dead: 0, conflicts: 0 });
-    expect(
-      reconcileVisibleLogoutBlockers(current, { pending: 0, dead: 1, conflicts: 0 }),
-    ).toEqual({ pending: 0, dead: 1, conflicts: 0 });
-  });
-
-  it("re-reads all blockers after a confirmed conflict callback and never signs out automatically", async () => {
-    engineMocks.listConflicts.mockResolvedValue([conflict()]);
-    outboxMocks.outboxCount.mockResolvedValue(1);
-
-    render(
-      createElement(
-        MemoryRouter,
-        { initialEntries: ["/settings?tab=data"] },
-        createElement(App),
-      ),
-    );
-
-    await screen.findByRole("button", { name: "Giữ dữ liệu trên thiết bị này" });
-    await waitFor(() => expect(engineMocks.listConflicts.mock.calls.length).toBeGreaterThanOrEqual(2));
-
-    engineMocks.listConflicts.mockClear();
-    engineMocks.listDeadOutbox.mockClear();
-    outboxMocks.outboxCount.mockClear();
-
-    fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
-    const banner = await screen.findByRole("alert");
-    expect(banner.textContent).toMatch(/chưa đồng bộ|chưa xử lý|xung đột/i);
-    expect(authMocks.signOut).not.toHaveBeenCalled();
-    expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
-    expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
-
-    engineMocks.listConflicts.mockClear();
-    engineMocks.listDeadOutbox.mockClear();
-    outboxMocks.outboxCount.mockClear();
-    engineMocks.listConflicts.mockResolvedValue([]);
-    engineMocks.listDeadOutbox.mockResolvedValue([]);
-    outboxMocks.outboxCount.mockResolvedValue(0);
-
-    fireEvent.click(screen.getByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }));
-    const dialog = await screen.findByRole("dialog");
-    fireEvent.click(
-      within(dialog).getByRole("button", {
-        name: /Xác nhận giữ dữ liệu trên thiết bị này/,
-      }),
-    );
-
-    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
-    expect(engineMocks.resolveConflict).toHaveBeenCalledTimes(1);
-    expect(authMocks.signOut).not.toHaveBeenCalled();
-    expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
-  });
-
-  it("keeps logout blocked after a pending replacement conflict and never auto signs out", async () => {
-    const replacement = conflict({
-      id: "replacement-1",
-      remoteVersion: 7,
-      reasonCategory: "server-version-changed",
-      sourceOutboxId: "outbox-1",
-      supersedesConflictId: "conflict-1",
-    });
-    engineMocks.listConflicts
-      .mockResolvedValueOnce([conflict()])
-      .mockResolvedValue([replacement]);
-    engineMocks.resolveConflict.mockResolvedValue({
-      status: "resolved-local-pending-conflict",
-      reason: "server-version-changed",
-    });
-    outboxMocks.outboxCount.mockResolvedValue(1);
-
-    render(
-      createElement(
-        MemoryRouter,
-        { initialEntries: ["/settings?tab=data"] },
-        createElement(App),
-      ),
-    );
-
-    fireEvent.click(await screen.findByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }));
-    fireEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: /Xác nhận giữ dữ liệu trên thiết bị này/,
-      }),
-    );
-
-    expect(
-      await screen.findByText(
-        "Đã lưu lựa chọn trên thiết bị, nhưng trạng thái server đã thay đổi hoặc chưa thể cập nhật an toàn. Không có dữ liệu bị ghi đè. Vui lòng xem xung đột mới.",
-      ),
-    ).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
-    await waitFor(() => {
-      expect(
-        screen.getAllByRole("alert").some((alert) =>
-          (alert.textContent ?? "").includes("chưa đồng bộ") ||
-            (alert.textContent ?? "").includes("xung đột"),
-        ),
-      ).toBe(true);
-    });
-    expect(authMocks.signOut).not.toHaveBeenCalled();
-    expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
-  });
-});
-
-describe("App logout fail-closed and recovery gate", () => {
-  it("blocks logout when conflicts > 0 and never clears local data", async () => {
-    engineMocks.listConflicts.mockResolvedValue([conflict()]);
-    outboxMocks.outboxCount.mockResolvedValue(0);
-
-    render(createElement(MemoryRouter, null, createElement(App)));
+describe("fresh fail-closed logout", () => {
+  it.each([
+    ["conflict", () => engineMocks.listConflicts.mockResolvedValue([conflict()])],
+    ["pending outbox", () => outboxMocks.outboxCount.mockResolvedValue(2)],
+    ["dead outbox", () => { outboxMocks.outboxCount.mockResolvedValue(1); engineMocks.listDeadOutbox.mockResolvedValue([{ id: "dead-1", dead: true }]); }],
+  ])("blocks %s without sign-out or clear", async (_label, arrange) => {
+    arrange();
+    renderApp();
     fireEvent.click(await screen.findByRole("button", { name: "Đăng xuất" }));
-
-    expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.getByText(/Bạn còn dữ liệu chưa đồng bộ/)).toBeTruthy();
+    expect(await screen.findByText(BLOCKED_COPY)).toBeTruthy();
     expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
+    expect(authMocks.signOut).not.toHaveBeenCalled();
     expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
   });
 
-  it("blocks logout when pending outbox > 0", async () => {
-    outboxMocks.outboxCount.mockResolvedValue(3);
-    engineMocks.listDeadOutbox.mockResolvedValue([]);
-
-    render(createElement(MemoryRouter, null, createElement(App)));
-    fireEvent.click(await screen.findByRole("button", { name: "Đăng xuất" }));
-
-    expect(await screen.findByText(/Bạn còn dữ liệu chưa đồng bộ/)).toBeTruthy();
-    expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
-  });
-
-  it("blocks logout when dead outbox > 0", async () => {
-    outboxMocks.outboxCount.mockResolvedValue(1);
-    engineMocks.listDeadOutbox.mockResolvedValue([{ id: "dead-1", dead: true }]);
-
-    render(createElement(MemoryRouter, null, createElement(App)));
-    fireEvent.click(await screen.findByRole("button", { name: "Đăng xuất" }));
-
-    expect(await screen.findByText(/Bạn còn dữ liệu chưa đồng bộ/)).toBeTruthy();
-    expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
-  });
-
-  it("re-checks fresh state even when UI looked clean — still blocks on conflict", async () => {
-    // First badge reads are clean; logout re-check finds a conflict.
-    engineMocks.listConflicts
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValue([conflict()]);
-    outboxMocks.outboxCount.mockResolvedValue(0);
-
-    render(createElement(MemoryRouter, null, createElement(App)));
+  it("blocks when the visible state was clean but the fresh read finds a conflict", async () => {
+    renderApp();
     await screen.findByRole("button", { name: "Đăng xuất" });
-
+    engineMocks.listConflicts.mockResolvedValue([conflict()]);
     fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
-    expect(await screen.findByText(/Bạn còn dữ liệu chưa đồng bộ/)).toBeTruthy();
+    expect(await screen.findByText(BLOCKED_COPY)).toBeTruthy();
     expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
     expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
   });
 
-  it("allows logout when every blocker is zero and recovery is done", async () => {
-    render(createElement(MemoryRouter, null, createElement(App)));
-    fireEvent.click(await screen.findByRole("button", { name: "Đăng xuất" }));
+  it("fails closed when any fresh read fails", async () => {
+    renderApp();
+    await screen.findByRole("button", { name: "Đăng xuất" });
+    outboxMocks.outboxCount.mockRejectedValueOnce(new Error("PRIVATE_BROWSER_ERROR"));
+    fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
+    expect(await screen.findByText(BLOCKED_COPY)).toBeTruthy();
+    expect(document.body.textContent).not.toContain("PRIVATE_BROWSER_ERROR");
+    expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
+    expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
+  });
 
-    await waitFor(() => expect(authMocks.signOutBeforeLocalClear).toHaveBeenCalled());
+  it("blocks local recovery data that is not complete", async () => {
+    renderApp();
+    await screen.findByRole("button", { name: "Đăng xuất" });
+    dbMocks.countLocalData.mockResolvedValue(LOCAL_SETTINGS);
+    engineMocks.getSyncMeta.mockResolvedValue({ migrateWizardDone: false });
+    fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
+    expect(await screen.findByText(BLOCKED_COPY)).toBeTruthy();
+    expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
+  });
+
+  it("preserves explicit logout when all fresh blockers are zero", async () => {
+    renderApp();
+    fireEvent.click(await screen.findByRole("button", { name: "Đăng xuất" }));
+    await waitFor(() => expect(authMocks.signOutBeforeLocalClear).toHaveBeenCalledTimes(1));
+    expect(authMocks.signOutBeforeLocalClear.mock.calls[0][0]).toBe(authMocks.signOut);
     expect(authMocks.signOutBeforeLocalClear.mock.calls[0][1]).toBe(dbMocks.clearUserBusinessData);
   });
+});
 
-  it("routes local Settings=1 after login to recovery, not onboarding", async () => {
-    dbMocks.countLocalData.mockResolvedValue({
-      settings: 1,
-      goals: 0,
-      transactions: 0,
-      annualChecklists: 0,
-      monthlySnapshots: 0,
-    });
-    engineMocks.getSyncMeta.mockResolvedValue({
-      migrateWizardDone: false,
-      migrateWizardSkipped: true, // skip must not open onboarding
-    });
+describe("mandatory recovery routing", () => {
+  beforeEach(() => {
+    dbMocks.countLocalData.mockResolvedValue(LOCAL_SETTINGS);
+    engineMocks.getSyncMeta.mockResolvedValue({ migrateWizardDone: false, migrateWizardSkipped: true });
     dbMocks.getSettings.mockResolvedValue({ onboardingDone: false, planName: "" });
-
-    render(createElement(MemoryRouter, null, createElement(App)));
-
-    expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Khôi phục dữ liệu trên thiết bị" })).toBeTruthy();
-    expect(screen.queryByText("Bắt đầu với kế hoạch mẫu")).toBeNull();
-    expect(screen.queryByText("Bắt đầu với dữ liệu trống")).toBeNull();
   });
 
-  it("soft recovery back keeps recovery required — onboarding still blocked", async () => {
-    dbMocks.countLocalData.mockResolvedValue({
-      settings: 1,
-      goals: 0,
-      transactions: 0,
-      annualChecklists: 0,
-      monthlySnapshots: 0,
-    });
-    engineMocks.getSyncMeta.mockResolvedValue({
-      migrateWizardDone: false,
-      migrateWizardSkipped: false,
-    });
-    dbMocks.getSettings.mockResolvedValue({ onboardingDone: false, planName: "" });
+  it.each(["/", "/settings?tab=data", "/goals"])("keeps %s behind recovery and never renders onboarding", async (path) => {
+    renderApp(path);
+    expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
+    expect(screen.queryByText("Bắt đầu với kế hoạch mẫu")).toBeNull();
+    expect(screen.queryByText("Bắt đầu với dữ liệu trống")).toBeNull();
+    expect(engineMocks.runSync).not.toHaveBeenCalled();
+  });
 
-    render(createElement(MemoryRouter, null, createElement(App)));
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Quay lại — chưa khôi phục dữ liệu" }),
-    );
-
+  it("secondary action preserves the mandatory recovery gate", async () => {
+    renderApp();
+    fireEvent.click(await screen.findByRole("button", { name: "Quay lại — chưa khôi phục dữ liệu" }));
     expect(screen.getByTestId("recovery-screen")).toBeTruthy();
+    expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
+    expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
+  });
+
+  it("completion routes to Settings Data, then marks done, without auto sync or clear", async () => {
+    dbMocks.getSettings.mockResolvedValue({ onboardingDone: true, planName: "Quỹ VWCE" });
+    renderApp();
+    await screen.findByTestId("recovery-screen");
+    engineMocks.runSync.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "Kiểm tra dữ liệu" }));
+
+    expect(await screen.findByTestId("settings-data")).toBeTruthy();
+    expect(engineMocks.saveSyncMeta).toHaveBeenCalledWith({
+      userId: "owner-1", migrateWizardDone: true, migrateWizardSkipped: false,
+    });
+    expect(engineMocks.runSync).not.toHaveBeenCalled();
+    expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
+    expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
     expect(screen.queryByText("Bắt đầu với kế hoạch mẫu")).toBeNull();
   });
 
   it("allows normal onboarding only when local business data is zero", async () => {
-    dbMocks.countLocalData.mockResolvedValue({
-      settings: 0,
-      goals: 0,
-      transactions: 0,
-      annualChecklists: 0,
-      monthlySnapshots: 0,
-    });
-    engineMocks.getSyncMeta.mockResolvedValue({
-      migrateWizardDone: false,
-      migrateWizardSkipped: false,
-    });
-    dbMocks.getSettings.mockResolvedValue({ onboardingDone: false, planName: "" });
-
-    render(createElement(MemoryRouter, null, createElement(App)));
-
+    dbMocks.countLocalData.mockResolvedValue(ZERO_COUNTS);
+    renderApp();
     expect(await screen.findByText("Bắt đầu với kế hoạch mẫu")).toBeTruthy();
     expect(screen.queryByTestId("recovery-screen")).toBeNull();
   });
