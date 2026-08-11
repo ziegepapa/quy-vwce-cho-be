@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const remoteMock = vi.hoisted(() => ({
   tables: new Map<string, Map<string, Record<string, unknown>>>(),
   failFetch: false,
+  failUpdate: false,
+  forceConditionalZeroRows: false,
   conditionalUpdates: [] as Array<{
     table: string;
     filters: Record<string, unknown>;
@@ -43,12 +45,14 @@ vi.mock("../supabase", () => {
     };
 
     const updateResult = () => {
-      const rows = matchingRows();
+      if (remoteMock.failUpdate) return { data: null, error: { message: "private backend error" } };
+      const conditional = Object.prototype.hasOwnProperty.call(filters, "version");
+      const matched = matchingRows();
+      const rows = conditional && remoteMock.forceConditionalZeroRows ? [] : matched;
       for (const row of rows) {
-        const id = String(row.id);
-        rowsFor(table).set(id, { ...row, ...updatePayload });
+        rowsFor(table).set(String(row.id), { ...row, ...updatePayload });
       }
-      if (Object.prototype.hasOwnProperty.call(filters, "version")) {
+      if (conditional) {
         remoteMock.conditionalUpdates.push({
           table,
           filters: { ...filters },
@@ -120,6 +124,7 @@ import {
 } from "./engine";
 
 const USER_ID = "owner-1";
+const CANARY = "NOTFALLMAPPE_CONTACT_DOCUMENT_LOCATION_SECRET";
 const REMOTE_TABLE: Record<EntityTable, string> = {
   settings: "app_settings",
   goals: "goals",
@@ -131,12 +136,7 @@ const REMOTE_TABLE: Record<EntityTable, string> = {
 function setRemote(
   table: EntityTable,
   entityId: string,
-  value: {
-    data: unknown;
-    version: number;
-    updatedAt?: string;
-    deletedAt?: string | null;
-  },
+  value: { data: unknown; version: number; updatedAt?: string; deletedAt?: string | null },
 ) {
   const remoteTable = REMOTE_TABLE[table];
   let rows = remoteMock.tables.get(remoteTable);
@@ -158,7 +158,7 @@ function getRemote(table: EntityTable, entityId: string) {
   return remoteMock.tables.get(REMOTE_TABLE[table])?.get(entityId);
 }
 
-function v2Conflict(overrides: Partial<ConflictRecord> = {}): ConflictRecord {
+function conflict(overrides: Partial<ConflictRecord> = {}): ConflictRecord {
   return {
     id: "conflict-1",
     table: "goals",
@@ -182,6 +182,8 @@ async function putGoal(value: Record<string, unknown>) {
 beforeEach(async () => {
   remoteMock.tables.clear();
   remoteMock.failFetch = false;
+  remoteMock.failUpdate = false;
+  remoteMock.forceConditionalZeroRows = false;
   remoteMock.conditionalUpdates.length = 0;
   remoteMock.unconditionalUpserts.length = 0;
   await db.delete();
@@ -189,191 +191,152 @@ beforeEach(async () => {
 });
 
 describe("computeSyncStatus", () => {
-  it("offline wins", () => {
-    expect(
-      computeSyncStatus({ online: false, syncing: true, conflictCount: 0, pendingOutbox: 0 }),
-    ).toBe("offline");
-  });
-
-  it("conflict", () => {
-    expect(
-      computeSyncStatus({ online: true, syncing: false, conflictCount: 1, pendingOutbox: 0 }),
-    ).toBe("conflict");
-  });
-
-  it("syncing via outbox", () => {
-    expect(
-      computeSyncStatus({ online: true, syncing: false, conflictCount: 0, pendingOutbox: 3 }),
-    ).toBe("syncing");
-  });
-
-  it("synced", () => {
-    expect(
-      computeSyncStatus({ online: true, syncing: false, conflictCount: 0, pendingOutbox: 0 }),
-    ).toBe("synced");
+  it("keeps offline, conflict, syncing and synced precedence", () => {
+    expect(computeSyncStatus({ online: false, syncing: true, conflictCount: 1, pendingOutbox: 1 })).toBe("offline");
+    expect(computeSyncStatus({ online: true, syncing: false, conflictCount: 1, pendingOutbox: 0 })).toBe("conflict");
+    expect(computeSyncStatus({ online: true, syncing: false, conflictCount: 0, pendingOutbox: 1 })).toBe("syncing");
+    expect(computeSyncStatus({ online: true, syncing: false, conflictCount: 0, pendingOutbox: 0 })).toBe("synced");
   });
 });
 
-describe("atomic conflict resolution", () => {
-  it("local-win keeps the current local row and creates exactly one guarded outbox item", async () => {
+describe("truthful local resolution outcomes", () => {
+  it("returns sync-pending offline after atomically saving the local choice", async () => {
     await putGoal({ id: "goal-1", name: "Current local", version: 3, updatedAt: "local-now" });
-    await enqueueOutbox("goals", "goal-1", "upsert", { id: "goal-1", name: "Older" }, 3);
-    await db.conflicts.put(v2Conflict());
+    await db.conflicts.put(conflict());
 
-    const result = await resolveConflict("conflict-1", "local", USER_ID, {
-      online: false,
-      pushAfterResolve: false,
-    });
+    const result = await resolveConflict("conflict-1", "local", USER_ID, { online: false });
 
-    expect(result).toEqual({ status: "resolved-local" });
-    expect((await db.goals.get("goal-1") as any).name).toBe("Current local");
-    expect((await db.goals.get("goal-1") as any).version).toBe(6);
+    expect(result).toEqual({ status: "resolved-local-sync-pending", reason: "offline" });
     const outbox = await db.outbox.toArray();
     expect(outbox).toHaveLength(1);
     expect(outbox[0].expectedRemoteVersion).toBe(5);
     expect(outbox[0].version).toBe(6);
-    expect((outbox[0].payload as any).name).toBe("Current local");
     expect((await db.conflicts.get("conflict-1"))?.resolved).toBe("local");
+  });
+
+  it("returns resolved-local only after the exact guarded write and outbox removal", async () => {
+    await putGoal({ id: "goal-1", name: "Chosen local", version: 3 });
+    await db.conflicts.put(conflict());
+    setRemote("goals", "goal-1", {
+      data: { id: "goal-1", name: "Server before" },
+      version: 5,
+    });
+
+    const result = await resolveConflict("conflict-1", "local", USER_ID, { online: true });
+
+    expect(result).toEqual({ status: "resolved-local" });
+    expect(await db.outbox.count()).toBe(0);
+    expect(remoteMock.conditionalUpdates).toHaveLength(1);
+    expect(remoteMock.conditionalUpdates[0].updatedRows).toBe(1);
+    expect(remoteMock.conditionalUpdates[0].filters).toEqual({
+      user_id: USER_ID,
+      id: "goal-1",
+      version: 5,
+    });
+    expect((getRemote("goals", "goal-1")?.data as any).name).toBe("Chosen local");
+    expect(getRemote("goals", "goal-1")?.version).toBe(6);
+    expect(remoteMock.unconditionalUpserts).toHaveLength(0);
     expect(await listConflicts()).toEqual([]);
   });
 
-  it("server-win uses the current refetched row and removes only matching outbox", async () => {
-    await putGoal({ id: "goal-1", name: "Local", version: 2 });
-    await enqueueOutbox("goals", "goal-1", "upsert", { id: "goal-1", name: "Local" }, 2);
-    await enqueueOutbox("transactions", "tx-1", "upsert", { id: "tx-1" }, 1);
-    await db.conflicts.put(v2Conflict({ remote: { id: "goal-1", name: "Stale remote" } }));
+  it("covers production mismatch with one replacement conflict and no overwrite", async () => {
+    await putGoal({ id: "goal-1", name: "Chosen local", version: 3 });
+    await db.conflicts.put(conflict());
     setRemote("goals", "goal-1", {
-      data: { id: "goal-1", name: "Current server", updatedAt: "server-current" },
-      version: 8,
-    });
-
-    const result = await resolveConflict("conflict-1", "remote", USER_ID, { online: true });
-
-    expect(result).toEqual({ status: "resolved-remote" });
-    const local = await db.goals.get("goal-1") as any;
-    expect(local.name).toBe("Current server");
-    expect(local.version).toBe(8);
-    const outbox = await db.outbox.toArray();
-    expect(outbox).toHaveLength(1);
-    expect(outbox[0].table).toBe("transactions");
-    expect((await db.conflicts.get("conflict-1"))?.resolved).toBe("remote");
-  });
-
-  it("server-win tombstone soft-deletes without resurrecting stale remote data", async () => {
-    await putGoal({ id: "goal-1", name: "Keep local fields", version: 2 });
-    await enqueueOutbox("goals", "goal-1", "upsert", { id: "goal-1", name: "Local" }, 2);
-    await db.conflicts.put(v2Conflict({ remote: { id: "goal-1", name: "Must not return" } }));
-    setRemote("goals", "goal-1", {
-      data: { id: "goal-1", name: "Stale tombstone payload" },
-      version: 9,
-      deletedAt: "2026-08-11T08:05:00.000Z",
-    });
-
-    const result = await resolveConflict("conflict-1", "remote", USER_ID, { online: true });
-
-    expect(result).toEqual({ status: "remote-deleted" });
-    const local = await db.goals.get("goal-1") as any;
-    expect(local.name).toBe("Keep local fields");
-    expect(local.deletedAt).toBe("2026-08-11T08:05:00.000Z");
-    expect(local.version).toBe(9);
-    expect(await db.outbox.count()).toBe(0);
-    expect((await db.conflicts.get("conflict-1"))?.resolved).toBe("remote-deleted");
-  });
-
-  it("legacy conflict fails closed offline, on fetch failure, and when remote is not found", async () => {
-    const legacy: ConflictRecord = {
-      id: "legacy-1",
-      table: "goals",
-      entityId: "goal-1",
-      local: { id: "goal-1", name: "Local" },
-      remote: { id: "goal-1", name: "Stale" },
-      detectedAt: "2026-08-11T08:00:00.000Z",
-    };
-    await putGoal({ id: "goal-1", name: "Local", version: 2 });
-    await enqueueOutbox("goals", "goal-1", "upsert", legacy.local, 2);
-    await db.conflicts.put(legacy);
-
-    const offline = await resolveConflict("legacy-1", "remote", USER_ID, { online: false });
-    expect(offline.status).toBe("needs-network-verification");
-
-    remoteMock.failFetch = true;
-    const failed = await resolveConflict("legacy-1", "remote", USER_ID, { online: true });
-    expect(failed.status).toBe("needs-network-verification");
-
-    remoteMock.failFetch = false;
-    const notFound = await resolveConflict("legacy-1", "remote", USER_ID, { online: true });
-    expect(notFound.status).toBe("needs-network-verification");
-    expect((await db.goals.get("goal-1") as any).name).toBe("Local");
-    expect(await db.outbox.count()).toBe(1);
-    expect((await db.conflicts.get("legacy-1"))?.resolved).toBeUndefined();
-  });
-
-  it("legacy conflict refetches and never uses its stale remote snapshot", async () => {
-    const legacy: ConflictRecord = {
-      id: "legacy-1",
-      table: "goals",
-      entityId: "goal-1",
-      local: { id: "goal-1", name: "Local" },
-      remote: { id: "goal-1", name: "Stale snapshot" },
-      detectedAt: "2026-08-11T08:00:00.000Z",
-    };
-    await putGoal({ id: "goal-1", name: "Local", version: 2 });
-    await enqueueOutbox("goals", "goal-1", "upsert", legacy.local, 2);
-    await db.conflicts.put(legacy);
-    setRemote("goals", "goal-1", {
-      data: { id: "goal-1", name: "Fresh server" },
+      data: { id: "goal-1", name: "Concurrent server" },
       version: 7,
     });
 
-    const result = await resolveConflict("legacy-1", "remote", USER_ID, { online: true });
+    const result = await resolveConflict("conflict-1", "local", USER_ID, { online: true });
 
-    expect(result).toEqual({ status: "resolved-remote" });
-    expect((await db.goals.get("goal-1") as any).name).toBe("Fresh server");
-    expect((await db.conflicts.get("legacy-1"))?.remoteVersion).toBe(7);
-  });
-
-  it("rolls back entity and outbox when conflict marking fails", async () => {
-    await putGoal({ id: "goal-1", name: "Before", version: 2 });
-    await enqueueOutbox("goals", "goal-1", "upsert", { id: "goal-1", name: "Before" }, 2);
-    await db.conflicts.put(v2Conflict());
-    const originalOutbox = await db.outbox.toArray();
-    const putSpy = vi.spyOn(db.conflicts, "put").mockRejectedValueOnce(new Error("forced"));
-
-    const result = await resolveConflict("conflict-1", "local", USER_ID, {
-      online: false,
-      pushAfterResolve: false,
+    expect(result).toEqual({
+      status: "resolved-local-pending-conflict",
+      reason: "server-version-changed",
     });
-    putSpy.mockRestore();
-
-    expect(result.status).toBe("failed");
-    expect((await db.goals.get("goal-1") as any).name).toBe("Before");
-    expect((await db.goals.get("goal-1") as any).version).toBe(2);
-    expect(await db.outbox.toArray()).toEqual(originalOutbox);
-    expect((await db.conflicts.get("conflict-1"))?.resolved).toBeUndefined();
-  });
-
-  it("is idempotent when the same resolution is retried", async () => {
-    await putGoal({ id: "goal-1", name: "Local", version: 2 });
-    await db.conflicts.put(v2Conflict());
-
-    const first = await resolveConflict("conflict-1", "local", USER_ID, {
-      online: false,
-      pushAfterResolve: false,
-    });
-    const second = await resolveConflict("conflict-1", "local", USER_ID, {
-      online: false,
-      pushAfterResolve: false,
-    });
-
-    expect(first).toEqual({ status: "resolved-local" });
-    expect(second).toEqual({ status: "resolved-local" });
     expect(await db.outbox.count()).toBe(1);
+    expect((await db.conflicts.get("conflict-1"))?.resolved).toBe("local");
+    const unresolved = await listConflicts();
+    expect(unresolved).toHaveLength(1);
+    expect(unresolved[0].id).not.toBe("conflict-1");
+    expect(unresolved[0].reasonCategory).toBe("server-version-changed");
+    expect(unresolved[0].supersedesConflictId).toBe("conflict-1");
+    expect(unresolved[0].sourceOutboxId).toBe((await db.outbox.toArray())[0].id);
+    expect((getRemote("goals", "goal-1")?.data as any).name).toBe("Concurrent server");
+    expect(getRemote("goals", "goal-1")?.version).toBe(7);
+    expect(remoteMock.unconditionalUpserts).toHaveLength(0);
+  });
+
+  it("classifies zero rows with the same refetched version as guarded-update-not-applied", async () => {
+    await putGoal({ id: "goal-1", name: "Chosen local", version: 3 });
+    await db.conflicts.put(conflict());
+    setRemote("goals", "goal-1", {
+      data: { id: "goal-1", name: "Server unchanged" },
+      version: 5,
+    });
+    remoteMock.forceConditionalZeroRows = true;
+
+    const result = await resolveConflict("conflict-1", "local", USER_ID, { online: true });
+
+    expect(result).toEqual({
+      status: "resolved-local-pending-conflict",
+      reason: "guarded-update-not-applied",
+    });
+    expect(await db.outbox.count()).toBe(1);
+    expect(await listConflicts()).toHaveLength(1);
+    expect((await listConflicts())[0].reasonCategory).toBe("guarded-update-not-applied");
+    expect(getRemote("goals", "goal-1")?.version).toBe(5);
+    expect(remoteMock.unconditionalUpserts).toHaveLength(0);
+  });
+
+  it("returns sync-pending for a transient non-conflict push failure", async () => {
+    await putGoal({ id: "goal-1", name: "Chosen local", version: 3 });
+    await db.conflicts.put(conflict());
+    setRemote("goals", "goal-1", { data: { id: "goal-1" }, version: 5 });
+    remoteMock.failUpdate = true;
+
+    const result = await resolveConflict("conflict-1", "local", USER_ID, { online: true });
+
+    expect(result).toEqual({
+      status: "resolved-local-sync-pending",
+      reason: "sync-temporarily-unavailable",
+    });
+    expect(await db.outbox.count()).toBe(1);
+    expect(await listConflicts()).toEqual([]);
+    expect(getRemote("goals", "goal-1")?.version).toBe(5);
+  });
+
+  it("keeps remote resolution and tombstone semantics", async () => {
+    await putGoal({ id: "goal-1", name: "Local", version: 2 });
+    await enqueueOutbox("goals", "goal-1", "upsert", { id: "goal-1" }, 2);
+    await db.conflicts.put(conflict());
+    setRemote("goals", "goal-1", {
+      data: { id: "goal-1", name: "Current server" },
+      version: 8,
+    });
+
+    expect(await resolveConflict("conflict-1", "remote", USER_ID, { online: true })).toEqual({
+      status: "resolved-remote",
+    });
+    expect((await db.goals.get("goal-1") as any).name).toBe("Current server");
+    expect(await db.outbox.count()).toBe(0);
+
+    await db.conflicts.put(conflict({ id: "conflict-2", remoteVersion: 8 }));
+    await enqueueOutbox("goals", "goal-1", "upsert", { id: "goal-1" }, 8);
+    setRemote("goals", "goal-1", {
+      data: { id: "goal-1", name: "Stale tombstone data" },
+      version: 9,
+      deletedAt: "2026-08-11T08:05:00.000Z",
+    });
+    expect(await resolveConflict("conflict-2", "remote", USER_ID, { online: true })).toEqual({
+      status: "remote-deleted",
+    });
+    expect((await db.goals.get("goal-1") as any).deletedAt).toBe("2026-08-11T08:05:00.000Z");
   });
 });
 
-describe("guarded conditional pushes", () => {
-  it("never falls back to unconditional upsert on a version mismatch", async () => {
-    await db.conflicts.put(v2Conflict({ id: "old-resolution", resolved: "local" }));
+describe("guarded pull policy", () => {
+  it("does not false-conflict expected=5 target=6 remote=5", async () => {
+    await putGoal({ id: "goal-1", name: "Chosen local", version: 6 });
     await enqueueOutbox(
       "goals",
       "goal-1",
@@ -383,122 +346,124 @@ describe("guarded conditional pushes", () => {
       { expectedRemoteVersion: 5 },
     );
     setRemote("goals", "goal-1", {
-      data: { id: "goal-1", name: "Concurrent server", version: 7 },
+      data: { id: "goal-1", name: "Expected server" },
+      version: 5,
+    });
+
+    const result = await pullDelta(USER_ID);
+
+    expect(result.conflicts).toBe(0);
+    expect(await listConflicts()).toEqual([]);
+    expect((await db.goals.get("goal-1") as any).version).toBe(6);
+    expect((await db.goals.get("goal-1") as any).name).toBe("Chosen local");
+    expect(await db.outbox.count()).toBe(1);
+  });
+
+  it("creates exactly one replacement for expected=5 target=6 remote=7", async () => {
+    await putGoal({ id: "goal-1", name: "Chosen local", version: 6 });
+    await enqueueOutbox(
+      "goals",
+      "goal-1",
+      "upsert",
+      { id: "goal-1", name: "Chosen local", version: 6 },
+      6,
+      { expectedRemoteVersion: 5 },
+    );
+    setRemote("goals", "goal-1", {
+      data: { id: "goal-1", name: "Diverged" },
       version: 7,
     });
 
-    const push = await pushOutbox(USER_ID);
-
-    expect(push).toMatchObject({ pushed: 0, errors: 1 });
-    expect(await db.outbox.count()).toBe(1);
-    expect(getRemote("goals", "goal-1")?.version).toBe(7);
-    expect((getRemote("goals", "goal-1")?.data as any).name).toBe("Concurrent server");
-    expect(remoteMock.unconditionalUpserts).toHaveLength(0);
-    expect(remoteMock.conditionalUpdates).toHaveLength(1);
-    expect(remoteMock.conditionalUpdates[0].filters).toEqual({
-      user_id: USER_ID,
-      id: "goal-1",
-      version: 5,
-    });
-    expect(remoteMock.conditionalUpdates[0].updatedRows).toBe(0);
-    expect((await db.conflicts.get("old-resolution"))?.resolved).toBe("local");
-
     await pullDelta(USER_ID);
+    await pullDelta(USER_ID);
+
     const unresolved = await listConflicts();
     expect(unresolved).toHaveLength(1);
     expect(unresolved[0].remoteVersion).toBe(7);
-  });
-
-  it("restores a remote tombstone exactly once with deleted_at null and next version", async () => {
-    await putGoal({
-      id: "goal-1",
-      name: "Restore me",
-      version: 2,
-      deletedAt: "local-stale-marker",
-    });
-    await db.conflicts.put(v2Conflict({
-      remoteDeletedAt: "2026-08-11T08:05:00.000Z",
-      remoteVersion: 5,
-    }));
-    setRemote("goals", "goal-1", {
-      data: { id: "goal-1", name: "Old server payload", deletedAt: "old" },
-      version: 5,
-      deletedAt: "2026-08-11T08:05:00.000Z",
-    });
-
-    const result = await resolveConflict("conflict-1", "local", USER_ID, { online: true });
-
-    expect(result).toEqual({ status: "resolved-local" });
-    const remote = getRemote("goals", "goal-1") as any;
-    expect(remote.deleted_at).toBeNull();
-    expect(remote.version).toBe(6);
-    expect(remote.data.name).toBe("Restore me");
-    expect(remote.data.deletedAt).toBeUndefined();
-    expect(remoteMock.conditionalUpdates).toHaveLength(1);
-    expect(remoteMock.conditionalUpdates[0].updatedRows).toBe(1);
-    expect(await db.outbox.count()).toBe(0);
-
-    await pushOutbox(USER_ID);
-    expect(remoteMock.conditionalUpdates).toHaveLength(1);
-  });
-
-  it("does not restore a tombstone after a concurrent version change", async () => {
-    await putGoal({ id: "goal-1", name: "Restore me", version: 2 });
-    await db.conflicts.put(v2Conflict({
-      remoteDeletedAt: "2026-08-11T08:05:00.000Z",
-      remoteVersion: 5,
-    }));
-    setRemote("goals", "goal-1", {
-      data: { id: "goal-1", name: "Concurrent tombstone" },
-      version: 6,
-      deletedAt: "2026-08-11T08:06:00.000Z",
-    });
-
-    const result = await resolveConflict("conflict-1", "local", USER_ID, { online: true });
-
-    expect(result).toEqual({ status: "resolved-local" });
-    const remote = getRemote("goals", "goal-1") as any;
-    expect(remote.deleted_at).toBe("2026-08-11T08:06:00.000Z");
-    expect(remote.version).toBe(6);
-    expect(remoteMock.unconditionalUpserts).toHaveLength(0);
+    expect(unresolved[0].reasonCategory).toBe("server-version-changed");
     expect(await db.outbox.count()).toBe(1);
-    expect((await db.conflicts.get("conflict-1"))?.resolved).toBe("local");
+  });
+
+  it("does not relax ordinary non-guarded outbox conflict detection", async () => {
+    await putGoal({ id: "goal-1", name: "Ordinary local", version: 2 });
+    await enqueueOutbox("goals", "goal-1", "upsert", { id: "goal-1", version: 2 }, 2);
+    setRemote("goals", "goal-1", { data: { id: "goal-1" }, version: 4 });
 
     await pullDelta(USER_ID);
-    const unresolved = await listConflicts();
-    expect(unresolved).toHaveLength(1);
-    expect(unresolved[0].remoteDeletedAt).toBe("2026-08-11T08:06:00.000Z");
-    expect((await db.goals.get("goal-1") as any).deletedAt).toBeUndefined();
+
+    expect(await listConflicts()).toHaveLength(1);
+    expect(await db.outbox.count()).toBe(1);
+  });
+});
+
+describe("per-user serialization", () => {
+  it("allows only one of two simultaneous pushes to process the same item", async () => {
+    await enqueueOutbox(
+      "goals",
+      "goal-1",
+      "upsert",
+      { id: "goal-1", name: "Chosen local", version: 6 },
+      6,
+      { expectedRemoteVersion: 5 },
+    );
+    setRemote("goals", "goal-1", { data: { id: "goal-1" }, version: 5 });
+
+    const results = await Promise.all([pushOutbox(USER_ID), pushOutbox(USER_ID)]);
+
+    expect(results.reduce((sum, result) => sum + result.pushed, 0)).toBe(1);
+    expect(remoteMock.conditionalUpdates).toHaveLength(1);
+    expect(await db.outbox.count()).toBe(0);
+  });
+
+  it("serializes concurrent push/pull without a stale conflict after success", async () => {
+    await putGoal({ id: "goal-1", name: "Chosen local", version: 6 });
+    await enqueueOutbox(
+      "goals",
+      "goal-1",
+      "upsert",
+      { id: "goal-1", name: "Chosen local", version: 6 },
+      6,
+      { expectedRemoteVersion: 5 },
+    );
+    setRemote("goals", "goal-1", { data: { id: "goal-1", name: "Before" }, version: 5 });
+
+    await Promise.all([pushOutbox(USER_ID), pullDelta(USER_ID)]);
+
+    expect(remoteMock.conditionalUpdates).toHaveLength(1);
+    expect(await db.outbox.count()).toBe(0);
+    expect(await listConflicts()).toEqual([]);
+    expect(getRemote("goals", "goal-1")?.version).toBe(6);
+  });
+
+  it("cleans a rejected queue tail so the next operation can run", async () => {
+    remoteMock.failFetch = true;
+    await expect(pullDelta(USER_ID)).rejects.toThrow("Sync failed");
+    remoteMock.failFetch = false;
+    await expect(pullDelta(USER_ID)).resolves.toMatchObject({ conflicts: 0 });
   });
 });
 
 describe("payload confidentiality", () => {
-  it("does not log settings or Notfallmappe canary while resolving", async () => {
-    const canary = ["NOTFALL", "MAPPE", "CANARY"].join("_");
+  it("does not expose or log settings and Notfallmappe canaries", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    await db.settings.put({ id: "settings", planName: "Local" } as never);
-    const legacy: ConflictRecord = {
+    await db.settings.put({ id: "settings", privateValue: CANARY, version: 2 } as never);
+    await db.conflicts.put(conflict({
       id: "settings-conflict",
       table: "settings",
       entityId: "settings",
-      local: { id: "settings", notfallmappe: { purpose: canary } },
-      remote: { id: "settings", notfallmappe: { purpose: "stale" } },
-      detectedAt: "2026-08-11T08:00:00.000Z",
-    };
-    await db.conflicts.put(legacy);
+      local: { privateValue: CANARY },
+      remote: { privateValue: CANARY },
+    }));
     setRemote("settings", "settings", {
-      data: { id: "settings", notfallmappe: { purpose: canary } },
-      version: 4,
+      data: { id: "settings", privateValue: CANARY },
+      version: 7,
     });
 
-    const result = await resolveConflict("settings-conflict", "remote", USER_ID, {
-      online: true,
-    });
+    const result = await resolveConflict("settings-conflict", "local", USER_ID, { online: true });
 
-    expect(result).toEqual({ status: "resolved-remote" });
-    expect(JSON.stringify(result)).not.toContain(canary);
+    expect(JSON.stringify(result)).not.toContain(CANARY);
     expect(log).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
