@@ -157,6 +157,15 @@ export default function SettingsPage({
   const [dead, setDead] = useState<OutboxItem[]>([]);
   const [deadRetrying, setDeadRetrying] = useState(false);
   const [deadSyncedMsg, setDeadSyncedMsg] = useState(false);
+  const [mfaEnrollment, setMfaEnrollment] = useState<{
+    factorId: string;
+    qrCode: string;
+    secret: string;
+  } | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaBusy, setMfaBusy] = useState(false);
+  const [mfaMessage, setMfaMessage] = useState<string | null>(null);
+  const [mfaSetupError, setMfaSetupError] = useState<string | null>(null);
   const auth = useAuth();
 
   const pendingSettings = useRef<Partial<AppSettings>>({});
@@ -587,6 +596,109 @@ export default function SettingsPage({
               options={THEME_OPTIONS}
               onChange={(value) => pickTheme(value as ThemeChoice)}
             />
+          </section>
+
+          <section className="settings-card">
+            <div className="settings-card-head">
+              <div>
+                <p className="settings-card-eyebrow">Bảo mật</p>
+                <h3>Xác minh hai bước</h3>
+                <p>TOTP bảo vệ account owner sau mật khẩu. Password reset không tự bypass TOTP.</p>
+              </div>
+              <span className="settings-icon-bubble" aria-hidden>⌁</span>
+            </div>
+            {auth.mfaEnrolled ? (
+              <>
+                <p className="settings-inline-status success">
+                  TOTP đã bật và factor đã được xác minh. Phiên đăng nhập mới sẽ bị chặn ở AAL1
+                  cho tới khi nhập mã.
+                </p>
+                <p className="muted">
+                  Trước khi coi MFA là production-ready, Owner phải xác nhận factor TOTP dự phòng
+                  hoặc quy trình Dashboard admin để reset factor. Dashboard admin phải có MFA và
+                  recovery method riêng.
+                </p>
+              </>
+            ) : mfaEnrollment ? (
+              <div className="stack">
+                <img
+                  src={mfaEnrollment.qrCode}
+                  alt="QR thiết lập TOTP"
+                  style={{ width: 196, maxWidth: "100%", borderRadius: 12 }}
+                />
+                <p className="muted">
+                  Quét QR bằng authenticator. Nếu không quét được, nhập secret này thủ công:
+                </p>
+                <code style={{ overflowWrap: "anywhere" }}>{mfaEnrollment.secret}</code>
+                <label className="setting-field">
+                  <span>Mã 6 chữ số để xác minh factor</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, ""))}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="settings-primary-action"
+                  disabled={mfaBusy || mfaCode.length !== 6}
+                  onClick={async () => {
+                    setMfaBusy(true);
+                    setMfaSetupError(null);
+                    setMfaMessage(null);
+                    try {
+                      const result = await auth.verifyMfaEnrollment(
+                        mfaEnrollment.factorId,
+                        mfaCode,
+                      );
+                      if (result.error) setMfaSetupError(result.error);
+                      else {
+                        setMfaEnrollment(null);
+                        setMfaCode("");
+                        setMfaMessage(
+                          "TOTP đã được xác minh. Hãy test enroll → logout → login AAL1 → TOTP AAL2 → mở vault trước khi coi là đạt.",
+                        );
+                      }
+                    } finally {
+                      setMfaBusy(false);
+                    }
+                  }}
+                >
+                  {mfaBusy ? "Đang xác minh…" : "Xác minh và bật TOTP"}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="settings-primary-action"
+                disabled={mfaBusy}
+                onClick={async () => {
+                  setMfaBusy(true);
+                  setMfaSetupError(null);
+                  setMfaMessage(null);
+                  try {
+                    const result = await auth.startMfaEnrollment();
+                    if (result.error || !result.data) {
+                      setMfaSetupError(result.error ?? "Không bắt đầu được TOTP.");
+                    } else {
+                      setMfaEnrollment(result.data);
+                    }
+                  } finally {
+                    setMfaBusy(false);
+                  }
+                }}
+              >
+                {mfaBusy ? "Đang tạo…" : "Thiết lập TOTP"}
+              </button>
+            )}
+            {mfaSetupError ? <p className="settings-error" role="alert">{mfaSetupError}</p> : null}
+            {mfaMessage ? (
+              <p className="settings-inline-status success" role="status">{mfaMessage}</p>
+            ) : null}
           </section>
 
           <section className="settings-card">
