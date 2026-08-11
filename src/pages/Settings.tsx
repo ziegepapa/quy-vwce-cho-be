@@ -157,7 +157,7 @@ export default function SettingsPage({
   const [checklist, setChecklist] = useState<AnnualChecklist | null>(null);
   const [checklistYear, setChecklistYear] = useState(new Date().getFullYear());
   const [deleteStep, setDeleteStep] = useState(0);
-  const [deleteConfirm, setDeleteConfirm] = "";
+  const [deleteConfirm, setDeleteConfirm] = useState("");
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
   const [dead, setDead] = useState<OutboxItem[]>([]);
   const [deadRetrying, setDeadRetrying] = useState(false);
