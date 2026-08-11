@@ -182,7 +182,7 @@ describe("SyncConflictSection confidentiality and explicit choices", () => {
       /Xác nhận giữ dữ liệu trên thiết bị này/,
     );
 
-    expect(await screen.findByText(reason)).toHaveAttribute("aria-live", "assertive");
+    expect((await screen.findByText(reason)).getAttribute("aria-live")).toBe("assertive");
     expect(screen.getByRole("article", { name: "Xung đột Cài đặt" })).toBeTruthy();
     expect(onResolved).not.toHaveBeenCalled();
     expect(document.body.textContent).not.toContain(CANARY);
@@ -212,9 +212,9 @@ describe("SyncConflictSection confidentiality and explicit choices", () => {
 
     await waitFor(() => {
       expect(engineMocks.resolveConflict).toHaveBeenCalledTimes(1);
-      expect(within(cards[0]).getByRole("button", { name: "Đang xử lý…" })).toBeDisabled();
-      expect(within(cards[1]).getByRole("button", { name: "Giữ dữ liệu trên thiết bị này" })).toBeEnabled();
-      expect(within(cards[1]).getByRole("button", { name: "Dùng dữ liệu đã đồng bộ" })).toBeEnabled();
+      expect((within(cards[0]).getByRole("button", { name: "Đang xử lý…" }) as HTMLButtonElement).disabled).toBe(true);
+      expect((within(cards[1]).getByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }) as HTMLButtonElement).disabled).toBe(false);
+      expect((within(cards[1]).getByRole("button", { name: "Dùng dữ liệu đã đồng bộ" }) as HTMLButtonElement).disabled).toBe(false);
     });
 
     settle?.({ status: "resolved-local" });
@@ -262,7 +262,7 @@ describe("Settings Data tab regression", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "1 thay đổi đang chờ" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Thử lại đồng bộ" })).toBeEnabled();
+    expect((screen.getByRole("button", { name: "Thử lại đồng bộ" }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByRole("heading", { name: "Xuất và nhập dữ liệu" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: /xung đột cần xử lý/ })).toBeNull();
   });
