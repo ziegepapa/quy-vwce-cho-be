@@ -174,6 +174,8 @@ export default function SyncConflictSection({
   onResolved,
 }: SyncConflictSectionProps) {
   const [conflicts, setConflicts] = useState<ConflictDisplayItem[] | null>(null);
+  const [conflictReadFailed, setConflictReadFailed] = useState(false);
+  const [retryingRead, setRetryingRead] = useState(false);
   const [pendingChoice, setPendingChoice] = useState<PendingChoice | null>(null);
   const [inFlight, setInFlight] = useState<Set<string>>(() => new Set());
   const [cardFeedback, setCardFeedback] = useState<Record<string, string>>({});
@@ -188,11 +190,23 @@ export default function SyncConflictSection({
   const refreshConflicts = useCallback(async () => {
     try {
       const unresolved = await listConflicts();
-      if (mounted.current) setConflicts(unresolved.map(toDisplayItem));
+      if (mounted.current) {
+        setConflicts(unresolved.map(toDisplayItem));
+        setConflictReadFailed(false);
+      }
     } catch {
-      if (mounted.current) setConflicts([]);
+      if (mounted.current) setConflictReadFailed(true);
     }
   }, []);
+
+  const retryConflictRead = useCallback(async () => {
+    setRetryingRead(true);
+    try {
+      await refreshConflicts();
+    } finally {
+      if (mounted.current) setRetryingRead(false);
+    }
+  }, [refreshConflicts]);
 
   useEffect(() => {
     mounted.current = true;
@@ -203,10 +217,16 @@ export default function SyncConflictSection({
   }, [refreshConflicts]);
 
   useEffect(() => {
-    if (!focusRequest || conflicts === null || handledFocusRequest.current === focusRequest) return;
+    if (
+      !focusRequest ||
+      (conflicts === null && !conflictReadFailed) ||
+      handledFocusRequest.current === focusRequest
+    ) return;
     handledFocusRequest.current = focusRequest;
-    if (conflicts.length > 0) void focusSyncConflictSection();
-  }, [conflicts, focusRequest]);
+    if (conflictReadFailed || (conflicts && conflicts.length > 0)) {
+      void focusSyncConflictSection();
+    }
+  }, [conflictReadFailed, conflicts, focusRequest]);
 
   useEffect(() => {
     if (!pendingChoice) return;
@@ -231,7 +251,7 @@ export default function SyncConflictSection({
     conflict: ConflictDisplayItem,
     choice: ConflictChoice,
   ) {
-    if (inFlightIds.current.has(conflict.id)) return;
+    if (conflictReadFailed || inFlightIds.current.has(conflict.id)) return;
     triggerRef.current = event.currentTarget;
     setSuccessFeedback(null);
     setPendingChoice({
@@ -264,7 +284,7 @@ export default function SyncConflictSection({
 
   async function confirmChoice() {
     const choice = pendingChoice;
-    if (!choice || inFlightIds.current.has(choice.conflictId)) return;
+    if (conflictReadFailed || !choice || inFlightIds.current.has(choice.conflictId)) return;
     inFlightIds.current.add(choice.conflictId);
     setInFlight((current) => new Set(current).add(choice.conflictId));
     setCardFeedback((current) => {
@@ -311,7 +331,8 @@ export default function SyncConflictSection({
     }
   }
 
-  if (conflicts === null || conflicts.length === 0) return null;
+  if (conflicts === null && !conflictReadFailed) return null;
+  if (conflicts?.length === 0 && !conflictReadFailed) return null;
 
   const confirmationText = pendingChoice
     ? pendingChoice.choice === "local"
@@ -339,70 +360,93 @@ export default function SyncConflictSection({
       <div className="settings-card-head">
         <div>
           <p className="settings-card-eyebrow">Đồng bộ cần quyết định</p>
-          <h3 id="sync-conflicts-heading">{conflicts.length} xung đột cần xử lý</h3>
-          <p>
-            Đồng bộ đã dừng để tránh ghi đè hoặc làm mất dữ liệu. Hãy chọn rõ bản dữ liệu cần giữ
-            cho từng mục.
-          </p>
+          <h3 id="sync-conflicts-heading">
+            {conflicts && conflicts.length > 0
+              ? `${conflicts.length} xung đột cần xử lý`
+              : "Không thể đọc trạng thái xung đột"}
+          </h3>
+          {conflicts && conflicts.length > 0 ? (
+            <p>
+              Đồng bộ đã dừng để tránh ghi đè hoặc làm mất dữ liệu. Hãy chọn rõ bản dữ liệu cần giữ
+              cho từng mục.
+            </p>
+          ) : null}
         </div>
       </div>
+
+      {conflictReadFailed ? (
+        <div className="settings-error sync-conflict-result" role="alert">
+          <p>Không thể đọc trạng thái xung đột. Dữ liệu chưa bị thay đổi.</p>
+          <button
+            type="button"
+            className="settings-secondary-action"
+            disabled={retryingRead}
+            onClick={() => void retryConflictRead()}
+          >
+            {retryingRead ? "Đang tải lại…" : "Thử tải lại"}
+          </button>
+        </div>
+      ) : null}
 
       <div className="sync-conflict-live" role="status" aria-live="polite">
         {successFeedback}
       </div>
 
-      <div className="sync-conflict-list">
-        {conflicts.map((conflict) => {
-          const busy = inFlight.has(conflict.id);
-          return (
-            <article key={conflict.id} className="sync-conflict-card" aria-label={`Xung đột ${conflict.entityLabel}`}>
-              <div className="sync-conflict-card-head">
-                <strong>{conflict.entityLabel}</strong>
-                {conflict.remoteDeleted ? (
-                  <span className="sync-conflict-deleted">Bản trên server đã bị xóa</span>
-                ) : null}
-              </div>
+      {conflicts && conflicts.length > 0 ? (
+        <div className="sync-conflict-list">
+          {conflicts.map((conflict) => {
+            const busy = inFlight.has(conflict.id);
+            const resolutionDisabled = conflictReadFailed || busy;
+            return (
+              <article key={conflict.id} className="sync-conflict-card" aria-label={`Xung đột ${conflict.entityLabel}`}>
+                <div className="sync-conflict-card-head">
+                  <strong>{conflict.entityLabel}</strong>
+                  {conflict.remoteDeleted ? (
+                    <span className="sync-conflict-deleted">Bản trên server đã bị xóa</span>
+                  ) : null}
+                </div>
 
-              <dl className="sync-conflict-meta">
-                {conflict.detectedAt ? (
-                  <div><dt>Phát hiện</dt><dd>{conflict.detectedAt}</dd></div>
-                ) : null}
-                {conflict.localUpdatedAt ? (
-                  <div><dt>Thiết bị cập nhật</dt><dd>{conflict.localUpdatedAt}</dd></div>
-                ) : null}
-                {conflict.remoteUpdatedAt ? (
-                  <div><dt>Server cập nhật</dt><dd>{conflict.remoteUpdatedAt}</dd></div>
-                ) : null}
-              </dl>
+                <dl className="sync-conflict-meta">
+                  {conflict.detectedAt ? (
+                    <div><dt>Phát hiện</dt><dd>{conflict.detectedAt}</dd></div>
+                  ) : null}
+                  {conflict.localUpdatedAt ? (
+                    <div><dt>Thiết bị cập nhật</dt><dd>{conflict.localUpdatedAt}</dd></div>
+                  ) : null}
+                  {conflict.remoteUpdatedAt ? (
+                    <div><dt>Server cập nhật</dt><dd>{conflict.remoteUpdatedAt}</dd></div>
+                  ) : null}
+                </dl>
 
-              {cardFeedback[conflict.id] ? (
-                <p className="settings-error sync-conflict-result" role="status" aria-live="assertive">
-                  {cardFeedback[conflict.id]}
-                </p>
-              ) : null}
+                {cardFeedback[conflict.id] ? (
+                  <p className="settings-error sync-conflict-result" role="status" aria-live="assertive">
+                    {cardFeedback[conflict.id]}
+                  </p>
+                ) : null}
 
-              <div className="sync-conflict-actions">
-                <button
-                  type="button"
-                  className="settings-primary-action"
-                  disabled={busy}
-                  onClick={(event) => beginChoice(event, conflict, "local")}
-                >
-                  {busy ? "Đang xử lý…" : "Giữ dữ liệu trên thiết bị này"}
-                </button>
-                <button
-                  type="button"
-                  className="settings-secondary-action"
-                  disabled={busy}
-                  onClick={(event) => beginChoice(event, conflict, "remote")}
-                >
-                  Dùng dữ liệu đã đồng bộ
-                </button>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+                <div className="sync-conflict-actions">
+                  <button
+                    type="button"
+                    className="settings-primary-action"
+                    disabled={resolutionDisabled}
+                    onClick={(event) => beginChoice(event, conflict, "local")}
+                  >
+                    {busy ? "Đang xử lý…" : "Giữ dữ liệu trên thiết bị này"}
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-secondary-action"
+                    disabled={resolutionDisabled}
+                    onClick={(event) => beginChoice(event, conflict, "remote")}
+                  >
+                    Dùng dữ liệu đã đồng bộ
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
 
       {pendingChoice ? (
         <div className="sync-conflict-dialog-backdrop">

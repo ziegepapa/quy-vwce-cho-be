@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { createElement } from "react";
+import { StrictMode, createElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -101,6 +101,64 @@ beforeEach(() => {
   dbMocks.listTransactions.mockResolvedValue([]);
   dbMocks.exportBackup.mockResolvedValue({ exportedAt: "2026-08-11T10:00:00.000Z" });
   HTMLElement.prototype.scrollIntoView = vi.fn();
+});
+
+describe("SyncConflictSection fail-closed reads", () => {
+  it("shows a safe initial warning and only retries listConflicts before rendering cards", async () => {
+    engineMocks.listConflicts.mockRejectedValueOnce(new Error(`read failed: ${CANARY}`));
+    renderSection();
+
+    const warning = await screen.findByText(
+      "Không thể đọc trạng thái xung đột. Dữ liệu chưa bị thay đổi.",
+    );
+    expect(warning.closest(`#sync-conflicts`)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Giữ dữ liệu trên thiết bị này" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Dùng dữ liệu đã đồng bộ" })).toBeNull();
+    expect(document.body.textContent).not.toContain("read failed");
+    expect(document.body.textContent).not.toContain(CANARY);
+    expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
+
+    engineMocks.listConflicts.mockResolvedValueOnce([conflict()]);
+    fireEvent.click(screen.getByRole("button", { name: "Thử tải lại" }));
+
+    expect(await screen.findByRole("article", { name: "Xung đột Cài đặt" })).toBeTruthy();
+    expect(screen.queryByText("Không thể đọc trạng thái xung đột. Dữ liệu chưa bị thay đổi.")).toBeNull();
+    expect(engineMocks.listConflicts).toHaveBeenCalledTimes(2);
+    expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain(CANARY);
+  });
+
+  it("keeps the last successful cards visible when a later refresh fails", async () => {
+    engineMocks.listConflicts
+      .mockResolvedValueOnce([conflict()])
+      .mockRejectedValueOnce(new Error(`temporary read failed: ${CANARY}`));
+
+    render(
+      createElement(
+        StrictMode,
+        null,
+        createElement(SyncConflictSection, {
+          userId: "owner-1",
+          onResolved: vi.fn(),
+        }),
+      ),
+    );
+
+    await waitFor(() => expect(engineMocks.listConflicts).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole("article", { name: "Xung đột Cài đặt" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "1 xung đột cần xử lý" })).toBeTruthy();
+    expect(screen.getByText("Không thể đọc trạng thái xung đột. Dữ liệu chưa bị thay đổi.")).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "Giữ dữ liệu trên thiết bị này" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "Dùng dữ liệu đã đồng bộ" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain(CANARY);
+  });
 });
 
 describe("SyncConflictSection confidentiality and explicit choices", () => {
