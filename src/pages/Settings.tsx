@@ -20,6 +20,7 @@ import { useAuth } from "../lib/auth";
 import { listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
 import type { OutboxItem } from "../lib/sync/types";
 import SettingsPricePanel from "../components/SettingsPricePanel";
+import SyncConflictSection from "../components/SyncConflictSection";
 
 type SettingsTab = "general" | "prices" | "data";
 type SaveState = "saved" | "dirty" | "saving" | "error";
@@ -132,12 +133,16 @@ export default function SettingsPage({
   refreshKey,
   onQuotesChanged,
   onSettingsChanged,
+  onConflictResolved,
+  focusConflictRequest,
 }: {
   onReload: () => void;
   onOpenMigrate?: () => void;
   refreshKey?: number;
   onQuotesChanged?: () => void | Promise<void>;
   onSettingsChanged?: () => void | Promise<void>;
+  onConflictResolved?: () => void | Promise<void>;
+  focusConflictRequest?: string | null;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab");
@@ -759,6 +764,16 @@ export default function SettingsPage({
             </div>
             <p>Dữ liệu được ghi vào thiết bị trước, sau đó đồng bộ khi tài khoản và mạng sẵn sàng.</p>
           </section>
+
+          {auth.user?.id ? (
+            <SyncConflictSection
+              userId={auth.user.id}
+              focusRequest={focusConflictRequest}
+              onResolved={async () => {
+                await onConflictResolved?.();
+              }}
+            />
+          ) : null}
 
           {auth.user?.id && (dead.length > 0 || deadSyncedMsg) ? (
             <section className="settings-card">
