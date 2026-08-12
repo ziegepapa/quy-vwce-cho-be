@@ -11,6 +11,7 @@ import type {
 import { defaultNotfallmappe, nowIso, uid } from "../lib/defaults";
 import { buildEquitySeries, formatDateVN, formatMoney } from "../lib/calc";
 import { printNotfallmappe } from "../lib/printNotfallmappe";
+import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import "../styles/notfallmappe.css";
 
 /**
@@ -42,6 +43,7 @@ export default function NotfallmappePage() {
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   const rootRef = useRef<HTMLDivElement>(null);
   const dataRef = useRef<NotfallmappeData | null>(null);
@@ -151,11 +153,13 @@ export default function NotfallmappePage() {
   if (!data) return <p className="muted">Đang tải…</p>;
 
   function patch(p: Partial<NotfallmappeData>) {
+    if (readOnly) { showBlocked(); return; }
     setData((d) => (d ? { ...d, ...p } : d));
     setDirty(true);
   }
 
   function patchContact(id: string, p: Partial<EmergencyContact>) {
+    if (readOnly) { showBlocked(); return; }
     setData((d) =>
       d ? { ...d, contacts: d.contacts.map((c) => (c.id === id ? { ...c, ...p } : c)) } : d,
     );
@@ -163,6 +167,7 @@ export default function NotfallmappePage() {
   }
 
   function patchDoc(id: string, p: Partial<DocumentLocation>) {
+    if (readOnly) { showBlocked(); return; }
     setData((d) =>
       d ? { ...d, documents: d.documents.map((x) => (x.id === id ? { ...x, ...p } : x)) } : d,
     );
@@ -170,6 +175,7 @@ export default function NotfallmappePage() {
   }
 
   async function persist(extra?: Partial<NotfallmappeData>) {
+    if (readOnly) { showBlocked(); return; }
     const base = dataRef.current;
     if (!base) return;
     setSaving(true);
@@ -184,6 +190,7 @@ export default function NotfallmappePage() {
   }
 
   async function handlePrint() {
+    if (readOnly) { showBlocked(); return; }
     await persist({ lastPrintedAt: nowIso() });
     const root = rootRef.current;
     if (!root) return;
@@ -358,6 +365,7 @@ export default function NotfallmappePage() {
                   className="nfm-del"
                   aria-label={`Xóa ${c.name || "liên hệ"}`}
                   onClick={() => {
+                    if (readOnly) { showBlocked(); return; }
                     setData((d) =>
                       d ? { ...d, contacts: d.contacts.filter((x) => x.id !== c.id) } : d,
                     );
@@ -390,6 +398,7 @@ export default function NotfallmappePage() {
             type="button"
             className="nfm-add"
             onClick={() => {
+              if (readOnly) { showBlocked(); return; }
               setData((d) =>
                 d
                   ? {
@@ -439,6 +448,7 @@ export default function NotfallmappePage() {
                   className="nfm-del"
                   aria-label={`Xóa ${doc.label || "giấy tờ"}`}
                   onClick={() => {
+                    if (readOnly) { showBlocked(); return; }
                     setData((d) =>
                       d
                         ? { ...d, documents: d.documents.filter((x) => x.id !== doc.id) }
@@ -481,6 +491,7 @@ export default function NotfallmappePage() {
             type="button"
             className="nfm-add"
             onClick={() => {
+              if (readOnly) { showBlocked(); return; }
               setData((d) =>
                 d
                   ? {
