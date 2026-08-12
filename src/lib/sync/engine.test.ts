@@ -28,17 +28,11 @@ function createExclusiveLockManager(): ExclusiveLockManager {
     request<T>(name: string, options: ExclusiveLockOptions, callback: () => Promise<T>): Promise<T> {
       if (options.mode !== "exclusive") return Promise.reject(new Error("Exclusive lock required"));
       const previous = tails.get(name) ?? Promise.resolve();
-      let release!: () => void;
-      const hold = new Promise<void>((resolve) => { release = resolve; });
-      const tail = previous.catch(() => undefined).then(() => hold);
-      tails.set(name, tail);
-      return previous.catch(() => undefined).then(async () => {
-        try {
-          return await callback();
-        } finally {
-          release();
-          if (tails.get(name) === tail) tails.delete(name);
-        }
+      const run = previous.then(callback, callback);
+      const settled = run.then(() => undefined, () => undefined);
+      tails.set(name, settled);
+      return run.finally(() => {
+        if (tails.get(name) === settled) tails.delete(name);
       });
     },
     reset() {
