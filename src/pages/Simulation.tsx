@@ -20,6 +20,7 @@ import {
 } from "../lib/simulation/engine";
 import type { Mode, ProjectOutput, Scenario, YearPoint } from "../lib/simulation/engine";
 import type { AppSettings, Goal, Transaction } from "../lib/types";
+import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 
 /**
  * Mô phỏng v2 — ba chế độ, một hàm tính cuối kỳ chung.
@@ -53,6 +54,7 @@ export default function Simulation() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   const [mode, setMode] = useState<Mode>("A");
   const [years, setYears] = useState(15);
@@ -268,6 +270,7 @@ export default function Simulation() {
     partial: Partial<Pick<AppSettings, "contributionY1" | "contributionY2" | "vwceReturn">>,
     message: string,
   ) {
+    if (readOnly) { showBlocked(); return; }
     const keys = Object.keys(partial) as (keyof typeof partial)[];
     if (keys.length === 0) return;
 
@@ -300,6 +303,7 @@ export default function Simulation() {
   }
 
   function openSaveConfirm() {
+    if (readOnly) { showBlocked(); return; }
     if (planUnreachable) return;
 
     const o1 = settings?.contributionY1 ?? 0;
@@ -355,6 +359,7 @@ export default function Simulation() {
   }
 
   async function confirmPersist() {
+    if (readOnly) { showBlocked(); return; }
     const current = settings ?? (await getSettings());
     const nR = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
     const monthlyR = round2(monthlyForProject);
@@ -390,6 +395,7 @@ export default function Simulation() {
   }
 
   async function undoPersist() {
+    if (readOnly) { showBlocked(); return; }
     if (!undoSnap) return;
     await saveSettings(undoSnap.values);
     setSettings(await getSettings());
@@ -989,7 +995,7 @@ export default function Simulation() {
       </details>
 
       <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-        {"\u01adc t\u00ednh, kh\u00f4ng ph\u1ea3i t\u01b0 v\u1ea5n \u0111\u1ea7u t\u01b0 hay thu\u1ebf."}
+        {"\u01af\u1edbc t\u00ednh, kh\u00f4ng ph\u1ea3i t\u01b0 v\u1ea5n \u0111\u1ea7u t\u01b0 hay thu\u1ebf."}
       </p>
 
       <button
