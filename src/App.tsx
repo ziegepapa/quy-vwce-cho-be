@@ -3,7 +3,7 @@ import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-d
 import { signOutBeforeLocalClear, useAuth } from "./lib/auth";
 import { clearUserBusinessData, countLocalData, ensureInitialized, getSettings, ingestQuotesFeed, runPendingMigrations } from "./lib/db";
 import type { AppSettings } from "./lib/types";
-import { getSyncMeta, listConflicts, listDeadOutbox, reviveDeadOutbox, runSync } from "./lib/sync/engine";
+import { getSyncMeta, listConflicts, listDeadOutbox, reviveDeadOutbox, runSync, saveSyncMeta } from "./lib/sync/engine";
 import { outboxCount } from "./lib/sync/outbox";
 import type { SyncMeta, SyncStatus } from "./lib/sync/types";
 import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
@@ -90,6 +90,8 @@ export default function App() {
   const [logoutRetrying, setLogoutRetrying] = useState(false);
   const [logoutGate, setLogoutGate] = useState(false);
   const [logoutCleanupPending, setLogoutCleanupPending] = useState(readLogoutCleanupPending);
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+  const [skipBusy, setSkipBusy] = useState(false);
   const { api: navActionsApi, navAction } = useNavActionRegistry();
 
   const refreshSyncBadge = useCallback(async () => {
@@ -190,6 +192,25 @@ export default function App() {
     } catch { setLogoutNoticeKind("error"); setLogoutNotice(LOGOUT_BLOCKED_MESSAGE); }
     finally { setLogoutRetrying(false); try { await refreshSyncBadge(); } catch { /* next logout rechecks */ } }
   }
+  async function skipRecovery() {
+    if (!auth.user || skipBusy) return;
+    setSkipBusy(true);
+    try {
+      await saveSyncMeta({
+        userId: auth.user.id,
+        migrateWizardDone: true,
+        migrateWizardSkipped: true,
+        recoveryState: "complete",
+      });
+      setRecoveryRequired(false);
+      setShowSkipConfirm(false);
+      setShowWizard(false);
+    } catch {
+      // Nếu lưu thất bại, giữ nguyên trạng thái hiện tại
+    } finally {
+      setSkipBusy(false);
+    }
+  }
 
   if (!auth.ready || !ready || (auth.user && (!auth.mfaReady || !recoveryChecked))) return <div className="app-shell"><p className="muted">Đang tải…</p></div>;
   if (logoutGate || logoutCleanupPending) return <div className="app-shell" role={logoutCleanupPending ? "alert" : "status"}><div className={logoutCleanupPending ? "banner error" : "banner"}><h1 className="page-title">{logoutCleanupPending ? "Phiên cloud đã kết thúc" : "Đang đóng kho…"}</h1><p>{logoutNotice ?? "Đang kết thúc phiên cloud trước khi xóa cache local."}</p>{logoutCleanupPending ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutCleanup()}>{logoutRetrying ? "Đang xóa lại…" : "Thử xóa cache lại"}</button> : null}</div></div>;
@@ -231,9 +252,21 @@ export default function App() {
         onAddGoal={recoveryActive ? undefined : navAction("addGoal")}
         onChangeScenario={recoveryActive ? undefined : navAction("changeScenario")}
       /> : null}
-      {recoveryActive ? <section className="banner recovery-banner" role="status" data-testid="recovery-banner"><h2 className="recovery-banner-title">Khôi phục dữ liệu chưa hoàn tất</h2><p className="recovery-banner-body">Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy hoàn tất kiểm tra trước khi đăng xuất hoặc đồng bộ dữ liệu.</p><button type="button" className="primary recovery-banner-action" onClick={() => setShowWizard(true)}>Tiếp tục khôi phục dữ liệu</button></section> : null}
+
+      {recoveryActive ? (
+        <section className="banner recovery-banner" role="status" data-testid="recovery-banner">
+          <h2 className="recovery-banner-title">Khôi phục dữ liệu chưa hoàn tất</h2>
+          <p className="recovery-banner-body">Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy hoàn tất kiểm tra trước khi đăng xuất hoặc đồng bộ dữ liệu.</p>
+          <div className="recovery-banner-action">
+            <button type="button" className="primary" onClick={() => setShowWizard(true)}>Tiếp tục khôi phục dữ liệu</button>
+            <button type="button" className="ghost" onClick={() => setShowSkipConfirm(true)}>Bỏ qua</button>
+          </div>
+        </section>
+      ) : null}
+
       {logoutBlockers && !recoveryActive ? <div className="banner error" role="alert"><strong>Chưa thể đăng xuất.</strong><p>{LOGOUT_BLOCKED_MESSAGE}</p>{logoutNotice === RECOVERY_SYNC_PENDING_MESSAGE ? <p>{RECOVERY_SYNC_PENDING_MESSAGE}</p> : null}<div className="stack" style={{ marginTop: 8 }}>{hasLogoutBlockers(logoutBlockers) ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutBlockers()}>{logoutRetrying ? "Đang thử lại…" : "Đồng bộ / thử lại"}</button> : <button type="button" className="secondary" onClick={() => setShowWizard(true)}>Khôi phục dữ liệu trên thiết bị</button>}{logoutBlockers.conflicts > 0 ? <button type="button" className="ghost" onClick={handleOpenSyncConflicts}>{conflictCtaLabel(logoutBlockers.conflicts)}</button> : null}</div></div> : null}
       {logoutNotice && !logoutBlockers && !recoveryActive ? <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">{logoutNotice}</div> : null}
+
       <NavActionsProvider api={navActionsApi}><main className={`premium-screen premium-screen-${screenName}`}><RecoveryReadOnlyProvider readOnly={recoveryActive}><Routes>
         <Route path="/" element={<Overview key={quoteRefreshVersion} />} />
         <Route path="/transactions" element={<Transactions />} />
@@ -243,5 +276,18 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} />} />
       </Routes></RecoveryReadOnlyProvider></main></NavActionsProvider>
     </div><BottomDock items={NAV} />
+
+    {showSkipConfirm ? (
+      <div className="modal-backdrop" role="presentation">
+        <div className="card modal-card" role="dialog" aria-modal="true" aria-labelledby="skip-recovery-title">
+          <h2 id="skip-recovery-title">Bỏ qua khôi phục dữ liệu?</h2>
+          <p>Dữ liệu trên thiết bị sẽ <strong>không</strong> được đưa vào tài khoản. Bạn có thể khôi phục sau bằng cách mở lại mục Khôi phục trong Cài đặt.</p>
+          <div className="stack" style={{ marginTop: 16 }}>
+            <button type="button" className="secondary" disabled={skipBusy} onClick={() => setShowSkipConfirm(false)}>Quay lại</button>
+            <button type="button" disabled={skipBusy} onClick={() => void skipRecovery()}>{skipBusy ? "Đang lưu…" : "Xác nhận bỏ qua"}</button>
+          </div>
+        </div>
+      </div>
+    ) : null}
   </div>;
 }

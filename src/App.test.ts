@@ -12,6 +12,7 @@ const engineMocks = vi.hoisted(() => ({
   resolveConflict: vi.fn(),
   reviveDeadOutbox: vi.fn(),
   runSync: vi.fn(),
+  saveSyncMeta: vi.fn(),
 }));
 const outboxMocks = vi.hoisted(() => ({
   outboxCount: vi.fn(),
@@ -144,6 +145,8 @@ const BLOCKED =
   "B\u1ea1n c\u00f2n d\u1eef li\u1ec7u ch\u01b0a \u0111\u1ed3ng b\u1ed9 ho\u1eb7c ch\u01b0a kh\u00f4i ph\u1ee5c. H\u00e3y kh\u00f4i ph\u1ee5c ho\u1eb7c sao l\u01b0u tr\u01b0\u1edbc khi \u0111\u0103ng xu\u1ea5t.";
 const RECOVERY_BANNER = "Kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u ch\u01b0a ho\u00e0n t\u1ea5t";
 const CONTINUE_RECOVERY = "Ti\u1ebfp t\u1ee5c kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u";
+const SKIP_RECOVERY = "B\u1ecf qua";
+const SKIP_CONFIRM = "X\u00e1c nh\u1eadn b\u1ecf qua";
 
 function conflict(): ConflictRecord {
   return {
@@ -201,6 +204,7 @@ beforeEach(() => {
     conflicts: 0,
   });
   engineMocks.reviveDeadOutbox.mockResolvedValue(0);
+  engineMocks.saveSyncMeta.mockResolvedValue(COMPLETE);
   outboxMocks.outboxCount.mockResolvedValue(0);
   authMocks.signOutBeforeLocalClear.mockResolvedValue({ status: "success" });
 });
@@ -248,8 +252,8 @@ describe("fresh fail-closed logout", () => {
       expect(await screen.findByText(RECOVERY_BANNER)).toBeTruthy();
       expect(screen.queryByTestId("recovery-screen")).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "\u0110\u0103ng xu\u1ea5t" }));
-      // handleSignOut early-returns when recoveryActive=true.
-      // Recovery banner đã chặn đăng xuất — không set state, không gọi signOut.
+      // handleSignOut early-returns khi recoveryActive=true.
+      // Recovery banner chặn đăng xuất — không set state, không gọi signOut.
       await waitFor(() => {
         expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
       });
@@ -347,6 +351,49 @@ describe("recovery read-only shell (menu access)", () => {
     fireEvent.click(screen.getByRole("button", { name: CONTINUE_RECOVERY }));
     expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
     expect(engineMocks.runSync).not.toHaveBeenCalled();
+    expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
+  });
+
+  it("shows skip confirm dialog when user clicks B\u1ecf qua", async () => {
+    renderApp();
+    await screen.findByText(RECOVERY_BANNER);
+    fireEvent.click(screen.getByRole("button", { name: SKIP_RECOVERY }));
+    expect(await screen.findByText("B\u1ecf qua kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u?")).toBeTruthy();
+    expect(screen.getByRole("button", { name: SKIP_CONFIRM })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Quay l\u1ea1i" })).toBeTruthy();
+  });
+
+  it("cancelling skip confirm keeps recovery banner visible", async () => {
+    renderApp();
+    await screen.findByText(RECOVERY_BANNER);
+    fireEvent.click(screen.getByRole("button", { name: SKIP_RECOVERY }));
+    await screen.findByText("B\u1ecf qua kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u?");
+    fireEvent.click(screen.getByRole("button", { name: "Quay l\u1ea1i" }));
+    expect(await screen.findByText(RECOVERY_BANNER)).toBeTruthy();
+    expect(screen.queryByText("B\u1ecf qua kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u?")).toBeNull();
+    expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
+  });
+
+  it("confirming skip calls saveSyncMeta with skipped=true and removes banner", async () => {
+    engineMocks.saveSyncMeta.mockResolvedValue({
+      ...COMPLETE,
+      migrateWizardSkipped: true,
+    });
+    renderApp();
+    await screen.findByText(RECOVERY_BANNER);
+    fireEvent.click(screen.getByRole("button", { name: SKIP_RECOVERY }));
+    await screen.findByText("B\u1ecf qua kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u?");
+    fireEvent.click(screen.getByRole("button", { name: SKIP_CONFIRM }));
+    await waitFor(() => {
+      expect(engineMocks.saveSyncMeta).toHaveBeenCalledWith(
+        expect.objectContaining({
+          migrateWizardDone: true,
+          migrateWizardSkipped: true,
+          recoveryState: "complete",
+        }),
+      );
+    });
+    expect(screen.queryByText(RECOVERY_BANNER)).toBeNull();
     expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
   });
 });
