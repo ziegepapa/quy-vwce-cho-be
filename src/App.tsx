@@ -144,6 +144,11 @@ export default function App() {
           if (!needsRecovery) {
             try { setSyncStatus("syncing"); await runSync(auth.user.id); } catch { /* network */ }
             await refreshSyncBadge();
+            // Cập nhật settings sau sync: pullDelta có thể đã ghi data mới từ Supabase
+            // (bao gồm notfallmappe, onboardingDone...) vào DB. Nếu không cập nhật lại
+            // ở đây, React state sẽ giữ giá trị cũ (đọc trước sync) và app có thể
+            // hiện lại Onboarding mặc dù data đã được khôi phục hoàn toàn.
+            setSettings(await getSettings());
           }
         } catch { setRecoveryRequired(true); setShowWizard(false); setRecoveryChecked(true); }
       } else { setRecoveryRequired(false); setShowWizard(false); setRecoveryChecked(true); }
@@ -219,6 +224,8 @@ export default function App() {
         if (auth.vaultReady) await runSync(auth.user.id);
       } catch { /* mạng không có cũng không sao */ }
       await refreshSyncBadge();
+      // Cập nhật settings sau sync để phản ánh data mới nhất từ Supabase
+      setSettings(await getSettings());
     } catch {
       setSkipError("Không thể lưu trạng thái. Kiểm tra bộ nhớ và thử lại.");
     } finally {
