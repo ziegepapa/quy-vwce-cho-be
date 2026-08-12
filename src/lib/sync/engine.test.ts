@@ -57,11 +57,14 @@ function createExclusiveLockManager(): ExclusiveLockManager {
 }
 
 const testLocks = createExclusiveLockManager();
-const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+const originalLocksDescriptor = Object.getOwnPropertyDescriptor(navigator, "locks");
+const originalOnlineDescriptor = Object.getOwnPropertyDescriptor(navigator, "onLine");
 
 afterAll(() => {
-  if (originalNavigatorDescriptor) Object.defineProperty(globalThis, "navigator", originalNavigatorDescriptor);
-  else Reflect.deleteProperty(globalThis, "navigator");
+  if (originalLocksDescriptor) Object.defineProperty(navigator, "locks", originalLocksDescriptor);
+  else Reflect.deleteProperty(navigator, "locks");
+  if (originalOnlineDescriptor) Object.defineProperty(navigator, "onLine", originalOnlineDescriptor);
+  else Reflect.deleteProperty(navigator, "onLine");
 });
 
 vi.mock("../supabase", () => {
@@ -177,12 +180,8 @@ function conflict(): ConflictRecord {
 
 beforeEach(async () => {
   testLocks.reset();
-  const testNavigator = Object.create(globalThis.navigator) as Navigator & { locks: ExclusiveLockManager };
-  Object.defineProperties(testNavigator, {
-    locks: { configurable: true, value: testLocks },
-    onLine: { configurable: true, value: true },
-  });
-  Object.defineProperty(globalThis, "navigator", { configurable: true, value: testNavigator });
+  Object.defineProperty(navigator, "locks", { configurable: true, value: testLocks });
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
   remoteMock.userId = USER_ID; remoteMock.authError = false; remoteMock.failFetch = false;
   remoteMock.failInsert = false; remoteMock.failUpdate = false; remoteMock.forceConditionalZeroRows = false;
   remoteMock.tables.clear(); remoteMock.inserts.length = 0; remoteMock.updates.length = 0; remoteMock.upserts.length = 0;
