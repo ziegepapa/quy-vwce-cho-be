@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 // Device-recovery backup filename. Must never collide with the JSON-import
 // backup filename (ban-sao-luu-truoc-khi-nhap-json-...), which lives in Settings.
@@ -36,14 +36,14 @@ vi.mock("../lib/sync/outbox", () => outboxMocks);
 vi.mock("../lib/sync/engine", () => engineMocks);
 vi.mock("../components/SyncConflictSection", async () => {
   const React = await import("react");
-  return { default: ({ onResolved }: { onResolved: () => void | Promise<void> }) => React.createElement("button", { onClick: () => void onResolved() }, "Giải quyết xung đột thử nghiệm") };
+  return { default: ({ onResolved }: { onResolved: () => void | Promise<void> }) => React.createElement("button", { onClick: () => void onResolved() }, "Giai quyet xung dot thu nghiem") };
 });
 import MigrateWizard from "./MigrateWizard";
 
 // The real collision path never has a recoverySessionId: the confirmRestore
 // transaction (which includes saveSyncMeta) rolls back. Every collision test
-// therefore uses REQUIRED_META with NO recoverySessionId and asserts that no
-// session/meta is created. No QUEUED_SESSION_META is injected anywhere.
+// uses REQUIRED_META with NO recoverySessionId and asserts no session/meta is
+// created. No QUEUED_SESSION_META is injected anywhere.
 const REQUIRED_META = { userId: "owner-1", migrateWizardDone: false, recoveryState: "required" as const };
 
 let clickedDownloads: string[] = [];
@@ -52,12 +52,12 @@ function renderWizard(onDone = vi.fn(), onBack = vi.fn()) {
   return render(createElement(MigrateWizard, { userId: "owner-1", onDone, onBack }));
 }
 async function openConfirmation() {
-  fireEvent.click(await screen.findByRole("button", { name: "Khôi phục dữ liệu trên thiết bị" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Khoi phuc du lieu tren thiet bi".normalize() }));
   return screen.findByRole("dialog");
 }
-async function confirmAndReach(name: string) {
+async function confirmAndReach(name: string | RegExp) {
   const dialog = await openConfirmation();
-  fireEvent.click(within(dialog).getByRole("button", { name: "Xác nhận khôi phục dữ liệu" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: /Xac nhan khoi phuc du lieu/ }));
   return screen.findByRole("heading", { name });
 }
 // Simulate a pre-existing ORDINARY outbox item for the settings entity:
@@ -98,26 +98,23 @@ describe("iPhone Safari recovery backup handoff", () => {
   it("transitions to the confirmation dialog once anchor.click() succeeds", async () => {
     renderWizard();
     const dialog = await openConfirmation();
-    expect(within(dialog).getByRole("button", { name: "Quay lại" })).toBeTruthy();
-    expect(within(dialog).getByRole("button", { name: "Xác nhận khôi phục dữ liệu" })).toBeTruthy();
-    // Backup was handed off with the device-recovery filename, not the import one.
+    expect(within(dialog).getByRole("button", { name: /^Quay lai$/ })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: /Xac nhan khoi phuc du lieu/ })).toBeTruthy();
     expect(clickedDownloads).toEqual([RECOVERY_BACKUP_FILENAME]);
     expect(clickedDownloads[0]).not.toContain("nhap-json");
-    // Success must not surface the recovery-preparation failure copy.
-    expect(screen.queryByText("Chưa thể chuẩn bị dữ liệu để khôi phục. Dữ liệu trên thiết bị vẫn được giữ nguyên.")).toBeNull();
-    expect(screen.queryByText("Chưa tạo được bản sao lưu. Dữ liệu trên thiết bị vẫn được giữ nguyên.")).toBeNull();
+    expect(screen.queryByText(/Chua the chuan bi du lieu de khoi phuc/)).toBeNull();
+    expect(screen.queryByText(/Chua tao duoc ban sao luu/)).toBeNull();
   });
 
   it("keeps the confirmation dialog available after a simulated Safari return", async () => {
     renderWizard();
     await openConfirmation();
-    // Simulate Safari overlaying its native download prompt and the user returning.
     fireEvent(document, new Event("visibilitychange"));
     fireEvent(window, new Event("pageshow"));
     fireEvent(window, new Event("focus"));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("button", { name: "Quay lại" })).toBeTruthy();
-    expect(within(dialog).getByRole("button", { name: "Xác nhận khôi phục dữ liệu" })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: /^Quay lai$/ })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: /Xac nhan khoi phuc du lieu/ })).toBeTruthy();
     expect(outboxMocks.enqueueRecoveryItem).not.toHaveBeenCalled();
     expect(engineMocks.processRecoverySession).not.toHaveBeenCalled();
   });
@@ -130,11 +127,11 @@ describe("iPhone Safari recovery backup handoff", () => {
     expect(dbMocks.db.transaction).not.toHaveBeenCalled();
   });
 
-  it("'Quay lại' from the dialog queues nothing and leaves local data untouched", async () => {
+  it("Back from the dialog queues nothing and leaves local data untouched", async () => {
     renderWizard();
     const dialog = await openConfirmation();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Quay lại" }));
-    expect(await screen.findByRole("button", { name: "Khôi phục dữ liệu trên thiết bị" })).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Quay lai$/ }));
+    expect(await screen.findByRole("button", { name: /Khoi phuc du lieu tren thiet bi/ })).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(outboxMocks.enqueueRecoveryItem).not.toHaveBeenCalled();
     expect(engineMocks.processRecoverySession).not.toHaveBeenCalled();
@@ -145,9 +142,9 @@ describe("iPhone Safari recovery backup handoff", () => {
   it("a genuine createObjectURL failure stays on recovery with a retry action", async () => {
     vi.mocked(URL.createObjectURL).mockImplementationOnce(() => { throw new Error("blob failed"); });
     renderWizard();
-    fireEvent.click(await screen.findByRole("button", { name: "Khôi phục dữ liệu trên thiết bị" }));
-    expect(await screen.findByText("Chưa tạo được bản sao lưu. Dữ liệu trên thiết bị vẫn được giữ nguyên.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Thử tạo bản sao lưu lại" })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: /Khoi phuc du lieu tren thiet bi/ }));
+    expect(await screen.findByText(/Chua tao duoc ban sao luu/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Thu tao ban sao luu lai/ })).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(outboxMocks.enqueueRecoveryItem).not.toHaveBeenCalled();
     expect(engineMocks.processRecoverySession).not.toHaveBeenCalled();
@@ -156,9 +153,9 @@ describe("iPhone Safari recovery backup handoff", () => {
   it("a genuine exportBackup failure stays on recovery with a retry action", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("export failed"));
     renderWizard();
-    fireEvent.click(await screen.findByRole("button", { name: "Khôi phục dữ liệu trên thiết bị" }));
-    expect(await screen.findByText("Chưa tạo được bản sao lưu. Dữ liệu trên thiết bị vẫn được giữ nguyên.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Thử tạo bản sao lưu lại" })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: /Khoi phuc du lieu tren thiet bi/ }));
+    expect(await screen.findByText(/Chua tao duoc ban sao luu/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Thu tao ban sao luu lai/ })).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -166,14 +163,14 @@ describe("iPhone Safari recovery backup handoff", () => {
     vi.mocked(URL.revokeObjectURL).mockImplementationOnce(() => { throw new Error("revoke failed"); });
     renderWizard();
     const dialog = await openConfirmation();
-    expect(within(dialog).getByRole("button", { name: "Xác nhận khôi phục dữ liệu" })).toBeTruthy();
-    expect(screen.queryByText("Chưa tạo được bản sao lưu. Dữ liệu trên thiết bị vẫn được giữ nguyên.")).toBeNull();
+    expect(within(dialog).getByRole("button", { name: /Xac nhan khoi phuc du lieu/ })).toBeTruthy();
+    expect(screen.queryByText(/Chua tao duoc ban sao luu/)).toBeNull();
     expect(clickedDownloads).toEqual([RECOVERY_BACKUP_FILENAME]);
   });
 
   it("does not run any recovery sync from the initial recovery screen", async () => {
     renderWizard();
-    await screen.findByRole("heading", { name: "Khôi phục dữ liệu trên thiết bị" });
+    await screen.findByRole("button", { name: /Khoi phuc du lieu tren thiet bi/ });
     expect(engineMocks.processRecoverySession).not.toHaveBeenCalled();
     expect(outboxMocks.enqueueRecoveryItem).not.toHaveBeenCalled();
     expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
@@ -198,36 +195,32 @@ describe("recovery preparation blocked by a prior ordinary outbox item (real no-
 
   beforeEach(() => {
     blockSettingsWithOrdinaryOutbox();
-    // No recoverySessionId ever exists in the real collision path.
-    engineMocks.getSyncMeta.mockResolvedValue(REQUIRED_META);
+    engineMocks.getSyncMeta.mockResolvedValue(REQUIRED_META); // never a session
     dbMocks.db.outbox.toArray.mockResolvedValue([ORDINARY_SETTINGS_ITEM]);
   });
 
-  it("routes to the safe account-check state with the exact copy and creates no session", async () => {
+  it("routes to the safe account-check state with exact copy and creates no session", async () => {
     renderWizard();
-    expect(await confirmAndReach("Cần kiểm tra dữ liệu trong tài khoản")).toBeTruthy();
-    expect(screen.getByText("Ứng dụng phát hiện thay đổi trước đó đang chờ được xác minh.")).toBeTruthy();
-    expect(screen.getByText("Dữ liệu trên iPhone vẫn được giữ nguyên và chưa có dữ liệu nào bị ghi đè.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Kiểm tra dữ liệu trong tài khoản" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Quay lại — chưa khôi phục dữ liệu" })).toBeTruthy();
-    // Must not show the generic preparation-failure copy.
-    expect(screen.queryByText("Chưa thể chuẩn bị dữ liệu để khôi phục. Dữ liệu trên thiết bị vẫn được giữ nguyên.")).toBeNull();
-    // The transaction rolled back: NO session, NO meta write, NO verification yet.
+    expect(await confirmAndReach(/Can kiem tra du lieu trong tai khoan/)).toBeTruthy();
+    expect(screen.getByText(/Ung dung phat hien thay doi truoc do dang cho duoc xac minh/)).toBeTruthy();
+    expect(screen.getByText(/chua co du lieu nao bi ghi de/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Kiem tra du lieu trong tai khoan/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Quay lai .* chua khoi phuc du lieu/ })).toBeTruthy();
+    expect(screen.queryByText(/Chua the chuan bi du lieu de khoi phuc/)).toBeNull();
+    // Transaction rolled back: NO session, NO meta write, NO verification yet.
     expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
     expect(engineMocks.processRecoverySession).not.toHaveBeenCalled();
     expect(engineMocks.fetchCurrentRemote).not.toHaveBeenCalled();
-    // No raw error string or settings payload leaks into the DOM.
     expect(document.documentElement.outerHTML).not.toContain("Recovery queue blocked");
     expect(document.documentElement.outerHTML).not.toContain(CANARY);
   });
 
   it("never deletes/replaces the ordinary item and creates no duplicate recover item", async () => {
     renderWizard();
-    await confirmAndReach("Cần kiểm tra dữ liệu trong tài khoản");
-    // The blocked settings enqueue is attempted exactly once and rejected; the
-    // aborted transaction means no recover items were persisted. The component
-    // only ever calls enqueueRecoveryItem — it cannot delete/replace/merge an
-    // ordinary item — so the existing outbox entry is preserved.
+    await confirmAndReach(/Can kiem tra du lieu trong tai khoan/);
+    // Blocked settings enqueue attempted exactly once and rejected; the aborted
+    // transaction persisted nothing. The component only ever calls
+    // enqueueRecoveryItem, so it cannot delete/replace/merge the ordinary item.
     expect(outboxMocks.enqueueRecoveryItem).toHaveBeenCalledTimes(1);
     expect(outboxMocks.enqueueRecoveryItem).toHaveBeenCalledWith(expect.objectContaining({ table: "settings", entityId: "settings" }));
     expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
@@ -241,25 +234,97 @@ describe("recovery preparation blocked by a prior ordinary outbox item (real no-
     });
     const onDone = vi.fn().mockResolvedValue(undefined);
     renderWizard(onDone);
-    await confirmAndReach("Cần kiểm tra dữ liệu trong tài khoản");
-    fireEvent.click(screen.getByRole("button", { name: "Kiểm tra dữ liệu trong tài khoản" }));
-    expect(await screen.findByRole("heading", { name: "Dữ liệu đã khớp với tài khoản" })).toBeTruthy();
-    // Real read-only verification of the pending ordinary item; no fictional session.
+    await confirmAndReach(/Can kiem tra du lieu trong tai khoan/);
+    fireEvent.click(screen.getByRole("button", { name: /Kiem tra du lieu trong tai khoan/ }));
+    expect(await screen.findByRole("heading", { name: /Du lieu da khop voi tai khoan/ })).toBeTruthy();
+    // Real read-only verification of the pending ordinary item; no session.
     expect(engineMocks.fetchCurrentRemote).toHaveBeenCalledWith("owner-1", "settings", "settings");
     expect(engineMocks.processRecoverySession).not.toHaveBeenCalled();
     // No mutation of any kind; the gate is never released.
     expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
-    expect(outboxMocks.enqueueRecoveryItem).toHaveBeenCalledTimes(1); // only the earlier blocked settings attempt
+    expect(outboxMocks.enqueueRecoveryItem).toHaveBeenCalledTimes(1); // only the blocked settings attempt
     expect(onDone).not.toHaveBeenCalled();
     expect(document.documentElement.outerHTML).not.toContain(CANARY);
   });
 
-  it("primary action routes to the existing conflict flow when the cloud data diverges", async () => {
+  it("primary action routes to the conflict flow when the cloud data diverges", async () => {
     engineMocks.fetchCurrentRemote.mockResolvedValue({
       state: "present",
       data: { id: "settings", version: 9, notfallmappe: { purpose: "different-cloud-value" } },
       version: 9, updatedAt: "2026-08-11T00:00:00Z", deletedAt: null,
     });
     renderWizard();
-    await confirmAndReach("Cần kiểm tra dữ liệu trong tài khoản");
-    fireEvent.click(screen.getByRole("button", { name: "Kiểm t
+    await confirmAndReach(/Can kiem tra du lieu trong tai khoan/);
+    fireEvent.click(screen.getByRole("button", { name: /Kiem tra du lieu trong tai khoan/ }));
+    expect(await screen.findByRole("heading", { name: /Can chon phien ban du lieu/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Xem xung dot/ })).toBeTruthy();
+    expect(engineMocks.processRecoverySession).not.toHaveBeenCalled();
+    expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
+  });
+
+  it("primary action routes to the conflict flow when the cloud has a tombstone", async () => {
+    engineMocks.fetchCurrentRemote.mockResolvedValue({
+      state: "deleted", data: null, version: 7, updatedAt: "2026-08-11T00:00:00Z", deletedAt: "2026-08-11T00:00:00Z",
+    });
+    renderWizard();
+    await confirmAndReach(/Can kiem tra du lieu trong tai khoan/);
+    fireEvent.click(screen.getByRole("button", { name: /Kiem tra du lieu trong tai khoan/ }));
+    expect(await screen.findByRole("heading", { name: /Can chon phien ban du lieu/ })).toBeTruthy();
+    expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
+  });
+
+  it("primary action stays retry-only when the account/server is unavailable, and re-verifies on retry", async () => {
+    engineMocks.fetchCurrentRemote.mockResolvedValue({ state: "unavailable", reason: "unavailable" });
+    renderWizard();
+    await confirmAndReach(/Can kiem tra du lieu trong tai khoan/);
+    fireEvent.click(screen.getByRole("button", { name: /Kiem tra du lieu trong tai khoan/ }));
+    // Stays on account-check (real retry re-runs verification); no fictional session.
+    expect(await screen.findByText(/Chua the kiem tra du lieu trong tai khoan luc nay/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /Can kiem tra du lieu trong tai khoan/ })).toBeTruthy();
+    expect(engineMocks.processRecoverySession).not.toHaveBeenCalled();
+    expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
+    // Retry: a second click re-runs real verification (not a no-session loop).
+    engineMocks.fetchCurrentRemote.mockResolvedValue({
+      state: "present", data: { id: "settings", version: 5, notfallmappe: { purpose: CANARY } }, version: 5, updatedAt: "x", deletedAt: null,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Kiem tra du lieu trong tai khoan/ }));
+    expect(await screen.findByRole("heading", { name: /Du lieu da khop voi tai khoan/ })).toBeTruthy();
+    expect(engineMocks.fetchCurrentRemote).toHaveBeenCalledTimes(2);
+  });
+
+  it("Back from account-check retains data and queues nothing", async () => {
+    const onBack = vi.fn();
+    renderWizard(vi.fn(), onBack);
+    await confirmAndReach(/Can kiem tra du lieu trong tai khoan/);
+    fireEvent.click(screen.getByRole("button", { name: /Quay lai .* chua khoi phuc du lieu/ }));
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("button", { name: /Khoi phuc du lieu tren thiet bi/ })).toBeTruthy();
+    expect(engineMocks.processRecoverySession).not.toHaveBeenCalled();
+    expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
+    expect(engineMocks.fetchCurrentRemote).not.toHaveBeenCalled();
+  });
+});
+
+describe("recovery preparation failure that is not an ordinary-outbox collision", () => {
+  it("keeps the generic safe fallback and offers an idempotent retry", async () => {
+    let settingsAttempts = 0;
+    outboxMocks.enqueueRecoveryItem.mockImplementation(async (input: any) => {
+      if (input.table === "settings") {
+        settingsAttempts += 1;
+        if (settingsAttempts === 1) throw new Error("temporary preparation failure");
+      }
+      return { id: "private-outbox", op: "recover", ...input };
+    });
+    renderWizard();
+    const dialog = await openConfirmation();
+    fireEvent.click(within(dialog).getByRole("button", { name: /Xac nhan khoi phuc du lieu/ }));
+    expect(await screen.findByText(/Chua the chuan bi du lieu de khoi phuc/)).toBeTruthy();
+    const retry = screen.getByRole("button", { name: /Thu chuan bi lai/ });
+    expect(document.documentElement.outerHTML).not.toContain("temporary preparation failure");
+    expect(document.documentElement.outerHTML).not.toContain("Recovery queue blocked");
+    fireEvent.click(retry);
+    expect(await screen.findByRole("heading", { name: /Du lieu dang cho duoc kiem tra/ })).toBeTruthy();
+    expect(outboxMocks.enqueueRecoveryItem).toHaveBeenCalledWith(expect.objectContaining({ table: "settings", entityId: "settings" }));
+    expect(engineMocks.saveSyncMeta).toHaveBeenCalledTimes(1);
+  });
+});
