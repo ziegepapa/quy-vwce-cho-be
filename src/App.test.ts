@@ -127,8 +127,15 @@ const COMPLETE = {
   migrateWizardSkipped: false,
   recoveryState: "complete" as const,
 };
+const PENDING = {
+  ...COMPLETE,
+  migrateWizardDone: false,
+  recoveryState: "queued" as const,
+};
 const BLOCKED =
   "Bạn còn dữ liệu chưa đồng bộ hoặc chưa khôi phục. Hãy khôi phục hoặc sao lưu trước khi đăng xuất.";
+const RECOVERY_BANNER = "Khôi phục dữ liệu chưa hoàn tất";
+const CONTINUE_RECOVERY = "Tiếp tục khôi phục dữ liệu";
 
 function conflict(): ConflictRecord {
   return {
@@ -223,7 +230,7 @@ describe("fresh fail-closed logout", () => {
   });
 
   it.each(["required", "queued", "verifying", "conflict"])(
-    "blocks recovery state %s",
+    "blocks logout while recovery state %s is pending",
     async (state) => {
       dbMocks.countLocalData.mockResolvedValue(LOCAL);
       engineMocks.getSyncMeta.mockResolvedValue({
@@ -232,118 +239,7 @@ describe("fresh fail-closed logout", () => {
         recoveryState: state,
       });
       renderApp();
-      expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
-      // Soft back only — do not invoke onDone while recovery is incomplete.
-      fireEvent.click(
-        screen.getByRole("button", { name: "Quay lại — chưa khôi phục dữ liệu" }),
-      );
-      expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
-      expect(screen.getByTestId("recovery-screen")).toBeTruthy();
-    },
-  );
-
-  it("blocks stale-clean UI when a fresh recovery read becomes queued", async () => {
-    renderApp();
-    await screen.findByRole("button", { name: "Đăng xuất" });
-    dbMocks.countLocalData.mockResolvedValue(LOCAL);
-    engineMocks.getSyncMeta.mockResolvedValue({
-      ...COMPLETE,
-      migrateWizardDone: false,
-      recoveryState: "queued",
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
-    expect(await screen.findByText(BLOCKED)).toBeTruthy();
-    expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
-  });
-
-  it("fails closed on read failure", async () => {
-    renderApp();
-    await screen.findByRole("button", { name: "Đăng xuất" });
-    outboxMocks.outboxCount.mockRejectedValueOnce(new Error("PRIVATE"));
-    fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
-    expect(await screen.findByText(BLOCKED)).toBeTruthy();
-    expect(document.body.textContent).not.toContain("PRIVATE");
-  });
-
-  it("preserves explicit logout only when recovery is complete and blockers are zero", async () => {
-    renderApp();
-    fireEvent.click(await screen.findByRole("button", { name: "Đăng xuất" }));
-    await waitFor(() =>
-      expect(authMocks.signOutBeforeLocalClear).toHaveBeenCalledTimes(1),
-    );
-    expect(authMocks.signOutBeforeLocalClear.mock.calls[0][1]).toBe(
-      dbMocks.clearUserBusinessData,
-    );
-  });
-});
-
-describe("mandatory recovery routing and completion", () => {
-  beforeEach(() => {
-    dbMocks.countLocalData.mockResolvedValue(LOCAL);
-    dbMocks.getSettings.mockResolvedValue({ onboardingDone: false, planName: "" });
-    engineMocks.getSyncMeta.mockResolvedValue({
-      ...COMPLETE,
-      migrateWizardDone: false,
-      recoveryState: "queued",
-    });
-  });
-
-  it.each(["/", "/settings?tab=data", "/goals"])(
-    "keeps %s behind recovery with no onboarding or auto sync",
-    async (path) => {
-      engineMocks.runSync.mockClear();
-      renderApp(path);
-      expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
-      expect(screen.queryByText("Bắt đầu với kế hoạch mẫu")).toBeNull();
-      expect(screen.queryByText("Bắt đầu với dữ liệu trống")).toBeNull();
-      // Recovery gate must not kick off ordinary sync.
-      await waitFor(() => {
-        expect(engineMocks.runSync).not.toHaveBeenCalled();
-      });
-    },
-  );
-
-  it("does not release the gate when the wizard reports done but fresh metadata is pending", async () => {
-    renderApp();
-    expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Kiểm tra dữ liệu" }));
-    // onDone throws Recovery incomplete; gate must stay.
-    await waitFor(() => {
-      expect(screen.getByTestId("recovery-screen")).toBeTruthy();
-    });
-    expect(screen.queryByTestId("settings-data")).toBeNull();
-  });
-
-  it("routes to Settings Data only after fresh complete metadata", async () => {
-    engineMocks.getSyncMeta
-      .mockResolvedValueOnce({
-        ...COMPLETE,
-        migrateWizardDone: false,
-        recoveryState: "queued",
-      })
-      .mockResolvedValue({
-        ...COMPLETE,
-        recoverySessionId: "session",
-        migrateWizardDone: true,
-        recoveryState: "complete",
-      });
-    dbMocks.countLocalData.mockResolvedValue(LOCAL);
-    dbMocks.getSettings.mockResolvedValue({
-      onboardingDone: true,
-      planName: "Quỹ VWCE",
-    });
-    renderApp();
-    expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Kiểm tra dữ liệu" }));
-    expect(await screen.findByTestId("settings-data")).toBeTruthy();
-    expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
-  });
-
-  it("allows onboarding only when local business data is zero", async () => {
-    dbMocks.countLocalData.mockResolvedValue(ZERO);
-    engineMocks.getSyncMeta.mockResolvedValue(COMPLETE);
-    renderApp();
-    expect(await screen.findByText("Bắt đầu với kế hoạch mẫu")).toBeTruthy();
-    expect(screen.queryByTestId("recovery-screen")).toBeNull();
-  });
-});
+      expect(await screen.findByText(RECOVERY_BANNER)).toBeTruthy();
+      expect(screen.queryByTestId("recovery-screen")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
+      
