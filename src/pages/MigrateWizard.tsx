@@ -3,12 +3,13 @@ import SyncConflictSection from "../components/SyncConflictSection";
 import { countLocalData, db, exportBackup } from "../lib/db";
 import { uid } from "../lib/defaults";
 import {
+  fetchCurrentRemote,
   getSyncMeta,
   processRecoverySession,
   saveSyncMeta,
 } from "../lib/sync/engine";
 import { enqueueRecoveryItem } from "../lib/sync/outbox";
-import type { EntityTable, RecoveryState } from "../lib/sync/types";
+import type { EntityTable, OutboxItem, RecoveryState } from "../lib/sync/types";
 
 type Props = {
   userId: string;
@@ -30,8 +31,10 @@ type Phase =
   | "unverified"
   | "complete"
   | "account-check"
+  | "account-verified"
   | "prepare-failed";
 type RecoverableRow = { id: string; version?: unknown; [key: string]: unknown };
+type AccountCheckOutcome = "exact" | "conflict" | "retry";
 
 const EMPTY_COUNTS: Counts = { settings: 0, goals: 0, transactions: 0, annualChecklists: 0, monthlySnapshots: 0 };
 const BACKUP_FAILURE_MESSAGE = "Chưa tạo được bản sao lưu. Dữ liệu trên thiết bị vẫn được giữ nguyên.";
@@ -41,13 +44,19 @@ const CONFLICT_COPY = "Dữ liệu trên iPhone và dữ liệu trong tài kho�
 const UNVERIFIED_COPY = "Dữ liệu trên iPhone vẫn được giữ nguyên. Hãy kết nối mạng và thử kiểm tra lại. Bạn chưa thể hoàn tất hoặc đăng xuất.";
 
 // Ordinary-outbox collision: a prior pending edit for the same entity blocks
-// recovery. We surface a safe, explicit account-check state instead of the
-// generic preparation failure. We never touch the existing ordinary item.
+// recovery. The confirmRestore transaction rolls back, so NO recovery session
+// and NO recover items are created. We surface a safe, explicit account-check
+// state instead of the generic preparation failure, and never touch the
+// existing ordinary item.
 const ACCOUNT_CHECK_TITLE = "Cần kiểm tra dữ liệu trong tài khoản";
 const ACCOUNT_CHECK_BODY_LINE_1 = "Ứng dụng phát hiện thay đổi trước đó đang chờ được xác minh.";
 const ACCOUNT_CHECK_BODY_LINE_2 = "Dữ liệu trên iPhone vẫn được giữ nguyên và chưa có dữ liệu nào bị ghi đè.";
 const ACCOUNT_CHECK_PRIMARY = "Kiểm tra dữ liệu trong tài khoản";
 const ACCOUNT_CHECK_RETRY_MESSAGE = "Chưa thể kiểm tra dữ liệu trong tài khoản lúc này. Dữ liệu trên iPhone vẫn được giữ nguyên. Hãy thử lại.";
+// Safe verified no-op: the pending change already matches the account. We do
+// NOT release the recovery gate or mark recovery complete here.
+const ACCOUNT_VERIFIED_TITLE = "Dữ liệu đã khớp với tài khoản";
+const ACCOUNT_VERIFIED_COPY = "Thay đổi đang chờ trên iPhone đã khớp với dữ liệu trong tài khoản. Không có dữ liệu nào bị ghi đè và bạn không cần khôi phục thêm.";
 const BACK_LABEL = "Quay lại — chưa khôi phục dữ liệu";
 const PREPARE_RETRY_LABEL = "Thử chuẩn bị lại";
 // enqueueRecoveryItem throws exactly this when a prior ordinary outbox item
@@ -69,6 +78,59 @@ function phaseForState(state?: RecoveryState): Phase {
   if (state === "conflict") return "conflict";
   if (state === "queued" || state === "verifying") return "queued";
   return "review";
+}
+
+// Pure, read-only comparison helpers. They mirror the engine's recovery
+// comparison (ignore version and deletion markers, canonicalise key order) so
+// the wizard can decide exact-vs-divergent without importing engine internals
+// or mutating anything.
+function canonicalJson(value: unknown): string {
+  const normalize = (input: unknown): unknown => {
+    if (Array.isArray(input)) return input.map(normalize);
+    if (!input || typeof input !== "object") return input;
+    return Object.fromEntries(
+      Object.entries(input as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, val]) => [key, normalize(val)]),
+    );
+  };
+  return JSON.stringify(normalize(value));
+}
+function comparableEntityData(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const next = { ...(value as Record<string, unknown>) };
+  delete next.version;
+  delete next.deletedAt;
+  delete next.deleted_at;
+  return next;
+}
+function sameEntityData(a: unknown, b: unknown): boolean {
+  const left = comparableEntityData(a);
+  const right = comparableEntityData(b);
+  return Boolean(left && right && canonicalJson(left) === canonicalJson(right));
+}
+
+// Read-only verification of a single pending ORDINARY outbox item against the
+// current remote state. It NEVER enqueues, upserts, deletes, resolves, or
+// releases the gate — it only fetches and compares.
+async function verifyOrdinaryItemAgainstRemote(
+  userId: string,
+  item: OutboxItem,
+): Promise<AccountCheckOutcome> {
+  const remote = await fetchCurrentRemote(userId, item.table, item.entityId);
+  if (remote.state === "unavailable") return "retry";
+  if (item.op === "delete") {
+    // Pending deletion: if the account no longer has the row the intent is
+    // already satisfied (safe no-op); still present -> the user must choose.
+    return remote.state === "present" ? "conflict" : "exact";
+  }
+  if (remote.state === "present") {
+    return sameEntityData(remote.data, item.payload) ? "exact" : "conflict";
+  }
+  if (remote.state === "deleted") return "conflict"; // tombstone
+  // not-found for a pending upsert: the account does not have this row yet. We
+  // must not insert it here and cannot claim a verified no-op, so offer retry.
+  return "retry";
 }
 
 export default function MigrateWizard({ userId, onDone, onBack }: Props) {
@@ -146,7 +208,9 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
   // Shared preparation path for the explicit confirmation and for the
   // "Thử chuẩn bị lại" retry. Everything runs inside one transaction, so any
   // failure rolls back completely: no recover items are created and every
-  // existing ordinary outbox item and local row is preserved.
+  // existing ordinary outbox item and local row is preserved. On an
+  // ordinary-outbox collision, saveSyncMeta never runs, so no recovery session
+  // is created.
   async function prepareRecovery() {
     setBusy(true); setMessage("");
     try {
@@ -183,7 +247,8 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
     } catch (error) {
       if (isRecoveryQueueBlocked(error)) {
         // A prior ordinary outbox item (e.g. a pending settings edit) blocks
-        // recovery. Nothing was written; offer a safe, explicit account check.
+        // recovery. Nothing was written and no session exists; offer a safe,
+        // explicit account check backed by real read-only verification.
         setPhase("account-check");
       } else {
         setMessage(RECOVERY_FAILURE_MESSAGE);
@@ -202,44 +267,41 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
     await prepareRecovery();
   }
 
-  // Safe account check for the ordinary-outbox collision. It never enqueues,
-  // upserts, deletes or merges anything; it only verifies via the existing
-  // read-first recovery path and maps the outcome. Completion/gate release can
-  // only happen once the account is verified.
+  // Safe account check for the ordinary-outbox collision. There is NO recovery
+  // session in this path, so we never call processRecoverySession. Instead we
+  // read the pending ordinary outbox items and verify each one read-only against
+  // the current remote state. We never enqueue, upsert, delete/replace the
+  // ordinary item, sync, resolve, or release the gate.
   async function checkAccountData() {
     if (busy || phase !== "account-check") return;
     setBusy(true); setMessage("");
     try {
-      const meta = await getSyncMeta(userId);
-      const verifiableSession = meta.recoverySessionId && meta.recoveryState !== "complete"
-        ? meta.recoverySessionId
-        : sessionId;
-      if (!verifiableSession) {
-        // No recovery session to verify safely (session/server unavailable).
-        // Retry only — stay on the account-check state.
+      const pending = (await db.outbox.toArray()) as OutboxItem[];
+      const ordinary = pending.filter((item) => item.op === "upsert" || item.op === "delete");
+      if (ordinary.length === 0) {
+        // Nothing to verify safely; stay on account-check and offer retry only.
         setMessage(ACCOUNT_CHECK_RETRY_MESSAGE);
         return;
       }
-      const result = await processRecoverySession(userId, verifiableSession);
-      if (result.status === "confirmed") {
-        const [nextCounts, confirmedMeta] = await Promise.all([countLocalData(), getSyncMeta(userId)]);
-        if (!confirmedMeta.migrateWizardDone || confirmedMeta.recoveryState !== "complete") {
-          setSessionId(verifiableSession);
-          setPhase("unverified");
-          return;
-        }
-        setSessionId(verifiableSession);
-        setCounts(nextCounts);
-        setPhase("complete");
-      } else if (result.status === "conflict") {
-        setSessionId(verifiableSession);
-        setPhase("conflict");
-      } else {
-        setSessionId(verifiableSession);
-        setPhase("unverified");
+      let sawConflict = false;
+      let sawRetry = false;
+      let sawExact = false;
+      for (const item of ordinary) {
+        const outcome = await verifyOrdinaryItemAgainstRemote(userId, item);
+        if (outcome === "conflict") sawConflict = true;
+        else if (outcome === "retry") sawRetry = true;
+        else sawExact = true;
       }
+      // Precedence: a confirmed divergence must be surfaced; otherwise if we
+      // could not verify everything, retry; only claim a safe no-op when every
+      // pending item was verified as an exact match.
+      if (sawConflict) { setPhase("conflict"); return; }
+      if (sawRetry) { setMessage(ACCOUNT_CHECK_RETRY_MESSAGE); return; }
+      if (sawExact) { setPhase("account-verified"); return; }
+      setMessage(ACCOUNT_CHECK_RETRY_MESSAGE);
     } catch {
-      setPhase("unverified");
+      // Unavailable/offline/auth/RLS: keep everything intact and offer retry.
+      setMessage(ACCOUNT_CHECK_RETRY_MESSAGE);
     } finally { setBusy(false); }
   }
 
@@ -296,13 +358,15 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
       : phase === "unverified" ? "Chưa thể kiểm tra dữ liệu trong tài khoản"
         : phase === "queued" ? "Dữ liệu đang chờ được kiểm tra"
           : phase === "account-check" ? ACCOUNT_CHECK_TITLE
-            : "Khôi phục dữ liệu trên thiết bị";
+            : phase === "account-verified" ? ACCOUNT_VERIFIED_TITLE
+              : "Khôi phục dữ liệu trên thiết bị";
   const copy = phase === "complete"
     ? "Dữ liệu trên thiết bị đã được đưa vào tài khoản. Hãy kiểm tra Cài đặt → Dữ liệu trước khi đăng xuất."
     : phase === "conflict" ? CONFLICT_COPY
       : phase === "unverified" ? UNVERIFIED_COPY
         : phase === "queued" ? QUEUED_COPY
-          : "Đã tìm thấy dữ liệu cũ trên iPhone này. Khôi phục để dùng lại với tài khoản của bạn.";
+          : phase === "account-verified" ? ACCOUNT_VERIFIED_COPY
+            : "Đã tìm thấy dữ liệu cũ trên iPhone này. Khôi phục để dùng lại với tài khoản của bạn.";
 
   return (
     <div className="app-shell">
@@ -344,6 +408,9 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
               <button type="button" disabled={busy} onClick={() => void checkAccountData()}>{busy ? "Đang kiểm tra…" : ACCOUNT_CHECK_PRIMARY}</button>
               <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{BACK_LABEL}</button>
             </>
+          ) : null}
+          {phase === "account-verified" ? (
+            <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{BACK_LABEL}</button>
           ) : null}
           {phase === "prepare-failed" ? (
             <>
