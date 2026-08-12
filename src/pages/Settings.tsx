@@ -19,6 +19,7 @@ import { THEME_OPTIONS, persistTheme, readTheme } from "../lib/theme";
 import { useAuth } from "../lib/auth";
 import { listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
 import type { OutboxItem } from "../lib/sync/types";
+import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import SettingsPricePanel from "../components/SettingsPricePanel";
 import SyncConflictSection from "../components/SyncConflictSection";
 
@@ -174,6 +175,7 @@ export default function SettingsPage({
   const [mfaMessage, setMfaMessage] = useState<string | null>(null);
   const [mfaSetupError, setMfaSetupError] = useState<string | null>(null);
   const auth = useAuth();
+  const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   const pendingSettings = useRef<Partial<AppSettings>>({});
   const saveTimer = useRef<number | null>(null);
@@ -201,8 +203,9 @@ export default function SettingsPage({
   }, [auth.user?.id]);
 
   useEffect(() => {
+    if (readOnly) return;
     void getOrCreateChecklist(checklistYear).then(setChecklist);
-  }, [checklistYear]);
+  }, [checklistYear, readOnly]);
 
   useEffect(() => {
     const on = () => setOnline(true);
@@ -263,6 +266,7 @@ export default function SettingsPage({
   }
 
   function patchSettings(partial: Partial<AppSettings>) {
+    if (readOnly) { showBlocked(); return; }
     setSettings((current) => (current ? { ...current, ...partial } : current));
     pendingSettings.current = { ...pendingSettings.current, ...partial };
     setSaveError(null);
@@ -320,10 +324,12 @@ export default function SettingsPage({
   }
 
   function doImport(file: File) {
+    if (readOnly) { showBlocked(); return; }
     setPendingFile(file);
   }
 
   async function confirmImport() {
+    if (readOnly) { showBlocked(); return; }
     const file = pendingFile;
     if (!file) return;
     setImporting(true);
@@ -662,6 +668,7 @@ export default function SettingsPage({
                   className="settings-primary-action"
                   disabled={mfaBusy || mfaCode.length !== 6}
                   onClick={async () => {
+                    if (readOnly) { showBlocked(); return; }
                     setMfaBusy(true);
                     setMfaSetupError(null);
                     setMfaMessage(null);
@@ -692,6 +699,7 @@ export default function SettingsPage({
                 className="settings-primary-action"
                 disabled={mfaBusy}
                 onClick={async () => {
+                  if (readOnly) { showBlocked(); return; }
                   setMfaBusy(true);
                   setMfaSetupError(null);
                   setMfaMessage(null);
@@ -746,6 +754,7 @@ export default function SettingsPage({
                     className="ios-switch"
                     checked={item.done}
                     onChange={async () => {
+                      if (readOnly) { showBlocked(); return; }
                       const items = checklist.items.map((current) =>
                         current.key === item.key ? { ...current, done: !current.done } : current,
                       );
@@ -800,6 +809,7 @@ export default function SettingsPage({
                   className="settings-primary-action"
                   disabled={deadRetrying}
                   onClick={async () => {
+                    if (readOnly) { showBlocked(); return; }
                     if (!auth.user?.id) return;
                     setDeadRetrying(true);
                     setDeadSyncedMsg(false);
@@ -935,6 +945,7 @@ export default function SettingsPage({
                     className="danger"
                     disabled={deleteConfirm.trim().toUpperCase() !== "XOA"}
                     onClick={async () => {
+                      if (readOnly) { showBlocked(); return; }
                       await clearAllData();
                       window.location.reload();
                     }}

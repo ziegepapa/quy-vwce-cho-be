@@ -7,6 +7,7 @@ import { getSyncMeta, listConflicts, listDeadOutbox, reviveDeadOutbox, runSync }
 import { outboxCount } from "./lib/sync/outbox";
 import type { SyncMeta, SyncStatus } from "./lib/sync/types";
 import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
+import { RecoveryReadOnlyProvider } from "./lib/recoveryReadOnly";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
 import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
@@ -127,12 +128,12 @@ export default function App() {
         try {
           const [meta, counts] = await Promise.all([getSyncMeta(auth.user.id), countLocalData()]);
           const needsRecovery = isRecoveryPending(counts, meta);
-          setRecoveryRequired(needsRecovery); setShowWizard(needsRecovery); setRecoveryChecked(true);
+          setRecoveryRequired(needsRecovery); setShowWizard(false); setRecoveryChecked(true);
           if (!needsRecovery) {
             try { setSyncStatus("syncing"); await runSync(auth.user.id); } catch { /* network */ }
             await refreshSyncBadge();
           }
-        } catch { setRecoveryRequired(true); setShowWizard(true); setRecoveryChecked(true); }
+        } catch { setRecoveryRequired(true); setShowWizard(false); setRecoveryChecked(true); }
       } else { setRecoveryRequired(false); setShowWizard(false); setRecoveryChecked(true); }
       setReady(true);
     })();
@@ -189,7 +190,7 @@ export default function App() {
   if (migrationError) return <div className="app-shell" role="alert"><h1>Không thể nâng cấp dữ liệu local</h1><p className="muted">Ứng dụng dừng lại để tránh dùng dữ liệu nửa migrate. Đồng bộ và ghi mới bị tạm khóa.</p><p>{migrationError}</p><button type="button" className="btn primary" onClick={() => void reload()}>Thử lại migration</button></div>;
   if (auth.configured && (!auth.user || !auth.vaultReady)) return <AuthPage />;
 
-  if (auth.user && (showWizard || recoveryRequired)) {
+  if (auth.user && showWizard) {
     const recoveryUserId = auth.user.id;
     return <MigrateWizard userId={recoveryUserId} onDone={async () => {
       const [meta, refreshedCounts] = await Promise.all([getSyncMeta(recoveryUserId), countLocalData()]);
@@ -200,9 +201,11 @@ export default function App() {
       if (safety.readFailed || hasLogoutBlockers(safety.blockers)) { setLogoutBlockers(safety.blockers); setLogoutNoticeKind("info"); setLogoutNotice(RECOVERY_SYNC_PENDING_MESSAGE); }
       else { setLogoutBlockers(null); setLogoutNotice(null); }
       await reload();
-    }} onBack={() => { setShowWizard(true); setRecoveryRequired(true); }} />;
+    }} onBack={() => setShowWizard(false)} />;
   }
-  if (!settings?.onboardingDone) return <Onboarding onDone={async (seed) => { await ensureInitialized(seed); await reload(); }} />;
+  const recoveryActive = Boolean(auth.user) && recoveryRequired;
+  if (!recoveryActive && !settings?.onboardingDone) return <Onboarding onDone={async (seed) => { await ensureInitialized(seed); await reload(); }} />;
+  if (!settings) return <div className="app-shell"><p className="muted">Đang tải…</p></div>;
 
   const displayName = (auth.user?.user_metadata?.display_name as string) || auth.user?.email?.split("@")[0] || settings.planName;
   const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
@@ -211,16 +214,17 @@ export default function App() {
     <aside className="sidebar" aria-label="Điều hướng"><div className="sidebar-brand">Quỹ VWCE</div><nav className="sidebar-nav">{NAV.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
     <div className="app-shell">
       {auth.user ? <CollapsingNavBar displayName={displayName} syncStatus={syncStatus} pending={pending} onSignOut={handleSignOut} onSyncNow={handleSyncNow} onUpdatePrice={() => navigate("/settings?tab=prices")} onSearch={navAction("search")} onFilter={navAction("filter")} onAddGoal={navAction("addGoal")} onChangeScenario={navAction("changeScenario")} /> : null}
-      {logoutBlockers ? <div className="banner error" role="alert"><strong>Chưa thể đăng xuất.</strong><p>{LOGOUT_BLOCKED_MESSAGE}</p>{logoutNotice === RECOVERY_SYNC_PENDING_MESSAGE ? <p>{RECOVERY_SYNC_PENDING_MESSAGE}</p> : null}<div className="stack" style={{ marginTop: 8 }}>{hasLogoutBlockers(logoutBlockers) ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutBlockers()}>{logoutRetrying ? "Đang thử lại…" : "Đồng bộ / thử lại"}</button> : <button type="button" className="secondary" onClick={() => { setShowWizard(true); setRecoveryRequired(true); }}>Khôi phục dữ liệu trên thiết bị</button>}{logoutBlockers.conflicts > 0 ? <button type="button" className="ghost" onClick={handleOpenSyncConflicts}>{conflictCtaLabel(logoutBlockers.conflicts)}</button> : null}</div></div> : null}
+      {recoveryActive ? <section className="banner recovery-banner" role="status" data-testid="recovery-banner"><h2 className="recovery-banner-title">Khôi phục dữ liệu chưa hoàn tất</h2><p className="recovery-banner-body">Dữ liệu trên iPhone vẫn được giữ nguyên. Hãy hoàn tất kiểm tra trước khi đăng xuất hoặc đồng bộ dữ liệu.</p><button type="button" className="primary recovery-banner-action" onClick={() => setShowWizard(true)}>Tiếp tục khôi phục dữ liệu</button></section> : null}
+      {logoutBlockers ? <div className="banner error" role="alert"><strong>Chưa thể đăng xuất.</strong><p>{LOGOUT_BLOCKED_MESSAGE}</p>{logoutNotice === RECOVERY_SYNC_PENDING_MESSAGE ? <p>{RECOVERY_SYNC_PENDING_MESSAGE}</p> : null}<div className="stack" style={{ marginTop: 8 }}>{hasLogoutBlockers(logoutBlockers) ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutBlockers()}>{logoutRetrying ? "Đang thử lại…" : "Đồng bộ / thử lại"}</button> : <button type="button" className="secondary" onClick={() => setShowWizard(true)}>Khôi phục dữ liệu trên thiết bị</button>}{logoutBlockers.conflicts > 0 ? <button type="button" className="ghost" onClick={handleOpenSyncConflicts}>{conflictCtaLabel(logoutBlockers.conflicts)}</button> : null}</div></div> : null}
       {logoutNotice && !logoutBlockers ? <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">{logoutNotice}</div> : null}
-      <NavActionsProvider api={navActionsApi}><main className={`premium-screen premium-screen-${screenName}`}><Routes>
+      <NavActionsProvider api={navActionsApi}><main className={`premium-screen premium-screen-${screenName}`}><RecoveryReadOnlyProvider readOnly={recoveryActive}><Routes>
         <Route path="/" element={<Overview key={quoteRefreshVersion} />} />
         <Route path="/transactions" element={<Transactions />} />
         <Route path="/goals" element={<Goals />} />
         <Route path="/simulation" element={<Simulation />} />
         <Route path="/notfallmappe" element={<Notfallmappe />} />
-        <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => { setShowWizard(true); setRecoveryRequired(true); } : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} />} />
-      </Routes></main></NavActionsProvider>
+        <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} />} />
+      </Routes></RecoveryReadOnlyProvider></main></NavActionsProvider>
     </div><BottomDock items={NAV} />
   </div>;
 }

@@ -13,6 +13,7 @@ import {
 } from "../lib/calc";
 import { nowIso } from "../lib/defaults";
 import { useNavAction } from "../lib/navActions";
+import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import ActionMenu from "../components/ActionMenu";
 
 const BLANK_FORM = {
@@ -55,6 +56,7 @@ export default function Goals() {
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Goal | null>(null);
   const [form, setForm] = useState(BLANK_FORM);
+  const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   async function reload() {
     setGoals(await listGoals());
@@ -66,6 +68,7 @@ export default function Goals() {
   // V9 B2: một đường vào duy nhất cho "thêm mới".
   // Trước đây nút empty-state quên reset `edit` → lưu đè lên mục tiêu cũ.
   function openCreate() {
+    if (readOnly) { showBlocked(); return; }
     setEdit(null);
     setForm(BLANK_FORM);
     setShow(true);
@@ -103,6 +106,7 @@ export default function Goals() {
   }, [goals, today]);
 
   async function save() {
+    if (readOnly) { showBlocked(); return; }
     await upsertGoal({
       id: edit?.id ?? uid("goal"),
       name: form.name,
@@ -123,6 +127,7 @@ export default function Goals() {
   }
 
   function openEdit(g: Goal) {
+    if (readOnly) { showBlocked(); return; }
     setEdit(g);
     setForm({
       name: g.name,
@@ -223,6 +228,7 @@ export default function Goals() {
                         label: "Xóa",
                         danger: true,
                         onClick: async () => {
+                          if (readOnly) { showBlocked(); return; }
                           if (confirm("Xóa mục tiêu này?")) {
                             await deleteGoal(g.id);
                             await reload();

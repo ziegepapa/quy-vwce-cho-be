@@ -17,6 +17,7 @@ import {
   normalizeIsin,
   resolveInstrumentIsin,
 } from "../lib/instrument";
+import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import ActionMenu from "../components/ActionMenu";
 import { IconPlus } from "../components/Icons";
 import TradeRepublicPdfImport from "../components/TradeRepublicPdfImport";
@@ -57,6 +58,7 @@ export default function Transactions() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [qtyError, setQtyError] = useState("");
   const [isinError, setIsinError] = useState("");
+  const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   async function reload() {
     setTxs(await listTransactions());
@@ -96,6 +98,7 @@ export default function Transactions() {
     : 0;
 
   async function save() {
+    if (readOnly) { showBlocked(); return; }
     setQtyError("");
     setIsinError("");
     if (!form.date || !form.amount.trim()) {
@@ -174,6 +177,7 @@ export default function Transactions() {
   }
 
   function openEdit(tx: Transaction) {
+    if (readOnly) { showBlocked(); return; }
     setEditId(tx.id);
     setForm({
       date: tx.date,
@@ -198,6 +202,7 @@ export default function Transactions() {
           className="fab"
           aria-label="Thêm giao dịch"
           onClick={() => {
+            if (readOnly) { showBlocked(); return; }
             setEditId(null);
             setForm(emptyForm());
             setShow(true);
@@ -207,7 +212,9 @@ export default function Transactions() {
         </button>
       </div>
 
-      <TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} />
+      {readOnly ? null : (
+        <TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} />
+      )}
 
       <button
         type="button"
@@ -257,6 +264,7 @@ export default function Transactions() {
         <div className="empty card">
           <p>Chưa có giao dịch.</p>
           <button type="button" onClick={() => {
+            if (readOnly) { showBlocked(); return; }
             setEditId(null);
             setForm(emptyForm());
             setShow(true);
@@ -295,6 +303,7 @@ export default function Transactions() {
                         label: "Xóa",
                         danger: true,
                         onClick: async () => {
+                          if (readOnly) { showBlocked(); return; }
                           if (!confirm("Xóa giao dịch này?")) return;
                           await deleteTransaction(tx.id);
                           await reload();
