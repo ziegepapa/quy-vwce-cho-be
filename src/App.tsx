@@ -213,7 +213,18 @@ export default function App() {
   return <div className="app-layout">
     <aside className="sidebar" aria-label="Điều hướng"><div className="sidebar-brand">Quỹ VWCE</div><nav className="sidebar-nav">{NAV.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
     <div className="app-shell">
-      {auth.user ? <CollapsingNavBar displayName={displayName} syncStatus={syncStatus} pending={pending} onSignOut={handleSignOut} onSyncNow={handleSyncNow} onUpdatePrice={() => navigate("/settings?tab=prices")} onSearch={navAction("search")} onFilter={navAction("filter")} onAddGoal={navAction("addGoal")} onChangeScenario={navAction("changeScenario")} /> : null}
+      {auth.user ? <CollapsingNavBar
+        displayName={displayName}
+        syncStatus={syncStatus}
+        pending={pending}
+        onSignOut={handleSignOut}
+        onSyncNow={recoveryActive ? undefined : handleSyncNow}
+        onUpdatePrice={recoveryActive ? undefined : () => navigate("/settings?tab=prices")}
+        onSearch={navAction("search")}
+        onFilter={navAction("filter")}
+        onAddGoal={recoveryActive ? undefined : navAction("addGoal")}
+        onChangeScenario={recoveryActive ? undefined : navAction("changeScenario")}
+      /> : null}
       {recoveryActive ? <section className="banner recovery-banner" role="status" data-testid="recovery-banner"><h2 className="recovery-banner-title">Khôi phục dữ liệu chưa hoàn tất</h2><p className="recovery-banner-body">Dữ liệu trên iPhone vẫn được giữ nguyên. Hãy hoàn tất kiểm tra trước khi đăng xuất hoặc đồng bộ dữ liệu.</p><button type="button" className="primary recovery-banner-action" onClick={() => setShowWizard(true)}>Tiếp tục khôi phục dữ liệu</button></section> : null}
       {logoutBlockers ? <div className="banner error" role="alert"><strong>Chưa thể đăng xuất.</strong><p>{LOGOUT_BLOCKED_MESSAGE}</p>{logoutNotice === RECOVERY_SYNC_PENDING_MESSAGE ? <p>{RECOVERY_SYNC_PENDING_MESSAGE}</p> : null}<div className="stack" style={{ marginTop: 8 }}>{hasLogoutBlockers(logoutBlockers) ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutBlockers()}>{logoutRetrying ? "Đang thử lại…" : "Đồng bộ / thử lại"}</button> : <button type="button" className="secondary" onClick={() => setShowWizard(true)}>Khôi phục dữ liệu trên thiết bị</button>}{logoutBlockers.conflicts > 0 ? <button type="button" className="ghost" onClick={handleOpenSyncConflicts}>{conflictCtaLabel(logoutBlockers.conflicts)}</button> : null}</div></div> : null}
       {logoutNotice && !logoutBlockers ? <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">{logoutNotice}</div> : null}
