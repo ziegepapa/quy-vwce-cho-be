@@ -200,36 +200,26 @@ export default function App() {
     finally { setLogoutRetrying(false); try { await refreshSyncBadge(); } catch { /* next logout rechecks */ } }
   }
 
-  /**
-   * Bỏ qua recovery: xóa recovery outbox items, đánh dấu meta hoàn tất,
-   * rồi refresh badge để UI cập nhật đúng ngay.
-   * Lỗi được hiển thị rõ — không nuot im lặng.
-   */
   async function skipRecovery() {
     if (!auth.user || skipBusy) return;
     setSkipBusy(true);
     setSkipError(null);
     try {
-      // 1. Xóa tất cả recovery outbox items để outboxCount() về 0
       await clearRecoveryItems();
-      // 2. Lưu meta: đánh dấu skip hoàn tất — persist trước khi dismiss
       await saveSyncMeta({
         userId: auth.user.id,
         migrateWizardDone: true,
         migrateWizardSkipped: true,
         recoveryState: "complete",
       });
-      // 3. Dismiss banner ngay
       setRecoveryRequired(false);
       setShowSkipConfirm(false);
       setShowWizard(false);
-      // 4. Sync + refresh badge để UI phản ánh đúng
       try {
         if (auth.vaultReady) await runSync(auth.user.id);
       } catch { /* mạng không có cũng không sao */ }
       await refreshSyncBadge();
     } catch {
-      // Lưu thất bại: hiển lỗi rõ, giữ banner
       setSkipError("Không thể lưu trạng thái. Kiểm tra bộ nhớ và thử lại.");
     } finally {
       setSkipBusy(false);
@@ -255,7 +245,7 @@ export default function App() {
     }} onBack={() => setShowWizard(false)} />;
   }
 
-  if (!recoveryActive && !settings?.onboardingDone) return <Onboarding onDone={async (seed) => { await ensureInitialized(seed); await reload(); }} />;
+  if (!recoveryActive && !settings?.onboardingDone) return <Onboarding onDone={async () => { await ensureInitialized(false); await reload(); }} />;
   if (!settings) return <div className="app-shell"><p className="muted">Đang tải…</p></div>;
 
   const displayName = (auth.user?.user_metadata?.display_name as string) || auth.user?.email?.split("@")[0] || settings.planName;

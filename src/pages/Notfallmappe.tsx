@@ -23,6 +23,10 @@ import "../styles/notfallmappe.css";
  *  3. Nội dung có đồng bộ lên máy chủ — nói rõ, không giấu.
  *  4. Máy tự đọc lại nội dung và cảnh báo nếu thấy bí mật lọt vào.
  *
+ * Lưu ngay (không debounce): mọi thay đổi được enqueue vào outbox ngay lập tức.
+ * Điều này đảm bảo logout-safety-check thấy pending > 0 và không cho
+ * đăng xuất khi data chưa sync lên Supabase.
+ *
  * Bản in: không in giao diện app. Dựng iframe riêng, thay input/textarea
  * bằng chữ tĩnh, rồi in iframe. Tránh vệt đen do iOS Safari phóng ô nhập.
  */
@@ -33,26 +37,21 @@ const SECRET_RE =
 /** IBAN đầy đủ, ví dụ DE89 3704 0044 0532 0130 00. */
 const IBAN_RE = /\b[A-Z]{2}\s?\d{2}(?:\s?[A-Z0-9]{4}){3,7}\b/;
 
-/** Ngừng gõ bao lâu thì tự lưu. */
-const AUTOSAVE_MS = 900;
-
 export default function NotfallmappePage() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [data, setData] = useState<NotfallmappeData | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [txs, setTxs] = useState<Transaction[]>([]);
-  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   const rootRef = useRef<HTMLDivElement>(null);
+  // dataRef luôn giữ snapshot mới nhất để các handler có thể merge đúng
   const dataRef = useRef<NotfallmappeData | null>(null);
-  const dirtyRef = useRef(false);
 
   useEffect(() => {
     dataRef.current = data;
-    dirtyRef.current = dirty;
-  }, [data, dirty]);
+  }, [data]);
 
   useEffect(() => {
     (async () => {
@@ -62,34 +61,6 @@ export default function NotfallmappePage() {
       setGoals(await listGoals());
       setTxs(await listTransactions());
     })();
-  }, []);
-
-  useEffect(() => {
-    if (!dirty) return;
-    const t = window.setTimeout(() => {
-      void persist();
-    }, AUTOSAVE_MS);
-    return () => window.clearTimeout(t);
-  }, [data, dirty]);
-
-  useEffect(() => {
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (!dirtyRef.current) return;
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (dirtyRef.current && dataRef.current) {
-        void saveSettings({
-          notfallmappe: { ...dataRef.current, updatedAt: nowIso() },
-        });
-      }
-    };
   }, []);
 
   const snap = useMemo(() => {
@@ -152,26 +123,81 @@ export default function NotfallmappePage() {
 
   if (!data) return <p className="muted">Đang tải…</p>;
 
+  /**
+   * Lưu ngay — không debounce.
+   * enqueueOutbox được gọi bên trong saveSettings, đảm bảo outboxCount > 0
+   * ngay sau khi user thay đổi. Logout-safety-check sẽ thấy pending và chặn
+   * đăng xuất cho đến khi sync hoàn tất.
+   */
+  function save(next: NotfallmappeData) {
+    setData(next);
+    dataRef.current = next;
+    void saveSettings({ notfallmappe: next });
+  }
+
   function patch(p: Partial<NotfallmappeData>) {
     if (readOnly) { showBlocked(); return; }
-    setData((d) => (d ? { ...d, ...p } : d));
-    setDirty(true);
+    const base = dataRef.current;
+    if (!base) return;
+    save({ ...base, ...p, updatedAt: nowIso() });
   }
 
   function patchContact(id: string, p: Partial<EmergencyContact>) {
     if (readOnly) { showBlocked(); return; }
-    setData((d) =>
-      d ? { ...d, contacts: d.contacts.map((c) => (c.id === id ? { ...c, ...p } : c)) } : d,
-    );
-    setDirty(true);
+    const base = dataRef.current;
+    if (!base) return;
+    save({
+      ...base,
+      contacts: base.contacts.map((c) => (c.id === id ? { ...c, ...p } : c)),
+      updatedAt: nowIso(),
+    });
   }
 
   function patchDoc(id: string, p: Partial<DocumentLocation>) {
     if (readOnly) { showBlocked(); return; }
-    setData((d) =>
-      d ? { ...d, documents: d.documents.map((x) => (x.id === id ? { ...x, ...p } : x)) } : d,
-    );
-    setDirty(true);
+    const base = dataRef.current;
+    if (!base) return;
+    save({
+      ...base,
+      documents: base.documents.map((x) => (x.id === id ? { ...x, ...p } : x)),
+      updatedAt: nowIso(),
+    });
+  }
+
+  function removeContact(id: string) {
+    if (readOnly) { showBlocked(); return; }
+    const base = dataRef.current;
+    if (!base) return;
+    save({ ...base, contacts: base.contacts.filter((c) => c.id !== id), updatedAt: nowIso() });
+  }
+
+  function addContact() {
+    if (readOnly) { showBlocked(); return; }
+    const base = dataRef.current;
+    if (!base) return;
+    save({
+      ...base,
+      contacts: [...base.contacts, { id: uid("ct"), name: "", relation: "", phone: "", email: "" }],
+      updatedAt: nowIso(),
+    });
+  }
+
+  function removeDocument(id: string) {
+    if (readOnly) { showBlocked(); return; }
+    const base = dataRef.current;
+    if (!base) return;
+    save({ ...base, documents: base.documents.filter((x) => x.id !== id), updatedAt: nowIso() });
+  }
+
+  function addDocument() {
+    if (readOnly) { showBlocked(); return; }
+    const base = dataRef.current;
+    if (!base) return;
+    save({
+      ...base,
+      documents: [...base.documents, { id: uid("doc"), label: "", location: "" }],
+      updatedAt: nowIso(),
+    });
   }
 
   async function persist(extra?: Partial<NotfallmappeData>) {
@@ -183,7 +209,7 @@ export default function NotfallmappePage() {
     try {
       await saveSettings({ notfallmappe: next });
       setData(next);
-      setDirty(false);
+      dataRef.current = next;
     } finally {
       setSaving(false);
     }
@@ -201,17 +227,11 @@ export default function NotfallmappePage() {
 
   const statusText = saving
     ? "Đang lưu…"
-    : dirty
-      ? "Chưa lưu — sẽ tự lưu sau giây lát"
-      : data.updatedAt
-        ? `Đã lưu · cập nhật ${formatDateVN(data.updatedAt.slice(0, 10))}`
-        : "Đã lưu";
+    : data.updatedAt
+      ? `Đã lưu · cập nhật ${formatDateVN(data.updatedAt.slice(0, 10))}`
+      : "Đã lưu";
 
-  const statusClass = saving
-    ? "nfm-status is-saving"
-    : dirty
-      ? "nfm-status is-dirty"
-      : "nfm-status";
+  const statusClass = saving ? "nfm-status is-saving" : "nfm-status";
 
   return (
     <div className="nfm" ref={rootRef}>
@@ -364,13 +384,7 @@ export default function NotfallmappePage() {
                   type="button"
                   className="nfm-del"
                   aria-label={`Xóa ${c.name || "liên hệ"}`}
-                  onClick={() => {
-                    if (readOnly) { showBlocked(); return; }
-                    setData((d) =>
-                      d ? { ...d, contacts: d.contacts.filter((x) => x.id !== c.id) } : d,
-                    );
-                    setDirty(true);
-                  }}
+                  onClick={() => removeContact(c.id)}
                 >
                   ✕
                 </button>
@@ -397,21 +411,7 @@ export default function NotfallmappePage() {
           <button
             type="button"
             className="nfm-add"
-            onClick={() => {
-              if (readOnly) { showBlocked(); return; }
-              setData((d) =>
-                d
-                  ? {
-                      ...d,
-                      contacts: [
-                        ...d.contacts,
-                        { id: uid("ct"), name: "", relation: "", phone: "", email: "" },
-                      ],
-                    }
-                  : d,
-              );
-              setDirty(true);
-            }}
+            onClick={addContact}
           >
             + Thêm người liên hệ
           </button>
@@ -432,10 +432,6 @@ export default function NotfallmappePage() {
         <div className="nfm-box">
           {data.documents.map((doc) => (
             <div className="nfm-item" key={doc.id}>
-              {/*
-               * Tên giấy tờ là TIÊU ĐỀ khối — đứng đầu, không phải giá trị ô nhập.
-               * Khóa label giữ nguyên; vẫn sửa được tên.
-               */}
               <div className="nfm-item-top">
                 <input
                   value={doc.label}
@@ -447,24 +443,11 @@ export default function NotfallmappePage() {
                   type="button"
                   className="nfm-del"
                   aria-label={`Xóa ${doc.label || "giấy tờ"}`}
-                  onClick={() => {
-                    if (readOnly) { showBlocked(); return; }
-                    setData((d) =>
-                      d
-                        ? { ...d, documents: d.documents.filter((x) => x.id !== doc.id) }
-                        : d,
-                    );
-                    setDirty(true);
-                  }}
+                  onClick={() => removeDocument(doc.id)}
                 >
                   ✕
                 </button>
               </div>
-              {/*
-               * Hai ô cạnh nhau (nfm-row-grid) để mục 4 không chiếm cả trang in.
-               * Chỉ location được lưu — "Ghi chú" là dòng trống để viết tay trên giấy
-               * (schema không có khóa notes; không đổi khóa dữ liệu).
-               */}
               <div className="nfm-row-grid">
                 <label className="nfm-field">
                   <span>Bản gốc cất ở đâu</span>
@@ -490,18 +473,7 @@ export default function NotfallmappePage() {
           <button
             type="button"
             className="nfm-add"
-            onClick={() => {
-              if (readOnly) { showBlocked(); return; }
-              setData((d) =>
-                d
-                  ? {
-                      ...d,
-                      documents: [...d.documents, { id: uid("doc"), label: "", location: "" }],
-                    }
-                  : d,
-              );
-              setDirty(true);
-            }}
+            onClick={addDocument}
           >
             + Thêm giấy tờ
           </button>

@@ -68,12 +68,11 @@ vi.mock("./pages/Auth", () => ({ default: () => null }));
 vi.mock("./pages/Onboarding", async () => {
   const React = await import("react");
   return {
-    default: () =>
+    default: ({ onDone }: { onDone: () => void }) =>
       React.createElement(
         "div",
         null,
-        React.createElement("button", null, "B\u1eaft \u0111\u1ea7u v\u1edbi k\u1ebf ho\u1ea1ch m\u1eabu"),
-        React.createElement("button", null, "B\u1eaft \u0111\u1ea7u v\u1edbi d\u1eef li\u1ec7u tr\u1ed1ng"),
+        React.createElement("button", { onClick: onDone }, "B\u1eaft đầu"),
       ),
   };
 });
@@ -339,8 +338,7 @@ describe("recovery read-only shell (menu access)", () => {
     dbMocks.getSettings.mockResolvedValue({ onboardingDone: false, planName: "" });
     renderApp();
     expect(await screen.findByText(RECOVERY_BANNER)).toBeTruthy();
-    expect(screen.queryByText("B\u1eaft \u0111\u1ea7u v\u1edbi k\u1ebf ho\u1ea1ch m\u1eabu")).toBeNull();
-    expect(screen.queryByText("B\u1eaft \u0111\u1ea7u v\u1edbi d\u1eef li\u1ec7u tr\u1ed1ng")).toBeNull();
+    expect(screen.queryByText("B\u1eaft đầu")).toBeNull();
     expect(screen.queryByTestId("recovery-screen")).toBeNull();
   });
 
@@ -393,7 +391,6 @@ describe("recovery read-only shell (menu access)", () => {
         }),
       );
     });
-    // clearRecoveryItems must be called before saveSyncMeta
     expect(engineMocks.clearRecoveryItems).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(RECOVERY_BANNER)).toBeNull();
     expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
@@ -436,12 +433,12 @@ describe("recovery completion", () => {
 });
 
 describe("onboarding", () => {
-  it("allows onboarding only when local business data is zero", async () => {
+  it("shows onboarding start button when local business data is zero", async () => {
     dbMocks.countLocalData.mockResolvedValue(ZERO);
     engineMocks.getSyncMeta.mockResolvedValue(COMPLETE);
     dbMocks.getSettings.mockResolvedValue({ onboardingDone: false, planName: "" });
     renderApp();
-    expect(await screen.findByText("B\u1eaft \u0111\u1ea7u v\u1edbi k\u1ebf ho\u1ea1ch m\u1eabu")).toBeTruthy();
+    expect(await screen.findByText("B\u1eaft đầu")).toBeTruthy();
     expect(screen.queryByTestId("recovery-screen")).toBeNull();
     expect(screen.queryByText(RECOVERY_BANNER)).toBeNull();
   });
