@@ -158,7 +158,7 @@ export default function SettingsPage({
   const [checklistYear, setChecklistYear] = useState(new Date().getFullYear());
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState("");
-  const [pendingImport, setPendingImport] = useState<BackupPayload | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
   const [dead, setDead] = useState<OutboxItem[]>([]);
@@ -319,40 +319,40 @@ export default function SettingsPage({
     setMetaBackup(payload.exportedAt);
   }
 
-  async function doImport(file: File) {
-    let data: BackupPayload;
-    try {
-      data = JSON.parse(await file.text());
-    } catch {
-      alert("JSON không hợp lệ");
-      return;
-    }
-    if (!data || typeof data !== "object") {
-      alert("Cấu trúc backup không hợp lệ");
-      return;
-    }
-    if (!isSupportedBackupSchema(data.schemaVersion)) {
-      alert(
-        `schemaVersion không khớp (file: ${String(data.schemaVersion)}, app: ${SCHEMA_VERSION} hoặc 1)`,
-      );
-      return;
-    }
-    setPendingImport(data);
+  function doImport(file: File) {
+    setPendingFile(file);
   }
 
   async function confirmImport() {
-    const data = pendingImport;
-    if (!data) return;
+    const file = pendingFile;
+    if (!file) return;
     setImporting(true);
     try {
-      const current = await exportBackup();
-      downloadJson(
-        current,
-        `ban-sao-luu-truoc-khi-nhap-json-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
-    } catch {
-      /* */
-    }
-    try {
+      let data: BackupPayload;
+      try {
+        data = JSON.parse(await file.text());
+      } catch {
+        alert("JSON không hợp lệ");
+        return;
+      }
+      if (!data || typeof data !== "object") {
+        alert("Cấu trúc backup không hợp lệ");
+        return;
+      }
+      if (!isSupportedBackupSchema(data.schemaVersion)) {
+        alert(
+          `schemaVersion không khớp (file: ${String(data.schemaVersion)}, app: ${SCHEMA_VERSION} hoặc 1)`,
+        );
+        return;
+      }
+      try {
+        const current = await exportBackup();
+        downloadJson(
+          current,
+          `ban-sao-luu-truoc-khi-nhap-json-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
+      } catch {
+        /* */
+      }
       await importBackup(data);
       alert("Nhập backup thành công");
       onReload();
@@ -360,7 +360,7 @@ export default function SettingsPage({
       alert(reason instanceof Error ? reason.message : "Lỗi nhập");
     } finally {
       setImporting(false);
-      setPendingImport(null);
+      setPendingFile(null);
     }
   }
 
@@ -853,17 +853,21 @@ export default function SettingsPage({
             <p className="settings-inline-status settings-import-warning" role="note">
               ⚠️ Nhập một bản sao lưu sẽ <strong>ghi đè và thay thế toàn bộ dữ liệu đang có trên thiết bị này</strong>. Ứng dụng sẽ tự tải một bản sao lưu của dữ liệu hiện tại trước khi ghi đè để bạn có thể quay lại nếu cần.
             </p>
-            {pendingImport ? (
+            {pendingFile ? (
               <div
                 className="delete-confirm import-confirm"
                 role="alertdialog"
                 aria-modal="true"
-                aria-label="Xác nhận nhập dữ liệu"
+                aria-labelledby="import-confirm-title"
               >
-                <p><strong>Nhập bản sao lưu này và ghi đè dữ liệu hiện tại?</strong></p>
+                <p id="import-confirm-title"><strong>Thay dữ liệu trên thiết bị bằng file này?</strong></p>
+                <p className="import-confirm-file">
+                  <span className="import-confirm-file-label">File đã chọn</span>
+                  <span className="import-confirm-file-name">{pendingFile.name}</span>
+                </p>
                 <p>
-                  Toàn bộ dữ liệu đang có trên thiết bị này sẽ được thay thế bằng dữ liệu trong file.
-                  Ứng dụng sẽ tự tải một bản sao lưu của dữ liệu hiện tại trước khi ghi đè.
+                  Toàn bộ dữ liệu local hiện có trên iPhone sẽ được thay bằng nội dung file này.
+                  Ứng dụng sẽ tải một bản sao lưu trước khi tiếp tục. Thao tác này không tự ghi đè dữ liệu trong tài khoản.
                 </p>
                 <div className="delete-actions">
                   <button
@@ -872,15 +876,15 @@ export default function SettingsPage({
                     disabled={importing}
                     onClick={() => void confirmImport()}
                   >
-                    {importing ? "Đang nhập…" : "Nhập và ghi đè"}
+                    {importing ? "Đang nhập…" : "Xác nhận thay dữ liệu trên thiết bị"}
                   </button>
                   <button
                     type="button"
                     className="secondary"
                     disabled={importing}
-                    onClick={() => setPendingImport(null)}
+                    onClick={() => setPendingFile(null)}
                   >
-                    Hủy
+                    Quay lại
                   </button>
                 </div>
               </div>
