@@ -68,12 +68,11 @@ vi.mock("./pages/Auth", () => ({ default: () => null }));
 vi.mock("./pages/Onboarding", async () => {
   const React = await import("react");
   return {
-    default: () =>
+    default: ({ onDone }: { onDone: () => void }) =>
       React.createElement(
         "div",
         null,
-        React.createElement("button", null, "B\u1eaft \u0111\u1ea7u v\u1edbi k\u1ebf ho\u1ea1ch m\u1eabu"),
-        React.createElement("button", null, "B\u1eaft \u0111\u1ea7u v\u1edbi d\u1eef li\u1ec7u tr\u1ed1ng"),
+        React.createElement("button", { onClick: onDone }, "B\u1eaft \u0111\u1ea7u"),
       ),
   };
 });
@@ -98,11 +97,7 @@ vi.mock("./pages/MigrateWizard", async () => {
         ),
         React.createElement(
           "button",
-          {
-            onClick: () => {
-              void Promise.resolve(onDone()).catch(() => undefined);
-            },
-          },
+          { onClick: () => { void Promise.resolve(onDone()).catch(() => undefined); } },
           "Ki\u1ec3m tra d\u1eef li\u1ec7u",
         ),
       ),
@@ -122,48 +117,22 @@ vi.mock("./pages/Settings", async () => {
 
 import App from "./App";
 
-const ZERO = {
-  settings: 0,
-  goals: 0,
-  transactions: 0,
-  annualChecklists: 0,
-  monthlySnapshots: 0,
-  quotes: 0,
-};
+const ZERO = { settings: 0, goals: 0, transactions: 0, annualChecklists: 0, monthlySnapshots: 0, quotes: 0 };
 const LOCAL = { ...ZERO, settings: 1 };
-const COMPLETE = {
-  userId: "owner-1",
-  migrateWizardDone: true,
-  migrateWizardSkipped: false,
-  recoveryState: "complete" as const,
-};
-const PENDING = {
-  ...COMPLETE,
-  migrateWizardDone: false,
-  recoveryState: "queued" as const,
-};
-const BLOCKED =
-  "B\u1ea1n c\u00f2n d\u1eef li\u1ec7u ch\u01b0a \u0111\u1ed3ng b\u1ed9 ho\u1eb7c ch\u01b0a kh\u00f4i ph\u1ee5c. H\u00e3y kh\u00f4i ph\u1ee5c ho\u1eb7c sao l\u01b0u tr\u01b0\u1edbc khi \u0111\u0103ng xu\u1ea5t.";
+const COMPLETE = { userId: "owner-1", migrateWizardDone: true, migrateWizardSkipped: false, recoveryState: "complete" as const };
+const PENDING = { ...COMPLETE, migrateWizardDone: false, recoveryState: "queued" as const };
+const BLOCKED = "B\u1ea1n c\u00f2n d\u1eef li\u1ec7u ch\u01b0a \u0111\u1ed3ng b\u1ed9 ho\u1eb7c ch\u01b0a kh\u00f4i ph\u1ee5c. H\u00e3y kh\u00f4i ph\u1ee5c ho\u1eb7c sao l\u01b0u tr\u01b0\u1edbc khi \u0111\u0103ng xu\u1ea5t.";
 const RECOVERY_BANNER = "Kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u ch\u01b0a ho\u00e0n t\u1ea5t";
 const CONTINUE_RECOVERY = "Ti\u1ebfp t\u1ee5c kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u";
 const SKIP_RECOVERY = "B\u1ecf qua";
 const SKIP_CONFIRM = "X\u00e1c nh\u1eadn b\u1ecf qua";
 
 function conflict(): ConflictRecord {
-  return {
-    id: "c1",
-    table: "settings",
-    entityId: "settings",
-    local: {},
-    remote: {},
-    detectedAt: "2026-08-11T10:00:00Z",
-  };
+  return { id: "c1", table: "settings", entityId: "settings", local: {}, remote: {}, detectedAt: "2026-08-11T10:00:00Z" };
 }
 
 function renderApp(path = "/") {
-  return render(
-    createElement(MemoryRouter, { initialEntries: [path] }, createElement(App)),
-  );
+  return render(createElement(MemoryRouter, { initialEntries: [path] }, createElement(App)));
 }
 
 afterEach(() => cleanup());
@@ -171,27 +140,14 @@ afterEach(() => cleanup());
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
-  Object.defineProperty(window.navigator, "onLine", {
-    configurable: true,
-    value: true,
-  });
+  Object.defineProperty(window.navigator, "onLine", { configurable: true, value: true });
   authMocks.useAuth.mockReturnValue({
-    ready: true,
-    configured: false,
-    user: {
-      id: "owner-1",
-      email: "owner@example.com",
-      user_metadata: {},
-    },
-    vaultReady: true,
-    mfaReady: true,
-    signOut: authMocks.signOut,
+    ready: true, configured: false,
+    user: { id: "owner-1", email: "owner@example.com", user_metadata: {} },
+    vaultReady: true, mfaReady: true, signOut: authMocks.signOut,
   });
   dbMocks.runPendingMigrations.mockResolvedValue(undefined);
-  dbMocks.getSettings.mockResolvedValue({
-    onboardingDone: true,
-    planName: "Qu\u1ef9 VWCE",
-  });
+  dbMocks.getSettings.mockResolvedValue({ onboardingDone: true, planName: "Qu\u1ef9 VWCE" });
   dbMocks.ingestQuotesFeed.mockResolvedValue({ status: "skipped" });
   dbMocks.countLocalData.mockResolvedValue(ZERO);
   dbMocks.clearUserBusinessData.mockResolvedValue(undefined);
@@ -199,12 +155,7 @@ beforeEach(() => {
   engineMocks.getSyncMeta.mockResolvedValue(COMPLETE);
   engineMocks.listConflicts.mockResolvedValue([]);
   engineMocks.listDeadOutbox.mockResolvedValue([]);
-  engineMocks.runSync.mockResolvedValue({
-    status: "synced",
-    pushed: 0,
-    pulled: 0,
-    conflicts: 0,
-  });
+  engineMocks.runSync.mockResolvedValue({ status: "synced", pushed: 0, pulled: 0, conflicts: 0 });
   engineMocks.reviveDeadOutbox.mockResolvedValue(0);
   engineMocks.saveSyncMeta.mockResolvedValue(COMPLETE);
   outboxMocks.outboxCount.mockResolvedValue(0);
@@ -213,25 +164,9 @@ beforeEach(() => {
 
 describe("fresh fail-closed logout", () => {
   it.each<[string, () => void]>([
-    [
-      "conflict",
-      () => {
-        engineMocks.listConflicts.mockResolvedValue([conflict()]);
-      },
-    ],
-    [
-      "pending",
-      () => {
-        outboxMocks.outboxCount.mockResolvedValue(2);
-      },
-    ],
-    [
-      "dead",
-      () => {
-        outboxMocks.outboxCount.mockResolvedValue(1);
-        engineMocks.listDeadOutbox.mockResolvedValue([{ id: "dead", dead: true }]);
-      },
-    ],
+    ["conflict", () => { engineMocks.listConflicts.mockResolvedValue([conflict()]); }],
+    ["pending", () => { outboxMocks.outboxCount.mockResolvedValue(2); }],
+    ["dead", () => { outboxMocks.outboxCount.mockResolvedValue(1); engineMocks.listDeadOutbox.mockResolvedValue([{ id: "dead", dead: true }]); }],
   ])("blocks %s without sign-out or clear", async (_label, arrange) => {
     arrange();
     renderApp();
@@ -245,18 +180,12 @@ describe("fresh fail-closed logout", () => {
     "blocks logout while recovery state %s is pending",
     async (state) => {
       dbMocks.countLocalData.mockResolvedValue(LOCAL);
-      engineMocks.getSyncMeta.mockResolvedValue({
-        ...COMPLETE,
-        migrateWizardDone: false,
-        recoveryState: state,
-      });
+      engineMocks.getSyncMeta.mockResolvedValue({ ...COMPLETE, migrateWizardDone: false, recoveryState: state });
       renderApp();
       expect(await screen.findByText(RECOVERY_BANNER)).toBeTruthy();
       expect(screen.queryByTestId("recovery-screen")).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "\u0110\u0103ng xu\u1ea5t" }));
-      await waitFor(() => {
-        expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
-      });
+      await waitFor(() => { expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled(); });
       expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
       expect(screen.queryByText(RECOVERY_BANNER)).toBeTruthy();
     },
@@ -266,11 +195,7 @@ describe("fresh fail-closed logout", () => {
     renderApp();
     await screen.findByRole("button", { name: "\u0110\u0103ng xu\u1ea5t" });
     dbMocks.countLocalData.mockResolvedValue(LOCAL);
-    engineMocks.getSyncMeta.mockResolvedValue({
-      ...COMPLETE,
-      migrateWizardDone: false,
-      recoveryState: "queued",
-    });
+    engineMocks.getSyncMeta.mockResolvedValue({ ...COMPLETE, migrateWizardDone: false, recoveryState: "queued" });
     fireEvent.click(screen.getByRole("button", { name: "\u0110\u0103ng xu\u1ea5t" }));
     expect(await screen.findByText(BLOCKED)).toBeTruthy();
     expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
@@ -288,12 +213,8 @@ describe("fresh fail-closed logout", () => {
   it("preserves explicit logout only when recovery is complete and blockers are zero", async () => {
     renderApp();
     fireEvent.click(await screen.findByRole("button", { name: "\u0110\u0103ng xu\u1ea5t" }));
-    await waitFor(() =>
-      expect(authMocks.signOutBeforeLocalClear).toHaveBeenCalledTimes(1),
-    );
-    expect(authMocks.signOutBeforeLocalClear.mock.calls[0][1]).toBe(
-      dbMocks.clearUserBusinessData,
-    );
+    await waitFor(() => expect(authMocks.signOutBeforeLocalClear).toHaveBeenCalledTimes(1));
+    expect(authMocks.signOutBeforeLocalClear.mock.calls[0][1]).toBe(dbMocks.clearUserBusinessData);
   });
 });
 
@@ -301,10 +222,7 @@ describe("recovery read-only shell (menu access)", () => {
   beforeEach(() => {
     dbMocks.countLocalData.mockResolvedValue(LOCAL);
     engineMocks.getSyncMeta.mockResolvedValue(PENDING);
-    dbMocks.getSettings.mockResolvedValue({
-      onboardingDone: true,
-      planName: "Qu\u1ef9 VWCE",
-    });
+    dbMocks.getSettings.mockResolvedValue({ onboardingDone: true, planName: "Qu\u1ef9 VWCE" });
   });
 
   it("renders the normal app shell with the logout control, not the wizard", async () => {
@@ -314,33 +232,26 @@ describe("recovery read-only shell (menu access)", () => {
     expect(screen.queryByTestId("recovery-screen")).toBeNull();
   });
 
-  it.each([
-    "/",
-    "/transactions",
-    "/goals",
-    "/simulation",
-    "/notfallmappe",
-    "/settings?tab=data",
-  ])("shows the recovery banner on %s", async (path) => {
-    renderApp(path);
-    expect(await screen.findByText(RECOVERY_BANNER)).toBeTruthy();
-    expect(screen.queryByTestId("recovery-screen")).toBeNull();
-  });
+  it.each(["/", "/transactions", "/goals", "/simulation", "/notfallmappe", "/settings?tab=data"])(
+    "shows the recovery banner on %s",
+    async (path) => {
+      renderApp(path);
+      expect(await screen.findByText(RECOVERY_BANNER)).toBeTruthy();
+      expect(screen.queryByTestId("recovery-screen")).toBeNull();
+    },
+  );
 
   it("does not auto-sync while recovery is pending", async () => {
     renderApp();
     await screen.findByText(RECOVERY_BANNER);
-    await waitFor(() => {
-      expect(engineMocks.runSync).not.toHaveBeenCalled();
-    });
+    await waitFor(() => { expect(engineMocks.runSync).not.toHaveBeenCalled(); });
   });
 
   it("skips onboarding while recovery is pending even when onboarding is not done", async () => {
     dbMocks.getSettings.mockResolvedValue({ onboardingDone: false, planName: "" });
     renderApp();
     expect(await screen.findByText(RECOVERY_BANNER)).toBeTruthy();
-    expect(screen.queryByText("B\u1eaft \u0111\u1ea7u v\u1edbi k\u1ebf ho\u1ea1ch m\u1eabu")).toBeNull();
-    expect(screen.queryByText("B\u1eaft \u0111\u1ea7u v\u1edbi d\u1eef li\u1ec7u tr\u1ed1ng")).toBeNull();
+    expect(screen.queryByText("B\u1eaft \u0111\u1ea7u")).toBeNull();
     expect(screen.queryByTestId("recovery-screen")).toBeNull();
   });
 
@@ -354,65 +265,61 @@ describe("recovery read-only shell (menu access)", () => {
     expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
   });
 
-  it("shows skip confirm dialog when user clicks B\u1ecf qua", async () => {
+  it("shows skip confirm dialog on B\u1ecf qua click", async () => {
     renderApp();
     await screen.findByText(RECOVERY_BANNER);
     fireEvent.click(screen.getByRole("button", { name: SKIP_RECOVERY }));
     expect(await screen.findByText("B\u1ecf qua kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u?")).toBeTruthy();
-    expect(screen.getByRole("button", { name: SKIP_CONFIRM })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Quay l\u1ea1i" })).toBeTruthy();
   });
 
-  it("cancelling skip confirm keeps recovery banner visible", async () => {
+  it("dismisses skip dialog without saving when Quay l\u1ea1i is clicked", async () => {
     renderApp();
     await screen.findByText(RECOVERY_BANNER);
     fireEvent.click(screen.getByRole("button", { name: SKIP_RECOVERY }));
     await screen.findByText("B\u1ecf qua kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u?");
     fireEvent.click(screen.getByRole("button", { name: "Quay l\u1ea1i" }));
-    expect(await screen.findByText(RECOVERY_BANNER)).toBeTruthy();
-    expect(screen.queryByText("B\u1ecf qua kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u?")).toBeNull();
+    await waitFor(() => { expect(screen.queryByText("B\u1ecf qua kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u?")).toBeNull(); });
     expect(engineMocks.saveSyncMeta).not.toHaveBeenCalled();
+    expect(engineMocks.clearRecoveryItems).not.toHaveBeenCalled();
+    expect(screen.queryByText(RECOVERY_BANNER)).toBeTruthy();
   });
 
-  it("confirming skip calls saveSyncMeta with skipped=true and removes banner", async () => {
-    engineMocks.saveSyncMeta.mockResolvedValue({
-      ...COMPLETE,
-      migrateWizardSkipped: true,
-    });
+  it("calls clearRecoveryItems then saveSyncMeta and hides banner when confirmed", async () => {
     renderApp();
     await screen.findByText(RECOVERY_BANNER);
     fireEvent.click(screen.getByRole("button", { name: SKIP_RECOVERY }));
     await screen.findByText("B\u1ecf qua kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u?");
     fireEvent.click(screen.getByRole("button", { name: SKIP_CONFIRM }));
+    await waitFor(() => { expect(engineMocks.clearRecoveryItems).toHaveBeenCalledTimes(1); });
     await waitFor(() => {
       expect(engineMocks.saveSyncMeta).toHaveBeenCalledWith(
-        expect.objectContaining({
-          migrateWizardDone: true,
-          migrateWizardSkipped: true,
-          recoveryState: "complete",
-        }),
+        expect.objectContaining({ userId: "owner-1", migrateWizardDone: true, migrateWizardSkipped: true, recoveryState: "complete" }),
       );
     });
-    // clearRecoveryItems must be called before saveSyncMeta
-    expect(engineMocks.clearRecoveryItems).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(RECOVERY_BANNER)).toBeNull();
     expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
+  });
+
+  it("shows error message when saveSyncMeta fails and keeps banner", async () => {
+    engineMocks.saveSyncMeta.mockRejectedValueOnce(new Error("DB full"));
+    renderApp();
+    await screen.findByText(RECOVERY_BANNER);
+    fireEvent.click(screen.getByRole("button", { name: SKIP_RECOVERY }));
+    await screen.findByText("B\u1ecf qua kh\u00f4i ph\u1ee5c d\u1eef li\u1ec7u?");
+    fireEvent.click(screen.getByRole("button", { name: SKIP_CONFIRM }));
+    expect(await screen.findByText("Kh\u00f4ng th\u1ec3 l\u01b0u tr\u1ea1ng th\u00e1i. Ki\u1ec3m tra b\u1ed9 nh\u1edb v\u00e0 th\u1eed l\u1ea1i.")).toBeTruthy();
+    expect(screen.queryByText(RECOVERY_BANNER)).toBeTruthy();
   });
 });
 
 describe("recovery completion", () => {
   beforeEach(() => {
     dbMocks.countLocalData.mockResolvedValue(LOCAL);
-    dbMocks.getSettings.mockResolvedValue({
-      onboardingDone: true,
-      planName: "Qu\u1ef9 VWCE",
-    });
+    dbMocks.getSettings.mockResolvedValue({ onboardingDone: true, planName: "Qu\u1ef9 VWCE" });
   });
 
   it("removes the banner and restrictions after fresh complete metadata", async () => {
-    engineMocks.getSyncMeta
-      .mockResolvedValueOnce(PENDING)
-      .mockResolvedValue(COMPLETE);
+    engineMocks.getSyncMeta.mockResolvedValueOnce(PENDING).mockResolvedValue(COMPLETE);
     renderApp();
     await screen.findByText(RECOVERY_BANNER);
     fireEvent.click(screen.getByRole("button", { name: CONTINUE_RECOVERY }));
@@ -428,20 +335,18 @@ describe("recovery completion", () => {
     await screen.findByText(RECOVERY_BANNER);
     fireEvent.click(screen.getByRole("button", { name: CONTINUE_RECOVERY }));
     fireEvent.click(await screen.findByRole("button", { name: "Ki\u1ec3m tra d\u1eef li\u1ec7u" }));
-    await waitFor(() => {
-      expect(screen.getByTestId("recovery-screen")).toBeTruthy();
-    });
+    await waitFor(() => { expect(screen.getByTestId("recovery-screen")).toBeTruthy(); });
     expect(screen.queryByTestId("settings-data")).toBeNull();
   });
 });
 
 describe("onboarding", () => {
-  it("allows onboarding only when local business data is zero", async () => {
+  it("shows Bắt đầu button when local data is zero and onboarding not done", async () => {
     dbMocks.countLocalData.mockResolvedValue(ZERO);
     engineMocks.getSyncMeta.mockResolvedValue(COMPLETE);
     dbMocks.getSettings.mockResolvedValue({ onboardingDone: false, planName: "" });
     renderApp();
-    expect(await screen.findByText("B\u1eaft \u0111\u1ea7u v\u1edbi k\u1ebf ho\u1ea1ch m\u1eabu")).toBeTruthy();
+    expect(await screen.findByText("B\u1eaft \u0111\u1ea7u")).toBeTruthy();
     expect(screen.queryByTestId("recovery-screen")).toBeNull();
     expect(screen.queryByText(RECOVERY_BANNER)).toBeNull();
   });

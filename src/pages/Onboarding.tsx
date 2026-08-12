@@ -1,4 +1,4 @@
-export default function Onboarding({ onDone }: { onDone: (seed: boolean) => void }) {
+export default function Onboarding({ onDone }: { onDone: () => void }) {
   return (
     <div className="app-shell">
       <h1 className="page-title">Quỹ VWCE cho bé</h1>
@@ -7,8 +7,7 @@ export default function Onboarding({ onDone }: { onDone: (seed: boolean) => void
         Ứng dụng này chỉ hỗ trợ theo dõi và mô phỏng kế hoạch. Đây không phải tư vấn đầu tư, tư vấn thuế hoặc cam kết lợi nhuận. Lợi suất, lạm phát và thuế là giả định.
       </div>
       <div className="stack" style={{ marginTop: "1.25rem" }}>
-        <button type="button" onClick={() => onDone(true)}>Bắt đầu với kế hoạch mẫu</button>
-        <button type="button" className="secondary" onClick={() => onDone(false)}>Bắt đầu với dữ liệu trống</button>
+        <button type="button" onClick={onDone}>Bắt đầu</button>
       </div>
     </div>
   );
