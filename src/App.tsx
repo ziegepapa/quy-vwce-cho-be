@@ -151,9 +151,14 @@ export default function App() {
   }, [auth.user, auth.vaultReady, recoveryRequired, logoutCleanupPending, logoutGate, refreshSyncBadge]);
   useEffect(() => { if (logoutGate && !logoutCleanupPending && !auth.user) setLogoutGate(false); }, [auth.user, logoutCleanupPending, logoutGate]);
 
+  const recoveryActive = Boolean(auth.user) && recoveryRequired;
+
   async function handleSignOut() {
     setLogoutNotice(null);
     if (!auth.user) return;
+    // Recovery banner đã giải thích lý do và cung cấp action duy nhất đúng.
+    // Không set state logout khi đang recovery để tránh dirty state.
+    if (recoveryActive) return;
     const snapshot = await readLogoutSafety(auth.user.id);
     if (snapshot.readFailed || snapshot.recoveryPending || hasLogoutBlockers(snapshot.blockers)) {
       setLogoutBlockers(snapshot.blockers); setLogoutNoticeKind("error"); setLogoutNotice(LOGOUT_BLOCKED_MESSAGE); return;
@@ -188,7 +193,7 @@ export default function App() {
 
   if (!auth.ready || !ready || (auth.user && (!auth.mfaReady || !recoveryChecked))) return <div className="app-shell"><p className="muted">Đang tải…</p></div>;
   if (logoutGate || logoutCleanupPending) return <div className="app-shell" role={logoutCleanupPending ? "alert" : "status"}><div className={logoutCleanupPending ? "banner error" : "banner"}><h1 className="page-title">{logoutCleanupPending ? "Phiên cloud đã kết thúc" : "Đang đóng kho…"}</h1><p>{logoutNotice ?? "Đang kết thúc phiên cloud trước khi xóa cache local."}</p>{logoutCleanupPending ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutCleanup()}>{logoutRetrying ? "Đang xóa lại…" : "Thử xóa cache lại"}</button> : null}</div></div>;
-  if (migrationError) return <div className="app-shell" role="alert"><h1>Không thể nâng cấp dữ liệu local</h1><p className="muted">Ứng dụng dừng lại để tránh dùng dữ liệu nửa migrate. Đồng bộ và ghi mới bị tạm khóa.</p><p>{migrationError}</p><button type="button" className="btn primary" onClick={() => void reload()}>Thử lại migration</button></div>;
+  if (migrationError) return <div className="app-shell" role="alert"><h1>Không thể nâng cấp dữ liệu local</h1><p className="muted">Ứng dụng dừng lại để tránh dùng dữ liệu nữa migrate. Đồng bộ và ghi mới bị tạm khóa.</p><p>{migrationError}</p><button type="button" className="btn primary" onClick={() => void reload()}>Thử lại migration</button></div>;
   if (auth.configured && (!auth.user || !auth.vaultReady)) return <AuthPage />;
 
   if (auth.user && showWizard) {
@@ -204,7 +209,7 @@ export default function App() {
       await reload();
     }} onBack={() => setShowWizard(false)} />;
   }
-  const recoveryActive = Boolean(auth.user) && recoveryRequired;
+
   if (!recoveryActive && !settings?.onboardingDone) return <Onboarding onDone={async (seed) => { await ensureInitialized(seed); await reload(); }} />;
   if (!settings) return <div className="app-shell"><p className="muted">Đang tải…</p></div>;
 
@@ -226,9 +231,9 @@ export default function App() {
         onAddGoal={recoveryActive ? undefined : navAction("addGoal")}
         onChangeScenario={recoveryActive ? undefined : navAction("changeScenario")}
       /> : null}
-      {recoveryActive ? <section className="banner recovery-banner" role="status" data-testid="recovery-banner"><h2 className="recovery-banner-title">Khôi phục dữ liệu chưa hoàn tất</h2><p className="recovery-banner-body">Dữ liệu trên iPhone vẫn được giữ nguyên. Hãy hoàn tất kiểm tra trước khi đăng xuất hoặc đồng bộ dữ liệu.</p><button type="button" className="primary recovery-banner-action" onClick={() => setShowWizard(true)}>Tiếp tục khôi phục dữ liệu</button></section> : null}
-      {logoutBlockers ? <div className="banner error" role="alert"><strong>Chưa thể đăng xuất.</strong><p>{LOGOUT_BLOCKED_MESSAGE}</p>{logoutNotice === RECOVERY_SYNC_PENDING_MESSAGE ? <p>{RECOVERY_SYNC_PENDING_MESSAGE}</p> : null}<div className="stack" style={{ marginTop: 8 }}>{hasLogoutBlockers(logoutBlockers) ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutBlockers()}>{logoutRetrying ? "Đang thử lại…" : "Đồng bộ / thử lại"}</button> : <button type="button" className="secondary" onClick={() => setShowWizard(true)}>Khôi phục dữ liệu trên thiết bị</button>}{logoutBlockers.conflicts > 0 ? <button type="button" className="ghost" onClick={handleOpenSyncConflicts}>{conflictCtaLabel(logoutBlockers.conflicts)}</button> : null}</div></div> : null}
-      {logoutNotice && !logoutBlockers ? <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">{logoutNotice}</div> : null}
+      {recoveryActive ? <section className="banner recovery-banner" role="status" data-testid="recovery-banner"><h2 className="recovery-banner-title">Khôi phục dữ liệu chưa hoàn tất</h2><p className="recovery-banner-body">Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy hoàn tất kiểm tra trước khi đăng xuất hoặc đồng bộ dữ liệu.</p><button type="button" className="primary recovery-banner-action" onClick={() => setShowWizard(true)}>Tiếp tục khôi phục dữ liệu</button></section> : null}
+      {logoutBlockers && !recoveryActive ? <div className="banner error" role="alert"><strong>Chưa thể đăng xuất.</strong><p>{LOGOUT_BLOCKED_MESSAGE}</p>{logoutNotice === RECOVERY_SYNC_PENDING_MESSAGE ? <p>{RECOVERY_SYNC_PENDING_MESSAGE}</p> : null}<div className="stack" style={{ marginTop: 8 }}>{hasLogoutBlockers(logoutBlockers) ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutBlockers()}>{logoutRetrying ? "Đang thử lại…" : "Đồng bộ / thử lại"}</button> : <button type="button" className="secondary" onClick={() => setShowWizard(true)}>Khôi phục dữ liệu trên thiết bị</button>}{logoutBlockers.conflicts > 0 ? <button type="button" className="ghost" onClick={handleOpenSyncConflicts}>{conflictCtaLabel(logoutBlockers.conflicts)}</button> : null}</div></div> : null}
+      {logoutNotice && !logoutBlockers && !recoveryActive ? <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">{logoutNotice}</div> : null}
       <NavActionsProvider api={navActionsApi}><main className={`premium-screen premium-screen-${screenName}`}><RecoveryReadOnlyProvider readOnly={recoveryActive}><Routes>
         <Route path="/" element={<Overview key={quoteRefreshVersion} />} />
         <Route path="/transactions" element={<Transactions />} />
