@@ -15,34 +15,51 @@ export type EntityTable =
   | "annualChecklists"
   | "monthlySnapshots";
 
-export type OutboxOp = "upsert" | "delete";
+export type RecoveryState = "required" | "queued" | "verifying" | "conflict" | "complete";
 
-export type OutboxItem = {
+export type OutboxCommon = {
   id: string;
   table: EntityTable;
   entityId: string;
-  op: OutboxOp;
   payload: unknown;
-  version: number;
   createdAt: string;
   attempts: number;
   lastError?: string;
-  /**
-   * Conflict-derived local wins use an atomic PostgREST UPDATE guarded by this
-   * remote row version. Zero updated rows is a hard mismatch; it must never
-   * fall back to an unconditional upsert.
-   */
-  expectedRemoteVersion?: number;
-  /** true khi đã thất bại ≥ 8 lần — bỏ qua khi đẩy, có thể thử lại từ Cài đặt */
   dead?: boolean;
 };
+
+export type OrdinaryOutboxItem = OutboxCommon & {
+  op: "upsert" | "delete";
+  version: number;
+  expectedRemoteVersion?: number;
+  /** Present only when an explicit recovery conflict choice produced this guarded write. */
+  recoverySessionId?: string;
+};
+
+export type RecoveryOutboxItem = OutboxCommon & {
+  op: "recover";
+  recoverySessionId: string;
+  sourceLocalVersion: number | null;
+  /** Set before insert-only so an ambiguous response can be verified idempotently. */
+  createAttempted?: boolean;
+};
+
+export type OutboxOp = OrdinaryOutboxItem["op"] | RecoveryOutboxItem["op"];
+export type OutboxItem = OrdinaryOutboxItem | RecoveryOutboxItem;
+
+export type RecoverySessionResult =
+  | { status: "queued"; confirmed: number; pending: number }
+  | { status: "confirmed"; confirmed: number }
+  | { status: "conflict"; confirmed: number; conflicts: number }
+  | { status: "unverified"; confirmed: number; pending: number };
 
 export type ConflictResolution = "local" | "remote" | "remote-deleted";
 
 export type LocalSyncPendingReason = "offline" | "sync-temporarily-unavailable";
 export type LocalPendingConflictReason =
   | "server-version-changed"
-  | "guarded-update-not-applied";
+  | "guarded-update-not-applied"
+  | "recovery-remote-diverged";
 export type NetworkVerificationReason =
   | "offline"
   | "remote-verification-unavailable"
@@ -59,22 +76,13 @@ export type ConflictRecord = {
   local: unknown;
   remote: unknown;
   detectedAt: string;
-  /**
-   * V2 metadata comes from the remote row wrapper, never from row.data.
-   * Missing formatVersion/metadata identifies a legacy conflict that must be
-   * refetched before either resolution choice.
-   */
   formatVersion?: 2;
   remoteVersion?: number | null;
   remoteUpdatedAt?: string | null;
   remoteDeletedAt?: string | null;
-  /** Display-only hint read from the local payload when present. */
   localUpdatedAt?: string | null;
-  /** Safe internal diagnostics only. Never render this code or payloads. */
   reasonCategory?: LocalPendingConflictReason;
-  /** Exact guarded outbox item that produced this replacement conflict. */
   sourceOutboxId?: string;
-  /** Original conflict that was atomically resolved local. */
   supersedesConflictId?: string;
   resolved?: ConflictResolution;
 };
@@ -82,21 +90,22 @@ export type ConflictRecord = {
 export type ResolveConflictResult =
   | { status: "resolved-local" }
   | { status: "resolved-local-sync-pending"; reason: LocalSyncPendingReason }
-  | {
-      status: "resolved-local-pending-conflict";
-      reason: LocalPendingConflictReason;
-    }
+  | { status: "resolved-local-pending-conflict"; reason: LocalPendingConflictReason }
   | { status: "resolved-remote" }
   | { status: "remote-deleted" }
   | { status: "needs-network-verification"; reason: NetworkVerificationReason }
   | { status: "failed"; reason: ConflictResolutionFailureReason };
 
 export type SyncMeta = {
-  id: string; // `user_${userId}`
+  id: string;
   userId: string;
   lastPulledAt: string;
   lastPushedAt: string;
   migrateWizardDone: boolean;
   migrateWizardSkipped: boolean;
+  recoverySessionId?: string;
+  recoveryState?: RecoveryState;
+  recoveryTotal?: number;
+  recoveryConfirmed?: number;
   updatedAt: string;
 };
