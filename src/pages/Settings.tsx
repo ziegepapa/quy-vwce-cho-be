@@ -158,6 +158,8 @@ export default function SettingsPage({
   const [checklistYear, setChecklistYear] = useState(new Date().getFullYear());
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [pendingImport, setPendingImport] = useState<BackupPayload | null>(null);
+  const [importing, setImporting] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
   const [dead, setDead] = useState<OutboxItem[]>([]);
   const [deadRetrying, setDeadRetrying] = useState(false);
@@ -335,12 +337,18 @@ export default function SettingsPage({
       );
       return;
     }
-    if (!confirm("Tiếp tục nhập? Ứng dụng sẽ tự sao lưu dữ liệu hiện tại trước.")) return;
+    setPendingImport(data);
+  }
+
+  async function confirmImport() {
+    const data = pendingImport;
+    if (!data) return;
+    setImporting(true);
     try {
       const current = await exportBackup();
       downloadJson(
         current,
-        `vwce-auto-before-import-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
+        `ban-sao-luu-truoc-khi-nhap-json-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
     } catch {
       /* */
     }
@@ -350,6 +358,9 @@ export default function SettingsPage({
       onReload();
     } catch (reason) {
       alert(reason instanceof Error ? reason.message : "Lỗi nhập");
+    } finally {
+      setImporting(false);
+      setPendingImport(null);
     }
   }
 
@@ -827,7 +838,7 @@ export default function SettingsPage({
               <span><strong>Xuất JSON</strong><small>Bản sao lưu đầy đủ</small></span>
             </button>
             <label className="group-action">
-              <span><strong>Nhập JSON</strong><small>Khôi phục từ bản sao lưu</small></span>
+              <span><strong>Nhập file JSON</strong><small>Khôi phục từ một bản sao lưu JSON</small></span>
               <input
                 type="file"
                 accept="application/json,.json"
@@ -839,12 +850,47 @@ export default function SettingsPage({
                 }}
               />
             </label>
+            <p className="settings-inline-status settings-import-warning" role="note">
+              ⚠️ Nhập một bản sao lưu sẽ <strong>ghi đè và thay thế toàn bộ dữ liệu đang có trên thiết bị này</strong>. Ứng dụng sẽ tự tải một bản sao lưu của dữ liệu hiện tại trước khi ghi đè để bạn có thể quay lại nếu cần.
+            </p>
+            {pendingImport ? (
+              <div
+                className="delete-confirm import-confirm"
+                role="alertdialog"
+                aria-modal="true"
+                aria-label="Xác nhận nhập dữ liệu"
+              >
+                <p><strong>Nhập bản sao lưu này và ghi đè dữ liệu hiện tại?</strong></p>
+                <p>
+                  Toàn bộ dữ liệu đang có trên thiết bị này sẽ được thay thế bằng dữ liệu trong file.
+                  Ứng dụng sẽ tự tải một bản sao lưu của dữ liệu hiện tại trước khi ghi đè.
+                </p>
+                <div className="delete-actions">
+                  <button
+                    type="button"
+                    className="danger"
+                    disabled={importing}
+                    onClick={() => void confirmImport()}
+                  >
+                    {importing ? "Đang nhập…" : "Nhập và ghi đè"}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={importing}
+                    onClick={() => setPendingImport(null)}
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <button type="button" className="group-action" onClick={() => void exportCsv()}>
               <span><strong>Xuất CSV giao dịch</strong><small>Dùng với bảng tính</small></span>
             </button>
             {onOpenMigrate ? (
               <button type="button" className="group-action" onClick={onOpenMigrate}>
-                <span><strong>Nhập dữ liệu local</strong><small>Đưa dữ liệu cũ vào tài khoản</small></span>
+                <span><strong>Khôi phục dữ liệu đang có trên thiết bị</strong><small>Đưa dữ liệu đang lưu trên thiết bị này vào tài khoản đã đăng nhập, không ghi đè bản sao lưu.</small></span>
               </button>
             ) : null}
           </section>
