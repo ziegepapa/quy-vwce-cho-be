@@ -627,3 +627,14 @@ export async function reviveDeadOutbox(): Promise<number> {
   for (const item of dead) await db.outbox.put({ ...item, dead: false, attempts: 0, lastError: undefined });
   return dead.length;
 }
+/**
+ * Xóa tất cả recovery outbox items (op === "recover") khỏi IndexedDB.
+ * Gọi khi user chọn bỏ qua recovery để đảm bảo outboxCount() về 0
+ * và sync engine hoạt động đúng sau đó.
+ */
+export async function clearRecoveryItems(): Promise<number> {
+  const all = await db.outbox.toArray();
+  const recovery = all.filter((item) => item.op === "recover");
+  for (const item of recovery) await db.outbox.delete(item.id);
+  return recovery.length;
+}

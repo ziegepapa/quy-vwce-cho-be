@@ -3,7 +3,15 @@ import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-d
 import { signOutBeforeLocalClear, useAuth } from "./lib/auth";
 import { clearUserBusinessData, countLocalData, ensureInitialized, getSettings, ingestQuotesFeed, runPendingMigrations } from "./lib/db";
 import type { AppSettings } from "./lib/types";
-import { getSyncMeta, listConflicts, listDeadOutbox, reviveDeadOutbox, runSync, saveSyncMeta } from "./lib/sync/engine";
+import {
+  clearRecoveryItems,
+  getSyncMeta,
+  listConflicts,
+  listDeadOutbox,
+  reviveDeadOutbox,
+  runSync,
+  saveSyncMeta,
+} from "./lib/sync/engine";
 import { outboxCount } from "./lib/sync/outbox";
 import type { SyncMeta, SyncStatus } from "./lib/sync/types";
 import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
@@ -92,6 +100,7 @@ export default function App() {
   const [logoutCleanupPending, setLogoutCleanupPending] = useState(readLogoutCleanupPending);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [skipBusy, setSkipBusy] = useState(false);
+  const [skipError, setSkipError] = useState<string | null>(null);
   const { api: navActionsApi, navAction } = useNavActionRegistry();
 
   const refreshSyncBadge = useCallback(async () => {
@@ -158,8 +167,6 @@ export default function App() {
   async function handleSignOut() {
     setLogoutNotice(null);
     if (!auth.user) return;
-    // Recovery banner đã giải thích lý do và cung cấp action duy nhất đúng.
-    // Không set state logout khi đang recovery để tránh dirty state.
     if (recoveryActive) return;
     const snapshot = await readLogoutSafety(auth.user.id);
     if (snapshot.readFailed || snapshot.recoveryPending || hasLogoutBlockers(snapshot.blockers)) {
@@ -192,21 +199,38 @@ export default function App() {
     } catch { setLogoutNoticeKind("error"); setLogoutNotice(LOGOUT_BLOCKED_MESSAGE); }
     finally { setLogoutRetrying(false); try { await refreshSyncBadge(); } catch { /* next logout rechecks */ } }
   }
+
+  /**
+   * Bỏ qua recovery: xóa recovery outbox items, đánh dấu meta hoàn tất,
+   * rồi refresh badge để UI cập nhật đúng ngay.
+   * Lỗi được hiển thị rõ — không nuot im lặng.
+   */
   async function skipRecovery() {
     if (!auth.user || skipBusy) return;
     setSkipBusy(true);
+    setSkipError(null);
     try {
+      // 1. Xóa tất cả recovery outbox items để outboxCount() về 0
+      await clearRecoveryItems();
+      // 2. Lưu meta: đánh dấu skip hoàn tất — persist trước khi dismiss
       await saveSyncMeta({
         userId: auth.user.id,
         migrateWizardDone: true,
         migrateWizardSkipped: true,
         recoveryState: "complete",
       });
+      // 3. Dismiss banner ngay
       setRecoveryRequired(false);
       setShowSkipConfirm(false);
       setShowWizard(false);
+      // 4. Sync + refresh badge để UI phản ánh đúng
+      try {
+        if (auth.vaultReady) await runSync(auth.user.id);
+      } catch { /* mạng không có cũng không sao */ }
+      await refreshSyncBadge();
     } catch {
-      // Nếu lưu thất bại, giữ nguyên trạng thái hiện tại
+      // Lưu thất bại: hiển lỗi rõ, giữ banner
+      setSkipError("Không thể lưu trạng thái. Kiểm tra bộ nhớ và thử lại.");
     } finally {
       setSkipBusy(false);
     }
@@ -246,7 +270,7 @@ export default function App() {
         pending={pending}
         onSignOut={handleSignOut}
         onSyncNow={recoveryActive ? undefined : handleSyncNow}
-        onUpdatePrice={recoveryActive ? undefined : () => navigate("/settings?tab=prices")}
+        onUpdatePrice={undefined}
         onSearch={navAction("search")}
         onFilter={navAction("filter")}
         onAddGoal={recoveryActive ? undefined : navAction("addGoal")}
@@ -282,8 +306,9 @@ export default function App() {
         <div className="card modal-card" role="dialog" aria-modal="true" aria-labelledby="skip-recovery-title">
           <h2 id="skip-recovery-title">Bỏ qua khôi phục dữ liệu?</h2>
           <p>Dữ liệu trên thiết bị sẽ <strong>không</strong> được đưa vào tài khoản. Bạn có thể khôi phục sau bằng cách mở lại mục Khôi phục trong Cài đặt.</p>
+          {skipError ? <div className="banner error" role="alert" style={{ marginTop: 8 }}>{skipError}</div> : null}
           <div className="stack" style={{ marginTop: 16 }}>
-            <button type="button" className="secondary" disabled={skipBusy} onClick={() => setShowSkipConfirm(false)}>Quay lại</button>
+            <button type="button" className="secondary" disabled={skipBusy} onClick={() => { setShowSkipConfirm(false); setSkipError(null); }}>Quay lại</button>
             <button type="button" disabled={skipBusy} onClick={() => void skipRecovery()}>{skipBusy ? "Đang lưu…" : "Xác nhận bỏ qua"}</button>
           </div>
         </div>
