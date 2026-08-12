@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import type { ConflictRecord } from "./lib/sync/types";
 
 const engineMocks = vi.hoisted(() => ({
+  clearRecoveryItems: vi.fn(),
   getSyncMeta: vi.fn(),
   listConflicts: vi.fn(),
   listDeadOutbox: vi.fn(),
@@ -194,6 +195,7 @@ beforeEach(() => {
   dbMocks.ingestQuotesFeed.mockResolvedValue({ status: "skipped" });
   dbMocks.countLocalData.mockResolvedValue(ZERO);
   dbMocks.clearUserBusinessData.mockResolvedValue(undefined);
+  engineMocks.clearRecoveryItems.mockResolvedValue(0);
   engineMocks.getSyncMeta.mockResolvedValue(COMPLETE);
   engineMocks.listConflicts.mockResolvedValue([]);
   engineMocks.listDeadOutbox.mockResolvedValue([]);
@@ -252,8 +254,6 @@ describe("fresh fail-closed logout", () => {
       expect(await screen.findByText(RECOVERY_BANNER)).toBeTruthy();
       expect(screen.queryByTestId("recovery-screen")).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "\u0110\u0103ng xu\u1ea5t" }));
-      // handleSignOut early-returns khi recoveryActive=true.
-      // Recovery banner chặn đăng xuất — không set state, không gọi signOut.
       await waitFor(() => {
         expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
       });
@@ -393,6 +393,8 @@ describe("recovery read-only shell (menu access)", () => {
         }),
       );
     });
+    // clearRecoveryItems must be called before saveSyncMeta
+    expect(engineMocks.clearRecoveryItems).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(RECOVERY_BANNER)).toBeNull();
     expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
   });
