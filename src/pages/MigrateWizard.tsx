@@ -74,14 +74,22 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
     }
     const payload = await exportBackup();
     const objectUrl = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
-    try {
-      const anchor = document.createElement("a");
-      anchor.href = objectUrl;
-      anchor.download = "ban-sao-luu-truoc-khi-khoi-phuc.json";
-      anchor.setAttribute("aria-label", "Bản sao lưu trước khi khôi phục");
-      anchor.click();
-    } finally {
-      if (typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(objectUrl);
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = "ban-sao-luu-truoc-khi-khoi-phuc.json";
+    anchor.setAttribute("aria-label", "Bản sao lưu trước khi khôi phục");
+    anchor.click();
+    // The backup handoff is considered successfully initiated once anchor.click()
+    // returns. On iPhone Safari the native download prompt can overlay or navigate
+    // the page, and revoking the object URL synchronously here can cancel the
+    // download or throw. Revoking is best-effort cleanup only: it must never turn a
+    // successful handoff into a failure or block the transition to confirmation.
+    if (typeof URL.revokeObjectURL === "function") {
+      try {
+        URL.revokeObjectURL(objectUrl);
+      } catch {
+        /* best-effort cleanup only */
+      }
     }
   }
 
