@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const USER_ID = "owner-1";
 const CANARY = "NOTFALLMAPPE_CONTACT_DOCUMENT_LOCATION_SECRET";
@@ -15,6 +15,45 @@ const remoteMock = vi.hoisted(() => ({
   updates: [] as Array<{ table: string; filters: Record<string, unknown>; payload: Record<string, unknown> }>,
   upserts: [] as Array<{ table: string; payload: Record<string, unknown> }>,
 }));
+
+type ExclusiveLockOptions = { mode: "exclusive" };
+type ExclusiveLockManager = {
+  request<T>(name: string, options: ExclusiveLockOptions, callback: () => Promise<T>): Promise<T>;
+  reset(): void;
+};
+
+function createExclusiveLockManager(): ExclusiveLockManager {
+  const tails = new Map<string, Promise<void>>();
+  return {
+    request<T>(name: string, options: ExclusiveLockOptions, callback: () => Promise<T>): Promise<T> {
+      if (options.mode !== "exclusive") return Promise.reject(new Error("Exclusive lock required"));
+      const previous = tails.get(name) ?? Promise.resolve();
+      let release!: () => void;
+      const hold = new Promise<void>((resolve) => { release = resolve; });
+      const tail = previous.catch(() => undefined).then(() => hold);
+      tails.set(name, tail);
+      return previous.catch(() => undefined).then(async () => {
+        try {
+          return await callback();
+        } finally {
+          release();
+          if (tails.get(name) === tail) tails.delete(name);
+        }
+      });
+    },
+    reset() {
+      tails.clear();
+    },
+  };
+}
+
+const testLocks = createExclusiveLockManager();
+const originalLocksDescriptor = Object.getOwnPropertyDescriptor(navigator, "locks");
+
+afterAll(() => {
+  if (originalLocksDescriptor) Object.defineProperty(navigator, "locks", originalLocksDescriptor);
+  else Reflect.deleteProperty(navigator, "locks");
+});
 
 vi.mock("../supabase", () => {
   const rowsFor = (table: string) => {
@@ -103,6 +142,8 @@ function conflict(): ConflictRecord {
 }
 
 beforeEach(async () => {
+  testLocks.reset();
+  Object.defineProperty(navigator, "locks", { configurable: true, value: testLocks });
   remoteMock.userId = USER_ID; remoteMock.authError = false; remoteMock.failFetch = false;
   remoteMock.failInsert = false; remoteMock.failUpdate = false; remoteMock.forceConditionalZeroRows = false;
   remoteMock.tables.clear(); remoteMock.inserts.length = 0; remoteMock.updates.length = 0; remoteMock.upserts.length = 0;
