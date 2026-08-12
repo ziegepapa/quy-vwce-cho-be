@@ -22,6 +22,7 @@ import Onboarding from "./pages/Onboarding";
 import AuthPage from "./pages/Auth";
 import MigrateWizard from "./pages/MigrateWizard";
 import "./styles/premium-command-layout.css";
+import "./styles/recovery-banner.css";
 
 const LOGOUT_CLEANUP_PENDING_KEY = "vwce:logout-cleanup-pending";
 const LOGOUT_BLOCKED_MESSAGE = "Bạn còn dữ liệu chưa đồng bộ hoặc chưa khôi phục. Hãy khôi phục hoặc sao lưu trước khi đăng xuất.";
