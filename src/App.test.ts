@@ -206,7 +206,7 @@ beforeEach(() => {
 });
 
 describe("fresh fail-closed logout", () => {
-  it.each([
+  it.each<[string, () => void]>([
     [
       "conflict",
       () => {

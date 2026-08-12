@@ -40,7 +40,7 @@ export function RecoveryReadOnlyProvider({
   children,
 }: {
   readOnly: boolean;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const showBlocked = useCallback(() => setNotice(RECOVERY_READONLY_MESSAGE), []);
