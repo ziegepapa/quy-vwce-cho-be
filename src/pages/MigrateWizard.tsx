@@ -22,7 +22,15 @@ type Counts = {
   annualChecklists: number;
   monthlySnapshots: number;
 };
-type Phase = "review" | "confirm" | "queued" | "conflict" | "unverified" | "complete";
+type Phase =
+  | "review"
+  | "confirm"
+  | "queued"
+  | "conflict"
+  | "unverified"
+  | "complete"
+  | "account-check"
+  | "prepare-failed";
 type RecoverableRow = { id: string; version?: unknown; [key: string]: unknown };
 
 const EMPTY_COUNTS: Counts = { settings: 0, goals: 0, transactions: 0, annualChecklists: 0, monthlySnapshots: 0 };
@@ -31,6 +39,25 @@ const RECOVERY_FAILURE_MESSAGE = "Chưa thể chuẩn bị dữ liệu để kh�
 const QUEUED_COPY = "Dữ liệu trên iPhone vẫn được giữ nguyên và đã sẵn sàng để khôi phục. Ứng dụng chưa xác nhận dữ liệu trong tài khoản, nên bạn chưa thể hoàn tất hoặc đăng xuất.";
 const CONFLICT_COPY = "Dữ liệu trên iPhone và dữ liệu trong tài khoản khác nhau. Ứng dụng chưa ghi đè dữ liệu nào. Hãy kiểm tra và chọn phiên bản bạn muốn giữ.";
 const UNVERIFIED_COPY = "Dữ liệu trên iPhone vẫn được giữ nguyên. Hãy kết nối mạng và thử kiểm tra lại. Bạn chưa thể hoàn tất hoặc đăng xuất.";
+
+// Ordinary-outbox collision: a prior pending edit for the same entity blocks
+// recovery. We surface a safe, explicit account-check state instead of the
+// generic preparation failure. We never touch the existing ordinary item.
+const ACCOUNT_CHECK_TITLE = "Cần kiểm tra dữ liệu trong tài khoản";
+const ACCOUNT_CHECK_BODY_LINE_1 = "Ứng dụng phát hiện thay đổi trước đó đang chờ được xác minh.";
+const ACCOUNT_CHECK_BODY_LINE_2 = "Dữ liệu trên iPhone vẫn được giữ nguyên và chưa có dữ liệu nào bị ghi đè.";
+const ACCOUNT_CHECK_PRIMARY = "Kiểm tra dữ liệu trong tài khoản";
+const ACCOUNT_CHECK_RETRY_MESSAGE = "Chưa thể kiểm tra dữ liệu trong tài khoản lúc này. Dữ liệu trên iPhone vẫn được giữ nguyên. Hãy thử lại.";
+const BACK_LABEL = "Quay lại — chưa khôi phục dữ liệu";
+const PREPARE_RETRY_LABEL = "Thử chuẩn bị lại";
+// enqueueRecoveryItem throws exactly this when a prior ordinary outbox item
+// exists for the same entity. Matching on it lets us keep every other failure
+// on the generic safe fallback.
+const RECOVERY_QUEUE_BLOCKED_MESSAGE = "Recovery queue blocked";
+
+function isRecoveryQueueBlocked(error: unknown): boolean {
+  return error instanceof Error && error.message === RECOVERY_QUEUE_BLOCKED_MESSAGE;
+}
 
 function sourceVersion(row: RecoverableRow): number | null {
   return typeof row.version === "number" && Number.isFinite(row.version)
@@ -116,8 +143,11 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
     }
   }
 
-  async function confirmRestore() {
-    if (busy || total === 0 || phase !== "confirm") return;
+  // Shared preparation path for the explicit confirmation and for the
+  // "Thử chuẩn bị lại" retry. Everything runs inside one transaction, so any
+  // failure rolls back completely: no recover items are created and every
+  // existing ordinary outbox item and local row is preserved.
+  async function prepareRecovery() {
     setBusy(true); setMessage("");
     try {
       const meta = await getSyncMeta(userId);
@@ -150,9 +180,66 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
       );
       setSessionId(recoverySessionId);
       setPhase("queued");
+    } catch (error) {
+      if (isRecoveryQueueBlocked(error)) {
+        // A prior ordinary outbox item (e.g. a pending settings edit) blocks
+        // recovery. Nothing was written; offer a safe, explicit account check.
+        setPhase("account-check");
+      } else {
+        setMessage(RECOVERY_FAILURE_MESSAGE);
+        setPhase("prepare-failed");
+      }
+    } finally { setBusy(false); }
+  }
+
+  async function confirmRestore() {
+    if (busy || total === 0 || phase !== "confirm") return;
+    await prepareRecovery();
+  }
+
+  async function retryPrepare() {
+    if (busy || total === 0 || phase !== "prepare-failed") return;
+    await prepareRecovery();
+  }
+
+  // Safe account check for the ordinary-outbox collision. It never enqueues,
+  // upserts, deletes or merges anything; it only verifies via the existing
+  // read-first recovery path and maps the outcome. Completion/gate release can
+  // only happen once the account is verified.
+  async function checkAccountData() {
+    if (busy || phase !== "account-check") return;
+    setBusy(true); setMessage("");
+    try {
+      const meta = await getSyncMeta(userId);
+      const verifiableSession = meta.recoverySessionId && meta.recoveryState !== "complete"
+        ? meta.recoverySessionId
+        : sessionId;
+      if (!verifiableSession) {
+        // No recovery session to verify safely (session/server unavailable).
+        // Retry only — stay on the account-check state.
+        setMessage(ACCOUNT_CHECK_RETRY_MESSAGE);
+        return;
+      }
+      const result = await processRecoverySession(userId, verifiableSession);
+      if (result.status === "confirmed") {
+        const [nextCounts, confirmedMeta] = await Promise.all([countLocalData(), getSyncMeta(userId)]);
+        if (!confirmedMeta.migrateWizardDone || confirmedMeta.recoveryState !== "complete") {
+          setSessionId(verifiableSession);
+          setPhase("unverified");
+          return;
+        }
+        setSessionId(verifiableSession);
+        setCounts(nextCounts);
+        setPhase("complete");
+      } else if (result.status === "conflict") {
+        setSessionId(verifiableSession);
+        setPhase("conflict");
+      } else {
+        setSessionId(verifiableSession);
+        setPhase("unverified");
+      }
     } catch {
-      setMessage(RECOVERY_FAILURE_MESSAGE);
-      setPhase("review");
+      setPhase("unverified");
     } finally { setBusy(false); }
   }
 
@@ -208,7 +295,8 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
     : phase === "conflict" ? "Cần chọn phiên bản dữ liệu"
       : phase === "unverified" ? "Chưa thể kiểm tra dữ liệu trong tài khoản"
         : phase === "queued" ? "Dữ liệu đang chờ được kiểm tra"
-          : "Khôi phục dữ liệu trên thiết bị";
+          : phase === "account-check" ? ACCOUNT_CHECK_TITLE
+            : "Khôi phục dữ liệu trên thiết bị";
   const copy = phase === "complete"
     ? "Dữ liệu trên thiết bị đã được đưa vào tài khoản. Hãy kiểm tra Cài đặt → Dữ liệu trước khi đăng xuất."
     : phase === "conflict" ? CONFLICT_COPY
@@ -220,7 +308,13 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
     <div className="app-shell">
       <div className="card">
         <h1 className="page-title">{heading}</h1>
-        <p className="muted">{copy}</p>
+        {phase === "account-check" ? (
+          <p className="muted">
+            {ACCOUNT_CHECK_BODY_LINE_1}<br />{ACCOUNT_CHECK_BODY_LINE_2}
+          </p>
+        ) : (
+          <p className="muted">{copy}</p>
+        )}
         {(phase === "review" || phase === "confirm") ? (
           <p className="muted">Để an toàn, ứng dụng sẽ tạo một bản sao lưu trên iPhone trước khi khôi phục. Safari có thể hỏi nơi lưu file. Hãy chọn ‘Tải về’.</p>
         ) : null}
@@ -242,7 +336,19 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
               <button type="button" disabled={busy || total === 0} onClick={() => void beginRestore()}>
                 {busy ? "Đang tạo bản sao lưu…" : backupFailed ? "Thử tạo bản sao lưu lại" : "Khôi phục dữ liệu trên thiết bị"}
               </button>
-              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>Quay lại — chưa khôi phục dữ liệu</button>
+              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{BACK_LABEL}</button>
+            </>
+          ) : null}
+          {phase === "account-check" ? (
+            <>
+              <button type="button" disabled={busy} onClick={() => void checkAccountData()}>{busy ? "Đang kiểm tra…" : ACCOUNT_CHECK_PRIMARY}</button>
+              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{BACK_LABEL}</button>
+            </>
+          ) : null}
+          {phase === "prepare-failed" ? (
+            <>
+              <button type="button" disabled={busy || total === 0} onClick={() => void retryPrepare()}>{busy ? "Đang chuẩn bị…" : PREPARE_RETRY_LABEL}</button>
+              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{BACK_LABEL}</button>
             </>
           ) : null}
           {phase === "queued" ? (
