@@ -48,10 +48,13 @@ function createExclusiveLockManager(): ExclusiveLockManager {
 }
 
 const testLocks = createExclusiveLockManager();
+const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, "window");
 const originalLocksDescriptor = Object.getOwnPropertyDescriptor(navigator, "locks");
 const originalOnlineDescriptor = Object.getOwnPropertyDescriptor(navigator, "onLine");
 
 afterAll(() => {
+  if (originalWindowDescriptor) Object.defineProperty(globalThis, "window", originalWindowDescriptor);
+  else Reflect.deleteProperty(globalThis, "window");
   if (originalLocksDescriptor) Object.defineProperty(navigator, "locks", originalLocksDescriptor);
   else Reflect.deleteProperty(navigator, "locks");
   if (originalOnlineDescriptor) Object.defineProperty(navigator, "onLine", originalOnlineDescriptor);
@@ -146,6 +149,7 @@ function conflict(): ConflictRecord {
 
 beforeEach(async () => {
   testLocks.reset();
+  Object.defineProperty(globalThis, "window", { configurable: true, value: globalThis });
   Object.defineProperty(navigator, "locks", { configurable: true, value: testLocks });
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
   remoteMock.userId = USER_ID; remoteMock.authError = false; remoteMock.failFetch = false;
