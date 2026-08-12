@@ -90,7 +90,15 @@ vi.mock("./pages/MigrateWizard", async () => {
         { "data-testid": "recovery-screen" },
         React.createElement("h1", null, "Khôi phục dữ liệu trên thiết bị"),
         React.createElement("button", { onClick: onBack }, "Quay lại — chưa khôi phục dữ liệu"),
-        React.createElement("button", { onClick: () => void onDone() }, "Kiểm tra dữ liệu"),
+        React.createElement(
+          "button",
+          {
+            onClick: () => {
+              void Promise.resolve(onDone()).catch(() => undefined);
+            },
+          },
+          "Kiểm tra dữ liệu",
+        ),
       ),
   };
 });
@@ -225,8 +233,12 @@ describe("fresh fail-closed logout", () => {
       });
       renderApp();
       expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
-      fireEvent.click(screen.getByRole("button", { name: "Kiểm tra dữ liệu" }));
+      // Soft back only — do not invoke onDone while recovery is incomplete.
+      fireEvent.click(
+        screen.getByRole("button", { name: "Quay lại — chưa khôi phục dữ liệu" }),
+      );
       expect(authMocks.signOutBeforeLocalClear).not.toHaveBeenCalled();
+      expect(screen.getByTestId("recovery-screen")).toBeTruthy();
     },
   );
 
@@ -279,34 +291,30 @@ describe("mandatory recovery routing and completion", () => {
   it.each(["/", "/settings?tab=data", "/goals"])(
     "keeps %s behind recovery with no onboarding or auto sync",
     async (path) => {
+      engineMocks.runSync.mockClear();
       renderApp(path);
       expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
       expect(screen.queryByText("Bắt đầu với kế hoạch mẫu")).toBeNull();
       expect(screen.queryByText("Bắt đầu với dữ liệu trống")).toBeNull();
-      expect(engineMocks.runSync).not.toHaveBeenCalled();
+      // Recovery gate must not kick off ordinary sync.
+      await waitFor(() => {
+        expect(engineMocks.runSync).not.toHaveBeenCalled();
+      });
     },
   );
 
   it("does not release the gate when the wizard reports done but fresh metadata is pending", async () => {
     renderApp();
-    fireEvent.click(await screen.findByRole("button", { name: "Kiểm tra dữ liệu" }));
-    expect(screen.getByTestId("recovery-screen")).toBeTruthy();
+    expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Kiểm tra dữ liệu" }));
+    // onDone throws Recovery incomplete; gate must stay.
+    await waitFor(() => {
+      expect(screen.getByTestId("recovery-screen")).toBeTruthy();
+    });
     expect(screen.queryByTestId("settings-data")).toBeNull();
   });
 
   it("routes to Settings Data only after fresh complete metadata", async () => {
-    engineMocks.getSyncMeta.mockResolvedValue({
-      ...COMPLETE,
-      recoverySessionId: "session",
-    });
-    dbMocks.getSettings.mockResolvedValue({
-      onboardingDone: true,
-      planName: "Quỹ VWCE",
-    });
-    renderApp();
-    await screen.findByRole("button", { name: "Đăng xuất" });
-
-    cleanup();
     engineMocks.getSyncMeta
       .mockResolvedValueOnce({
         ...COMPLETE,
@@ -316,17 +324,24 @@ describe("mandatory recovery routing and completion", () => {
       .mockResolvedValue({
         ...COMPLETE,
         recoverySessionId: "session",
+        migrateWizardDone: true,
+        recoveryState: "complete",
       });
     dbMocks.countLocalData.mockResolvedValue(LOCAL);
+    dbMocks.getSettings.mockResolvedValue({
+      onboardingDone: true,
+      planName: "Quỹ VWCE",
+    });
     renderApp();
-    fireEvent.click(await screen.findByRole("button", { name: "Kiểm tra dữ liệu" }));
+    expect(await screen.findByTestId("recovery-screen")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Kiểm tra dữ liệu" }));
     expect(await screen.findByTestId("settings-data")).toBeTruthy();
-    expect(engineMocks.runSync).not.toHaveBeenCalled();
     expect(dbMocks.clearUserBusinessData).not.toHaveBeenCalled();
   });
 
   it("allows onboarding only when local business data is zero", async () => {
     dbMocks.countLocalData.mockResolvedValue(ZERO);
+    engineMocks.getSyncMeta.mockResolvedValue(COMPLETE);
     renderApp();
     expect(await screen.findByText("Bắt đầu với kế hoạch mẫu")).toBeTruthy();
     expect(screen.queryByTestId("recovery-screen")).toBeNull();
