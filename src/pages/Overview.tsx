@@ -172,6 +172,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   }
 
   const hasMissingPrices = !portfolioSnapshot.valueComplete;
+  const hasStalePrices = portfolioSnapshot.stalePriceIsins.length > 0;
   const securitiesKnown = market.securities;
   const cash = market.cash;
   const totalKnown = portfolioSnapshot.totalValue;
@@ -217,6 +218,15 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       title: `Thiếu giá cho ${market.missingIsins.length} mã`,
       why: "Tổng tài sản chưa đầy đủ cho đến khi có giá từng ISIN.",
       cta: "Cập nhật",
+      to: "/settings?tab=prices",
+    });
+  } else if (hasStalePrices) {
+    insights.push({
+      id: "price-stale",
+      priority: "high",
+      title: `Giá cũ cho ${portfolioSnapshot.stalePriceIsins.length} mã`,
+      why: "Tổng tài sản đang là ước tính; Pulse giữ nguyên mốc tin cậy gần nhất.",
+      cta: "Làm mới giá",
       to: "/settings?tab=prices",
     });
   } else if (!vwcePrice && mode !== "empty" && portfolio.vwceQty > 0) {
@@ -320,7 +330,11 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         {mode !== "empty" ? (
           <div className="rhythm-assets">
             <p className="rhythm-assets-label">
-              {hasMissingPrices ? "Tài sản đã định giá" : "Tổng tài sản"}
+              {hasMissingPrices
+                ? "Tài sản đã định giá"
+                : hasStalePrices
+                  ? "Tài sản ước tính · có giá cũ"
+                  : "Tổng tài sản"}
             </p>
             <button
               type="button"
@@ -372,6 +386,8 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
           totalValue={totalKnown}
           totalQuantity={totalQuantity}
           valueComplete={portfolioSnapshot.valueComplete}
+          pulseEligible={portfolioSnapshot.pulseEligible}
+          stalePriceIsins={portfolioSnapshot.stalePriceIsins}
           vwcePrice={vwcePrice}
           vwcePriceSource={vwcePriceSource}
           settings={settings}
@@ -421,12 +437,20 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
               </button>
               {detailOpen ? (
                 <dl className="stat-detail-list">
-                  {Object.entries(market.byIsin).map(([isin, row]) => (
-                    <div key={isin}>
-                      <dt>{instrumentName(isin)}<span className="muted" style={{ display: "block", fontSize: 11 }}>{isin}</span></dt>
-                      <dd>{row.qty.toFixed(4)} × {row.price != null ? formatMoney(row.price) : <span style={{ color: "var(--warning-600)" }}>Thiếu giá</span>}{row.value != null ? ` = ${formatMoney(row.value)}` : ""}</dd>
-                    </div>
-                  ))}
+                  {Object.entries(market.byIsin).map(([isin, row]) => {
+                    const priceStatus = portfolioSnapshot.priceStatusByIsin[isin];
+                    return (
+                      <div key={isin}>
+                        <dt>{instrumentName(isin)}<span className="muted" style={{ display: "block", fontSize: 11 }}>{isin}</span></dt>
+                        <dd>
+                          {row.qty.toFixed(4)} × {row.price != null ? formatMoney(row.price) : <span style={{ color: "var(--warning-600)" }}>Thiếu giá</span>}
+                          {priceStatus === "stale" ? <span style={{ color: "var(--warning-600)" }}> · Giá cũ</span> : null}
+                          {priceStatus === "manual" ? <span className="muted"> · Giá thủ công</span> : null}
+                          {row.value != null ? ` = ${formatMoney(row.value)}` : ""}
+                        </dd>
+                      </div>
+                    );
+                  })}
                   <div>
                     <dt>Giá vốn TB VWCE{costBasisCopy.provenance ? <span className="muted" style={{ display: "block", fontSize: 11 }}>{costBasisCopy.provenance}</span> : null}</dt>
                     <dd>{costBasis.avgCost != null ? formatMoney(costBasis.avgCost) : <span className="muted">{costBasisCopy.value}</span>}</dd>
