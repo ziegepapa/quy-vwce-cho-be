@@ -30,7 +30,7 @@ export {
   deleteDepotStatement,
 } from "./depotStatements";
 export { exportBackup } from "./db.m08";
-export { importBackup } from "./db.m09";
+export { importBackup } from "./backupImport";
 export {
   clearAllData, clearUserBusinessData, getOrCreateChecklist, countLocalData,
 } from "./db.m10";
