@@ -28,7 +28,6 @@ const engineMocks = vi.hoisted(() => ({
 
 vi.mock("../lib/db", () => dbMocks);
 vi.mock("../lib/sync/engine", () => engineMocks);
-vi.mock("../lib/backupSchema", () => ({ isSupportedBackupSchema: () => true }));
 vi.mock("../lib/calc", () => ({
   csvEscape: (value: unknown) => String(value ?? ""),
   formatDateVN: (value: string) => value,
@@ -39,7 +38,11 @@ vi.mock("../lib/theme", () => ({
   persistTheme: vi.fn(),
   readTheme: () => "system",
 }));
-vi.mock("../lib/types", () => ({ APP_VERSION: "test", SCHEMA_VERSION: 3 }));
+vi.mock("../lib/types", () => ({
+  APP_VERSION: "test",
+  BACKUP_SCHEMA_VERSION: 3,
+  SCHEMA_VERSION: 3,
+}));
 vi.mock("../lib/auth", () => ({ useAuth: () => ({ user: null, mfaEnrolled: false }) }));
 vi.mock("../components/SettingsPricePanel", () => ({ default: () => null }));
 vi.mock("../components/SyncConflictSection", () => ({ default: () => null }));
@@ -123,6 +126,67 @@ describe("JSON import confirmation modal", () => {
     );
     expect(dbMocks.exportBackup).not.toHaveBeenCalled();
     expect(dbMocks.importBackup).not.toHaveBeenCalled();
+  });
+
+  it("JSON sai cú pháp: báo lỗi và không chạm dữ liệu", async () => {
+    const onReload = vi.fn();
+    const { container } = renderSettings(vi.fn(), onReload);
+    await screen.findByText("Nhập file JSON");
+    await selectFile(container, makeFile("backup-loi.json", "{khong-phai-json"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận thay dữ liệu trên thiết bị" }));
+
+    await waitFor(() => expect(window.alert).toHaveBeenCalledWith("JSON không hợp lệ"));
+    expect(dbMocks.exportBackup).not.toHaveBeenCalled();
+    expect(dbMocks.importBackup).not.toHaveBeenCalled();
+    expect(onReload).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByText("Thay dữ liệu trên thiết bị bằng file này?")).toBeNull(),
+    );
+  });
+
+  it("JSON không phải object: báo lỗi và không chạm dữ liệu", async () => {
+    const onReload = vi.fn();
+    const { container } = renderSettings(vi.fn(), onReload);
+    await screen.findByText("Nhập file JSON");
+    await selectFile(container, makeFile("backup-null.json", "null"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận thay dữ liệu trên thiết bị" }));
+
+    await waitFor(() =>
+      expect(window.alert).toHaveBeenCalledWith("Cấu trúc backup không hợp lệ"),
+    );
+    expect(dbMocks.exportBackup).not.toHaveBeenCalled();
+    expect(dbMocks.importBackup).not.toHaveBeenCalled();
+    expect(onReload).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByText("Thay dữ liệu trên thiết bị bằng file này?")).toBeNull(),
+    );
+  });
+
+  it("schemaVersion không hỗ trợ: báo lỗi và không chạm dữ liệu", async () => {
+    const onReload = vi.fn();
+    const { container } = renderSettings(vi.fn(), onReload);
+    await screen.findByText("Nhập file JSON");
+    await selectFile(
+      container,
+      makeFile(
+        "backup-schema-999.json",
+        JSON.stringify({ schemaVersion: 999, exportedAt: "2026-08-10T09:08:07Z" }),
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận thay dữ liệu trên thiết bị" }));
+
+    await waitFor(() =>
+      expect(window.alert).toHaveBeenCalledWith(expect.stringContaining("schemaVersion không khớp")),
+    );
+    expect(dbMocks.exportBackup).not.toHaveBeenCalled();
+    expect(dbMocks.importBackup).not.toHaveBeenCalled();
+    expect(onReload).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByText("Thay dữ liệu trên thiết bị bằng file này?")).toBeNull(),
+    );
   });
 
   it("xác nhận: sao lưu trước rồi mới gọi importBackup", async () => {
