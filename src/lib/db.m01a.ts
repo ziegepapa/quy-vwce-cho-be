@@ -5,6 +5,7 @@ import type {
 } from "./types";
 import type { AppMetadataRow } from "./appMetadata";
 import type { ConflictRecord, OutboxItem, SyncMeta } from "./sync/types";
+import { assertValidTransactionNumbers } from "./transactionValidation";
 
 export class VwceDB extends Dexie {
   settings!: Table<AppSettings, string>;
@@ -84,6 +85,18 @@ export class VwceDB extends Dexie {
     // for a store name, so this is a second type view of appMetadata rather than
     // a second table. The IndexedDB version stays 4.
     this.appMetadataRows = this.table<AppMetadataRow, string>("appMetadata");
+
+    // Last-line numeric invariant. Sync hydration/conflict resolution and
+    // migrations can write through a generic Dexie Table and therefore bypass
+    // upsertTransaction(). Keeping the guard on the physical store prevents an
+    // invalid remote or legacy row from ever replacing trusted local data.
+    const transactionTable = this.table<Transaction, string>("transactions");
+    transactionTable.hook("creating", (_primaryKey, transaction) => {
+      assertValidTransactionNumbers(transaction);
+    });
+    transactionTable.hook("updating", (modifications, _primaryKey, current) => {
+      assertValidTransactionNumbers({ ...current, ...modifications } as Transaction);
+    });
   }
 }
 

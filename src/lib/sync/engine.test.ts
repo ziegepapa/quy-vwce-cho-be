@@ -274,8 +274,18 @@ describe("server-confirmed recovery", () => {
   it("keeps a partially confirmed session queued", async () => {
     await beginSession("session-1", 2);
     await queueGoal({ id: "goal-1", name: "One" }, null);
-    await db.transactions.put({ id: "tx-1", version: 2 } as never);
-    await enqueueRecoveryItem({ recoverySessionId: "session-1", table: "transactions", entityId: "tx-1", payload: { id: "tx-1", version: 2 }, sourceLocalVersion: 2 });
+    const transaction = {
+      id: "tx-1",
+      date: "2026-08-11",
+      type: "adjust",
+      amount: 0,
+      notes: "",
+      createdAt: "2026-08-11T18:00:00.000Z",
+      updatedAt: "2026-08-11T18:00:00.000Z",
+      version: 2,
+    };
+    await db.transactions.put(transaction as never);
+    await enqueueRecoveryItem({ recoverySessionId: "session-1", table: "transactions", entityId: "tx-1", payload: transaction, sourceLocalVersion: 2 });
     setRemote("transactions", "tx-1", { id: "tx-1", version: 99 }, 99);
     const result = await processSession();
     expect(result.status).toBe("conflict"); expect(result.confirmed).toBe(1);
