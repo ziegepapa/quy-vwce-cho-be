@@ -1,7 +1,44 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 const localOrigin = "http://127.0.0.1:4173";
 const appPath = "/quy-vwce-cho-be/";
+const iphone13Viewport = { width: 390, height: 844 };
+
+async function openPrivateVaultEntry(page: Page) {
+  const response = await page.goto("./", { waitUntil: "domcontentloaded" });
+  expect(response?.ok()).toBe(true);
+  await expect(page.locator("#root > *").first()).toBeVisible();
+
+  const startButton = page.getByRole("button", { name: "Bắt đầu", exact: true });
+  const loginHeading = page.getByRole("heading", { name: "Đăng nhập", exact: true });
+  const missingConfigHeading = page.getByRole("heading", {
+    name: "Chưa cấu hình đăng nhập",
+    exact: true,
+  });
+  const authEntryHeading = loginHeading.or(missingConfigHeading);
+
+  await expect(startButton.or(authEntryHeading)).toBeVisible();
+  if (await startButton.isVisible()) await startButton.click();
+  await expect(authEntryHeading).toBeVisible();
+
+  return { loginHeading, missingConfigHeading };
+}
+
+async function captureVisualEvidence(page: Page, testInfo: TestInfo, fileName: string) {
+  await openPrivateVaultEntry(page);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    )
+    .toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath(fileName),
+    fullPage: true,
+    animations: "disabled",
+  });
+}
 
 test("production build boots in an isolated browser environment", async ({ page }) => {
   const pageErrors: string[] = [];
@@ -25,13 +62,7 @@ test("production build boots in an isolated browser environment", async ({ page 
 });
 
 test("private-vault authentication entry point remains usable", async ({ page }) => {
-  await page.goto("./", { waitUntil: "domcontentloaded" });
-
-  const loginHeading = page.getByRole("heading", { name: "Đăng nhập", exact: true });
-  const missingConfigHeading = page.getByRole("heading", {
-    name: "Chưa cấu hình đăng nhập",
-    exact: true,
-  });
+  const { loginHeading, missingConfigHeading } = await openPrivateVaultEntry(page);
 
   if (await loginHeading.isVisible()) {
     await expect(page.getByLabel("Email")).toBeVisible();
@@ -46,6 +77,17 @@ test("private-vault authentication entry point remains usable", async ({ page })
     await expect(page.getByText("VITE_SUPABASE_URL")).toBeVisible();
     await expect(page.getByText("VITE_SUPABASE_ANON_KEY")).toBeVisible();
   }
+});
+
+test.describe("retained visual evidence", () => {
+  test("captures the desktop authentication entry", async ({ page }, testInfo) => {
+    await captureVisualEvidence(page, testInfo, "visual-evidence-auth-desktop.png");
+  });
+
+  test("captures the iPhone 13 authentication entry", async ({ page }, testInfo) => {
+    await page.setViewportSize(iphone13Viewport);
+    await captureVisualEvidence(page, testInfo, "visual-evidence-auth-iphone-13.png");
+  });
 });
 
 test("preview exposes an installable PWA and consistent quote feeds", async ({ request }) => {
