@@ -1,13 +1,23 @@
 import type { PlanPhase, PlanStatus, PlanTarget } from "./types";
 
 /**
- * Số năm còn lại đến targetIso tính từ now (floor).
+ * Số năm còn lại đến targetIso tính từ now (floor, dùng phép trừ năm chính xác).
  * Âm nếu đã qua mốc.
  */
 export function yearsUntil(targetIso: string, now: Date = new Date()): number {
   const target = new Date(targetIso);
-  const diffMs = target.getTime() - now.getTime();
-  return Math.floor(diffMs / (365.25 * 24 * 3600 * 1000));
+  // Bước 1: hiệu năm
+  let years = target.getFullYear() - now.getFullYear();
+  // Bước 2: nếu ngày kỷ niệm trong năm (now + years) chưa đến mốc target, giảm 1
+  const anniversary = new Date(
+    now.getFullYear() + years,
+    now.getMonth(),
+    now.getDate(),
+  );
+  if (anniversary > target) {
+    years -= 1;
+  }
+  return years;
 }
 
 type PhaseRow = {
@@ -160,7 +170,6 @@ export function getPlanPhase(
 export function defaultPlanTarget(birthDateIso: string): PlanTarget {
   const birth = new Date(birthDateIso);
   const targetYear = birth.getFullYear() + 18;
-  // Tạo ngày trong UTC để tránh timezone shift
   const targetDate = `${targetYear}-${String(birth.getMonth() + 1).padStart(2, "0")}-${String(birth.getDate()).padStart(2, "0")}`;
   return {
     targetUseDate: targetDate,
