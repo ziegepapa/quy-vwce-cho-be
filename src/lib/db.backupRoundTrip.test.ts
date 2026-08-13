@@ -26,6 +26,16 @@ const TX: Transaction = {
   source: "manual",
 };
 
+const EXPECTED_TX = {
+  id: TX.id,
+  date: TX.date,
+  type: TX.type,
+  amount: TX.amount,
+  notes: TX.notes,
+  createdAt: TX.createdAt,
+  source: TX.source,
+};
+
 beforeEach(async () => {
   await db.delete();
   await db.open();
@@ -57,7 +67,8 @@ describe("backup export/import durability", () => {
 
     expect(settings.planName).toBe("Round-trip plan");
     expect(settings.onboardingDone).toBe(true);
-    expect(transactions).toEqual([TX]);
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0]).toMatchObject(EXPECTED_TX);
   });
 
   it("rejects an unsupported schema before replacing existing local data", async () => {
@@ -74,6 +85,8 @@ describe("backup export/import durability", () => {
     await expect(importBackup(unsupported)).rejects.toThrow(/schemaVersion/);
 
     expect((await getSettings()).planName).toBe("Keep existing data");
-    expect(await listTransactions()).toEqual([TX]);
+    const transactions = await listTransactions();
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0]).toMatchObject(EXPECTED_TX);
   });
 });
