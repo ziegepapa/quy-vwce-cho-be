@@ -13,6 +13,7 @@ import {
   upsertTransaction,
 } from "./db";
 import { defaultSettings } from "./defaults";
+import { BACKUP_SCHEMA_VERSION } from "./types";
 import type { BackupPayload, Transaction } from "./types";
 
 const TX: Transaction = {
@@ -85,6 +86,24 @@ describe("backup export/import durability", () => {
     await expect(importBackup(unsupported)).rejects.toThrow(/schemaVersion/);
 
     expect((await getSettings()).planName).toBe("Keep existing data");
+    const transactions = await listTransactions();
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0]).toMatchObject(EXPECTED_TX);
+  });
+
+  it("rejects a malformed supported-schema payload before replacing existing local data", async () => {
+    await saveSettings({ planName: "Keep malformed guard data" }, { sync: false });
+    await upsertTransaction(TX, { sync: false });
+
+    const malformed = {
+      schemaVersion: BACKUP_SCHEMA_VERSION,
+      exportedAt: "2026-08-13T12:00:00.000Z",
+      settings: [],
+    } as unknown as BackupPayload;
+
+    await expect(importBackup(malformed)).rejects.toThrow(/trường bắt buộc/);
+
+    expect((await getSettings()).planName).toBe("Keep malformed guard data");
     const transactions = await listTransactions();
     expect(transactions).toHaveLength(1);
     expect(transactions[0]).toMatchObject(EXPECTED_TX);
