@@ -39,6 +39,11 @@ export function isSupportedBackupSchema(version: unknown): version is number {
   return version === 1 || version === 2 || version === BACKUP_SCHEMA_VERSION;
 }
 
+/** One canonical user-facing message so the UI cannot omit a supported version. */
+export function unsupportedBackupSchemaMessage(version: unknown): string {
+  return `schemaVersion không khớp (file: ${String(version)}; hỗ trợ: 1, 2 hoặc ${BACKUP_SCHEMA_VERSION})`;
+}
+
 /**
  * Runtime guard used before the destructive clear-and-restore transaction.
  * TypeScript types cannot protect files loaded from disk, so required arrays
@@ -52,7 +57,7 @@ export function validateBackupPayload(value: unknown): BackupPayloadValidation {
   if (!isSupportedBackupSchema(value.schemaVersion)) {
     return {
       ok: false,
-      error: `schemaVersion không khớp (file: ${String(value.schemaVersion)}; hỗ trợ: 1, 2 hoặc ${BACKUP_SCHEMA_VERSION})`,
+      error: unsupportedBackupSchemaMessage(value.schemaVersion),
     };
   }
 
