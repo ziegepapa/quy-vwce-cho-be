@@ -2,6 +2,7 @@ import type { AppSettings, Goal, Transaction } from "./types";
 import { SCHEMA_VERSION } from "./types";
 import { defaultGoals, defaultSettings, nowIso } from "./defaults";
 import { isValidIsin, normalizeIsin, resolveInstrumentIsin } from "./instrument";
+import { assertValidTransactionNumbers } from "./transactionValidation";
 import { enqueueOutbox, settingsGuardBaseVersion } from "./sync/outbox";
 import { db } from "./db.m01a";
 import { ensureMultiAssetMigrated } from "./db.m01b";
@@ -116,6 +117,7 @@ export async function upsertTransaction(
   tx: Transaction,
   opts?: { sync?: boolean },
 ): Promise<void> {
+  assertValidTransactionNumbers(tx);
   if (
     tx.type === "buy_security" ||
     tx.type === "sell_security" ||
