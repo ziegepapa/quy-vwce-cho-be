@@ -18,6 +18,14 @@ export type TodayCenterPriceSource =
   | "legacy_quote"
   | "missing";
 
+export type TodayCenterHeldPriceStatus =
+  | "fresh"
+  | "manual"
+  | "stale"
+  | "missing";
+
+export type TodayCenterValuationStatus = "fresh" | "stale" | "missing";
+
 export type TodayCenterPortfolioProvenance = {
   holdings: "transactions_replay";
   marketValue: "portfolio_market_value";
@@ -31,6 +39,11 @@ export type TodayCenterPortfolioSnapshot = {
   totalValue: number;
   totalQuantity: number;
   valueComplete: boolean;
+  /** Price reliability for every currently held security. */
+  priceStatusByIsin: Record<string, TodayCenterHeldPriceStatus>;
+  valuationStatus: TodayCenterValuationStatus;
+  /** False when Pulse must preserve its last reliable baseline. */
+  pulseEligible: boolean;
   /** Held positions valued with an auto/legacy quote older than STALE_DAYS. */
   stalePriceIsins: string[];
   vwcePrice: number;
@@ -128,6 +141,27 @@ export function buildTodayCenterPortfolioSnapshot({
     .filter(([isin, row]) => row.qty > 0 && quoteStatuses[isin] === "valid-stale")
     .map(([isin]) => isin)
     .sort((a, b) => a.localeCompare(b));
+  const priceStatusByIsin = Object.fromEntries(
+    Object.entries(market.byIsin)
+      .filter(([, row]) => row.qty > 0)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([isin, row]) => {
+        const status: TodayCenterHeldPriceStatus = row.price == null
+          ? "missing"
+          : quoteStatuses[isin] === "valid-stale"
+            ? "stale"
+            : effectiveQuotes[isin]?.source === "manual"
+              ? "manual"
+              : "fresh";
+        return [isin, status];
+      }),
+  );
+  const valueComplete = market.missingIsins.length === 0;
+  const valuationStatus: TodayCenterValuationStatus = !valueComplete
+    ? "missing"
+    : stalePriceIsins.length > 0
+      ? "stale"
+      : "fresh";
   const vwcePrice = pricesByIsin[VWCE_ISIN] ?? 0;
   const vwcePriceSource: TodayCenterPriceSource = vwceQuote
     ? vwceQuote.source === "manual"
@@ -143,7 +177,10 @@ export function buildTodayCenterPortfolioSnapshot({
     market,
     totalValue: market.total,
     totalQuantity,
-    valueComplete: market.missingIsins.length === 0,
+    valueComplete,
+    priceStatusByIsin,
+    valuationStatus,
+    pulseEligible: valuationStatus === "fresh",
     stalePriceIsins,
     vwcePrice,
     vwceQuote,

@@ -56,6 +56,9 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
     expect(result.totalValue).toBe(0);
     expect(result.totalQuantity).toBe(0);
     expect(result.valueComplete).toBe(true);
+    expect(result.priceStatusByIsin).toEqual({});
+    expect(result.valuationStatus).toBe("fresh");
+    expect(result.pulseEligible).toBe(true);
     expect(result.stalePriceIsins).toEqual([]);
     expect(result.vwcePriceSource).toBe("missing");
   });
@@ -68,6 +71,7 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
     expect(result.totalValue).toBe(500);
     expect(result.market.cash).toBe(500);
     expect(result.market.missingIsins).toEqual([]);
+    expect(result.pulseEligible).toBe(true);
   });
 
   it("aggregates multiple ISIN holdings from the transaction ledger", () => {
@@ -87,6 +91,9 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
     expect(result.market.cash).toBe(500);
     expect(result.totalValue).toBe(990);
     expect(result.valueComplete).toBe(true);
+    expect(result.priceStatusByIsin).toEqual({ [isinA]: "fresh", [isinB]: "fresh" });
+    expect(result.valuationStatus).toBe("fresh");
+    expect(result.pulseEligible).toBe(true);
   });
 
   it("reports missing prices instead of valuing the position at zero", () => {
@@ -105,6 +112,9 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
     expect(result.market.byIsin[isin].value).toBeNull();
     expect(result.market.missingIsins).toEqual([isin]);
     expect(result.valueComplete).toBe(false);
+    expect(result.priceStatusByIsin).toEqual({ [isin]: "missing" });
+    expect(result.valuationStatus).toBe("missing");
+    expect(result.pulseEligible).toBe(false);
   });
 
   it("uses a dated legacy VWCE fallback", () => {
@@ -123,6 +133,8 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
     expect(result.vwceAgeDays).toBe(4);
     expect(result.vwcePriceSource).toBe("legacy_quote");
     expect(result.totalValue).toBe(123);
+    expect(result.priceStatusByIsin[VWCE_ISIN]).toBe("fresh");
+    expect(result.pulseEligible).toBe(true);
   });
 
   it("rejects a legacy fallback with a missing, malformed or future date", () => {
@@ -136,10 +148,12 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
       expect(result.vwcePrice).toBe(0);
       expect(result.vwcePriceSource).toBe("missing");
       expect(result.market.missingIsins).toEqual([VWCE_ISIN]);
+      expect(result.valuationStatus).toBe("missing");
+      expect(result.pulseEligible).toBe(false);
     }
   });
 
-  it("keeps stale auto valuation visible in provenance instead of hiding it", () => {
+  it("keeps stale auto valuation visible and excludes it from Pulse", () => {
     const result = build({
       transactions: [transaction("buy", "buy_vwce", 100, { quantity: 1 })],
       quotes: [quote("stale-auto", VWCE_ISIN, 150, "auto", { asOf: "2026-07-01" })],
@@ -148,11 +162,14 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
     expect(result.totalValue).toBe(50);
     expect(result.valueComplete).toBe(true);
     expect(result.stalePriceIsins).toEqual([VWCE_ISIN]);
+    expect(result.priceStatusByIsin[VWCE_ISIN]).toBe("stale");
+    expect(result.valuationStatus).toBe("stale");
+    expect(result.pulseEligible).toBe(false);
     expect(result.vwceAgeDays).toBe(35);
     expect(result.vwcePriceSource).toBe("auto_quote");
   });
 
-  it("does not expire an old manual valuation", () => {
+  it("keeps an explicitly selected old manual valuation Pulse-eligible", () => {
     const result = build({
       transactions: [transaction("buy", "buy_vwce", 100, { quantity: 1 })],
       quotes: [quote("old-manual", VWCE_ISIN, 150, "manual", { asOf: "2020-01-01" })],
@@ -160,6 +177,9 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
 
     expect(result.totalValue).toBe(50);
     expect(result.stalePriceIsins).toEqual([]);
+    expect(result.priceStatusByIsin[VWCE_ISIN]).toBe("manual");
+    expect(result.valuationStatus).toBe("fresh");
+    expect(result.pulseEligible).toBe(true);
     expect(result.vwcePriceSource).toBe("manual_quote");
   });
 
@@ -172,6 +192,37 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
     });
     expect(result.vwcePriceSource).toBe("legacy_quote");
     expect(result.stalePriceIsins).toEqual([VWCE_ISIN]);
+    expect(result.priceStatusByIsin[VWCE_ISIN]).toBe("stale");
+    expect(result.pulseEligible).toBe(false);
+  });
+
+  it("classifies every held ISIN independently", () => {
+    const freshIsin = "IE00B4L5Y983";
+    const manualIsin = "IE00B3RBWM25";
+    const staleIsin = "IE00BK5BQT80";
+    const missingIsin = "IE00B6R52259";
+    const result = build({
+      transactions: [
+        transaction("fresh", "buy_security", 10, { instrumentIsin: freshIsin, quantity: 1 }),
+        transaction("manual", "buy_security", 10, { instrumentIsin: manualIsin, quantity: 1 }),
+        transaction("stale", "buy_security", 10, { instrumentIsin: staleIsin, quantity: 1 }),
+        transaction("missing", "buy_security", 10, { instrumentIsin: missingIsin, quantity: 1 }),
+      ],
+      quotes: [
+        quote("fresh", freshIsin, 11),
+        quote("manual", manualIsin, 12, "manual", { asOf: "2020-01-01" }),
+        quote("stale", staleIsin, 13, "auto", { asOf: "2026-07-01" }),
+      ],
+    });
+
+    expect(result.priceStatusByIsin).toEqual({
+      [manualIsin]: "manual",
+      [freshIsin]: "fresh",
+      [missingIsin]: "missing",
+      [staleIsin]: "stale",
+    });
+    expect(result.valuationStatus).toBe("missing");
+    expect(result.pulseEligible).toBe(false);
   });
 
   it("rejects malformed and future effective quote dates", () => {
@@ -183,6 +234,7 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
       expect(result.vwcePrice).toBe(0);
       expect(result.market.missingIsins).toEqual([VWCE_ISIN]);
       expect(result.valueComplete).toBe(false);
+      expect(result.pulseEligible).toBe(false);
     }
   });
 
@@ -197,6 +249,7 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
     expect(result.vwcePrice).toBe(0);
     expect(result.vwcePriceSource).toBe("missing");
     expect(result.market.missingIsins).toEqual([VWCE_ISIN]);
+    expect(result.pulseEligible).toBe(false);
   });
 
   it("uses the same effective quote for price and provenance", () => {
@@ -234,5 +287,6 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
     expect(result.totalValue).toBe(0);
     expect(result.vwcePrice).toBe(0);
     expect(result.valueComplete).toBe(true);
+    expect(result.pulseEligible).toBe(true);
   });
 });
