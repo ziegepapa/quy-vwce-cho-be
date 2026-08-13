@@ -4,7 +4,13 @@ import {
   portfolioMarketValue,
   type PortfolioState,
 } from "./calc";
-import { VWCE_ISIN, type Quote, type Transaction } from "./types";
+import {
+  calendarDaysBetween,
+  isValidAsOfDate,
+  toDateOnly,
+} from "./instrument";
+import { classifyCandidate } from "./quoteResolve";
+import { STALE_DAYS, VWCE_ISIN, type Quote, type Transaction } from "./types";
 
 export type TodayCenterPriceSource =
   | "manual_quote"
@@ -25,8 +31,12 @@ export type TodayCenterPortfolioSnapshot = {
   totalValue: number;
   totalQuantity: number;
   valueComplete: boolean;
+  /** Held positions valued with an auto/legacy quote older than STALE_DAYS. */
+  stalePriceIsins: string[];
   vwcePrice: number;
   vwceQuote: Quote | null;
+  vwceAsOf: string | null;
+  vwceAgeDays: number | null;
   vwcePriceSource: TodayCenterPriceSource;
   provenance: TodayCenterPortfolioProvenance;
 };
@@ -35,7 +45,12 @@ export type TodayCenterPortfolioInput = {
   transactions: Transaction[];
   quotes: Quote[];
   legacyVwcePrice?: number;
+  legacyVwcePriceAsOf?: string;
+  /** Local calendar date injected for deterministic tests. */
+  nowDate?: string;
 };
+
+type UsableQuoteStatus = "valid-fresh" | "valid-stale";
 
 function normalizeIsin(value: string): string {
   return value.trim().toUpperCase();
@@ -59,26 +74,49 @@ export function buildTodayCenterPortfolioSnapshot({
   transactions,
   quotes,
   legacyVwcePrice = 0,
+  legacyVwcePriceAsOf = "",
+  nowDate: rawNowDate,
 }: TodayCenterPortfolioInput): TodayCenterPortfolioSnapshot {
+  const nowDate = typeof rawNowDate === "string" ? rawNowDate.trim() : toDateOnly();
   const portfolio = replayTransactions(transactions);
   const pricesByIsin: Record<string, number> = {};
   const effectiveQuotes: Record<string, Quote> = {};
+  const quoteStatuses: Record<string, UsableQuoteStatus> = {};
+  const quoteAgeDays: Record<string, number> = {};
 
   for (const quote of quotes) {
     const isin = normalizeIsin(quote.instrumentIsin);
-    if (!isin || quote.currency !== "EUR" || !Number.isFinite(quote.price) || quote.price <= 0) {
-      continue;
-    }
+    if (!isin || quote.currency !== "EUR") continue;
+    const status = classifyCandidate(quote, nowDate);
+    if (status !== "valid-fresh" && status !== "valid-stale") continue;
+
     pricesByIsin[isin] = quote.price;
     effectiveQuotes[isin] = quote;
+    quoteStatuses[isin] = status;
+    quoteAgeDays[isin] = calendarDaysBetween(quote.asOf, nowDate);
   }
 
   const vwceQuote = effectiveQuotes[VWCE_ISIN] ?? null;
   const legacyPrice = Number.isFinite(legacyVwcePrice) && legacyVwcePrice > 0
     ? legacyVwcePrice
     : 0;
-  if (!vwceQuote && legacyPrice > 0) {
+  const legacyAsOf = typeof legacyVwcePriceAsOf === "string"
+    ? legacyVwcePriceAsOf.trim()
+    : "";
+  const legacyAgeDays = isValidAsOfDate(nowDate) && isValidAsOfDate(legacyAsOf)
+    ? calendarDaysBetween(legacyAsOf, nowDate)
+    : null;
+  const legacyUsable =
+    !vwceQuote
+    && legacyPrice > 0
+    && legacyAgeDays !== null
+    && Number.isFinite(legacyAgeDays)
+    && legacyAgeDays >= 0;
+
+  if (legacyUsable) {
     pricesByIsin[VWCE_ISIN] = legacyPrice;
+    quoteStatuses[VWCE_ISIN] = legacyAgeDays > STALE_DAYS ? "valid-stale" : "valid-fresh";
+    quoteAgeDays[VWCE_ISIN] = legacyAgeDays;
   }
 
   const market = portfolioMarketValue(portfolio, pricesByIsin);
@@ -86,12 +124,16 @@ export function buildTodayCenterPortfolioSnapshot({
     (sum, position) => sum + Math.max(0, position.qty),
     0,
   );
+  const stalePriceIsins = Object.entries(market.byIsin)
+    .filter(([isin, row]) => row.qty > 0 && quoteStatuses[isin] === "valid-stale")
+    .map(([isin]) => isin)
+    .sort((a, b) => a.localeCompare(b));
   const vwcePrice = pricesByIsin[VWCE_ISIN] ?? 0;
   const vwcePriceSource: TodayCenterPriceSource = vwceQuote
     ? vwceQuote.source === "manual"
       ? "manual_quote"
       : "auto_quote"
-    : vwcePrice > 0
+    : legacyUsable
       ? "legacy_quote"
       : "missing";
 
@@ -102,8 +144,11 @@ export function buildTodayCenterPortfolioSnapshot({
     totalValue: market.total,
     totalQuantity,
     valueComplete: market.missingIsins.length === 0,
+    stalePriceIsins,
     vwcePrice,
     vwceQuote,
+    vwceAsOf: vwceQuote?.asOf ?? (legacyUsable ? legacyAsOf : null),
+    vwceAgeDays: quoteAgeDays[VWCE_ISIN] ?? null,
     vwcePriceSource,
     provenance: {
       holdings: "transactions_replay",

@@ -37,14 +37,16 @@ function isShapeValid(c: QuoteCandidate | null | undefined): c is QuoteCandidate
  * Classify a stored candidate.
  * - Future asOf (asOf > nowDate) → unusable (not fresh; do not auto-delete).
  * - Stale auto is still valid-stale (usable under fallback rules).
+ * - An unreadable caller date makes every present candidate unusable.
  */
 export function classifyCandidate(
   c: QuoteCandidate | null | undefined,
   nowDate: string,
 ): CandidateStatus {
   if (!isShapeValid(c)) return c ? "unusable" : "missing";
+  if (!isValidAsOfDate(nowDate)) return "unusable";
   const age = calendarDaysBetween(c.asOf, nowDate);
-  if (age < 0) return "unusable"; // future stored
+  if (!Number.isFinite(age) || age < 0) return "unusable"; // future or unreadable clock
   if (c.source === "auto" && age > STALE_DAYS) return "valid-stale";
   return "valid-fresh";
 }
