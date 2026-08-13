@@ -709,7 +709,7 @@ export default function SettingsPage({
             <p className="settings-inline-status settings-import-warning" role="note">
               ⚠️ Nhập một bản sao lưu sẽ{" "}
               <strong>ghi đè và thay thế toàn bộ dữ liệu đang có trên thiết bị này</strong>.
-              {" "}Ụng dụng sẽ tự tải một bản sao lưu của dữ liệu hiện tại trước khi ghi đè để bạn có thể quay lại nếu cần.
+              {" "}Ứng dụng sẽ tự tải một bản sao lưu của dữ liệu hiện tại trước khi ghi đè để bạn có thể quay lại nếu cần.
             </p>
             {pendingFile ? (
               <div className="delete-confirm import-confirm" role="alertdialog" aria-modal="true"
@@ -721,7 +721,7 @@ export default function SettingsPage({
                 </p>
                 <p>
                   Toàn bộ dữ liệu local hiện có trên iPhone sẽ được thay bằng nội dung file này.
-                  Ụng dụng sẽ tải một bản sao lưu trước khi tiếp tục. Thao tác này không tự ghi đè dữ liệu trong tài khoản.
+                  Ứng dụng sẽ tải một bản sao lưu trước khi tiếp tục. Thao tác này không tự ghi đè dữ liệu trong tài khoản.
                 </p>
                 <div className="delete-actions">
                   <button type="button" className="danger" disabled={importing}
