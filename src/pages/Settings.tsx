@@ -11,8 +11,11 @@ import {
   saveSettings,
 } from "../lib/db";
 import type { AnnualChecklist, AppSettings, BackupPayload } from "../lib/types";
-import { APP_VERSION, SCHEMA_VERSION } from "../lib/types";
-import { isSupportedBackupSchema } from "../lib/backupSchema";
+import { APP_VERSION } from "../lib/types";
+import {
+  isSupportedBackupSchema,
+  unsupportedBackupSchemaMessage,
+} from "../lib/backupSchema";
 import { csvEscape, formatDateVN, parseDecimal } from "../lib/calc";
 import type { ThemeChoice } from "../lib/theme";
 import { THEME_OPTIONS, persistTheme, readTheme } from "../lib/theme";
@@ -333,7 +336,7 @@ export default function SettingsPage({
       }
       if (!data || typeof data !== "object") { alert("Cấu trúc backup không hợp lệ"); return; }
       if (!isSupportedBackupSchema(data.schemaVersion)) {
-        alert(`schemaVersion không khớp (file: ${String(data.schemaVersion)}, app: ${SCHEMA_VERSION} hoặc 1)`);
+        alert(unsupportedBackupSchemaMessage(data.schemaVersion));
         return;
       }
       try {
