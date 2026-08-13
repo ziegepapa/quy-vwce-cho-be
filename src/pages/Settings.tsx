@@ -37,7 +37,6 @@ function pctDisplay(decimal: number): string {
   })} %`;
 }
 
-/** 2.5 → 0.025, tránh rác dấu phẩy động của phép chia số thực. */
 function pctToRate(pct: number): number {
   return Math.round(pct * 1e4) / 1e6;
 }
@@ -69,7 +68,6 @@ function NumField({
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const display = draft !== null ? draft : formatNum(value, minFrac, maxFrac);
-
   return (
     <span className="number-field-wrap">
       <input
@@ -198,9 +196,7 @@ export default function SettingsPage({
       if (auth.user?.id) setDead(await listDeadOutbox());
       else setDead([]);
     })();
-    return () => {
-      mounted.current = false;
-    };
+    return () => { mounted.current = false; };
   }, [auth.user?.id]);
 
   useEffect(() => {
@@ -228,7 +224,6 @@ export default function SettingsPage({
     if (Object.keys(partial).length === 0) return;
     pendingSettings.current = {};
     outstandingSaves.current += 1;
-
     const run = async () => {
       let failed = false;
       if (mounted.current) setSaveState("saving");
@@ -251,7 +246,6 @@ export default function SettingsPage({
         }
       }
     };
-
     const queued = saveQueue.current.then(run, run);
     saveQueue.current = queued.then(() => undefined, () => undefined);
     await queued;
@@ -261,9 +255,7 @@ export default function SettingsPage({
 
   function scheduleSettingsSave() {
     if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => {
-      void flushRef.current();
-    }, SETTINGS_AUTOSAVE_MS);
+    saveTimer.current = window.setTimeout(() => { void flushRef.current(); }, SETTINGS_AUTOSAVE_MS);
   }
 
   function patchSettings(partial: Partial<AppSettings>) {
@@ -336,30 +328,18 @@ export default function SettingsPage({
     setImporting(true);
     try {
       let data: BackupPayload;
-      try {
-        data = JSON.parse(await file.text());
-      } catch {
-        alert("JSON không hợp lệ");
-        return;
+      try { data = JSON.parse(await file.text()); } catch {
+        alert("JSON không hợp lệ"); return;
       }
-      if (!data || typeof data !== "object") {
-        alert("Cấu trúc backup không hợp lệ");
-        return;
-      }
+      if (!data || typeof data !== "object") { alert("Cấu trúc backup không hợp lệ"); return; }
       if (!isSupportedBackupSchema(data.schemaVersion)) {
-        alert(
-          `schemaVersion không khớp (file: ${String(data.schemaVersion)}, app: ${SCHEMA_VERSION} hoặc 1)`,
-        );
+        alert(`schemaVersion không khớp (file: ${String(data.schemaVersion)}, app: ${SCHEMA_VERSION} hoặc 1)`);
         return;
       }
       try {
         const current = await exportBackup();
-        downloadJson(
-          current,
-          `ban-sao-luu-truoc-khi-nhap-json-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
-      } catch {
-        /* */
-      }
+        downloadJson(current, `ban-sao-luu-truoc-khi-nhap-json-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
+      } catch { /* */ }
       await importBackup(data);
       alert("Nhập backup thành công");
       onReload();
@@ -375,19 +355,12 @@ export default function SettingsPage({
     const transactions = await listTransactions();
     const header = "date,type,amount,unitPrice,quantity,fee,tax,instrumentIsin,notes\n";
     const rows = transactions
-      .map((transaction) =>
-        [
-          csvEscape(transaction.date),
-          csvEscape(transaction.type),
-          csvEscape(transaction.amount),
-          csvEscape(transaction.unitPrice ?? ""),
-          csvEscape(transaction.quantity ?? ""),
-          csvEscape(transaction.fee ?? ""),
-          csvEscape(transaction.tax ?? ""),
-          csvEscape(transaction.instrumentIsin ?? ""),
-          csvEscape(transaction.notes ?? ""),
-        ].join(","),
-      )
+      .map((t) => [
+        csvEscape(t.date), csvEscape(t.type), csvEscape(t.amount),
+        csvEscape(t.unitPrice ?? ""), csvEscape(t.quantity ?? ""),
+        csvEscape(t.fee ?? ""), csvEscape(t.tax ?? ""),
+        csvEscape(t.instrumentIsin ?? ""), csvEscape(t.notes ?? ""),
+      ].join(","))
       .join("\n");
     const anchor = document.createElement("a");
     anchor.href = URL.createObjectURL(
@@ -400,13 +373,10 @@ export default function SettingsPage({
   if (!settings) return <p className="muted">Đang tải…</p>;
 
   const saveLabel =
-    saveState === "saving"
-      ? "Đang lưu…"
-      : saveState === "dirty"
-        ? "Sẽ tự lưu"
-        : saveState === "error"
-          ? "Chưa lưu được"
-          : "Đã lưu tự động";
+    saveState === "saving" ? "Đang lưu…"
+    : saveState === "dirty" ? "Sẽ tự lưu"
+    : saveState === "error" ? "Chưa lưu được"
+    : "Đã lưu tự động";
 
   return (
     <div className="settings-page">
@@ -417,43 +387,27 @@ export default function SettingsPage({
           <p>Thay đổi được lưu tự động. Bạn có thể chuyển màn hình mà không cần tìm nút Lưu.</p>
         </div>
         <span className={`settings-save-pill save-state-${saveState}`} role="status" aria-live="polite">
-          <span className="save-dot" aria-hidden />
-          {saveLabel}
+          <span className="save-dot" aria-hidden />{saveLabel}
         </span>
       </header>
 
       {saveError ? <p className="settings-error settings-global-error" role="alert">{saveError}</p> : null}
 
       <nav className="settings-tabs" role="tablist" aria-label="Nhóm cài đặt">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "general"}
+        <button type="button" role="tab" aria-selected={activeTab === "general"}
           className={activeTab === "general" ? "settings-tab active" : "settings-tab"}
-          onClick={() => changeTab("general")}
-        >
-          <span aria-hidden>◫</span>
-          Chung
+          onClick={() => changeTab("general")}>
+          <span aria-hidden>◫</span>Chung
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "prices"}
+        <button type="button" role="tab" aria-selected={activeTab === "prices"}
           className={activeTab === "prices" ? "settings-tab active" : "settings-tab"}
-          onClick={() => changeTab("prices")}
-        >
-          <span aria-hidden>€</span>
-          Giá & tài sản
+          onClick={() => changeTab("prices")}>
+          <span aria-hidden>€</span>Giá &amp; tài sản
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "data"}
+        <button type="button" role="tab" aria-selected={activeTab === "data"}
           className={activeTab === "data" ? "settings-tab active" : "settings-tab"}
-          onClick={() => changeTab("data")}
-        >
-          <span aria-hidden>↥</span>
-          Dữ liệu
+          onClick={() => changeTab("data")}>
+          <span aria-hidden>↥</span>Dữ liệu
         </button>
       </nav>
 
@@ -471,19 +425,15 @@ export default function SettingsPage({
             <div className="settings-field-grid">
               <label className="setting-field">
                 <span>Tên kế hoạch</span>
-                <input
-                  value={settings.planName ?? ""}
-                  onChange={(event) => patchSettings({ planName: event.target.value })}
-                  onBlur={() => void flushRef.current()}
-                />
+                <input value={settings.planName ?? ""}
+                  onChange={(e) => patchSettings({ planName: e.target.value })}
+                  onBlur={() => void flushRef.current()} />
               </label>
               <label className="setting-field">
                 <span>Tên bé</span>
-                <input
-                  value={settings.childName ?? ""}
-                  onChange={(event) => patchSettings({ childName: event.target.value })}
-                  onBlur={() => void flushRef.current()}
-                />
+                <input value={settings.childName ?? ""}
+                  onChange={(e) => patchSettings({ childName: e.target.value })}
+                  onBlur={() => void flushRef.current()} />
               </label>
             </div>
             <div className="setting-choice-row">
@@ -493,16 +443,11 @@ export default function SettingsPage({
               </div>
               <Segmented
                 value={settings.accountType}
-                options={[
-                  { value: "parent", label: "Cha/mẹ" },
-                  { value: "child", label: "Bé" },
-                ]}
-                onChange={(value) => patchSettings({ accountType: value as "child" | "parent" })}
-              />
+                options={[{ value: "parent", label: "Cha/mẹ" }, { value: "child", label: "Bé" }]}
+                onChange={(v) => patchSettings({ accountType: v as "child" | "parent" })} />
             </div>
           </section>
 
-          {/* CASH-MODEL-OPTIONAL-001 r1 */}
           <section className="settings-card">
             <div className="settings-card-head">
               <div>
@@ -515,20 +460,15 @@ export default function SettingsPage({
             <div className="setting-choice-row">
               <div>
                 <strong>Nguồn tiền mua</strong>
-                <span>
-                  {settings.trackInAppCash === true
-                    ? "Sổ kép: mọi lệnh mua cần một khoản nạp tương ứng, thiếu thì Tổng quan sẽ báo."
-                    : "Ngoài app: chỉ theo dõi chứng khoán. Không báo thiếu nạp, hàng An toàn để trống."}
+                <span>{settings.trackInAppCash === true
+                  ? "Sổ kép: mọi lệnh mua cần một khoản nạp tương ứng, thiếu thì Tổng quan sẽ báo."
+                  : "Ngoài app: chỉ theo dõi chứng khoán. Không báo thiếu nạp, hàng An toàn để trống."}
                 </span>
               </div>
               <Segmented
                 value={settings.trackInAppCash === true ? "ledger" : "securities"}
-                options={[
-                  { value: "securities", label: "Ngoài app" },
-                  { value: "ledger", label: "Sổ kép" },
-                ]}
-                onChange={(value) => patchSettings({ trackInAppCash: value === "ledger" })}
-              />
+                options={[{ value: "securities", label: "Ngoài app" }, { value: "ledger", label: "Sổ kép" }]}
+                onChange={(v) => patchSettings({ trackInAppCash: v === "ledger" })} />
             </div>
           </section>
 
@@ -544,47 +484,27 @@ export default function SettingsPage({
             <div className="assumption-grid">
               <div className="assumption-tile">
                 <span>Lạm phát</span>
-                <NumField
-                  value={settings.inflationRate * 100}
-                  minFrac={1}
-                  maxFrac={1}
-                  suffix="%"
+                <NumField value={settings.inflationRate * 100} minFrac={1} maxFrac={1} suffix="%"
                   ariaLabel={`Lạm phát ${pctDisplay(settings.inflationRate)}`}
-                  onCommit={(pct) => patchSettings({ inflationRate: pctToRate(pct) })}
-                />
+                  onCommit={(pct) => patchSettings({ inflationRate: pctToRate(pct) })} />
               </div>
               <div className="assumption-tile">
                 <span>Buffer</span>
-                <NumField
-                  value={settings.bufferPct * 100}
-                  minFrac={1}
-                  maxFrac={1}
-                  suffix="%"
+                <NumField value={settings.bufferPct * 100} minFrac={1} maxFrac={1} suffix="%"
                   ariaLabel={`Buffer ${pctDisplay(settings.bufferPct)}`}
-                  onCommit={(pct) => patchSettings({ bufferPct: pctToRate(pct) })}
-                />
+                  onCommit={(pct) => patchSettings({ bufferPct: pctToRate(pct) })} />
               </div>
               <div className="assumption-tile">
                 <span>Lợi suất VWCE</span>
-                <NumField
-                  value={settings.vwceReturn * 100}
-                  minFrac={1}
-                  maxFrac={1}
-                  suffix="%"
+                <NumField value={settings.vwceReturn * 100} minFrac={1} maxFrac={1} suffix="%"
                   ariaLabel={`Lợi suất VWCE ${pctDisplay(settings.vwceReturn)}`}
-                  onCommit={(pct) => patchSettings({ vwceReturn: pctToRate(pct) })}
-                />
+                  onCommit={(pct) => patchSettings({ vwceReturn: pctToRate(pct) })} />
               </div>
               <div className="assumption-tile">
                 <span>Lợi suất an toàn</span>
-                <NumField
-                  value={settings.safeReturn * 100}
-                  minFrac={1}
-                  maxFrac={1}
-                  suffix="%"
+                <NumField value={settings.safeReturn * 100} minFrac={1} maxFrac={1} suffix="%"
                   ariaLabel={`Lợi suất an toàn ${pctDisplay(settings.safeReturn)}`}
-                  onCommit={(pct) => patchSettings({ safeReturn: pctToRate(pct) })}
-                />
+                  onCommit={(pct) => patchSettings({ safeReturn: pctToRate(pct) })} />
               </div>
             </div>
             <div className="setting-choice-row">
@@ -594,12 +514,8 @@ export default function SettingsPage({
               </div>
               <Segmented
                 value={settings.endMode}
-                options={[
-                  { value: "hard", label: "Hạn cứng" },
-                  { value: "flexible", label: "Linh hoạt" },
-                ]}
-                onChange={(value) => patchSettings({ endMode: value as "hard" | "flexible" })}
-              />
+                options={[{ value: "hard", label: "Hạn cứng" }, { value: "flexible", label: "Linh hoạt" }]}
+                onChange={(v) => patchSettings({ endMode: v as "hard" | "flexible" })} />
             </div>
           </section>
 
@@ -611,116 +527,8 @@ export default function SettingsPage({
                 <p>Lựa chọn được nhớ ngay trên thiết bị này.</p>
               </div>
             </div>
-            <Segmented
-              value={theme}
-              options={THEME_OPTIONS}
-              onChange={(value) => pickTheme(value as ThemeChoice)}
-            />
-          </section>
-
-          <section className="settings-card">
-            <div className="settings-card-head">
-              <div>
-                <p className="settings-card-eyebrow">Bảo mật</p>
-                <h3>Xác minh hai bước</h3>
-                <p>TOTP bảo vệ account owner sau mật khẩu. Password reset không tự bypass TOTP.</p>
-              </div>
-              <span className="settings-icon-bubble" aria-hidden>⌁</span>
-            </div>
-            {auth.mfaEnrolled ? (
-              <>
-                <p className="settings-inline-status success">
-                  TOTP đã bật và factor đã được xác minh. Phiên đăng nhập mới sẽ bị chặn ở AAL1
-                  cho tới khi nhập mã.
-                </p>
-                <p className="muted">
-                  Trước khi coi MFA là production-ready, Owner phải xác nhận factor TOTP dự phòng
-                  hoặc quy trình Dashboard admin để reset factor. Dashboard admin phải có MFA và
-                  recovery method riêng.
-                </p>
-              </>
-            ) : mfaEnrollment ? (
-              <div className="stack">
-                <img
-                  src={mfaEnrollment.qrCode}
-                  alt="QR thiết lập TOTP"
-                  style={{ width: 196, maxWidth: "100%", borderRadius: 12 }}
-                />
-                <p className="muted">
-                  Quét QR bằng authenticator. Nếu không quét được, nhập secret này thủ công:
-                </p>
-                <code style={{ overflowWrap: "anywhere" }}>{mfaEnrollment.secret}</code>
-                <label className="setting-field">
-                  <span>Mã 6 chữ số để xác minh factor</span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    pattern="[0-9]{6}"
-                    maxLength={6}
-                    value={mfaCode}
-                    onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, ""))}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="settings-primary-action"
-                  disabled={mfaBusy || mfaCode.length !== 6}
-                  onClick={async () => {
-                    if (readOnly) { showBlocked(); return; }
-                    setMfaBusy(true);
-                    setMfaSetupError(null);
-                    setMfaMessage(null);
-                    try {
-                      const result = await auth.verifyMfaEnrollment(
-                        mfaEnrollment.factorId,
-                        mfaCode,
-                      );
-                      if (result.error) setMfaSetupError(result.error);
-                      else {
-                        setMfaEnrollment(null);
-                        setMfaCode("");
-                        setMfaMessage(
-                          "TOTP đã được xác minh. Hãy test enroll → logout → login AAL1 → TOTP AAL2 → mở vault trước khi coi là đạt.",
-                        );
-                      }
-                    } finally {
-                      setMfaBusy(false);
-                    }
-                  }}
-                >
-                  {mfaBusy ? "Đang xác minh…" : "Xác minh và bật TOTP"}
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="settings-primary-action"
-                disabled={mfaBusy}
-                onClick={async () => {
-                  if (readOnly) { showBlocked(); return; }
-                  setMfaBusy(true);
-                  setMfaSetupError(null);
-                  setMfaMessage(null);
-                  try {
-                    const result = await auth.startMfaEnrollment();
-                    if (result.error || !result.data) {
-                      setMfaSetupError(result.error ?? "Không bắt đầu được TOTP.");
-                    } else {
-                      setMfaEnrollment(result.data);
-                    }
-                  } finally {
-                    setMfaBusy(false);
-                  }
-                }}
-              >
-                {mfaBusy ? "Đang tạo…" : "Thiết lập TOTP"}
-              </button>
-            )}
-            {mfaSetupError ? <p className="settings-error" role="alert">{mfaSetupError}</p> : null}
-            {mfaMessage ? (
-              <p className="settings-inline-status success" role="status">{mfaMessage}</p>
-            ) : null}
+            <Segmented value={theme} options={THEME_OPTIONS}
+              onChange={(v) => pickTheme(v as ThemeChoice)} />
           </section>
 
           <section className="settings-card">
@@ -732,39 +540,92 @@ export default function SettingsPage({
               </div>
               <label className="year-picker">
                 <span className="sr-only">Năm checklist</span>
-                <input
-                  type="number"
-                  value={checklistYear}
-                  min={2000}
-                  max={2100}
-                  onChange={(event) => {
-                    const year = Number(event.target.value);
-                    if (year >= 2000 && year <= 2100) setChecklistYear(year);
-                  }}
-                />
+                <input type="number" value={checklistYear} min={2000} max={2100}
+                  onChange={(e) => { const y = Number(e.target.value); if (y >= 2000 && y <= 2100) setChecklistYear(y); }} />
               </label>
             </div>
             <div className="checklist-list">
               {checklist?.items.map((item) => (
                 <label key={item.key} className="switch-row">
                   <span>{item.label}</span>
-                  <input
-                    type="checkbox"
-                    className="ios-switch"
-                    checked={item.done}
+                  <input type="checkbox" className="ios-switch" checked={item.done}
                     onChange={async () => {
                       if (readOnly) { showBlocked(); return; }
-                      const items = checklist.items.map((current) =>
-                        current.key === item.key ? { ...current, done: !current.done } : current,
-                      );
+                      const items = checklist.items.map((c) =>
+                        c.key === item.key ? { ...c, done: !c.done } : c);
                       const next = { ...checklist, items, updatedAt: new Date().toISOString() };
                       await db.annualChecklists.put(next);
                       setChecklist(next);
-                    }}
-                  />
+                    }} />
                 </label>
               ))}
             </div>
+          </section>
+
+          <section className="settings-card">
+            <div className="settings-card-head">
+              <div>
+                <p className="settings-card-eyebrow">Bảo mật</p>
+                <h3>Xác minh hai bước</h3>
+                <p>TOTP bảo vệ account owner sau mật khẩu. Password reset không tự bypass TOTP.</p>
+              </div>
+              <span className="settings-icon-bubble" aria-hidden>⍁</span>
+            </div>
+            {auth.mfaEnrolled ? (
+              <>
+                <p className="settings-inline-status success">
+                  TOTP đã bật và factor đã được xác minh. Phiên đăng nhập mới sẽ bị chặn ở AAL1 cho tới khi nhập mã.
+                </p>
+                <p className="muted">
+                  Trước khi coi MFA là production-ready, Owner phải xác nhận factor TOTP dự phòng
+                  hoặc quy trình Dashboard admin để reset factor. Dashboard admin phải có MFA và recovery method riêng.
+                </p>
+              </>
+            ) : mfaEnrollment ? (
+              <div className="stack">
+                <img src={mfaEnrollment.qrCode} alt="QR thiết lập TOTP"
+                  style={{ width: 196, maxWidth: "100%", borderRadius: 12 }} />
+                <p className="muted">Quét QR bằng authenticator. Nếu không quét được, nhập secret này thủ công:</p>
+                <code style={{ overflowWrap: "anywhere" }}>{mfaEnrollment.secret}</code>
+                <label className="setting-field">
+                  <span>Mã 6 chữ số để xác minh factor</span>
+                  <input type="text" inputMode="numeric" autoComplete="one-time-code"
+                    pattern="[0-9]{6}" maxLength={6} value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))} />
+                </label>
+                <button type="button" className="settings-primary-action"
+                  disabled={mfaBusy || mfaCode.length !== 6}
+                  onClick={async () => {
+                    if (readOnly) { showBlocked(); return; }
+                    setMfaBusy(true); setMfaSetupError(null); setMfaMessage(null);
+                    try {
+                      const result = await auth.verifyMfaEnrollment(mfaEnrollment.factorId, mfaCode);
+                      if (result.error) setMfaSetupError(result.error);
+                      else {
+                        setMfaEnrollment(null); setMfaCode("");
+                        setMfaMessage("TOTP đã được xác minh. Hãy test enroll → logout → login AAL1 → TOTP AAL2 → mở vault trước khi coi là đạt.");
+                      }
+                    } finally { setMfaBusy(false); }
+                  }}>
+                  {mfaBusy ? "Đang xác minh…" : "Xác minh và bật TOTP"}
+                </button>
+              </div>
+            ) : (
+              <button type="button" className="settings-primary-action" disabled={mfaBusy}
+                onClick={async () => {
+                  if (readOnly) { showBlocked(); return; }
+                  setMfaBusy(true); setMfaSetupError(null); setMfaMessage(null);
+                  try {
+                    const result = await auth.startMfaEnrollment();
+                    if (result.error || !result.data) setMfaSetupError(result.error ?? "Không bắt đầu được TOTP.");
+                    else setMfaEnrollment(result.data);
+                  } finally { setMfaBusy(false); }
+                }}>
+                {mfaBusy ? "Đang tạo…" : "Thiết lập TOTP"}
+              </button>
+            )}
+            {mfaSetupError ? <p className="settings-error" role="alert">{mfaSetupError}</p> : null}
+            {mfaMessage ? <p className="settings-inline-status success" role="status">{mfaMessage}</p> : null}
           </section>
         </div>
       ) : null}
@@ -784,24 +645,14 @@ export default function SettingsPage({
           </section>
 
           {auth.user?.id ? (
-            <SyncConflictSection
-              userId={auth.user.id}
-              focusRequest={focusConflictRequest}
-              onResolved={async () => {
-                await onConflictResolved?.();
-              }}
-            />
+            <SyncConflictSection userId={auth.user.id} focusRequest={focusConflictRequest}
+              onResolved={async () => { await onConflictResolved?.(); }} />
           ) : null}
 
           {/* PLAN-GLIDE-PATH-001 — Lộ trình giảm rủi ro theo năm */}
           <PlanRoadmapSection
-            target={
-              settings.planTarget ?? {
-                targetUseDate: settings.endDate,
-                needFullAmount: true,
-              }
-            }
-            onTargetChange={(next) => patchSettings({ planTarget: next })}
+            target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
+            onChangeTarget={(next) => patchSettings({ planTarget: next })}
           />
 
           {auth.user?.id && (dead.length > 0 || deadSyncedMsg) ? (
@@ -814,15 +665,11 @@ export default function SettingsPage({
                 </div>
               </div>
               {dead.length > 0 ? (
-                <button
-                  type="button"
-                  className="settings-primary-action"
-                  disabled={deadRetrying}
+                <button type="button" className="settings-primary-action" disabled={deadRetrying}
                   onClick={async () => {
                     if (readOnly) { showBlocked(); return; }
                     if (!auth.user?.id) return;
-                    setDeadRetrying(true);
-                    setDeadSyncedMsg(false);
+                    setDeadRetrying(true); setDeadSyncedMsg(false);
                     try {
                       await reviveDeadOutbox();
                       await pushOutbox(auth.user.id);
@@ -832,11 +679,8 @@ export default function SettingsPage({
                         setDeadSyncedMsg(true);
                         window.setTimeout(() => setDeadSyncedMsg(false), 4000);
                       }
-                    } finally {
-                      setDeadRetrying(false);
-                    }
-                  }}
-                >
+                    } finally { setDeadRetrying(false); }
+                  }}>
                   {deadRetrying ? "Đang thử lại…" : "Thử lại đồng bộ"}
                 </button>
               ) : (
@@ -859,27 +703,17 @@ export default function SettingsPage({
             </button>
             <label className="group-action">
               <span><strong>Nhập file JSON</strong><small>Khôi phục từ một bản sao lưu JSON</small></span>
-              <input
-                type="file"
-                accept="application/json,.json"
-                hidden
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void doImport(file);
-                  event.target.value = "";
-                }}
-              />
+              <input type="file" accept="application/json,.json" hidden
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) void doImport(f); e.target.value = ""; }} />
             </label>
             <p className="settings-inline-status settings-import-warning" role="note">
-              ⚠️ Nhập một bản sao lưu sẽ <strong>ghi đè và thay thế toàn bộ dữ liệu đang có trên thiết bị này</strong>. Ứng dụng sẽ tự tải một bản sao lưu của dữ liệu hiện tại trước khi ghi đè để bạn có thể quay lại nếu cần.
+              ⚠️ Nhập một bản sao lưu sẽ{" "}
+              <strong>ghi đè và thay thế toàn bộ dữ liệu đang có trên thiết bị này</strong>.
+              {" "}Ụng dụng sẽ tự tải một bản sao lưu của dữ liệu hiện tại trước khi ghi đè để bạn có thể quay lại nếu cần.
             </p>
             {pendingFile ? (
-              <div
-                className="delete-confirm import-confirm"
-                role="alertdialog"
-                aria-modal="true"
-                aria-labelledby="import-confirm-title"
-              >
+              <div className="delete-confirm import-confirm" role="alertdialog" aria-modal="true"
+                aria-labelledby="import-confirm-title">
                 <p id="import-confirm-title"><strong>Thay dữ liệu trên thiết bị bằng file này?</strong></p>
                 <p className="import-confirm-file">
                   <span className="import-confirm-file-label">File đã chọn</span>
@@ -887,25 +721,15 @@ export default function SettingsPage({
                 </p>
                 <p>
                   Toàn bộ dữ liệu local hiện có trên iPhone sẽ được thay bằng nội dung file này.
-                  Ứng dụng sẽ tải một bản sao lưu trước khi tiếp tục. Thao tác này không tự ghi đè dữ liệu trong tài khoản.
+                  Ụng dụng sẽ tải một bản sao lưu trước khi tiếp tục. Thao tác này không tự ghi đè dữ liệu trong tài khoản.
                 </p>
                 <div className="delete-actions">
-                  <button
-                    type="button"
-                    className="danger"
-                    disabled={importing}
-                    onClick={() => void confirmImport()}
-                  >
+                  <button type="button" className="danger" disabled={importing}
+                    onClick={() => void confirmImport()}>
                     {importing ? "Đang nhập…" : "Xác nhận thay dữ liệu trên thiết bị"}
                   </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    disabled={importing}
-                    onClick={() => setPendingFile(null)}
-                  >
-                    Quay lại
-                  </button>
+                  <button type="button" className="secondary" disabled={importing}
+                    onClick={() => setPendingFile(null)}>Quay lại</button>
                 </div>
               </div>
             ) : null}
@@ -920,58 +744,32 @@ export default function SettingsPage({
           </section>
 
           <details className="settings-disclosure danger-disclosure" open={deleteStep > 0}>
-            <summary onClick={(event) => {
-              if (deleteStep > 0) event.preventDefault();
-            }}>
+            <summary onClick={(e) => { if (deleteStep > 0) e.preventDefault(); }}>
               <span>
                 <strong>Vùng nguy hiểm</strong>
                 <small>Xóa toàn bộ dữ liệu trên thiết bị này.</small>
               </span>
               {deleteStep === 0 ? (
-                <button
-                  type="button"
-                  className="danger-link"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    setDeleteStep(1);
-                  }}
-                >
-                  Mở
-                </button>
+                <button type="button" className="danger-link"
+                  onClick={(e) => { e.preventDefault(); setDeleteStep(1); }}>Mở</button>
               ) : null}
             </summary>
             {deleteStep > 0 ? (
               <div className="delete-confirm">
                 <p>Gõ <strong>XOA</strong> để xác nhận. Thao tác này không thể hoàn tác.</p>
-                <input
-                  value={deleteConfirm}
-                  onChange={(event) => setDeleteConfirm(event.target.value)}
-                  placeholder="XOA"
-                  autoCapitalize="characters"
-                />
+                <input value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder="XOA" autoCapitalize="characters" />
                 <div className="delete-actions">
-                  <button
-                    type="button"
-                    className="danger"
+                  <button type="button" className="danger"
                     disabled={deleteConfirm.trim().toUpperCase() !== "XOA"}
                     onClick={async () => {
                       if (readOnly) { showBlocked(); return; }
                       await clearAllData();
                       window.location.reload();
-                    }}
-                  >
-                    Xác nhận xóa
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => {
-                      setDeleteStep(0);
-                      setDeleteConfirm("");
-                    }}
-                  >
-                    Hủy
-                  </button>
+                    }}>Xác nhận xóa</button>
+                  <button type="button" className="secondary"
+                    onClick={() => { setDeleteStep(0); setDeleteConfirm(""); }}>Hủy</button>
                 </div>
               </div>
             ) : null}

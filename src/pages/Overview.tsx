@@ -82,9 +82,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       setQuotes(nextQuotes);
       setLoading(false);
     })();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [refreshKey]);
 
   const portfolioSnapshot = useMemo(
@@ -139,36 +137,30 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     ).insights;
   }, [portfolioSnapshot, transactions, settings]);
 
-  // ── Plan Phase (Glide Path) ──────────────────────────────────────────────
+  // ── Plan Phase (Glide Path) ────────────────────────────────────────────
+  // Card chỉ hiện khi user đã set planTarget rõ ràng (không fallback endDate)
   const planPhase = useMemo(() => {
     if (!settings) return null;
-    const effectiveTarget: PlanTarget = settings.planTarget ?? {
-      targetUseDate: settings.endDate,
-      needFullAmount: true,
-    };
-    return getPlanPhase(effectiveTarget);
+    return getPlanPhase(settings.planTarget ?? null);
   }, [settings]);
 
-  const planTargetDate =
-    settings?.planTarget?.targetUseDate ?? settings?.endDate ?? "";
+  const planTargetDate = settings?.planTarget?.targetUseDate ?? "";
 
   const showPlanCard =
-    planPhase != null && (planPhase.showReminder || planPhase.yearsLeft <= 6);
+    settings?.planTarget != null &&
+    planPhase != null &&
+    (planPhase.showReminder || planPhase.yearsLeft <= 6);
 
   const handleDismissGlideReminder = useCallback(async () => {
-    if (!settings) return;
-    const effectiveTarget: PlanTarget = settings.planTarget ?? {
-      targetUseDate: settings.endDate,
-      needFullAmount: true,
-    };
+    if (!settings || !settings.planTarget) return;
     const updated: PlanTarget = {
-      ...effectiveTarget,
+      ...settings.planTarget,
       lastGlideReminderYear: new Date().getFullYear(),
     };
     await saveSettings({ planTarget: updated });
     setSettings((prev) => (prev ? { ...prev, planTarget: updated } : prev));
   }, [settings]);
-  // ────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -302,6 +294,10 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       : vwcePriceSource === "legacy_quote"
         ? "Giá tương thích cũ"
         : "Chưa có giá";
+  void sourceLabel;
+  void allocationCopy;
+  void nearestTarget;
+  void pricesByIsin;
   const portfolioTraceModel = buildPortfolioTraceModel({
     totalValue: hero.assets,
     securities: securitiesKnown,

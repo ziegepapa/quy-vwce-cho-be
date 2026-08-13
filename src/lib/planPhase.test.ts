@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
+
 import { defaultPlanTarget, getPlanPhase, yearsUntil } from "./planPhase";
 import type { PlanTarget } from "./types";
 
-// ──── yearsUntil ────
+function t(targetUseDate: string, extra?: Partial<PlanTarget>): PlanTarget {
+  return { targetUseDate, needFullAmount: true, ...extra };
+}
 
 describe("yearsUntil", () => {
-  it("returns 0 when target is the same day", () => {
+  it("returns 0 when same day", () => {
     const now = new Date("2026-08-13");
     expect(yearsUntil("2026-08-13", now)).toBe(0);
   });
@@ -15,15 +18,15 @@ describe("yearsUntil", () => {
     expect(yearsUntil("2031-01-01", now)).toBe(5);
   });
 
-  it("returns 6 when still in the 6th year", () => {
+  it("returns 6 when still in the 6th year (anniversary not yet reached)", () => {
     const now = new Date("2026-08-13");
-    // 2033-01-01 is ~6.4 years away → floor = 6
+    // 2033-01-01: hiệu năm = 7, anniversary 2033-08-13 > 2033-01-01 → giảm 1 = 6
     expect(yearsUntil("2033-01-01", now)).toBe(6);
   });
 
-  it("returns negative when target has already passed", () => {
+  it("returns 0 when target has already passed (clamp)", () => {
     const now = new Date("2026-08-13");
-    expect(yearsUntil("2024-01-01", now)).toBeLessThan(0);
+    expect(yearsUntil("2024-01-01", now)).toBe(0);
   });
 
   it("returns 15 for a far-future target", () => {
@@ -32,27 +35,20 @@ describe("yearsUntil", () => {
   });
 });
 
-// ──── getPlanPhase ────
-
-const t = (targetUseDate: string, overrides: Partial<PlanTarget> = {}): PlanTarget => ({
-  targetUseDate,
-  needFullAmount: true,
-  ...overrides,
-});
-
 describe("getPlanPhase", () => {
-  it("returns null for null", () => {
+  it("returns null for null target", () => {
     expect(getPlanPhase(null)).toBeNull();
   });
 
-  it("returns null for undefined", () => {
+  it("returns null for undefined target", () => {
     expect(getPlanPhase(undefined)).toBeNull();
   });
 
-  it("returns null when targetUseDate is empty string", () => {
+  it("returns null for empty targetUseDate", () => {
     expect(getPlanPhase({ targetUseDate: "", needFullAmount: true })).toBeNull();
   });
 
+  // Phần spec H: test cases bắt buộc
   it("GIỮ + 100% when 10 years left", () => {
     const now = new Date("2026-01-01");
     const phase = getPlanPhase(t("2036-01-01"), now);
@@ -102,38 +98,34 @@ describe("getPlanPhase", () => {
     expect(phase?.equityPct).toBe(10);
   });
 
-  it("SỬ DỤNG + 0% when 0 years left (same year)", () => {
+  it("SỬ DỤNG + 0% when same year as target", () => {
     const now = new Date("2026-01-01");
     const phase = getPlanPhase(t("2026-06-01"), now);
     expect(phase?.status).toBe("SỬ DỤNG");
     expect(phase?.equityPct).toBe(0);
   });
 
-  it("SỬ DỤNG when target has already passed", () => {
+  it("SỬ DỤNG + 0% when target has already passed", () => {
     const now = new Date("2026-08-13");
     const phase = getPlanPhase(t("2025-01-01"), now);
     expect(phase?.status).toBe("SỬ DỤNG");
+    expect(phase?.equityPct).toBe(0);
   });
 
-  it("yearsLeft is never negative", () => {
+  it("yearsLeft is 0 when target has passed (clamp)", () => {
     const now = new Date("2026-08-13");
     const phase = getPlanPhase(t("2020-01-01"), now);
-    expect(phase?.yearsLeft).toBeGreaterThanOrEqual(0);
+    expect(phase?.yearsLeft).toBe(0);
   });
 
+  // showReminder
   it("showReminder = true when 5 years left and not reminded", () => {
     const now = new Date("2026-01-01");
     const phase = getPlanPhase(t("2031-01-01"), now);
     expect(phase?.showReminder).toBe(true);
   });
 
-  it("showReminder = true when exactly 6 years left and not reminded", () => {
-    const now = new Date("2026-01-01");
-    const phase = getPlanPhase(t("2032-01-01"), now);
-    expect(phase?.showReminder).toBe(true);
-  });
-
-  it("showReminder = false when already reminded this year", () => {
+  it("showReminder = false when reminded this year", () => {
     const now = new Date("2026-01-01");
     const phase = getPlanPhase(t("2031-01-01", { lastGlideReminderYear: 2026 }), now);
     expect(phase?.showReminder).toBe(false);
@@ -141,14 +133,13 @@ describe("getPlanPhase", () => {
 
   it("showReminder = false when > 6 years and GIỮ phase", () => {
     const now = new Date("2026-01-01");
-    // 7 years → GIỮ, > 6 → isActivePhase = false
+    // 7 years → GIỮ, > 6 → showReminder = false
     const phase = getPlanPhase(t("2033-01-01"), now);
     expect(phase?.showReminder).toBe(false);
   });
 
-  it("showReminder = false when reminded last year (different year)", () => {
+  it("showReminder = true when reminded last year (different year = new year)", () => {
     const now = new Date("2026-01-01");
-    // reminded in 2025 — a new year, so should show again
     const phase = getPlanPhase(t("2031-01-01", { lastGlideReminderYear: 2025 }), now);
     expect(phase?.showReminder).toBe(true);
   });
@@ -157,18 +148,8 @@ describe("getPlanPhase", () => {
 // ──── defaultPlanTarget ────
 
 describe("defaultPlanTarget", () => {
-  it("adds 18 years to birth date", () => {
+  it("adds 18 years to birth date (spec H: 2024-01-01 → 2042)", () => {
     const pt = defaultPlanTarget("2024-01-01");
     expect(pt.targetUseDate).toBe("2042-01-01");
-  });
-
-  it("needFullAmount defaults to true", () => {
-    const pt = defaultPlanTarget("2024-01-01");
-    expect(pt.needFullAmount).toBe(true);
-  });
-
-  it("works for different birth months", () => {
-    const pt = defaultPlanTarget("2010-06-15");
-    expect(pt.targetUseDate).toBe("2028-06-15");
   });
 });

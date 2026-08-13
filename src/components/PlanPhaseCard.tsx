@@ -14,6 +14,13 @@ const STATUS_ICON: Record<string, string> = {
   "SỬ DỤNG": "✅",
 };
 
+function formatDateVi(iso: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
 export default function PlanPhaseCard({
   phase,
   targetDate,
@@ -27,7 +34,7 @@ export default function PlanPhaseCard({
 }) {
   const color = STATUS_COLOR[phase.status] ?? { bg: "var(--surface-2,#f3f4f6)", fg: "inherit" };
   const icon = STATUS_ICON[phase.status] ?? "📋";
-  const targetYear = targetDate.slice(0, 4) || "—";
+  const dateLabel = formatDateVi(targetDate);
 
   return (
     <section
@@ -37,7 +44,7 @@ export default function PlanPhaseCard({
     >
       <div className="settings-card-head">
         <div style={{ flex: 1 }}>
-          <p className="settings-card-eyebrow">Kế hoạch theo năm (PLAN-GLIDE-PATH-001)</p>
+          <p className="settings-card-eyebrow">Lộ trình kế hoạch</p>
           <h3 style={{ margin: "4px 0 2px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span
               style={{
@@ -54,16 +61,16 @@ export default function PlanPhaseCard({
             </span>
             <span style={{ fontSize: 16, fontWeight: 600 }}>{phase.title}</span>
           </h3>
+          <p style={{ margin: "2px 0 0", fontSize: 13, color: "var(--text-muted,#6b7280)" }}>
+            Còn {phase.yearsLeft} năm · Đến {dateLabel}
+          </p>
         </div>
         <span className="settings-icon-bubble" aria-hidden style={{ fontSize: 24 }}>
           {icon}
         </span>
       </div>
 
-      <p style={{ margin: "0 0 8px", lineHeight: 1.5 }}>
-        {phase.yearsLeft > 0
-          ? `Còn khoảng ${phase.yearsLeft} năm đến mốc ${targetYear}.`
-          : `Đã đến hoặc qua mốc ${targetYear}.`}{" "}
+      <p style={{ margin: "8px 0 8px", lineHeight: 1.5 }}>
         {phase.summary}
       </p>
 
@@ -76,8 +83,7 @@ export default function PlanPhaseCard({
       </ul>
 
       <p className="muted" style={{ fontSize: 12, lineHeight: 1.4, marginBottom: 12 }}>
-        Đây là khung tham chiếu giáo dục, không phải lệnh giao dịch. Số % chỉ là gợi ý;
-        quyết định dựa trên số dư thực tế, nhu cầu gia đình và quy định thuế.
+        Đây là khung gợi ý theo số năm còn lại. Không phải lệnh giao dịch. Hãy kiểm tra số dư thật, phí và thuế trước khi chuyển tiền.
       </p>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
