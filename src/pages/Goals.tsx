@@ -34,18 +34,9 @@ function Ring({ pct, status }: { pct: number; status: string }) {
   return (
     <div className="progress-ring" aria-label={`${Math.round(pct)}%`}>
       <svg viewBox="0 0 36 36">
-        <path
-          className="ring-bg"
-          d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31"
-        />
-        <path
-          className={`ring-fg ${status}`}
-          strokeDasharray={`${shown}, 100`}
-          d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31"
-        />
-        <text x="18" y="20.5" textAnchor="middle" className="ring-text">
-          {Math.round(pct)}%
-        </text>
+        <path className="ring-bg" d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31" />
+        <path className={`ring-fg ${status}`} strokeDasharray={`${shown}, 100`} d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31" />
+        <text x="18" y="20.5" textAnchor="middle" className="ring-text">{Math.round(pct)}%</text>
       </svg>
     </div>
   );
@@ -53,20 +44,30 @@ function Ring({ pct, status }: { pct: number; status: string }) {
 
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Goal | null>(null);
   const [form, setForm] = useState(BLANK_FORM);
   const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   async function reload() {
-    setGoals(await listGoals());
+    try {
+      setGoals(await listGoals());
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => {
-    reload();
-  }, []);
+    setLoading(true);
+    setLoadError(false);
+    void reload();
+  }, [loadAttempt]);
 
-  // V9 B2: một đường vào duy nhất cho "thêm mới".
-  // Trước đây nút empty-state quên reset `edit` → lưu đè lên mục tiêu cũ.
   function openCreate() {
     if (readOnly) { showBlocked(); return; }
     setEdit(null);
@@ -74,10 +75,7 @@ export default function Goals() {
     setShow(true);
   }
 
-  // V9 B2: icon "+" trên top bar chỉ hiện khi dòng này chạy.
   useNavAction("addGoal", openCreate);
-
-  // V9 B2: new Date() mọi render làm useMemo bên dưới mất tác dụng.
   const today = useMemo(() => new Date(), []);
 
   const summary = useMemo(() => {
@@ -88,15 +86,11 @@ export default function Goals() {
     for (const g of goals) {
       const due = parseDate(g.dueDate);
       const years = Math.max(0, due.getFullYear() - g.baseYear);
-      const adj =
-        g.mode === "purchasing_power" ? inflate(g.amount, g.inflationRate, years) : g.amount;
+      const adj = g.mode === "purchasing_power" ? inflate(g.amount, g.inflationRate, years) : g.amount;
       need += adj;
       protectedSum += g.protectedAmount;
       const m = monthsBetween(today, due);
-      if (m >= 0 && m < nearestMonths) {
-        nearestMonths = m;
-        nearest = g;
-      }
+      if (m >= 0 && m < nearestMonths) { nearestMonths = m; nearest = g; }
     }
     const gap = Math.max(0, need - protectedSum);
     const monthsLeft = nearestMonths === Infinity ? 0 : nearestMonths;
@@ -144,47 +138,51 @@ export default function Goals() {
     setShow(true);
   }
 
-  const previewYears = Math.max(
-    0,
-    parseDate(form.dueDate).getFullYear() - (Number(form.baseYear) || 2026),
-  );
+  const previewYears = Math.max(0, parseDate(form.dueDate).getFullYear() - (Number(form.baseYear) || 2026));
   const previewAmount = parseDecimal(form.amount);
-  const previewAdj =
-    form.mode === "purchasing_power"
-      ? inflate(previewAmount, parseDecimal(form.inflationRate), previewYears)
-      : previewAmount;
+  const previewAdj = form.mode === "purchasing_power"
+    ? inflate(previewAmount, parseDecimal(form.inflationRate), previewYears)
+    : previewAmount;
+
+  if (loading) {
+    return (
+      <div className="empty card" role="status" aria-live="polite" aria-busy="true">
+        <p>Đang tải mục tiêu…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <section className="empty card" role="alert">
+        <h1 className="page-title">Không tải được Mục tiêu</h1>
+        <p>Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy thử tải lại.</p>
+        <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+          Thử lại
+        </button>
+      </section>
+    );
+  }
 
   return (
     <div>
-      {/* V9 B2: hàng FAB cũ đã xoá. Nút "+" giờ nằm trên top bar
-          qua useNavAction("addGoal") — tiết được ~56px ở đầu màn. */}
-
       <div className="goals-hero surface-raised">
         <Ring pct={summary.pct} status={summary.pct >= 80 ? "green" : summary.pct >= 40 ? "yellow" : "red"} />
         <div className="goals-hero-body">
           <div className="metric-label">Còn thiếu</div>
-          <div className="hero-money" style={{ color: "var(--text-primary)", fontSize: 28 }}>
-            {formatMoney(summary.gap)}
-          </div>
-          <p className="story-caption">
-            Cần bảo vệ {formatMoney(summary.need)} · Đã bảo vệ {formatMoney(summary.protectedSum)}
-          </p>
+          <div className="hero-money" style={{ color: "var(--text-primary)", fontSize: 28 }}>{formatMoney(summary.gap)}</div>
+          <p className="story-caption">Cần bảo vệ {formatMoney(summary.need)} · Đã bảo vệ {formatMoney(summary.protectedSum)}</p>
         </div>
       </div>
 
       {summary.count > 0 && summary.gap > 0 && summary.nearestMonths > 0 && (
-        <div className="story-banner">
-          Với nhịp hiện tại, cần thêm{" "}
-          <strong>{formatMoney(summary.perMonth)}/tháng</strong> để đạt cả {summary.count} mục tiêu.
-        </div>
+        <div className="story-banner">Với nhịp hiện tại, cần thêm <strong>{formatMoney(summary.perMonth)}/tháng</strong> để đạt cả {summary.count} mục tiêu.</div>
       )}
 
       {!goals.length && (
         <div className="empty card surface-raised">
           <p>Chưa có mục tiêu.</p>
-          <button type="button" onClick={openCreate}>
-            Thêm mục tiêu đầu tiên
-          </button>
+          <button type="button" onClick={openCreate}>Thêm mục tiêu đầu tiên</button>
         </div>
       )}
 
@@ -192,14 +190,9 @@ export default function Goals() {
         {goals.map((g) => {
           const due = parseDate(g.dueDate);
           const years = Math.max(0, due.getFullYear() - g.baseYear);
-          const adj =
-            g.mode === "purchasing_power" ? inflate(g.amount, g.inflationRate, years) : g.amount;
+          const adj = g.mode === "purchasing_power" ? inflate(g.amount, g.inflationRate, years) : g.amount;
           const months = monthsBetween(today, due);
-          const status = goalProgressStatus({
-            targetAdjusted: adj || 1,
-            protectedAmount: g.protectedAmount,
-            monthsRemaining: months,
-          });
+          const status = goalProgressStatus({ targetAdjusted: adj || 1, protectedAmount: g.protectedAmount, monthsRemaining: months });
           const pct = adj > 0 ? Math.min(100, (g.protectedAmount / adj) * 100) : 0;
           const gap = Math.max(0, adj - g.protectedAmount);
           const perMonth = months > 0 ? gap / months : gap;
@@ -213,58 +206,26 @@ export default function Goals() {
                     <Ring pct={pct} status={status} />
                     <div style={{ minWidth: 0 }}>
                       <strong style={{ fontSize: 16, fontWeight: 650 }}>{g.name}</strong>
-                      <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-                        {formatDateVN(g.dueDate)} · {months} tháng
-                      </div>
-                      <span className="urgency-chip" style={{ marginTop: 6 }}>
-                        {g.urgency === "hard" ? "Bắt buộc" : "Linh hoạt"}
-                      </span>
+                      <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{formatDateVN(g.dueDate)} · {months} tháng</div>
+                      <span className="urgency-chip" style={{ marginTop: 6 }}>{g.urgency === "hard" ? "Bắt buộc" : "Linh hoạt"}</span>
                     </div>
                   </div>
-                  <ActionMenu
-                    actions={[
-                      { label: "Sửa", onClick: () => openEdit(g) },
-                      {
-                        label: "Xóa",
-                        danger: true,
-                        onClick: async () => {
-                          if (readOnly) { showBlocked(); return; }
-                          if (confirm("Xóa mục tiêu này?")) {
-                            await deleteGoal(g.id);
-                            await reload();
-                          }
-                        },
-                      },
-                    ]}
-                  />
+                  <ActionMenu actions={[
+                    { label: "Sửa", onClick: () => openEdit(g) },
+                    { label: "Xóa", danger: true, onClick: async () => {
+                      if (readOnly) { showBlocked(); return; }
+                      if (confirm("Xóa mục tiêu này?")) { await deleteGoal(g.id); await reload(); }
+                    } },
+                  ]} />
                 </div>
 
                 <div style={{ marginTop: 12 }}>
-                  <span className="muted" style={{ fontSize: 15 }}>
-                    {formatMoney(g.amount)}
-                  </span>
-                  {g.mode === "purchasing_power" && g.amount > 0 && (
-                    <>
-                      <span className="muted"> → </span>
-                      <span className="metric-value money-md">{formatMoney(adj)}</span>
-                    </>
-                  )}
+                  <span className="muted" style={{ fontSize: 15 }}>{formatMoney(g.amount)}</span>
+                  {g.mode === "purchasing_power" && g.amount > 0 && <><span className="muted"> → </span><span className="metric-value money-md">{formatMoney(adj)}</span></>}
                 </div>
-
-                <div className="progress-track">
-                  <span style={{ width: `${pct}%` }} />
-                </div>
-
-                <div className="row-between" style={{ marginTop: 4 }}>
-                  <span className={`status-chip ${status}`}>{statusLabel(status)}</span>
-                </div>
-
-                {gap > 0 && months > 0 && (
-                  <p className="story-caption" style={{ marginTop: 8 }}>
-                    Cần bảo vệ thêm <strong style={{ fontWeight: 650 }}>{formatMoney(perMonth)}</strong>
-                    /tháng
-                  </p>
-                )}
+                <div className="progress-track"><span style={{ width: `${pct}%` }} /></div>
+                <div className="row-between" style={{ marginTop: 4 }}><span className={`status-chip ${status}`}>{statusLabel(status)}</span></div>
+                {gap > 0 && months > 0 && <p className="story-caption" style={{ marginTop: 8 }}>Cần bảo vệ thêm <strong style={{ fontWeight: 650 }}>{formatMoney(perMonth)}</strong>/tháng</p>}
               </div>
             </div>
           );
@@ -276,95 +237,18 @@ export default function Goals() {
           <div className="modal">
             <div className="sheet-handle" aria-hidden />
             <h2>{edit ? "Sửa mục tiêu" : "Thêm mục tiêu"}</h2>
-            <div className="field">
-              <label htmlFor="g-name">Tên</label>
-              <input
-                id="g-name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="g-due">Ngày cần tiền</label>
-              <input
-                id="g-due"
-                type="date"
-                value={form.dueDate}
-                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="g-amt">Số tiền (năm cơ sở)</label>
-              <input
-                id="g-amt"
-                inputMode="decimal"
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="g-mode">Chế độ</label>
-              <select
-                id="g-mode"
-                value={form.mode}
-                onChange={(e) => setForm({ ...form, mode: e.target.value as GoalMode })}
-              >
-                <option value="nominal">Danh nghĩa</option>
-                <option value="purchasing_power">Điều chỉnh lạm phát</option>
-              </select>
-            </div>
+            <div className="field"><label htmlFor="g-name">Tên</label><input id="g-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+            <div className="field"><label htmlFor="g-due">Ngày cần tiền</label><input id="g-due" type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
+            <div className="field"><label htmlFor="g-amt">Số tiền (năm cơ sở)</label><input id="g-amt" inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
+            <div className="field"><label htmlFor="g-mode">Chế độ</label><select id="g-mode" value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value as GoalMode })}><option value="nominal">Danh nghĩa</option><option value="purchasing_power">Điều chỉnh lạm phát</option></select></div>
             <div className="grid2">
-              <div className="field">
-                <label htmlFor="g-inf">Lạm phát</label>
-                <input
-                  id="g-inf"
-                  inputMode="decimal"
-                  value={form.inflationRate}
-                  onChange={(e) => setForm({ ...form, inflationRate: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="g-buf">Buffer</label>
-                <input
-                  id="g-buf"
-                  inputMode="decimal"
-                  value={form.bufferPct}
-                  onChange={(e) => setForm({ ...form, bufferPct: e.target.value })}
-                />
-              </div>
+              <div className="field"><label htmlFor="g-inf">Lạm phát</label><input id="g-inf" inputMode="decimal" value={form.inflationRate} onChange={(e) => setForm({ ...form, inflationRate: e.target.value })} /></div>
+              <div className="field"><label htmlFor="g-buf">Buffer</label><input id="g-buf" inputMode="decimal" value={form.bufferPct} onChange={(e) => setForm({ ...form, bufferPct: e.target.value })} /></div>
             </div>
-            <div className="field">
-              <label htmlFor="g-prot">Đã bảo vệ</label>
-              <input
-                id="g-prot"
-                inputMode="decimal"
-                value={form.protectedAmount}
-                onChange={(e) => setForm({ ...form, protectedAmount: e.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="g-urg">Mức độ</label>
-              <select
-                id="g-urg"
-                value={form.urgency}
-                onChange={(e) => setForm({ ...form, urgency: e.target.value as GoalUrgency })}
-              >
-                <option value="hard">Bắt buộc</option>
-                <option value="flexible">Linh hoạt</option>
-              </select>
-            </div>
-            <div className="banner info" style={{ marginBottom: 12 }}>
-              Preview: {formatMoney(previewAmount)}
-              {form.mode === "purchasing_power" && <> → {formatMoney(previewAdj)}</>}
-            </div>
-            <div className="stack">
-              <button type="button" onClick={save}>
-                Lưu
-              </button>
-              <button type="button" className="secondary" onClick={() => setShow(false)}>
-                Hủy
-              </button>
-            </div>
+            <div className="field"><label htmlFor="g-prot">Đã bảo vệ</label><input id="g-prot" inputMode="decimal" value={form.protectedAmount} onChange={(e) => setForm({ ...form, protectedAmount: e.target.value })} /></div>
+            <div className="field"><label htmlFor="g-urg">Mức độ</label><select id="g-urg" value={form.urgency} onChange={(e) => setForm({ ...form, urgency: e.target.value as GoalUrgency })}><option value="hard">Bắt buộc</option><option value="flexible">Linh hoạt</option></select></div>
+            <div className="banner info" style={{ marginBottom: 12 }}>Preview: {formatMoney(previewAmount)}{form.mode === "purchasing_power" && <> → {formatMoney(previewAdj)}</>}</div>
+            <div className="stack"><button type="button" onClick={save}>Lưu</button><button type="button" className="secondary" onClick={() => setShow(false)}>Hủy</button></div>
           </div>
         </div>
       )}

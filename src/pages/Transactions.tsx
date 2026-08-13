@@ -49,6 +49,9 @@ const emptyForm = () => ({
 
 export default function Transactions() {
   const [txs, setTxs] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [show, setShow] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [editId, setEditId] = useState<string | null>(null);
@@ -61,12 +64,21 @@ export default function Transactions() {
   const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   async function reload() {
-    setTxs(await listTransactions());
+    try {
+      setTxs(await listTransactions());
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
+    setLoading(true);
+    setLoadError(false);
     void reload();
-  }, []);
+  }, [loadAttempt]);
 
   const years = useMemo(() => {
     const values = new Set(txs.map((tx) => tx.date.slice(0, 4)));
@@ -83,6 +95,7 @@ export default function Transactions() {
       }),
     [txs, q, yearFilter, typeFilter],
   );
+  const filtersActive = yearFilter !== "all" || typeFilter !== "all" || Boolean(q);
 
   const amount = parseDecimal(form.amount);
   const unitPrice = parseDecimal(form.unitPrice);
@@ -193,6 +206,26 @@ export default function Transactions() {
     setShow(true);
   }
 
+  if (loading) {
+    return (
+      <div className="empty card" role="status" aria-live="polite" aria-busy="true">
+        <p>Đang tải giao dịch…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <section className="empty card" role="alert">
+        <h1 className="page-title">Không tải được Giao dịch</h1>
+        <p>Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy thử tải lại.</p>
+        <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+          Thử lại
+        </button>
+      </section>
+    );
+  }
+
   return (
     <div>
       <div className="row-between">
@@ -250,7 +283,7 @@ export default function Transactions() {
           </select>
         </div>
       </div>
-      {(yearFilter !== "all" || typeFilter !== "all" || q) && (
+      {filtersActive && (
         <button type="button" className="secondary" style={{ marginBottom: 12, width: "100%" }} onClick={() => {
           setYearFilter("all");
           setTypeFilter("all");
@@ -262,15 +295,21 @@ export default function Transactions() {
 
       {!filtered.length ? (
         <div className="empty card">
-          <p>Chưa có giao dịch.</p>
-          <button type="button" onClick={() => {
-            if (readOnly) { showBlocked(); return; }
-            setEditId(null);
-            setForm(emptyForm());
-            setShow(true);
-          }}>
-            Thêm giao dịch đầu tiên
-          </button>
+          {txs.length === 0 ? (
+            <>
+              <p>Chưa có giao dịch.</p>
+              <button type="button" onClick={() => {
+                if (readOnly) { showBlocked(); return; }
+                setEditId(null);
+                setForm(emptyForm());
+                setShow(true);
+              }}>
+                Thêm giao dịch đầu tiên
+              </button>
+            </>
+          ) : (
+            <p>Không có giao dịch khớp bộ lọc.</p>
+          )}
         </div>
       ) : (
         <div className="card" style={{ padding: "0.25rem 0.75rem" }}>
