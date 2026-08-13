@@ -1,18 +1,52 @@
 import type { PlanPhase, PlanStatus, PlanTarget } from "./types";
 
+type IsoCalendarDate = {
+  year: number;
+  month: number;
+  day: number;
+};
+
+function isLeapYear(year: number): boolean {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+function daysInMonth(year: number, month: number): number {
+  if (month === 2) return isLeapYear(year) ? 29 : 28;
+  if (month === 4 || month === 6 || month === 9 || month === 11) return 30;
+  return 31;
+}
+
+/** Strict YYYY-MM-DD parser that never passes through UTC Date parsing. */
+function parseIsoCalendarDate(value: string): IsoCalendarDate | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (year < 1 || month < 1 || month > 12) return null;
+  if (day < 1 || day > daysInMonth(year, month)) return null;
+  return { year, month, day };
+}
+
+export function planDateYear(targetIso: string): number | null {
+  return parseIsoCalendarDate(targetIso)?.year ?? null;
+}
+
 /**
- * Số năm còn lại đến targetIso tính từ now (floor, dùng phép trừ năm chính xác).
- * Trả về 0 nếu đã qua mốc (đã cắt — không âm).
+ * Số năm tròn còn lại đến targetIso theo ngày lịch local của người dùng.
+ * Trả về 0 nếu mốc đã qua hoặc targetIso/now không hợp lệ.
  */
 export function yearsUntil(targetIso: string, now: Date = new Date()): number {
-  const target = new Date(targetIso);
-  let years = target.getFullYear() - now.getFullYear();
-  const anniversary = new Date(
-    now.getFullYear() + years,
-    now.getMonth(),
-    now.getDate(),
-  );
-  if (anniversary > target) years -= 1;
+  const target = parseIsoCalendarDate(targetIso);
+  if (!target || !Number.isFinite(now.getTime())) return 0;
+
+  let years = target.year - now.getFullYear();
+  const nowMonth = now.getMonth() + 1;
+  const nowDay = now.getDate();
+  const targetBeforeAnniversary =
+    target.month < nowMonth ||
+    (target.month === nowMonth && target.day < nowDay);
+  if (targetBeforeAnniversary) years -= 1;
   return Math.max(years, 0);
 }
 
@@ -124,7 +158,7 @@ export function getPlanPhase(
   target: PlanTarget | null | undefined,
   now: Date = new Date(),
 ): PlanPhase | null {
-  if (!target?.targetUseDate) return null;
+  if (!target?.targetUseDate || !parseIsoCalendarDate(target.targetUseDate)) return null;
 
   const yearsLeft = yearsUntil(target.targetUseDate, now);
 
@@ -151,14 +185,18 @@ export function getPlanPhase(
 
 /**
  * Tạo PlanTarget mặc định từ ngày sinh bé (ISO date).
- * Ngày sử dụng = ngày sinh + 18 năm.
+ * Ngày sử dụng = ngày sinh + 18 năm, clamp 29/02 về 28/02 nếu cần.
  */
 export function defaultPlanTarget(birthDateIso: string): PlanTarget {
-  const birth = new Date(birthDateIso);
-  const target = new Date(birth);
-  target.setFullYear(birth.getFullYear() + 18);
+  const birth = parseIsoCalendarDate(birthDateIso);
+  if (!birth) throw new Error("Ngày sinh không hợp lệ");
+  const targetYear = birth.year + 18;
+  if (targetYear > 9999) throw new Error("Ngày sinh không hợp lệ");
+  const targetDay = Math.min(birth.day, daysInMonth(targetYear, birth.month));
+  const month = String(birth.month).padStart(2, "0");
+  const day = String(targetDay).padStart(2, "0");
   return {
-    targetUseDate: target.toISOString().slice(0, 10),
+    targetUseDate: `${String(targetYear).padStart(4, "0")}-${month}-${day}`,
     needFullAmount: true,
   };
 }
