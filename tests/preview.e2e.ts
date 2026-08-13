@@ -1,7 +1,8 @@
-import { devices, expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 const localOrigin = "http://127.0.0.1:4173";
 const appPath = "/quy-vwce-cho-be/";
+const iphone13Viewport = { width: 390, height: 844 };
 
 async function openPrivateVaultEntry(page: Page) {
   const response = await page.goto("./", { waitUntil: "domcontentloaded" });
@@ -83,12 +84,9 @@ test.describe("retained visual evidence", () => {
     await captureVisualEvidence(page, testInfo, "visual-evidence-auth-desktop.png");
   });
 
-  test.describe("iPhone 13", () => {
-    test.use({ ...devices["iPhone 13"] });
-
-    test("captures the iPhone authentication entry", async ({ page }, testInfo) => {
-      await captureVisualEvidence(page, testInfo, "visual-evidence-auth-iphone-13.png");
-    });
+  test("captures the iPhone 13 authentication entry", async ({ page }, testInfo) => {
+    await page.setViewportSize(iphone13Viewport);
+    await captureVisualEvidence(page, testInfo, "visual-evidence-auth-iphone-13.png");
   });
 });
 
