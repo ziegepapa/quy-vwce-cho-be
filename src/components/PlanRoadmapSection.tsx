@@ -9,9 +9,8 @@ function buildRoadmapRows(
   const rows: Array<{ year: number; phase: PlanPhase }> = [];
   const currentYear = now.getFullYear();
   const targetYear = new Date(target.targetUseDate).getFullYear();
-  // Hiển từ năm hiện tại đến targetYear + 1, tối đa 15 dòng
-  const endYear = Math.min(Math.max(targetYear + 1, currentYear + 3), currentYear + 15);
-  for (let year = currentYear; year <= endYear; year++) {
+  const endYear = Math.max(targetYear + 1, currentYear + 3);
+  for (let year = currentYear; year <= endYear && rows.length < 15; year++) {
     const fakeNow = new Date(year, 0, 1);
     const phase = getPlanPhase(target, fakeNow);
     if (!phase) continue;
@@ -43,17 +42,25 @@ export default function PlanRoadmapSection({
             — không phải lệnh giao dịch.
           </p>
         </div>
-        <span className="settings-icon-bubble" aria-hidden>
-          📅
-        </span>
+        <span className="settings-icon-bubble" aria-hidden>📅</span>
       </div>
 
-      <div className="settings-field-grid" style={{ marginBottom: 12 }}>
+      {currentPhase ? (
+        <p style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.5 }}>
+          Hiện tại: <strong>{currentPhase.status}</strong>{" "}
+          · Còn {currentPhase.yearsLeft} năm{" "}
+          · Mục tiêu cổ phiếu ~{currentPhase.equityPct}%
+        </p>
+      ) : null}
+
+      <div className="settings-field-grid" style={{ marginBottom: 16 }}>
         <label className="setting-field">
           <span>Ngày cần tiền (mốc sử dụng)</span>
           <input
             type="date"
             value={target.targetUseDate}
+            min="2020-01-01"
+            max="2100-12-31"
             onChange={(e) =>
               onChangeTarget({ ...target, targetUseDate: e.target.value })
             }
@@ -61,8 +68,8 @@ export default function PlanRoadmapSection({
         </label>
       </div>
 
-      <label className="switch-row" style={{ marginBottom: 16 }}>
-        <span>Cần gần như toàn bộ số tiền</span>
+      <label className="switch-row" style={{ marginBottom: 20 }}>
+        <span>Cần gần như toàn bộ số tiền ở mốc này</span>
         <input
           type="checkbox"
           className="ios-switch"
@@ -73,13 +80,6 @@ export default function PlanRoadmapSection({
         />
       </label>
 
-      {currentPhase ? (
-        <p style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.5 }}>
-          Hiện tại:{" "}
-          <strong>{currentPhase.status}</strong> · Còn {currentPhase.yearsLeft} năm · Mục tiêu cổ phiếu ~{currentPhase.equityPct}%
-        </p>
-      ) : null}
-
       <div style={{ overflowX: "auto" }}>
         <table
           style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}
@@ -87,7 +87,7 @@ export default function PlanRoadmapSection({
         >
           <thead>
             <tr>
-              {(["Năm", "Còn", "Trạng thái", "% CP"] as const).map((h) => (
+              {(["Năm", "Còn lại", "Trạng thái", "% CK"] as const).map((h) => (
                 <th
                   key={h}
                   style={{
@@ -111,47 +111,20 @@ export default function PlanRoadmapSection({
                 <tr
                   key={year}
                   style={{
-                    background: isCurrent
-                      ? "var(--surface-1,#f9fafb)"
-                      : undefined,
+                    background: isCurrent ? "var(--surface-1,#f9fafb)" : undefined,
                     fontWeight: isCurrent ? 600 : undefined,
                   }}
                 >
-                  <td
-                    style={{
-                      padding: "6px 8px 6px 0",
-                      borderBottom: bdStyle,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <td style={{ padding: "6px 8px 6px 0", borderBottom: bdStyle, whiteSpace: "nowrap" }}>
                     {year}{isCurrent ? " ◄" : ""}
                   </td>
-                  <td
-                    style={{
-                      textAlign: "center",
-                      padding: "6px 8px",
-                      borderBottom: bdStyle,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <td style={{ textAlign: "center", padding: "6px 8px", borderBottom: bdStyle, whiteSpace: "nowrap" }}>
                     {phase.yearsLeft > 0 ? `${phase.yearsLeft} năm` : "—"}
                   </td>
-                  <td
-                    style={{
-                      textAlign: "center",
-                      padding: "6px 8px",
-                      borderBottom: bdStyle,
-                    }}
-                  >
+                  <td style={{ textAlign: "center", padding: "6px 8px", borderBottom: bdStyle }}>
                     {phase.status}
                   </td>
-                  <td
-                    style={{
-                      textAlign: "center",
-                      padding: "6px 8px",
-                      borderBottom: bdStyle,
-                    }}
-                  >
+                  <td style={{ textAlign: "center", padding: "6px 8px", borderBottom: bdStyle }}>
                     {phase.equityPct}%
                   </td>
                 </tr>
@@ -162,8 +135,8 @@ export default function PlanRoadmapSection({
       </div>
 
       <p className="muted" style={{ fontSize: 12, marginTop: 12, lineHeight: 1.45 }}>
-        Số % chỉ là khung tham chiếu. Khi còn ≤ 5 năm, hãy tính lại theo giá trị thực tế
-        trong app và nhu cầu thật của gia đình.
+        Đây là khung gợi ý theo số năm còn lại. Không phải lệnh giao dịch.
+        Hãy kiểm tra số dư thật, phí và thuế trước khi chuyển tiền.
       </p>
     </section>
   );
