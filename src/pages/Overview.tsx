@@ -152,7 +152,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     (planPhase.showReminder || planPhase.yearsLeft <= 6);
 
   const handleDismissGlideReminder = useCallback(async () => {
-    if (!settings?.planTarget) return;
+    if (!settings || !settings.planTarget) return;
     const updated: PlanTarget = {
       ...settings.planTarget,
       lastGlideReminderYear: new Date().getFullYear(),
@@ -294,6 +294,10 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       : vwcePriceSource === "legacy_quote"
         ? "Giá tương thích cũ"
         : "Chưa có giá";
+  void sourceLabel;
+  void allocationCopy;
+  void nearestTarget;
+  void pricesByIsin;
   const portfolioTraceModel = buildPortfolioTraceModel({
     totalValue: hero.assets,
     securities: securitiesKnown,
