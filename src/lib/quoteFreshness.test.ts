@@ -90,6 +90,19 @@ describe("feed freshness", () => {
     expect(freshness.summary).toContain("tương lai");
   });
 
+  it("fails closed when the caller clock is invalid", () => {
+    const freshness = buildFeedFreshness({
+      asOf: sessionDaysAgo(1),
+      fetchedAt: isoBefore(60_000),
+      now: new Date(Number.NaN),
+    });
+    expect(freshness.level).toBe("unknown");
+    expect(freshness.ageDays).toBeNull();
+    expect(freshness.fetchedAgeLabel).toBeNull();
+    expect(freshness.summary).toBe("không đọc được thời điểm hiện tại");
+    expect(JSON.stringify(freshness)).not.toContain("NaN");
+  });
+
   it("measures the bot fetch in the coarsest honest unit", () => {
     expect(describeFetchAge(isoBefore(30_000), NOW)).toBe("vừa xong");
     expect(describeFetchAge(isoBefore(9 * 60_000), NOW)).toBe("9 phút trước");
@@ -97,6 +110,7 @@ describe("feed freshness", () => {
     expect(describeFetchAge(isoBefore(50 * 60 * 60_000), NOW)).toBe("2 ngày trước");
     expect(describeFetchAge(new Date(NOW.getTime() + 60_000).toISOString(), NOW)).toBeNull();
     expect(describeFetchAge("not a date", NOW)).toBeNull();
+    expect(describeFetchAge(isoBefore(60_000), new Date(Number.NaN))).toBeNull();
   });
 });
 
@@ -143,6 +157,49 @@ describe("refresh result wording", () => {
     expect(message).toContain(`đã quá ${STALE_DAYS} ngày`);
   });
 
+  it("adds the retained stale-auto warning when refresh is offline", () => {
+    const staleAsOf = sessionDaysAgo(STALE_DAYS + 1);
+    const described = describeRefreshResult(
+      ingested({
+        status: "offline",
+        unchanged: 0,
+        totalRows: 0,
+        acceptedRows: 0,
+        feedGeneratedAt: undefined,
+        newestAsOf: undefined,
+        newestFetchedAt: undefined,
+      }),
+      {
+        now: NOW,
+        retainedAutoQuotes: [{ asOf: staleAsOf, fetchedAt: isoBefore(DAY_MS_FOR_TEST) }],
+      },
+    );
+    expect(described.level).toBe("stale");
+    expect(described.message).toBe(
+      `Đang offline — giá đã lưu trên máy vẫn được giữ nguyên. Giá tự động đang dùng là phiên ${formatSessionDate(staleAsOf)}, đã quá ${STALE_DAYS} ngày.`,
+    );
+    expect(described.freshness?.level).toBe("stale");
+  });
+
+  it("does not call a retained fresh auto quote stale while offline", () => {
+    const described = describeRefreshResult(
+      ingested({ status: "offline", unchanged: 0, totalRows: 0, acceptedRows: 0 }),
+      { now: NOW, retainedAutoQuotes: [{ asOf: sessionDaysAgo(1) }] },
+    );
+    expect(described.level).toBe("unknown");
+    expect(described.message).toBe("Đang offline — giá đã lưu trên máy vẫn được giữ nguyên.");
+  });
+
+  it("names an unreadable retained auto session instead of guessing", () => {
+    const described = describeRefreshResult(
+      ingested({ status: "error", errors: ["network down"], unchanged: 0 }),
+      { now: NOW, retainedAutoQuotes: [{ asOf: "not-a-date" }] },
+    );
+    expect(described.level).toBe("unknown");
+    expect(described.message).toContain("Không xác minh được ngày phiên");
+    expect(described.freshness?.level).toBe("unknown");
+  });
+
   it("counts only what it actually wrote", () => {
     const { message } = describeRefreshResult(
       ingested({ updated: 2, unchanged: 0, totalRows: 2, acceptedRows: 2 }),
@@ -161,7 +218,7 @@ describe("refresh result wording", () => {
     expect(message).toContain("1 mã giữ nguyên");
   });
 
-  it("keeps the offline and failure sentences unchanged", () => {
+  it("keeps the offline and failure sentences unchanged without retained quotes", () => {
     const offline = describeRefreshResult(
       ingested({
         status: "offline",
@@ -208,3 +265,5 @@ describe("refresh result wording", () => {
     expect(message).toContain("không đọc được ngày phiên");
   });
 });
+
+const DAY_MS_FOR_TEST = 24 * 60 * 60 * 1000;

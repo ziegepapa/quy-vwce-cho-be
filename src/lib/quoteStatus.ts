@@ -24,7 +24,7 @@ export type QuoteSelectionState = {
   manual?: QuoteCandidate;
   autoStatus: CandidateStatus;
   manualStatus: CandidateStatus;
-  /** True only when the effective row itself is a stale auto candidate. */
+  /** True only when the effective row itself is a stale auto quote. */
   isStale: boolean;
 };
 
@@ -87,6 +87,7 @@ export async function listQuoteSelectionStates(options?: {
       const effective = quotesByKey.get(key);
       const autoStatus = classifyCandidate(auto, nowDate);
       const manualStatus = classifyCandidate(manual, nowDate);
+      const effectiveStatus = classifyCandidate(effective, nowDate);
       return {
         key,
         instrumentIsin,
@@ -98,7 +99,7 @@ export async function listQuoteSelectionStates(options?: {
         manual,
         autoStatus,
         manualStatus,
-        isStale: effective?.source === "auto" && autoStatus === "valid-stale",
+        isStale: effective?.source === "auto" && effectiveStatus === "valid-stale",
       };
     });
 }

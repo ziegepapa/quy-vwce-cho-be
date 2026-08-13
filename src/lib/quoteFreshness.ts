@@ -24,6 +24,11 @@ export type FeedFreshnessInput = {
   now?: Date;
 };
 
+export type RetainedAutoQuoteInput = {
+  asOf?: string | null;
+  fetchedAt?: string | null;
+};
+
 export type FeedFreshness = {
   level: FeedFreshnessLevel;
   /** Calendar days between the session and today; null when it cannot be read. */
@@ -39,6 +44,12 @@ export type RefreshDescription = {
   message: string;
   level: FeedFreshnessLevel;
   freshness: FeedFreshness | null;
+};
+
+export type RefreshDescriptionOptions = {
+  now?: Date;
+  /** Auto quotes that remain effective when the network refresh cannot run. */
+  retainedAutoQuotes?: RetainedAutoQuoteInput[];
 };
 
 const MINUTE_MS = 60_000;
@@ -61,7 +72,7 @@ export function describeDayAge(days: number): string {
 /** Latency from the bot fetch to now, in the coarsest unit that stays honest. */
 export function describeFetchAge(fetchedAt: string, now: Date): string | null {
   const parsed = Date.parse(fetchedAt);
-  if (!Number.isFinite(parsed)) return null;
+  if (!Number.isFinite(parsed) || !Number.isFinite(now.getTime())) return null;
   const elapsed = now.getTime() - parsed;
   if (elapsed < 0) return null;
   if (elapsed < MINUTE_MS) return "vừa xong";
@@ -103,6 +114,17 @@ export function buildFeedFreshness(input: FeedFreshnessInput = {}): FeedFreshnes
   const fetchedAgeLabel = rawFetchedAt ? describeFetchAge(rawFetchedAt, now) : null;
   const fetchedAtLabel = rawFetchedAt ? formatBotTimestamp(rawFetchedAt) : null;
 
+  if (!Number.isFinite(now.getTime())) {
+    return {
+      level: "unknown",
+      ageDays: null,
+      sessionLabel: isValidAsOfDate(asOf) ? formatSessionDate(asOf) : null,
+      fetchedAgeLabel: null,
+      fetchedAtLabel,
+      summary: "không đọc được thời điểm hiện tại",
+    };
+  }
+
   if (!isValidAsOfDate(asOf)) {
     return {
       level: "unknown",
@@ -143,31 +165,78 @@ export function buildFeedFreshness(input: FeedFreshnessInput = {}): FeedFreshnes
   };
 }
 
+type RetainedAutoQuoteDescription = {
+  level: "stale" | "unknown" | null;
+  freshness: FeedFreshness | null;
+  suffix: string;
+};
+
+function describeRetainedAutoQuotes(
+  quotes: RetainedAutoQuoteInput[] | undefined,
+  now: Date,
+): RetainedAutoQuoteDescription {
+  const freshnesses = (quotes ?? []).map((quote) =>
+    buildFeedFreshness({ asOf: quote.asOf, fetchedAt: quote.fetchedAt, now }),
+  );
+  if (freshnesses.length === 0) {
+    return { level: null, freshness: null, suffix: "" };
+  }
+
+  const stale = freshnesses.filter((freshness) => freshness.level === "stale");
+  const unknown = freshnesses.filter((freshness) => freshness.level === "unknown");
+  const warnings: string[] = [];
+
+  if (stale.length === 1) {
+    const session = stale[0].sessionLabel;
+    warnings.push(
+      session
+        ? `Giá tự động đang dùng là phiên ${session}, đã quá ${STALE_DAYS} ngày.`
+        : `Giá tự động đang dùng đã quá ${STALE_DAYS} ngày.`,
+    );
+  } else if (stale.length > 1) {
+    warnings.push(`${stale.length} giá tự động đang dùng đã quá ${STALE_DAYS} ngày.`);
+  }
+
+  if (unknown.length === 1) {
+    warnings.push("Không xác minh được ngày phiên của giá tự động đang dùng.");
+  } else if (unknown.length > 1) {
+    warnings.push(`Không xác minh được ngày phiên của ${unknown.length} giá tự động đang dùng.`);
+  }
+
+  return {
+    level: stale.length > 0 ? "stale" : unknown.length > 0 ? "unknown" : null,
+    freshness: stale[0] ?? unknown[0] ?? freshnesses[0] ?? null,
+    suffix: warnings.length > 0 ? ` ${warnings.join(" ")}` : "",
+  };
+}
+
 /**
- * One sentence for the refresh button. The offline and failure wording is kept
- * exactly as it was: those two already told the truth.
+ * One sentence for the refresh button. A failed network request keeps the
+ * locally stored quote, but now also names when that retained auto quote is
+ * stale or has an unreadable session date.
  */
 export function describeRefreshResult(
   result: QuoteFeedIngestResult,
-  options: { now?: Date } = {},
+  options: RefreshDescriptionOptions = {},
 ): RefreshDescription {
   const now = options.now ?? new Date();
+  const retained = describeRetainedAutoQuotes(options.retainedAutoQuotes, now);
 
   if (result.status === "offline") {
     return {
-      message: "Đang offline — giá đã lưu trên máy vẫn được giữ nguyên.",
-      level: "unknown",
-      freshness: null,
+      message: `Đang offline — giá đã lưu trên máy vẫn được giữ nguyên.${retained.suffix}`,
+      level: retained.level ?? "unknown",
+      freshness: retained.freshness,
     };
   }
   if (result.status === "error") {
     const reason = result.errors[0];
     return {
       message: `Chưa cập nhật được. Giá đang dùng không bị thay đổi${
-        reason ? `: ${reason}` : "."
-      }`,
-      level: "unknown",
-      freshness: null,
+        reason ? `: ${reason}.` : "."
+      }${retained.suffix}`,
+      level: retained.level ?? "unknown",
+      freshness: retained.freshness,
     };
   }
 

@@ -1,12 +1,44 @@
 import { useState } from "react";
-import { ingestQuotesFeed } from "../lib/db";
+import { ingestQuotesFeed, listQuoteSelectionStates } from "../lib/db";
 import { describeRefreshResult } from "../lib/quoteFreshness";
-import type { FeedFreshnessLevel } from "../lib/quoteFreshness";
+import type {
+  FeedFreshnessLevel,
+  RetainedAutoQuoteInput,
+} from "../lib/quoteFreshness";
+import type { QuoteFeedIngestResult } from "../lib/quoteFeed";
 
 type RefreshStatus = {
   message: string;
   level: FeedFreshnessLevel;
 };
+
+async function readRetainedAutoQuotes(): Promise<RetainedAutoQuoteInput[]> {
+  try {
+    const states = await listQuoteSelectionStates();
+    return states.flatMap((state) => {
+      const effective = state.effective;
+      return effective?.source === "auto"
+        ? [{ asOf: effective.asOf, fetchedAt: effective.fetchedAt }]
+        : [];
+    });
+  } catch {
+    // Freshness diagnostics must never block the refresh itself.
+    return [];
+  }
+}
+
+function failedResult(error: unknown): QuoteFeedIngestResult {
+  return {
+    status: "error",
+    url: "/data/quotes.json",
+    totalRows: 0,
+    acceptedRows: 0,
+    updated: 0,
+    unchanged: 0,
+    skipped: [],
+    errors: [error instanceof Error ? error.message : String(error)],
+  };
+}
 
 export default function QuoteFeedRefresh({
   onUpdated,
@@ -20,20 +52,17 @@ export default function QuoteFeedRefresh({
     if (refreshing) return;
     setRefreshing(true);
     setStatus(null);
+    const retainedAutoQuotes = await readRetainedAutoQuotes();
     try {
       const result = await ingestQuotesFeed();
-      const described = describeRefreshResult(result);
+      const described = describeRefreshResult(result, { retainedAutoQuotes });
       setStatus({ message: described.message, level: described.level });
       if (result.status === "ok" || result.status === "partial") {
         await onUpdated?.();
       }
     } catch (error) {
-      setStatus({
-        level: "unknown",
-        message: `Chưa cập nhật được. Giá đang dùng không bị thay đổi: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      });
+      const described = describeRefreshResult(failedResult(error), { retainedAutoQuotes });
+      setStatus({ message: described.message, level: described.level });
     } finally {
       setRefreshing(false);
     }

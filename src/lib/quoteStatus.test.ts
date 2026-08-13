@@ -38,6 +38,24 @@ describe("quote selection UI state", () => {
     expect(state.isStale).toBe(false);
   });
 
+  it("marks a retained stale auto effective when no manual fallback exists", async () => {
+    await putAutoCandidateAndResolve(
+      {
+        instrumentIsin: VWCE_ISIN,
+        currency: "EUR",
+        venue: "XETRA",
+        price: 160,
+        asOf: "2026-07-01",
+      },
+      { nowDate: "2026-08-04" },
+    );
+
+    const state = (await listQuoteSelectionStates({ nowDate: "2026-08-04" }))[0];
+    expect(state.autoStatus).toBe("valid-stale");
+    expect(state.effective?.source).toBe("auto");
+    expect(state.isStale).toBe(true);
+  });
+
   it("shows stale auto with deterministic manual fallback", async () => {
     await putAutoCandidateAndResolve(
       {
