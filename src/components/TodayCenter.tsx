@@ -8,8 +8,7 @@ import { buildPulseDisplay } from "../lib/overviewNumbers";
 import type { NhipInsight, NhipInsightKind } from "../lib/nhipInsights";
 import {
   portfolioPulseDelta,
-  readPortfolioPulse,
-  recordPortfolioPulse,
+  recordEligiblePortfolioPulse,
   type PortfolioPulseState,
 } from "../lib/todayCenter";
 import type { TodayCenterPriceSource } from "../lib/todayCenterAdapter";
@@ -26,6 +25,8 @@ type Props = {
   totalValue: number;
   totalQuantity: number;
   valueComplete: boolean;
+  pulseEligible: boolean;
+  stalePriceIsins: string[];
   vwcePrice: number;
   vwcePriceSource?: TodayCenterPriceSource;
   settings: AppSettings;
@@ -54,6 +55,8 @@ export default function TodayCenter({
   totalValue,
   totalQuantity,
   valueComplete,
+  pulseEligible,
+  stalePriceIsins,
   transactions,
   insights = [],
 }: Props) {
@@ -61,17 +64,17 @@ export default function TodayCenter({
   const ownerKey = auth.user?.id ?? "local";
   const [pulse, setPulse] = useState<PortfolioPulseState | null>(null);
   const [traceOpen, setTraceOpen] = useState(false);
+  const hasStalePrices = stalePriceIsins.length > 0;
+  const valuationReliable = valueComplete && pulseEligible && !hasStalePrices;
 
   useEffect(() => {
-    const current = valueComplete
-      ? recordPortfolioPulse(ownerKey, {
-          capturedAt: new Date().toISOString(),
-          totalValue,
-          totalQuantity,
-        })
-      : readPortfolioPulse(ownerKey);
+    const current = recordEligiblePortfolioPulse(ownerKey, {
+      capturedAt: new Date().toISOString(),
+      totalValue,
+      totalQuantity,
+    }, valuationReliable);
     setPulse(current);
-  }, [ownerKey, totalQuantity, totalValue, valueComplete]);
+  }, [ownerKey, totalQuantity, totalValue, valuationReliable]);
 
   const visibleInsights = useMemo(
     () => insights.filter((insight) => !HERO_OWNED_KINDS.has(insight.kind)),
@@ -84,16 +87,20 @@ export default function TodayCenter({
     [delta, pulse],
   );
   const pulseChanged = Boolean(
-    delta && (Math.abs(delta.value) > 0.005 || Math.abs(delta.quantity) > 0.000001),
+    valuationReliable
+    && delta
+    && (Math.abs(delta.value) > 0.005 || Math.abs(delta.quantity) > 0.000001),
   );
-  const showPulseSignal = !valueComplete || delta === null || pulseChanged;
+  const showPulseSignal = !valuationReliable || delta === null || pulseChanged;
   const showNhipSection = showNhipCopy || showPulseSignal;
 
   const deltaValue = !valueComplete
     ? "Đang chờ đủ giá"
-    : delta
-      ? signedMoney(delta.value)
-      : "Mốc đầu tiên";
+    : hasStalePrices
+      ? "Đang chờ giá mới"
+      : delta
+        ? signedMoney(delta.value)
+        : "Mốc đầu tiên";
   const deltaPercent =
     pulseDisplay.showPercent && pulseDisplay.percent !== null
       ? `${pulseDisplay.percent >= 0 ? "+" : ""}${pulseDisplay.percent.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`
@@ -106,12 +113,14 @@ export default function TodayCenter({
       : "số lượng không đổi";
   const deltaCaption = !valueComplete
     ? "Không ghi mốc khi còn thiếu giá."
-    : delta
-      ? `${deltaPercent} · ${deltaQuantity}`
-      : "Lần mở tiếp theo sẽ hiện thay đổi.";
+    : hasStalePrices
+      ? `Không ghi mốc khi ${stalePriceIsins.length} mã đang dùng giá cũ.`
+      : delta
+        ? `${deltaPercent} · ${deltaQuantity}`
+        : "Lần mở tiếp theo sẽ hiện thay đổi.";
 
   const pulseTraceModel = buildPulseTraceModel({
-    valueComplete,
+    valueComplete: valuationReliable,
     totalValue,
     totalQuantity,
     delta,
@@ -151,7 +160,7 @@ export default function TodayCenter({
                 aria-label={`Thay đổi từ lần mở trước: ${deltaValue}. Xem nguồn dữ liệu`}
               >
                 <span
-                  className={`nhip-meta-value ${valueComplete && delta ? metricTone(delta.value) : "neutral"}`}
+                  className={`nhip-meta-value ${valuationReliable && delta ? metricTone(delta.value) : "neutral"}`}
                 >
                   {deltaValue}
                 </span>

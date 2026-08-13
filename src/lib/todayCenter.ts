@@ -192,6 +192,21 @@ export function recordPortfolioPulse(
   return next;
 }
 
+/**
+ * Records only a reliable valuation. Missing or stale prices preserve the last
+ * trusted local baseline and can never create a misleading visit-to-visit delta.
+ */
+export function recordEligiblePortfolioPulse(
+  ownerKey: string,
+  sample: PortfolioPulseSample,
+  eligible: boolean,
+  visitId = RUNTIME_VISIT_ID,
+): PortfolioPulseState | null {
+  return eligible
+    ? recordPortfolioPulse(ownerKey, sample, visitId)
+    : readPortfolioPulse(ownerKey);
+}
+
 export function markRestoreCompleted(
   ownerKey: string,
   completedAt = new Date().toISOString(),

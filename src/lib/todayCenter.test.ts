@@ -5,6 +5,7 @@ import {
   portfolioPulseDelta,
   readPortfolioPulse,
   readRestoreCompleted,
+  recordEligiblePortfolioPulse,
   recordPortfolioPulse,
   type PortfolioPulseSample,
 } from "./todayCenter";
@@ -123,6 +124,47 @@ describe("portfolio pulse", () => {
     expect(later.previous?.totalValue).toBe(1_020);
     expect(delta?.value).toBe(100);
     expect(delta?.valuePct).toBeCloseTo((100 / 1_020) * 100);
+  });
+
+  it("preserves the last trusted baseline while stale or missing prices are present", () => {
+    const first = recordEligiblePortfolioPulse(
+      "owner-a",
+      sample("2026-08-05T08:00:00.000Z", 1_000, 5),
+      true,
+      "visit-a",
+    );
+    const blocked = recordEligiblePortfolioPulse(
+      "owner-a",
+      sample("2026-08-06T08:00:00.000Z", 9_999, 8),
+      false,
+      "visit-stale",
+    );
+
+    expect(blocked).toEqual(first);
+    expect(readPortfolioPulse("owner-a")?.current).toMatchObject({
+      totalValue: 1_000,
+      totalQuantity: 5,
+      visitId: "visit-a",
+    });
+
+    const nextReliable = recordEligiblePortfolioPulse(
+      "owner-a",
+      sample("2026-08-07T08:00:00.000Z", 1_100, 5.5),
+      true,
+      "visit-b",
+    );
+    expect(nextReliable?.previous?.totalValue).toBe(1_000);
+    expect(portfolioPulseDelta(nextReliable)?.value).toBe(100);
+  });
+
+  it("does not create a baseline when the first observed valuation is ineligible", () => {
+    expect(recordEligiblePortfolioPulse(
+      "owner-a",
+      sample("2026-08-05T08:00:00.000Z", 999, 5),
+      false,
+      "visit-stale",
+    )).toBeNull();
+    expect(readPortfolioPulse("owner-a")).toBeNull();
   });
 
   it("normalizes invalid numeric values instead of storing NaN", () => {
