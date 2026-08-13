@@ -57,6 +57,8 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [detailOpen, setDetailOpen] = useState(false);
   const [moreActions, setMoreActions] = useState(false);
   const [traceOpen, setTraceOpen] = useState(false);
@@ -65,25 +67,32 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setLoadError(false);
     void (async () => {
-      const [nextSettings, nextGoals, nextTransactions, nextInstruments, nextQuotes] =
-        await Promise.all([
-          getSettings(),
-          listGoals(),
-          listTransactions(),
-          listInstruments(),
-          listQuotes(),
-        ]);
-      if (!active) return;
-      setSettings(nextSettings);
-      setGoals(nextGoals);
-      setTransactions(nextTransactions);
-      setInstruments(nextInstruments);
-      setQuotes(nextQuotes);
-      setLoading(false);
+      try {
+        const [nextSettings, nextGoals, nextTransactions, nextInstruments, nextQuotes] =
+          await Promise.all([
+            getSettings(),
+            listGoals(),
+            listTransactions(),
+            listInstruments(),
+            listQuotes(),
+          ]);
+        if (!active) return;
+        setSettings(nextSettings);
+        setGoals(nextGoals);
+        setTransactions(nextTransactions);
+        setInstruments(nextInstruments);
+        setQuotes(nextQuotes);
+        setLoading(false);
+      } catch {
+        if (!active) return;
+        setLoadError(true);
+        setLoading(false);
+      }
     })();
     return () => { active = false; };
-  }, [refreshKey]);
+  }, [refreshKey, loadAttempt]);
 
   const portfolioSnapshot = useMemo(
     () => buildTodayCenterPortfolioSnapshot({
@@ -137,8 +146,6 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     ).insights;
   }, [portfolioSnapshot, transactions, settings]);
 
-  // ── Plan Phase (Glide Path) ────────────────────────────────────────────
-  // Card chỉ hiện khi user đã set planTarget rõ ràng (không fallback endDate)
   const planPhase = useMemo(() => {
     if (!settings) return null;
     return getPlanPhase(settings.planTarget ?? null);
@@ -160,13 +167,27 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     await saveSettings({ planTarget: updated });
     setSettings((prev) => (prev ? { ...prev, planTarget: updated } : prev));
   }, [settings]);
-  // ──────────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <div className="ov">
+      <div className="ov" role="status" aria-live="polite" aria-busy="true">
+        <p className="sr-only">Đang tải dữ liệu Tổng quan…</p>
         <div className="skeleton" style={{ height: 176, borderRadius: 22 }} />
         <div className="skeleton" style={{ height: 360, borderRadius: 24, marginTop: 16 }} />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="ov">
+        <section className="empty card" role="alert">
+          <h1 className="page-title">Không tải được Tổng quan</h1>
+          <p>Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy thử tải lại.</p>
+          <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+            Thử lại
+          </button>
+        </section>
       </div>
     );
   }
