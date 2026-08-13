@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { defaultPlanTarget, getPlanPhase, yearsUntil } from "./planPhase";
 import type { PlanTarget } from "./types";
 
