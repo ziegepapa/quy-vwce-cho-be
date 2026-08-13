@@ -90,8 +90,9 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       transactions,
       quotes,
       legacyVwcePrice: settings?.latestVwcePrice ?? 0,
+      legacyVwcePriceAsOf: settings?.latestPriceDate ?? "",
     }),
-    [transactions, quotes, settings?.latestVwcePrice],
+    [transactions, quotes, settings?.latestVwcePrice, settings?.latestPriceDate],
   );
   const {
     portfolio,
@@ -99,7 +100,6 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     market,
     totalQuantity,
     vwcePrice,
-    vwceQuote,
     vwcePriceSource,
   } = portfolioSnapshot;
 
@@ -307,7 +307,7 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     valueComplete: portfolioSnapshot.valueComplete,
     missingIsins: market.missingIsins,
     vwcePrice,
-    vwceAsOf: vwceQuote?.asOf,
+    vwceAsOf: portfolioSnapshot.vwceAsOf ?? undefined,
     provenance: portfolioSnapshot.provenance,
   });
 
