@@ -1,6 +1,6 @@
 import type { AppSettings, Instrument, Quote } from "./types";
 import { VWCE_ISIN } from "./types";
-import { defaultSettings, nowIso } from "./defaults";
+import { nowIso } from "./defaults";
 import { isValidIsin, normalizeIsin, quoteId } from "./instrument";
 import { enqueueOutbox } from "./sync/outbox";
 import { db } from "./db.m01a";
@@ -17,7 +17,15 @@ export async function applyResolvedEffective(
     await db.quotes.delete(qid);
   }
   if (isin === VWCE_ISIN) {
-    const current = (await db.settings.get("settings")) ?? defaultSettings();
+    // AN TOAN DU LIEU (dang xuat -> dang nhap lai): KHONG seed settings tu
+    // defaultSettings() o day. Ngay sau khi dang nhap lai, IndexedDB vua bi
+    // clearAllData() xoa sach va ban pull tu Supabase CHUA chay, nen "settings"
+    // chua ton tai cuc bo. Neu mirror gia tao mot settings mac dinh (notfallmappe
+    // rong) roi enqueue upsert, runSync (push TRUOC pull) se ghi de hang that
+    // tren Supabase va xoa mat Ho so khan cap. Chi mirror gia khi "settings" da
+    // ton tai; neu chua co thi bo qua -- gia van da duoc luu vao bang quotes o tren.
+    const current = await db.settings.get("settings");
+    if (!current) return;
     const rawVer = (current as AppSettings & { version?: number }).version;
     const prevVer = typeof rawVer === "number" ? rawVer : 0;
     const price = effective?.price;
