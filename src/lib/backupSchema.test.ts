@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isSupportedBackupSchema,
+  unsupportedBackupSchemaMessage,
   validateBackupPayload,
 } from "./backupSchema";
 import { BACKUP_SCHEMA_VERSION } from "./types";
@@ -34,6 +35,14 @@ describe("isSupportedBackupSchema", () => {
   });
 });
 
+describe("unsupportedBackupSchemaMessage", () => {
+  it("names every supported backup schema exactly", () => {
+    expect(unsupportedBackupSchemaMessage(999)).toBe(
+      "schemaVersion không khớp (file: 999; hỗ trợ: 1, 2 hoặc 3)",
+    );
+  });
+});
+
 describe("validateBackupPayload", () => {
   it("accepts a complete base payload", () => {
     const result = validateBackupPayload(VALID);
@@ -52,10 +61,12 @@ describe("validateBackupPayload", () => {
     });
   });
 
-  it("rejects unsupported schema versions with an explicit message", () => {
+  it("rejects unsupported schema versions with the canonical exact message", () => {
     const result = validateBackupPayload({ ...VALID, schemaVersion: 999 });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain("hỗ trợ: 1, 2 hoặc 3");
+    expect(result).toEqual({
+      ok: false,
+      error: "schemaVersion không khớp (file: 999; hỗ trợ: 1, 2 hoặc 3)",
+    });
   });
 
   it("rejects a supported-schema payload missing required arrays", () => {

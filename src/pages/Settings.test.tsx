@@ -164,7 +164,7 @@ describe("JSON import confirmation modal", () => {
     );
   });
 
-  it("schemaVersion không hỗ trợ: báo lỗi và không chạm dữ liệu", async () => {
+  it("schemaVersion không hỗ trợ: báo đủ mọi phiên bản và không chạm dữ liệu", async () => {
     const onReload = vi.fn();
     const { container } = renderSettings(vi.fn(), onReload);
     await screen.findByText("Nhập file JSON");
@@ -179,7 +179,9 @@ describe("JSON import confirmation modal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Xác nhận thay dữ liệu trên thiết bị" }));
 
     await waitFor(() =>
-      expect(window.alert).toHaveBeenCalledWith(expect.stringContaining("schemaVersion không khớp")),
+      expect(window.alert).toHaveBeenCalledWith(
+        "schemaVersion không khớp (file: 999; hỗ trợ: 1, 2 hoặc 3)",
+      ),
     );
     expect(dbMocks.exportBackup).not.toHaveBeenCalled();
     expect(dbMocks.importBackup).not.toHaveBeenCalled();
