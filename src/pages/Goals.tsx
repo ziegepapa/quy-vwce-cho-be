@@ -53,17 +53,29 @@ function Ring({ pct, status }: { pct: number; status: string }) {
 
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Goal | null>(null);
   const [form, setForm] = useState(BLANK_FORM);
   const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   async function reload() {
-    setGoals(await listGoals());
+    try {
+      setGoals(await listGoals());
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => {
-    reload();
-  }, []);
+    setLoading(true);
+    setLoadError(false);
+    void reload();
+  }, [loadAttempt]);
 
   // V9 B2: một đường vào duy nhất cho "thêm mới".
   // Trước đây nút empty-state quên reset `edit` → lưu đè lên mục tiêu cũ.
@@ -153,6 +165,26 @@ export default function Goals() {
     form.mode === "purchasing_power"
       ? inflate(previewAmount, parseDecimal(form.inflationRate), previewYears)
       : previewAmount;
+
+  if (loading) {
+    return (
+      <div className="empty card" role="status" aria-live="polite" aria-busy="true">
+        <p>Đang tải mục tiêu…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <section className="empty card" role="alert">
+        <h1 className="page-title">Không tải được Mục tiêu</h1>
+        <p>Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy thử tải lại.</p>
+        <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+          Thử lại
+        </button>
+      </section>
+    );
+  }
 
   return (
     <div>
