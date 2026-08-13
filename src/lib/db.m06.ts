@@ -158,9 +158,17 @@ export async function putAutoCandidateAndResolve(
       });
       const currentEffective = existing ?? null;
       if (!isSameEffectiveSemantics(currentEffective, resolved.effective)) {
+        // AN TOAN DU LIEU: feed gia TU DONG (chay moi lan mo app qua
+        // ingestQuotesFeed) KHONG duoc dong bo "settings" len Supabase. Neu enqueue
+        // thi outbox luon con item ngay sau khi mo app (khong the dang xuat) va push
+        // (khong dieu kien, truoc pull) se ghi de hang settings that -> xoa mat Ho so
+        // khan cap (notfallmappe). Gia van duoc mirror CUC BO (latestVwcePrice /
+        // latestPriceDate) trong applyResolvedEffective de UI hien thi, va van nam
+        // trong bang quotes. Chi hanh dong nhap gia THU CONG cua nguoi dung
+        // (saveManualQuoteForIsin / setQuotePreference) moi dong bo settings.
         await applyResolvedEffective(isin, currency, resolved.effective, {
           t,
-          syncSettings: true,
+          syncSettings: false,
         });
         return resolved.effective;
       }
