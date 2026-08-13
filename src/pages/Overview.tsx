@@ -139,36 +139,28 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
     ).insights;
   }, [portfolioSnapshot, transactions, settings]);
 
-  // ── Plan Phase (Glide Path) ──────────────────────────────────────────────
+  // ── Plan Phase (Glide Path) ────────────────────────────────────────────────────────
   const planPhase = useMemo(() => {
     if (!settings) return null;
-    const effectiveTarget: PlanTarget = settings.planTarget ?? {
-      targetUseDate: settings.endDate,
-      needFullAmount: true,
-    };
-    return getPlanPhase(effectiveTarget);
+    // Chỉ tính nếu đã set planTarget; không fallback sang endDate — spec G.1
+    return getPlanPhase(settings.planTarget ?? null);
   }, [settings]);
 
-  const planTargetDate =
-    settings?.planTarget?.targetUseDate ?? settings?.endDate ?? "";
+  const planTargetDate = settings?.planTarget?.targetUseDate ?? "";
 
   const showPlanCard =
-    planPhase != null && (planPhase.showReminder || planPhase.yearsLeft <= 6);
+    planPhase != null && (planPhase.yearsLeft <= 6 || planPhase.showReminder);
 
   const handleDismissGlideReminder = useCallback(async () => {
-    if (!settings) return;
-    const effectiveTarget: PlanTarget = settings.planTarget ?? {
-      targetUseDate: settings.endDate,
-      needFullAmount: true,
-    };
+    if (!settings?.planTarget) return;
     const updated: PlanTarget = {
-      ...effectiveTarget,
+      ...settings.planTarget,
       lastGlideReminderYear: new Date().getFullYear(),
     };
     await saveSettings({ planTarget: updated });
     setSettings((prev) => (prev ? { ...prev, planTarget: updated } : prev));
   }, [settings]);
-  // ────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (

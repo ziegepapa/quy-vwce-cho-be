@@ -2,22 +2,18 @@ import type { PlanPhase, PlanStatus, PlanTarget } from "./types";
 
 /**
  * Số năm còn lại đến targetIso tính từ now (floor, dùng phép trừ năm chính xác).
- * Âm nếu đã qua mốc.
+ * Trả về 0 nếu đã qua mốc (đã căt — không âm).
  */
 export function yearsUntil(targetIso: string, now: Date = new Date()): number {
   const target = new Date(targetIso);
-  // Bước 1: hiệu năm
   let years = target.getFullYear() - now.getFullYear();
-  // Bước 2: nếu ngày kỷ niệm trong năm (now + years) chưa đến mốc target, giảm 1
   const anniversary = new Date(
     now.getFullYear() + years,
     now.getMonth(),
     now.getDate(),
   );
-  if (anniversary > target) {
-    years -= 1;
-  }
-  return years;
+  if (anniversary > target) years -= 1;
+  return Math.max(years, 0);
 }
 
 type PhaseRow = {
@@ -30,86 +26,83 @@ type PhaseRow = {
 };
 
 /**
- * Bảng phase theo số năm còn lại — theo đúng tinh thần kế hoạch.
- * Sắp xếp giảm dần để find() trả kết quả đúng.
+ * Bảng phase theo số năm còn lại — nội dung chính xác theo spec.
+ * Sắp xếp giảm dần minYears để find() trả kết quả đúng.
  */
 const PHASE_TABLE: PhaseRow[] = [
   {
     minYears: 6,
     status: "GIỮ",
     equityPct: 100,
-    title: "Giai đoạn tăng trưởng tối đa",
+    title: "Giai đoạn tăng trưởng",
     summary:
-      "Còn nhiều năm — giữ Savings Plan VWCE theo kế hoạch, không phản ứng theo biến động ngắn hạn.",
+      "Còn nhiều thời gian. Giữ nguyên Sparplan cổ phiếu, không phản ứng theo biến động ngắn hạn.",
     actions: [
-      "Giữ mức góp hàng tháng, kiểm tra giao dịch đã chạy",
-      "Rà soát phí và sao kê mỗi năm; không thêm ETF chủ đề",
-      "Xác nhận ngân sách gia đình vẫn bền vững",
+      "Giữ mức góp hiện tại vào VWCE (và EIMI nếu có).",
+      "Mỗi năm chỉ rà soát 1 lần (sinh nhật hoặc tháng 01).",
+      "Không bán vì thị trường tăng/giảm.",
     ],
   },
   {
     minYears: 5,
     status: "GIẢM",
     equityPct: 90,
-    title: "Bắt đầu giảm rủi ro (còn 5 năm)",
+    title: "Bắt đầu giảm rủi ro",
     summary:
-      "Bắt đầu dịch chuyển dần sang phần an toàn. Không dừng VWCE — chỉ giảm tỷ trọng cổ phiếu.",
+      "Còn khoảng 5 năm. Bắt đầu chuyển một phần nhỏ sang phần an toàn, vẫn giữ phần lớn cổ phiếu.",
     actions: [
-      "Cân nhắc giảm Savings Plan VWCE ~10%, chuyển phần còn vào an toàn",
-      "Xác nhận số tiền thật sự cần ở mốc rút",
-      "Nghiên cứu lựa chọn phần an toàn (cash TR, Festgeld, money market ETF)",
+      "Giảm tiền mới vào cổ phiếu xuống khoảng 80\u201390% mức hiện tại.",
+      "Chuyển khoảng 10% giá trị danh mục sang phần an toàn trong tháng này.",
+      "Không dừng hẳn Sparplan cổ phiếu.",
     ],
   },
   {
     minYears: 4,
     status: "GIẢM",
     equityPct: 75,
-    title: "Tăng dần phần an toàn (còn 4 năm)",
-    summary:
-      "Tiếp tục giảm tỷ trọng. Mục tiêu phần an toàn khoảng 25–30% danh mục.",
+    title: "Giảm rủi ro tiếp",
+    summary: "Còn 4 năm. Tăng dần phần an toàn lên khoảng 25%.",
     actions: [
-      "Điều chỉnh Savings Plan để tăng phần an toàn",
-      "Chuyển một phần VWCE sang an toàn theo số dư thực tế tháng 01",
-      "Lập quy tắc chuyển tiền theo thời gian, không theo tin tức",
+      "Giảm tiếp tiền mới vào cổ phiếu.",
+      "Chuyển thêm một phần danh mục sang phần an toàn (mục tiêu khoảng 25%).",
+      "Kiểm tra lại ngày cần tiền và số tiền thật sự cần.",
     ],
   },
   {
     minYears: 3,
     status: "GIẢM",
     equityPct: 55,
-    title: "Giảm sâu hơn (còn 3 năm)",
-    summary:
-      "Phần an toàn tiến gần 50%. Ưu tiên bảo vệ phần chắc chắn cần dùng.",
+    title: "Giảm sâu hơn",
+    summary: "Còn 3 năm. Ưu tiên bảo toàn phần sẽ dùng trong 1\u20133 năm đầu.",
     actions: [
-      "Mục tiêu phần an toàn khoảng 45–55% danh mục",
-      "Khi thị trường giảm, dùng an toàn trước — không bán VWCE để đáp ứng chi linh hoạt",
-      "Chỉ để VWCE phần không cần thiết trong 0–3 năm đầu",
+      "Đưa phần an toàn lên khoảng 40\u201350%.",
+      "Chỉ giữ cổ phiếu với phần tiền chưa chắc cần sớm.",
+      "Rà soát Freistellungsauftrag và thuế nếu có.",
     ],
   },
   {
     minYears: 2,
     status: "GIẢM",
     equityPct: 30,
-    title: "Ưu tiên bảo toàn vốn (còn 2 năm)",
-    summary:
-      "Phần an toàn nên đạt 70%. Đây là thời điểm quan trọng nhất để giảm rủi ro.",
+    title: "Ưu tiên bảo toàn vốn",
+    summary: "Còn 2 năm. Phần lớn tiền cần dùng nên đã ở dạng an toàn.",
     actions: [
-      "Mục tiêu phần an toàn khoảng 70% danh mục",
-      "Tính lại glide path nếu ngày dùng thay đổi",
-      "Không tăng rủi ro hoặc dùng đòn bẩy để gỡ khoảng thiếu",
+      "Đưa phần an toàn lên khoảng 70%.",
+      "Giảm mạnh tiền mới vào cổ phiếu.",
+      "Chuẩn bị kế hoạch rút tiền cụ thể (không bán hết một lần).",
     ],
   },
   {
     minYears: 1,
-    status: "DỪNG",
+    status: "DỮNG",
     equityPct: 10,
-    title: "Dừng góp mới vào cổ phiếu (còn 1 năm)",
+    title: "Dừng góp cổ phiếu",
     summary:
-      "Bảo toàn khoản cần dùng trong 12 tháng kế tiếp. Phần cần dùng nên ở an toàn.",
+      "Còn khoảng 1 năm. Dừng Sparplan cổ phiếu, chuyển gần như toàn bộ phần cần dùng sang an toàn.",
     actions: [
-      "Dừng Savings Plan VWCE; chuyển 150 €/tháng vào phần an toàn",
-      "Phần an toàn mục tiêu khoảng 90% số tiền cần dùng",
-      "Phần chưa dùng giữ nguyên — không bán hết mặc định",
+      "Dừng Savings Plan cổ phiếu.",
+      "Chuyển phần còn lại cần dùng sang tiền mặt / Tagesgeld / money-market.",
+      "Chỉ giữ lại phần tiền chắc chắn không dùng trong 12\u201318 tháng tới.",
     ],
   },
   {
@@ -118,11 +111,11 @@ const PHASE_TABLE: PhaseRow[] = [
     equityPct: 0,
     title: "Giai đoạn sử dụng",
     summary:
-      "Đã đến mốc rút. Rút theo nhu cầu đã xác nhận; không bán hết một lần mặc định.",
+      "Đã đến thời điểm cần tiền. Rút theo nhu cầu thật, không bán hết mặc định.",
     actions: [
-      "Rút theo kế hoạch đã xác nhận — không bán hết một lần",
-      "Phần chưa cần tiếp tục theo thời hạn mới",
-      "Cân nhắc thuế lãi vốn (26,375%) khi bán từng phần — dàn trải qua nhiều năm thuế",
+      "Rút đúng số tiền đã xác nhận cần dùng.",
+      "Phần chưa dùng có thể giữ tiếp hoặc đặt kế hoạch mới.",
+      "Không bán toàn bộ chỉ vì đến hạn.",
     ],
   },
 ];
@@ -137,20 +130,17 @@ export function getPlanPhase(
 ): PlanPhase | null {
   if (!target?.targetUseDate) return null;
 
-  const yl = yearsUntil(target.targetUseDate, now);
-  // yearsLeft dùng cho display — không âm; yl (thực) dùng cho table lookup
-  const yearsLeft = Math.max(yl, 0);
+  const yearsLeft = yearsUntil(target.targetUseDate, now);
 
-  // PHASE_TABLE sắp xếp giảm dần minYears: tìm row đầu tiên có yl >= minYears
+  // PHASE_TABLE sắp xếp giảm dần minYears: tìm row đầu tiên có yearsLeft >= minYears
   const row =
-    PHASE_TABLE.find((r) => yl >= r.minYears) ??
+    PHASE_TABLE.find((r) => yearsLeft >= r.minYears) ??
     PHASE_TABLE[PHASE_TABLE.length - 1];
 
   const currentYear = now.getFullYear();
   const alreadyReminded = target.lastGlideReminderYear === currentYear;
-  // Nhắc khi: chưa nhắc năm này VÀ (còn ≤ 6 năm hoặc đã chuyển phase)
-  const isActivePhase = row.status !== "GIỮ" || yl <= 6;
-  const showReminder = !alreadyReminded && isActivePhase;
+  // Spec G.1: nhắc khi chưa nhắc năm này VÀ (≤ 6 năm hoặc đã chuyển phase)
+  const showReminder = !alreadyReminded && (yearsLeft <= 6 || row.status !== "GIỮ");
 
   return {
     status: row.status,
@@ -164,15 +154,15 @@ export function getPlanPhase(
 }
 
 /**
- * Tạo PlanTarget mặc định từ ngày sinh bé (ISO date, ví dụ "2024-01-01").
- * Ngày sử dụng = năm sinh + 18, giữ tháng và ngày.
+ * Tạo PlanTarget mặc định từ ngày sinh bé (ISO date).
+ * Ngày sử dụng = ngày sinh + 18 năm.
  */
 export function defaultPlanTarget(birthDateIso: string): PlanTarget {
   const birth = new Date(birthDateIso);
-  const targetYear = birth.getFullYear() + 18;
-  const targetDate = `${targetYear}-${String(birth.getMonth() + 1).padStart(2, "0")}-${String(birth.getDate()).padStart(2, "0")}`;
+  const target = new Date(birth);
+  target.setFullYear(birth.getFullYear() + 18);
   return {
-    targetUseDate: targetDate,
+    targetUseDate: target.toISOString().slice(0, 10),
     needFullAmount: true,
   };
 }

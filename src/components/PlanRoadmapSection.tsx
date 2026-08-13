@@ -9,10 +9,10 @@ function buildRoadmapRows(
   const rows: Array<{ year: number; phase: PlanPhase }> = [];
   const currentYear = now.getFullYear();
   const targetYear = new Date(target.targetUseDate).getFullYear();
-  // Show current year through target year + 1, at least current + 3
-  const endYear = Math.max(targetYear + 1, currentYear + 3);
+  // Hiển từ năm hiện tại đến targetYear + 1, tối đa 15 dòng
+  const endYear = Math.min(Math.max(targetYear + 1, currentYear + 3), currentYear + 15);
   for (let year = currentYear; year <= endYear; year++) {
-    const fakeNow = new Date(year, 0, 1); // 01/01 of each year
+    const fakeNow = new Date(year, 0, 1);
     const phase = getPlanPhase(target, fakeNow);
     if (!phase) continue;
     rows.push({ year, phase });
@@ -22,17 +22,15 @@ function buildRoadmapRows(
 
 export default function PlanRoadmapSection({
   target,
-  onTargetChange,
+  onChangeTarget,
 }: {
   target: PlanTarget;
-  onTargetChange: (next: PlanTarget) => void;
+  onChangeTarget: (next: PlanTarget) => void;
 }) {
   const now = useMemo(() => new Date(), []);
-  const rows = useMemo(
-    () => buildRoadmapRows(target, now),
-    [target, now],
-  );
+  const rows = useMemo(() => buildRoadmapRows(target, now), [target, now]);
   const currentYear = now.getFullYear();
+  const currentPhase = useMemo(() => getPlanPhase(target, now), [target, now]);
 
   return (
     <section className="settings-card">
@@ -45,35 +43,42 @@ export default function PlanRoadmapSection({
             — không phải lệnh giao dịch.
           </p>
         </div>
-        <span className="settings-icon-bubble" aria-hidden>📅</span>
+        <span className="settings-icon-bubble" aria-hidden>
+          📅
+        </span>
       </div>
 
-      <div className="settings-field-grid" style={{ marginBottom: 16 }}>
+      <div className="settings-field-grid" style={{ marginBottom: 12 }}>
         <label className="setting-field">
           <span>Ngày cần tiền (mốc sử dụng)</span>
           <input
             type="date"
             value={target.targetUseDate}
-            min="2020-01-01"
-            max="2100-12-31"
             onChange={(e) =>
-              onTargetChange({ ...target, targetUseDate: e.target.value })
+              onChangeTarget({ ...target, targetUseDate: e.target.value })
             }
           />
         </label>
       </div>
 
-      <label className="switch-row" style={{ marginBottom: 20 }}>
-        <span>Cần gần như toàn bộ số tiền ở mốc này</span>
+      <label className="switch-row" style={{ marginBottom: 16 }}>
+        <span>Cần gần như toàn bộ số tiền</span>
         <input
           type="checkbox"
           className="ios-switch"
           checked={target.needFullAmount}
           onChange={(e) =>
-            onTargetChange({ ...target, needFullAmount: e.target.checked })
+            onChangeTarget({ ...target, needFullAmount: e.target.checked })
           }
         />
       </label>
+
+      {currentPhase ? (
+        <p style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.5 }}>
+          Hiện tại:{" "}
+          <strong>{currentPhase.status}</strong> · Còn {currentPhase.yearsLeft} năm · Mục tiêu cổ phiếu ~{currentPhase.equityPct}%
+        </p>
+      ) : null}
 
       <div style={{ overflowX: "auto" }}>
         <table
@@ -82,7 +87,7 @@ export default function PlanRoadmapSection({
         >
           <thead>
             <tr>
-              {(["Năm", "Còn lại", "Trạng thái", "% CK"] as const).map((h) => (
+              {(["Năm", "Còn", "Trạng thái", "% CP"] as const).map((h) => (
                 <th
                   key={h}
                   style={{
@@ -112,16 +117,41 @@ export default function PlanRoadmapSection({
                     fontWeight: isCurrent ? 600 : undefined,
                   }}
                 >
-                  <td style={{ padding: "6px 8px 6px 0", borderBottom: bdStyle, whiteSpace: "nowrap" }}>
-                    {year}{isCurrent ? " ◀" : ""}
+                  <td
+                    style={{
+                      padding: "6px 8px 6px 0",
+                      borderBottom: bdStyle,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {year}{isCurrent ? " ◄" : ""}
                   </td>
-                  <td style={{ textAlign: "center", padding: "6px 8px", borderBottom: bdStyle, whiteSpace: "nowrap" }}>
+                  <td
+                    style={{
+                      textAlign: "center",
+                      padding: "6px 8px",
+                      borderBottom: bdStyle,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {phase.yearsLeft > 0 ? `${phase.yearsLeft} năm` : "—"}
                   </td>
-                  <td style={{ textAlign: "center", padding: "6px 8px", borderBottom: bdStyle }}>
+                  <td
+                    style={{
+                      textAlign: "center",
+                      padding: "6px 8px",
+                      borderBottom: bdStyle,
+                    }}
+                  >
                     {phase.status}
                   </td>
-                  <td style={{ textAlign: "center", padding: "6px 8px", borderBottom: bdStyle }}>
+                  <td
+                    style={{
+                      textAlign: "center",
+                      padding: "6px 8px",
+                      borderBottom: bdStyle,
+                    }}
+                  >
                     {phase.equityPct}%
                   </td>
                 </tr>
@@ -132,8 +162,8 @@ export default function PlanRoadmapSection({
       </div>
 
       <p className="muted" style={{ fontSize: 12, marginTop: 12, lineHeight: 1.45 }}>
-        Số % chỉ là khung tham chiếu giáo dục. Mọi quyết định chuyển bán cần kiểm tra số
-        dư thực tế, nhu cầu gia đình và quy định thuế tại quốc gia cư trú.
+        Số % chỉ là khung tham chiếu. Khi còn ≤ 5 năm, hãy tính lại theo giá trị thực tế
+        trong app và nhu cầu thật của gia đình.
       </p>
     </section>
   );

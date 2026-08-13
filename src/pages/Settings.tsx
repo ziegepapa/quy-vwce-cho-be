@@ -619,13 +619,57 @@ export default function SettingsPage({
           </section>
 
           <section className="settings-card">
+            <div className="settings-card-head compact-head">
+              <div>
+                <p className="settings-card-eyebrow">Định kỳ</p>
+                <h3>Checklist {checklistYear}</h3>
+                <p>Nhắc lại các việc quan trọng mỗi năm.</p>
+              </div>
+              <label className="year-picker">
+                <span className="sr-only">Năm checklist</span>
+                <input
+                  type="number"
+                  value={checklistYear}
+                  min={2000}
+                  max={2100}
+                  onChange={(event) => {
+                    const year = Number(event.target.value);
+                    if (year >= 2000 && year <= 2100) setChecklistYear(year);
+                  }}
+                />
+              </label>
+            </div>
+            <div className="checklist-list">
+              {checklist?.items.map((item) => (
+                <label key={item.key} className="switch-row">
+                  <span>{item.label}</span>
+                  <input
+                    type="checkbox"
+                    className="ios-switch"
+                    checked={item.done}
+                    onChange={async () => {
+                      if (readOnly) { showBlocked(); return; }
+                      const items = checklist.items.map((current) =>
+                        current.key === item.key ? { ...current, done: !current.done } : current,
+                      );
+                      const next = { ...checklist, items, updatedAt: new Date().toISOString() };
+                      await db.annualChecklists.put(next);
+                      setChecklist(next);
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+          </section>
+
+          <section className="settings-card">
             <div className="settings-card-head">
               <div>
                 <p className="settings-card-eyebrow">Bảo mật</p>
                 <h3>Xác minh hai bước</h3>
                 <p>TOTP bảo vệ account owner sau mật khẩu. Password reset không tự bypass TOTP.</p>
               </div>
-              <span className="settings-icon-bubble" aria-hidden>⌁</span>
+              <span className="settings-icon-bubble" aria-hidden>⍁</span>
             </div>
             {auth.mfaEnrolled ? (
               <>
@@ -722,50 +766,6 @@ export default function SettingsPage({
               <p className="settings-inline-status success" role="status">{mfaMessage}</p>
             ) : null}
           </section>
-
-          <section className="settings-card">
-            <div className="settings-card-head compact-head">
-              <div>
-                <p className="settings-card-eyebrow">Định kỳ</p>
-                <h3>Checklist {checklistYear}</h3>
-                <p>Nhắc lại các việc quan trọng mỗi năm.</p>
-              </div>
-              <label className="year-picker">
-                <span className="sr-only">Năm checklist</span>
-                <input
-                  type="number"
-                  value={checklistYear}
-                  min={2000}
-                  max={2100}
-                  onChange={(event) => {
-                    const year = Number(event.target.value);
-                    if (year >= 2000 && year <= 2100) setChecklistYear(year);
-                  }}
-                />
-              </label>
-            </div>
-            <div className="checklist-list">
-              {checklist?.items.map((item) => (
-                <label key={item.key} className="switch-row">
-                  <span>{item.label}</span>
-                  <input
-                    type="checkbox"
-                    className="ios-switch"
-                    checked={item.done}
-                    onChange={async () => {
-                      if (readOnly) { showBlocked(); return; }
-                      const items = checklist.items.map((current) =>
-                        current.key === item.key ? { ...current, done: !current.done } : current,
-                      );
-                      const next = { ...checklist, items, updatedAt: new Date().toISOString() };
-                      await db.annualChecklists.put(next);
-                      setChecklist(next);
-                    }}
-                  />
-                </label>
-              ))}
-            </div>
-          </section>
         </div>
       ) : null}
 
@@ -795,13 +795,8 @@ export default function SettingsPage({
 
           {/* PLAN-GLIDE-PATH-001 — Lộ trình giảm rủi ro theo năm */}
           <PlanRoadmapSection
-            target={
-              settings.planTarget ?? {
-                targetUseDate: settings.endDate,
-                needFullAmount: true,
-              }
-            }
-            onTargetChange={(next) => patchSettings({ planTarget: next })}
+            target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
+            onChangeTarget={(next) => patchSettings({ planTarget: next })}
           />
 
           {auth.user?.id && (dead.length > 0 || deadSyncedMsg) ? (
@@ -871,118 +866,4 @@ export default function SettingsPage({
               />
             </label>
             <p className="settings-inline-status settings-import-warning" role="note">
-              ⚠️ Nhập một bản sao lưu sẽ <strong>ghi đè và thay thế toàn bộ dữ liệu đang có trên thiết bị này</strong>. Ứng dụng sẽ tự tải một bản sao lưu của dữ liệu hiện tại trước khi ghi đè để bạn có thể quay lại nếu cần.
-            </p>
-            {pendingFile ? (
-              <div
-                className="delete-confirm import-confirm"
-                role="alertdialog"
-                aria-modal="true"
-                aria-labelledby="import-confirm-title"
-              >
-                <p id="import-confirm-title"><strong>Thay dữ liệu trên thiết bị bằng file này?</strong></p>
-                <p className="import-confirm-file">
-                  <span className="import-confirm-file-label">File đã chọn</span>
-                  <span className="import-confirm-file-name">{pendingFile.name}</span>
-                </p>
-                <p>
-                  Toàn bộ dữ liệu local hiện có trên iPhone sẽ được thay bằng nội dung file này.
-                  Ứng dụng sẽ tải một bản sao lưu trước khi tiếp tục. Thao tác này không tự ghi đè dữ liệu trong tài khoản.
-                </p>
-                <div className="delete-actions">
-                  <button
-                    type="button"
-                    className="danger"
-                    disabled={importing}
-                    onClick={() => void confirmImport()}
-                  >
-                    {importing ? "Đang nhập…" : "Xác nhận thay dữ liệu trên thiết bị"}
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    disabled={importing}
-                    onClick={() => setPendingFile(null)}
-                  >
-                    Quay lại
-                  </button>
-                </div>
-              </div>
-            ) : null}
-            <button type="button" className="group-action" onClick={() => void exportCsv()}>
-              <span><strong>Xuất CSV giao dịch</strong><small>Dùng với bảng tính</small></span>
-            </button>
-            {onOpenMigrate ? (
-              <button type="button" className="group-action" onClick={onOpenMigrate}>
-                <span><strong>Khôi phục dữ liệu đang có trên thiết bị</strong><small>Đưa dữ liệu đang lưu trên thiết bị này vào tài khoản đã đăng nhập, không ghi đè bản sao lưu.</small></span>
-              </button>
-            ) : null}
-          </section>
-
-          <details className="settings-disclosure danger-disclosure" open={deleteStep > 0}>
-            <summary onClick={(event) => {
-              if (deleteStep > 0) event.preventDefault();
-            }}>
-              <span>
-                <strong>Vùng nguy hiểm</strong>
-                <small>Xóa toàn bộ dữ liệu trên thiết bị này.</small>
-              </span>
-              {deleteStep === 0 ? (
-                <button
-                  type="button"
-                  className="danger-link"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    setDeleteStep(1);
-                  }}
-                >
-                  Mở
-                </button>
-              ) : null}
-            </summary>
-            {deleteStep > 0 ? (
-              <div className="delete-confirm">
-                <p>Gõ <strong>XOA</strong> để xác nhận. Thao tác này không thể hoàn tác.</p>
-                <input
-                  value={deleteConfirm}
-                  onChange={(event) => setDeleteConfirm(event.target.value)}
-                  placeholder="XOA"
-                  autoCapitalize="characters"
-                />
-                <div className="delete-actions">
-                  <button
-                    type="button"
-                    className="danger"
-                    disabled={deleteConfirm.trim().toUpperCase() !== "XOA"}
-                    onClick={async () => {
-                      if (readOnly) { showBlocked(); return; }
-                      await clearAllData();
-                      window.location.reload();
-                    }}
-                  >
-                    Xác nhận xóa
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => {
-                      setDeleteStep(0);
-                      setDeleteConfirm("");
-                    }}
-                  >
-                    Hủy
-                  </button>
-                </div>
-              </div>
-            ) : null}
-          </details>
-        </div>
-      ) : null}
-
-      <p className="settings-foot">
-        v{APP_VERSION} · {online ? "Online" : "Offline"} · Sao lưu:{" "}
-        {metaBackup ? formatDateVN(metaBackup.slice(0, 10)) : "chưa có"}
-      </p>
-    </div>
-  );
-}
+              ⚠️ Nhập một bản sao lưu sẽ <strong>ghi đè và thay thế toàn bộ dữ liệu đang c

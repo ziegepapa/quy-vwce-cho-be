@@ -3,14 +3,14 @@ import type { PlanPhase } from "../lib/types";
 const STATUS_COLOR: Record<string, { bg: string; fg: string }> = {
   "GIỮ":      { bg: "var(--green-100,#dcfce7)",   fg: "var(--green-700,#15803d)" },
   "GIẢM":     { bg: "var(--amber-100,#fef3c7)",   fg: "var(--amber-700,#b45309)" },
-  "DỪNG":     { bg: "var(--orange-100,#ffedd5)",  fg: "var(--orange-700,#c2410c)" },
+  "DỮNG":     { bg: "var(--orange-100,#ffedd5)",  fg: "var(--orange-700,#c2410c)" },
   "SỬ DỤNG": { bg: "var(--blue-100,#dbeafe)",    fg: "var(--blue-700,#1d4ed8)" },
 };
 
 const STATUS_ICON: Record<string, string> = {
   "GIỮ":      "📈",
   "GIẢM":     "⚖️",
-  "DỪNG":     "🛑",
+  "DỮNG":     "🛑",
   "SỬ DỤNG": "✅",
 };
 
@@ -27,7 +27,20 @@ export default function PlanPhaseCard({
 }) {
   const color = STATUS_COLOR[phase.status] ?? { bg: "var(--surface-2,#f3f4f6)", fg: "inherit" };
   const icon = STATUS_ICON[phase.status] ?? "📋";
-  const targetYear = targetDate.slice(0, 4) || "—";
+
+  // Format targetDate sang vi-VN (ví dụ: "tháng 1 năm 2042")
+  const dateLabel = targetDate
+    ? (() => {
+        try {
+          return new Date(targetDate + "T00:00:00").toLocaleDateString("vi-VN", {
+            year: "numeric",
+            month: "long",
+          });
+        } catch {
+          return targetDate.slice(0, 7);
+        }
+      })()
+    : "—";
 
   return (
     <section
@@ -37,8 +50,16 @@ export default function PlanPhaseCard({
     >
       <div className="settings-card-head">
         <div style={{ flex: 1 }}>
-          <p className="settings-card-eyebrow">Kế hoạch theo năm (PLAN-GLIDE-PATH-001)</p>
-          <h3 style={{ margin: "4px 0 2px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <p className="settings-card-eyebrow">Lộ trình kế hoạch</p>
+          <h3
+            style={{
+              margin: "4px 0 2px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
+          >
             <span
               style={{
                 display: "inline-block",
@@ -54,33 +75,30 @@ export default function PlanPhaseCard({
             </span>
             <span style={{ fontSize: 16, fontWeight: 600 }}>{phase.title}</span>
           </h3>
+          <p className="muted" style={{ fontSize: 13, margin: "4px 0 0" }}>
+            {phase.yearsLeft > 0 ? `Còn ${phase.yearsLeft} năm` : "Đã đến mốc"} · Đến {dateLabel}
+          </p>
         </div>
         <span className="settings-icon-bubble" aria-hidden style={{ fontSize: 24 }}>
           {icon}
         </span>
       </div>
 
-      <p style={{ margin: "0 0 8px", lineHeight: 1.5 }}>
-        {phase.yearsLeft > 0
-          ? `Còn khoảng ${phase.yearsLeft} năm đến mốc ${targetYear}.`
-          : `Đã đến hoặc qua mốc ${targetYear}.`}{" "}
-        {phase.summary}
-      </p>
+      <p style={{ margin: "8px 0 8px", lineHeight: 1.5 }}>{phase.summary}</p>
 
       <ul style={{ margin: "0 0 12px", paddingLeft: 20 }}>
         {phase.actions.map((action) => (
-          <li key={action} className="muted" style={{ marginBottom: 4, fontSize: 14, lineHeight: 1.4 }}>
+          <li
+            key={action}
+            className="muted"
+            style={{ marginBottom: 4, fontSize: 14, lineHeight: 1.4 }}
+          >
             {action}
           </li>
         ))}
       </ul>
 
-      <p className="muted" style={{ fontSize: 12, lineHeight: 1.4, marginBottom: 12 }}>
-        Đây là khung tham chiếu giáo dục, không phải lệnh giao dịch. Số % chỉ là gợi ý;
-        quyết định dựa trên số dư thực tế, nhu cầu gia đình và quy định thuế.
-      </p>
-
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
         {onViewFull ? (
           <button type="button" className="secondary" onClick={onViewFull}>
             Xem lộ trình đầy đủ
@@ -92,6 +110,10 @@ export default function PlanPhaseCard({
           </button>
         ) : null}
       </div>
+
+      <p className="muted" style={{ fontSize: 12, lineHeight: 1.4 }}>
+        Đây là khung gợi ý theo số năm còn lại. Không phải lệnh giao dịch. Hãy kiểm tra số dư thật, phí và thuế trước khi chuyển tiền.
+      </p>
     </section>
   );
 }
