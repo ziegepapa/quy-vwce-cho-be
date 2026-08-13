@@ -2,7 +2,7 @@ import type { AppSettings, Instrument, Quote } from "./types";
 import { VWCE_ISIN } from "./types";
 import { nowIso } from "./defaults";
 import { isValidIsin, normalizeIsin, quoteId } from "./instrument";
-import { enqueueOutbox } from "./sync/outbox";
+import { enqueueOutbox, settingsGuardBaseVersion } from "./sync/outbox";
 import { db } from "./db.m01a";
 export async function applyResolvedEffective(
   isin: string,
@@ -34,7 +34,13 @@ export async function applyResolvedEffective(
       effective != null &&
       (current.latestVwcePrice !== price || current.latestPriceDate !== asOf);
     if (economicsChanged && price != null && asOf) {
-      const ver = prevVer + 1;
+      // AN TOAN DU LIEU: `version` la con so danh cho dong bo lac quan, chi duoc
+      // TANG khi thuc su enqueue len server. Mirror gia CUC BO (syncSettings:false,
+      // tu feed tu dong) chi cap nhat gia de UI hien thi, KHONG duoc day version
+      // len -- neu khong version cuc bo se "troi" vuot server, khien push co guard
+      // sau do dung expectedRemoteVersion khong ton tai tren server va bi ket.
+      const willSync = opts.syncSettings !== false;
+      const ver = willSync ? prevVer + 1 : prevVer;
       const settingsNext = {
         ...current,
         id: "settings",
@@ -44,8 +50,19 @@ export async function applyResolvedEffective(
         version: ver,
       };
       await db.settings.put(settingsNext as AppSettings);
-      if (opts.syncSettings !== false) {
-        await enqueueOutbox("settings", "settings", "upsert", settingsNext, ver);
+      if (willSync) {
+        // Version-guard: settings da tung dong bo (prevVer > 0) phai push theo
+        // duong conditional update de KHONG ghi de ban moi hon tren server (giu
+        // Ho so khan cap). Push dau tien (prevVer === 0) van la upsert khong dieu kien.
+        const expectedRemoteVersion = await settingsGuardBaseVersion(prevVer);
+        await enqueueOutbox(
+          "settings",
+          "settings",
+          "upsert",
+          settingsNext,
+          ver,
+          expectedRemoteVersion !== undefined ? { expectedRemoteVersion } : undefined,
+        );
       }
     }
   }

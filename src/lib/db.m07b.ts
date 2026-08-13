@@ -2,7 +2,7 @@ import type { AppSettings, Goal, Transaction } from "./types";
 import { SCHEMA_VERSION } from "./types";
 import { defaultGoals, defaultSettings, nowIso } from "./defaults";
 import { isValidIsin, normalizeIsin, resolveInstrumentIsin } from "./instrument";
-import { enqueueOutbox } from "./sync/outbox";
+import { enqueueOutbox, settingsGuardBaseVersion } from "./sync/outbox";
 import { db } from "./db.m01a";
 import { ensureMultiAssetMigrated } from "./db.m01b";
 import { ensureQuoteFoundationMigrated } from "./db.m02";
@@ -55,7 +55,20 @@ export async function saveSettings(
     const next = { ...current, ...partial, id: "settings", updatedAt: nowIso(), version: ver };
     await db.settings.put(next as AppSettings);
     if (opts?.sync !== false) {
-      await enqueueOutbox("settings", "settings", "upsert", next, ver);
+      // Version-guard (AN TOAN DU LIEU): mot ban settings CUC BO cu KHONG duoc
+      // ghi de (upsert khong dieu kien) len ban moi hon tren server -- neu khong
+      // se xoa mat Ho so khan cap. Push dau tien (prevVer === 0) van khong dieu
+      // kien de nguoi dung dong bo duoc lan dau.
+      const prevVer = ver - 1;
+      const expectedRemoteVersion = await settingsGuardBaseVersion(prevVer);
+      await enqueueOutbox(
+        "settings",
+        "settings",
+        "upsert",
+        next,
+        ver,
+        expectedRemoteVersion !== undefined ? { expectedRemoteVersion } : undefined,
+      );
     }
   });
 }
@@ -86,7 +99,7 @@ export async function listTransactions(): Promise<Transaction[]> {
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
-/** C3 — tìm giao dịch theo externalRef, bỏ qua tombstone đã xóa. */
+/** C3 -- tim giao dich theo externalRef, bo qua tombstone da xoa. */
 export async function findTransactionByExternalRef(
   externalRef: string,
 ): Promise<Transaction | undefined> {

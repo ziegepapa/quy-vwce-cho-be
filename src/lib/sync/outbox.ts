@@ -57,6 +57,35 @@ export async function enqueueOutbox(
   await db.outbox.put(item);
 }
 
+/**
+ * AN TOAN DU LIEU -- version-guard cho ban ghi singleton "settings".
+ *
+ * Tra ve `expectedRemoteVersion` de push "settings" chay theo duong conditional
+ * update (`.eq("version", base)`) thay vi upsert vo dieu kien. Nho vay mot ban
+ * settings CUC BO cu (vi du sau dang xuat/dang nhap tren may khac, hoac dua
+ * tranh push-truoc-pull) KHONG the ghi de len ban moi hon tren server va xoa mat
+ * Ho so khan cap (notfallmappe) -- thay vao do se sinh conflict de nguoi dung tu
+ * quyet.
+ *
+ * - Neu dang co outbox item "settings" cho san: ke thua base cu, de chuoi chinh
+ *   sua offline duoc gop lai van guard dung version goc (tranh conflict gia tren
+ *   cung mot may).
+ * - Neu chua co: dung `prevVer` khi > 0 (settings da tung pull/dong bo ve, phai
+ *   guard). `prevVer === 0` nghia la ban ghi moi tinh chua tung len server ->
+ *   tra ve `undefined` de push dau tien la insert/upsert khong dieu kien.
+ */
+export async function settingsGuardBaseVersion(
+  prevVer: number,
+): Promise<number | undefined> {
+  const pending = await db.outbox.where("entityId").equals("settings").toArray();
+  const existing = pending.find(
+    (item): item is OrdinaryOutboxItem =>
+      item.table === "settings" && item.op === "upsert",
+  );
+  if (existing) return existing.expectedRemoteVersion;
+  return prevVer > 0 ? prevVer : undefined;
+}
+
 export async function enqueueRecoveryItem(
   input: EnqueueRecoveryInput,
 ): Promise<RecoveryOutboxItem> {
