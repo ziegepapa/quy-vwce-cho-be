@@ -1,5 +1,6 @@
 import type { BackupPayload } from "./types";
 import { BACKUP_SCHEMA_VERSION } from "./types";
+import { validateTransactionNumbers } from "./transactionValidation";
 
 const REQUIRED_ARRAY_FIELDS = [
   "settings",
@@ -81,6 +82,16 @@ export function validateBackupPayload(value: unknown): BackupPayloadValidation {
       ok: false,
       error: `Backup có trường không hợp lệ: ${invalidOptional.join(", ")}`,
     };
+  }
+
+  for (const [index, transaction] of (value.transactions as unknown[]).entries()) {
+    const validation = validateTransactionNumbers(transaction);
+    if (!validation.ok) {
+      return {
+        ok: false,
+        error: `Backup transactions[${index}] không hợp lệ: ${validation.error}`,
+      };
+    }
   }
 
   return { ok: true, payload: value as unknown as BackupPayload };
