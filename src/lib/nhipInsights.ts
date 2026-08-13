@@ -1,6 +1,9 @@
 import type { AppSettings, Transaction } from "./types";
 import { STALE_DAYS } from "./types";
-import type { TodayCenterPortfolioSnapshot } from "./todayCenterAdapter";
+import type {
+  TodayCenterPortfolioSnapshot,
+  TodayCenterPriceSource,
+} from "./todayCenterAdapter";
 
 export type NhipInsightKind =
   | "empty_start"
@@ -17,6 +20,8 @@ export type NhipInsight = {
 export type NhipInsightInput = {
   portfolioEmpty: boolean;
   vwceAsOf: string | null;
+  /** Manual quotes are intentional and do not inherit the auto-feed expiry rule. */
+  vwceSource?: TodayCenterPriceSource;
   planEndDate: string;
   transactions: ReadonlyArray<Pick<Transaction, "date" | "type" | "amount" | "deletedAt">>;
   /** Injected ISO timestamp for deterministic tests. Defaults to new Date().toISOString(). */
@@ -53,6 +58,7 @@ function daysBetween(fromIso: string, toIso: string): number | null {
 export function buildNhipInsights({
   portfolioEmpty,
   vwceAsOf,
+  vwceSource,
   planEndDate,
   transactions,
   now: rawNow,
@@ -70,8 +76,9 @@ export function buildNhipInsights({
     };
   }
 
-  // stale_price — highest priority for non-empty portfolio
-  if (vwceAsOf) {
+  // stale_price — highest priority for non-empty portfolio. Manual quotes are
+  // deliberately user-selected, so only auto/legacy sources use STALE_DAYS.
+  if (vwceAsOf && vwceSource !== "manual_quote") {
     const age = daysBetween(vwceAsOf, now);
     if (age !== null && age > STALE_DAYS) {
       result.push({
@@ -180,7 +187,8 @@ export function buildNhipInsightInput(
       totalValue: snapshot.totalValue,
       totalQuantity: snapshot.totalQuantity,
     }),
-    vwceAsOf: snapshot.vwceQuote?.asOf ?? null,
+    vwceAsOf: snapshot.vwceAsOf ?? snapshot.vwceQuote?.asOf ?? null,
+    vwceSource: snapshot.vwcePriceSource,
     planEndDate: settings.endDate,
     transactions,
     now,

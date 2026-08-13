@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildTodayCenterPortfolioSnapshot } from "./todayCenterAdapter";
+import {
+  buildTodayCenterPortfolioSnapshot,
+  type TodayCenterPortfolioInput,
+} from "./todayCenterAdapter";
 import { VWCE_ISIN, type Quote, type Transaction, type TxType } from "./types";
 
-const now = "2026-08-05T08:00:00.000Z";
+const NOW = "2026-08-05T08:00:00.000Z";
+const NOW_DATE = "2026-08-05";
 
 function transaction(
   id: string,
@@ -12,12 +16,12 @@ function transaction(
 ): Transaction {
   return {
     id,
-    date: "2026-08-05",
+    date: NOW_DATE,
     type,
     amount,
     notes: "",
-    createdAt: now,
-    updatedAt: now,
+    createdAt: NOW,
+    updatedAt: NOW,
     ...extra,
   };
 }
@@ -35,24 +39,29 @@ function quote(
     currency: "EUR",
     price,
     source,
-    asOf: "2026-08-05",
-    createdAt: now,
-    updatedAt: now,
+    asOf: NOW_DATE,
+    createdAt: NOW,
+    updatedAt: NOW,
     ...extra,
   };
 }
 
+function build(input: Omit<TodayCenterPortfolioInput, "nowDate"> & { nowDate?: string }) {
+  return buildTodayCenterPortfolioSnapshot({ nowDate: NOW_DATE, ...input });
+}
+
 describe("buildTodayCenterPortfolioSnapshot", () => {
   it("returns a complete empty snapshot", () => {
-    const result = buildTodayCenterPortfolioSnapshot({ transactions: [], quotes: [] });
+    const result = build({ transactions: [], quotes: [] });
     expect(result.totalValue).toBe(0);
     expect(result.totalQuantity).toBe(0);
     expect(result.valueComplete).toBe(true);
+    expect(result.stalePriceIsins).toEqual([]);
     expect(result.vwcePriceSource).toBe("missing");
   });
 
   it("keeps a cash-only portfolio complete", () => {
-    const result = buildTodayCenterPortfolioSnapshot({
+    const result = build({
       transactions: [transaction("cash", "cash_in", 500)],
       quotes: [],
     });
@@ -64,7 +73,7 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
   it("aggregates multiple ISIN holdings from the transaction ledger", () => {
     const isinA = "IE00B4L5Y983";
     const isinB = "IE00B3RBWM25";
-    const result = buildTodayCenterPortfolioSnapshot({
+    const result = build({
       transactions: [
         transaction("cash", "cash_in", 1_000),
         transaction("buy-a", "buy_security", 200, { instrumentIsin: isinA, quantity: 2 }),
@@ -82,7 +91,7 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
 
   it("reports missing prices instead of valuing the position at zero", () => {
     const isin = "IE00B4L5Y983";
-    const result = buildTodayCenterPortfolioSnapshot({
+    const result = build({
       transactions: [
         transaction("cash", "cash_in", 200),
         transaction("buy", "buy_security", 100, { instrumentIsin: isin, quantity: 1 }),
@@ -98,23 +107,100 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
     expect(result.valueComplete).toBe(false);
   });
 
-  it("preserves the legacy VWCE price fallback", () => {
-    const result = buildTodayCenterPortfolioSnapshot({
+  it("uses a dated legacy VWCE fallback", () => {
+    const result = build({
       transactions: [
         transaction("cash", "cash_in", 100),
         transaction("buy", "buy_vwce", 100, { quantity: 1 }),
       ],
       quotes: [],
       legacyVwcePrice: 123,
+      legacyVwcePriceAsOf: "2026-08-01",
     });
 
     expect(result.vwcePrice).toBe(123);
+    expect(result.vwceAsOf).toBe("2026-08-01");
+    expect(result.vwceAgeDays).toBe(4);
     expect(result.vwcePriceSource).toBe("legacy_quote");
     expect(result.totalValue).toBe(123);
   });
 
+  it("rejects a legacy fallback with a missing, malformed or future date", () => {
+    for (const legacyVwcePriceAsOf of [undefined, "not-a-date", "2026-08-06"]) {
+      const result = build({
+        transactions: [transaction("buy", "buy_vwce", 100, { quantity: 1 })],
+        quotes: [],
+        legacyVwcePrice: 123,
+        legacyVwcePriceAsOf,
+      });
+      expect(result.vwcePrice).toBe(0);
+      expect(result.vwcePriceSource).toBe("missing");
+      expect(result.market.missingIsins).toEqual([VWCE_ISIN]);
+    }
+  });
+
+  it("keeps stale auto valuation visible in provenance instead of hiding it", () => {
+    const result = build({
+      transactions: [transaction("buy", "buy_vwce", 100, { quantity: 1 })],
+      quotes: [quote("stale-auto", VWCE_ISIN, 150, "auto", { asOf: "2026-07-01" })],
+    });
+
+    expect(result.totalValue).toBe(50);
+    expect(result.valueComplete).toBe(true);
+    expect(result.stalePriceIsins).toEqual([VWCE_ISIN]);
+    expect(result.vwceAgeDays).toBe(35);
+    expect(result.vwcePriceSource).toBe("auto_quote");
+  });
+
+  it("does not expire an old manual valuation", () => {
+    const result = build({
+      transactions: [transaction("buy", "buy_vwce", 100, { quantity: 1 })],
+      quotes: [quote("old-manual", VWCE_ISIN, 150, "manual", { asOf: "2020-01-01" })],
+    });
+
+    expect(result.totalValue).toBe(50);
+    expect(result.stalePriceIsins).toEqual([]);
+    expect(result.vwcePriceSource).toBe("manual_quote");
+  });
+
+  it("marks an old legacy fallback stale when it values a held position", () => {
+    const result = build({
+      transactions: [transaction("buy", "buy_vwce", 100, { quantity: 1 })],
+      quotes: [],
+      legacyVwcePrice: 123,
+      legacyVwcePriceAsOf: "2026-07-01",
+    });
+    expect(result.vwcePriceSource).toBe("legacy_quote");
+    expect(result.stalePriceIsins).toEqual([VWCE_ISIN]);
+  });
+
+  it("rejects malformed and future effective quote dates", () => {
+    for (const asOf of ["2026-02-30", "not-a-date", "2026-08-06"]) {
+      const result = build({
+        transactions: [transaction("buy", "buy_vwce", 100, { quantity: 1 })],
+        quotes: [quote(`bad-${asOf}`, VWCE_ISIN, 150, "auto", { asOf })],
+      });
+      expect(result.vwcePrice).toBe(0);
+      expect(result.market.missingIsins).toEqual([VWCE_ISIN]);
+      expect(result.valueComplete).toBe(false);
+    }
+  });
+
+  it("fails closed when the valuation date is invalid", () => {
+    const result = build({
+      transactions: [transaction("buy", "buy_vwce", 100, { quantity: 1 })],
+      quotes: [quote("fresh", VWCE_ISIN, 150)],
+      legacyVwcePrice: 123,
+      legacyVwcePriceAsOf: NOW_DATE,
+      nowDate: "not-a-date",
+    });
+    expect(result.vwcePrice).toBe(0);
+    expect(result.vwcePriceSource).toBe("missing");
+    expect(result.market.missingIsins).toEqual([VWCE_ISIN]);
+  });
+
   it("uses the same effective quote for price and provenance", () => {
-    const result = buildTodayCenterPortfolioSnapshot({
+    const result = build({
       transactions: [
         transaction("cash", "cash_in", 100),
         transaction("buy", "buy_vwce", 100, { quantity: 1 }),
@@ -124,6 +210,7 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
         quote("effective", VWCE_ISIN, 130, "manual"),
       ],
       legacyVwcePrice: 999,
+      legacyVwcePriceAsOf: NOW_DATE,
     });
 
     expect(result.vwcePrice).toBe(130);
@@ -133,14 +220,15 @@ describe("buildTodayCenterPortfolioSnapshot", () => {
   });
 
   it("ignores invalid, non-EUR and deleted inputs safely", () => {
-    const deleted = transaction("deleted", "cash_in", 999, { deletedAt: now });
-    const result = buildTodayCenterPortfolioSnapshot({
+    const deleted = transaction("deleted", "cash_in", 999, { deletedAt: NOW });
+    const result = build({
       transactions: [deleted],
       quotes: [
         quote("invalid", VWCE_ISIN, Number.NaN),
         quote("usd", VWCE_ISIN, 200, "auto", { currency: "USD" }),
       ],
       legacyVwcePrice: Number.NaN,
+      legacyVwcePriceAsOf: NOW_DATE,
     });
 
     expect(result.totalValue).toBe(0);
