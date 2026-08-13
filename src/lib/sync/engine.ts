@@ -512,11 +512,21 @@ async function runSyncUnlocked(userId: string, networkAllowed: boolean) {
     const conflicts = (await listConflicts()).length;
     return { status: computeSyncStatus({ online: online && networkAllowed, syncing: false, conflictCount: conflicts, pendingOutbox: pending }), pushed: 0, pulled: 0, conflicts };
   }
+  // AN TOAN DU LIEU: lan hydrate DAU TIEN (chua tung pull, lastPulledAt rong) phai
+  // PULL TRUOC roi moi push. Ngay sau khi dang nhap lai, IndexedDB vua bi
+  // clearAllData() xoa sach; neu push truoc thi bat ky outbox "settings" con sot lai
+  // nao cung se ghi de (upsert khong dieu kien) hang that tren Supabase truoc khi
+  // pull kip khoi phuc -> mat Ho so khan cap (notfallmappe). Cac lan sync sau van
+  // giu push-truoc-pull nhu cu.
+  const meta = await getSyncMeta(userId);
+  const firstHydrate = !meta.lastPulledAt;
+  const pullBefore = firstHydrate ? await pullDeltaUnlocked(userId) : null;
   const push = await pushOutboxUnlocked(userId);
-  const pull = await pullDeltaUnlocked(userId);
+  const pullAfter = firstHydrate ? null : await pullDeltaUnlocked(userId);
+  const pulled = (pullBefore?.pulled ?? 0) + (pullAfter?.pulled ?? 0);
   const pending = await outboxCount();
   const conflicts = (await listConflicts()).length;
-  return { status: computeSyncStatus({ online: true, syncing: false, conflictCount: conflicts, pendingOutbox: pending }), pushed: push.pushed, pulled: pull.pulled, conflicts };
+  return { status: computeSyncStatus({ online: true, syncing: false, conflictCount: conflicts, pendingOutbox: pending }), pushed: push.pushed, pulled, conflicts };
 }
 export async function runSync(userId: string): Promise<{ status: SyncStatus; pushed: number; pulled: number; conflicts: number }> {
   return withUserSyncLock(userId, ({ networkAllowed }) => runSyncUnlocked(userId, networkAllowed));
