@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   getSettings,
   listGoals,
   listInstruments,
   listQuotes,
   listTransactions,
+  saveSettings,
 } from "../lib/db";
-import type { AppSettings, Goal, Instrument, Quote, Transaction } from "../lib/types";
+import type { AppSettings, Goal, Instrument, PlanTarget, Quote, Transaction } from "../lib/types";
 import {
   formatMoney,
   inflate,
@@ -32,9 +33,11 @@ import {
 } from "../lib/nhipInsights";
 import { computeContributionStreak } from "../lib/contributionStreak";
 import { computeHeroLifetimeContribution } from "../lib/heroLifetime";
+import { getPlanPhase } from "../lib/planPhase";
 import TodayCenter from "../components/TodayCenter";
 import TraceSheet from "../components/TraceSheet";
 import RhythmHero from "../components/RhythmHero";
+import PlanPhaseCard from "../components/PlanPhaseCard";
 import "../styles/rhythm-hero.css";
 
 type Insight = {
@@ -47,6 +50,7 @@ type Insight = {
 };
 
 export default function Overview({ refreshKey = 0 }: { displayName?: string; refreshKey?: number }) {
+  const navigate = useNavigate();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -134,6 +138,37 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       buildNhipInsightInput(portfolioSnapshot, transactions, settings),
     ).insights;
   }, [portfolioSnapshot, transactions, settings]);
+
+  // ── Plan Phase (Glide Path) ──────────────────────────────────────────────
+  const planPhase = useMemo(() => {
+    if (!settings) return null;
+    const effectiveTarget: PlanTarget = settings.planTarget ?? {
+      targetUseDate: settings.endDate,
+      needFullAmount: true,
+    };
+    return getPlanPhase(effectiveTarget);
+  }, [settings]);
+
+  const planTargetDate =
+    settings?.planTarget?.targetUseDate ?? settings?.endDate ?? "";
+
+  const showPlanCard =
+    planPhase != null && (planPhase.showReminder || planPhase.yearsLeft <= 6);
+
+  const handleDismissGlideReminder = useCallback(async () => {
+    if (!settings) return;
+    const effectiveTarget: PlanTarget = settings.planTarget ?? {
+      targetUseDate: settings.endDate,
+      needFullAmount: true,
+    };
+    const updated: PlanTarget = {
+      ...effectiveTarget,
+      lastGlideReminderYear: new Date().getFullYear(),
+    };
+    await saveSettings({ planTarget: updated });
+    setSettings((prev) => (prev ? { ...prev, planTarget: updated } : prev));
+  }, [settings]);
+  // ────────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -428,6 +463,19 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
             </>
           ) : null}
         </section>
+      ) : null}
+
+      {showPlanCard && planPhase ? (
+        <PlanPhaseCard
+          phase={planPhase}
+          targetDate={planTargetDate}
+          onViewFull={() => navigate("/settings?tab=data")}
+          onDismissReminder={
+            planPhase.showReminder
+              ? () => { void handleDismissGlideReminder(); }
+              : undefined
+          }
+        />
       ) : null}
 
       <p className="ov-foot">Không phải tư vấn đầu tư. What-if là ước tính; giao dịch vẫn lấy từ sổ local.</p>

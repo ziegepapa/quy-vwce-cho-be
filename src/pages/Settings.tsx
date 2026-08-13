@@ -22,6 +22,7 @@ import type { OutboxItem } from "../lib/sync/types";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import SettingsPricePanel from "../components/SettingsPricePanel";
 import SyncConflictSection from "../components/SyncConflictSection";
+import PlanRoadmapSection from "../components/PlanRoadmapSection";
 
 type SettingsTab = "general" | "prices" | "data";
 type SaveState = "saved" | "dirty" | "saving" | "error";
@@ -501,9 +502,7 @@ export default function SettingsPage({
             </div>
           </section>
 
-          {/* CASH-MODEL-OPTIONAL-001 r1: the owner pays for the ETF from a bank
-              or broker account this app never sees, so the double-entry ledger
-              is the exception here and not the default. */}
+          {/* CASH-MODEL-OPTIONAL-001 r1 */}
           <section className="settings-card">
             <div className="settings-card-head">
               <div>
@@ -793,6 +792,17 @@ export default function SettingsPage({
               }}
             />
           ) : null}
+
+          {/* PLAN-GLIDE-PATH-001 — Lộ trình giảm rủi ro theo năm */}
+          <PlanRoadmapSection
+            target={
+              settings.planTarget ?? {
+                targetUseDate: settings.endDate,
+                needFullAmount: true,
+              }
+            }
+            onTargetChange={(next) => patchSettings({ planTarget: next })}
+          />
 
           {auth.user?.id && (dead.length > 0 || deadSyncedMsg) ? (
             <section className="settings-card">

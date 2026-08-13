@@ -129,6 +129,35 @@ export type DepotStatement = {
   deletedAt?: string;
 };
 
+/** Trạng thái kế hoạch đầu tư theo số năm còn lại đến ngày cần tiền. */
+export type PlanStatus = "GIỮ" | "GIẢM" | "DỪNG" | "SỬ DỤNG";
+
+/**
+ * PLAN-GLIDE-PATH-001 — thông tin về mốc sử dụng tiền.
+ * Lưu trong AppSettings để thừa hưởng cơ chế sync/backup mà không cần nâng DB version.
+ */
+export type PlanTarget = {
+  /** ISO date, ví dụ "2042-01-01" */
+  targetUseDate: string;
+  /** true = cần gần như toàn bộ số tiền */
+  needFullAmount: boolean;
+  /** Nếu chỉ cần một phần (euro, tùy chọn) */
+  partialNeedEuro?: number;
+  /** Năm đã hiện reminder lần cuối — tránh spam */
+  lastGlideReminderYear?: number;
+};
+
+/** Kết quả tính toán phase hiện tại cho UI — chỉ hướng dẫn, không lệnh giao dịch. */
+export type PlanPhase = {
+  status: PlanStatus;
+  yearsLeft: number;
+  equityPct: number;
+  title: string;
+  summary: string;
+  actions: string[];
+  showReminder: boolean;
+};
+
 export type AppSettings = {
   id: string; planName: string; childName: string; accountType: "child" | "parent";
   currency: "EUR"; inflationRate: number; vwceReturn: number; safeReturn: number; bufferPct: number;
@@ -159,6 +188,8 @@ export type AppSettings = {
    * is why neither DEXIE_DB_VERSION nor BACKUP_SCHEMA_VERSION moves.
    */
   trackInAppCash?: boolean;
+  /** PLAN-GLIDE-PATH-001 — lộ trình giảm rủi ro theo năm. Optional để tương thích ngược. */
+  planTarget?: PlanTarget;
   createdAt: string; updatedAt: string;
 };
 export type Goal = {
