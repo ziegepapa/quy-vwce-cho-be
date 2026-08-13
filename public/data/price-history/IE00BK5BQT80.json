@@ -22,6 +22,11 @@
       "date": "2026-08-12",
       "price": 168.8,
       "source": "cron"
+    },
+    {
+      "date": "2026-08-13",
+      "price": 169.62,
+      "source": "cron"
     }
   ]
 }
