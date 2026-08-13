@@ -73,7 +73,7 @@ describe("Transactions load and empty states", () => {
     ]);
     render(createElement(Transactions));
 
-    expect(await screen.findByText("Nạp cash")).toBeTruthy();
+    expect(await screen.findByText(/Khoản góp tháng 8/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Tìm"), { target: { value: "không khớp" } });
 
     expect(screen.getByText("Không có giao dịch khớp bộ lọc.")).toBeTruthy();
