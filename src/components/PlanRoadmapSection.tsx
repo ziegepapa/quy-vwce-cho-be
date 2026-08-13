@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getPlanPhase } from "../lib/planPhase";
+import { getPlanPhase, planDateYear } from "../lib/planPhase";
 import type { PlanPhase, PlanTarget } from "../lib/types";
 
 function buildRoadmapRows(
@@ -8,7 +8,7 @@ function buildRoadmapRows(
 ): Array<{ year: number; phase: PlanPhase }> {
   const rows: Array<{ year: number; phase: PlanPhase }> = [];
   const currentYear = now.getFullYear();
-  const targetYear = new Date(target.targetUseDate).getFullYear();
+  const targetYear = planDateYear(target.targetUseDate) ?? currentYear;
   const endYear = Math.max(targetYear + 1, currentYear + 3);
   for (let year = currentYear; year <= endYear && rows.length < 15; year++) {
     const fakeNow = new Date(year, 0, 1);
