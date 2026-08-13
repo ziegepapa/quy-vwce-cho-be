@@ -68,6 +68,14 @@ jobs:
         run: npm run build
       - name: Run browser preview smoke test
         run: npm run test:preview
+      - name: Upload retained UI screenshots
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/**/visual-evidence-*.png
+          if-no-files-found: error
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
