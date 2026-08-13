@@ -24,6 +24,7 @@ const vwceQuote = (price: number, asOf: string): Quote => {
     id: quoteId(VWCE_ISIN, "EUR"),
     instrumentIsin: VWCE_ISIN,
     currency: "EUR",
+    venue: "XETRA",
     price,
     asOf,
     source: "auto",
@@ -32,12 +33,20 @@ const vwceQuote = (price: number, asOf: string): Quote => {
   };
 };
 
-const settingsOutbox = () =>
-  db.outbox.where("entityId").equals("settings").toArray();
+// db.outbox.toArray() tra ve union (Ordinary | Recovery); RecoveryOutboxItem
+// khong co version/expectedRemoteVersion. Doc qua kieu ro rang nay (co op +
+// payload bat buoc) de tranh loi weak-type TS2559 khi truy cap truc tiep.
+type SettingsOutboxRow = {
+  op: "upsert" | "delete" | "recover";
+  version?: number;
+  expectedRemoteVersion?: number;
+  payload: unknown;
+};
 
-const versionOf = (item: { version?: number }) => item.version;
-const guardOf = (item: { expectedRemoteVersion?: number }) =>
-  item.expectedRemoteVersion;
+const settingsOutbox = () =>
+  db.outbox.where("entityId").equals("settings").toArray() as Promise<
+    SettingsOutboxRow[]
+  >;
 
 /** settings da tung pull/dong bo ve o mot version cu the. */
 const syncedSettings = (version: number): AppSettings =>
@@ -57,8 +66,8 @@ describe("settings version-guard -- saveSettings", () => {
     const pending = await settingsOutbox();
     expect(pending).toHaveLength(1);
     expect(pending[0].op).toBe("upsert");
-    expect(versionOf(pending[0])).toBe(1);
-    expect(guardOf(pending[0])).toBeUndefined();
+    expect(pending[0].version).toBe(1);
+    expect(pending[0].expectedRemoteVersion).toBeUndefined();
   });
 
   it("guards edits once the row has been synced/hydrated", async () => {
@@ -68,8 +77,8 @@ describe("settings version-guard -- saveSettings", () => {
 
     const pending = await settingsOutbox();
     expect(pending).toHaveLength(1);
-    expect(versionOf(pending[0])).toBe(6);
-    expect(guardOf(pending[0])).toBe(5);
+    expect(pending[0].version).toBe(6);
+    expect(pending[0].expectedRemoteVersion).toBe(5);
   });
 
   it("coalesced offline edits keep the original synced base version", async () => {
@@ -80,9 +89,9 @@ describe("settings version-guard -- saveSettings", () => {
 
     const pending = await settingsOutbox();
     expect(pending).toHaveLength(1);
-    expect(versionOf(pending[0])).toBe(7);
+    expect(pending[0].version).toBe(7);
     // Base van la 5 (version tren server), khong phai 6 -> tranh conflict gia.
-    expect(guardOf(pending[0])).toBe(5);
+    expect(pending[0].expectedRemoteVersion).toBe(5);
     const payload = pending[0].payload as AppSettings;
     expect(payload.childName).toBe("Be An");
     expect(payload.planName).toBe("Doi ten");
@@ -96,8 +105,8 @@ describe("settings version-guard -- saveSettings", () => {
 
     const pending = await settingsOutbox();
     expect(pending).toHaveLength(1);
-    expect(versionOf(pending[0])).toBe(2);
-    expect(guardOf(pending[0])).toBeUndefined();
+    expect(pending[0].version).toBe(2);
+    expect(pending[0].expectedRemoteVersion).toBeUndefined();
   });
 
   it("does not enqueue anything when sync is disabled", async () => {
@@ -136,8 +145,8 @@ describe("settings version-guard -- local price mirror must not drift the base",
 
     const pending = await settingsOutbox();
     expect(pending).toHaveLength(1);
-    expect(versionOf(pending[0])).toBe(1);
-    expect(guardOf(pending[0])).toBeUndefined();
+    expect(pending[0].version).toBe(1);
+    expect(pending[0].expectedRemoteVersion).toBeUndefined();
   });
 
   it("keeps the synced base version even after a local auto mirror", async () => {
@@ -151,8 +160,8 @@ describe("settings version-guard -- local price mirror must not drift the base",
 
     const pending = await settingsOutbox();
     expect(pending).toHaveLength(1);
-    expect(versionOf(pending[0])).toBe(6);
-    expect(guardOf(pending[0])).toBe(5);
+    expect(pending[0].version).toBe(6);
+    expect(pending[0].expectedRemoteVersion).toBe(5);
   });
 });
 
@@ -167,8 +176,8 @@ describe("settings version-guard -- manual price mirror (applyResolvedEffective)
 
     const pending = await settingsOutbox();
     expect(pending).toHaveLength(1);
-    expect(versionOf(pending[0])).toBe(6);
-    expect(guardOf(pending[0])).toBe(5);
+    expect(pending[0].version).toBe(6);
+    expect(pending[0].expectedRemoteVersion).toBe(5);
   });
 
   it("first manual mirror on a fresh row is unconditional", async () => {
@@ -181,7 +190,7 @@ describe("settings version-guard -- manual price mirror (applyResolvedEffective)
 
     const pending = await settingsOutbox();
     expect(pending).toHaveLength(1);
-    expect(versionOf(pending[0])).toBe(1);
-    expect(guardOf(pending[0])).toBeUndefined();
+    expect(pending[0].version).toBe(1);
+    expect(pending[0].expectedRemoteVersion).toBeUndefined();
   });
 });
