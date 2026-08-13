@@ -2,7 +2,7 @@ import type { PlanPhase, PlanStatus, PlanTarget } from "./types";
 
 /**
  * Số năm còn lại đến targetIso tính từ now (floor, dùng phép trừ năm chính xác).
- * Trả về 0 nếu đã qua mốc (đã căt — không âm).
+ * Trả về 0 nếu đã qua mốc (đã cắt — không âm).
  */
 export function yearsUntil(targetIso: string, now: Date = new Date()): number {
   const target = new Date(targetIso);
@@ -51,7 +51,7 @@ const PHASE_TABLE: PhaseRow[] = [
     summary:
       "Còn khoảng 5 năm. Bắt đầu chuyển một phần nhỏ sang phần an toàn, vẫn giữ phần lớn cổ phiếu.",
     actions: [
-      "Giảm tiền mới vào cổ phiếu xuống khoảng 80\u201390% mức hiện tại.",
+      "Giảm tiền mới vào cổ phiếu xuống khoảng 80–90% mức hiện tại.",
       "Chuyển khoảng 10% giá trị danh mục sang phần an toàn trong tháng này.",
       "Không dừng hẳn Sparplan cổ phiếu.",
     ],
@@ -73,9 +73,9 @@ const PHASE_TABLE: PhaseRow[] = [
     status: "GIẢM",
     equityPct: 55,
     title: "Giảm sâu hơn",
-    summary: "Còn 3 năm. Ưu tiên bảo toàn phần sẽ dùng trong 1\u20133 năm đầu.",
+    summary: "Còn 3 năm. Ưu tiên bảo toàn phần sẽ dùng trong 1–3 năm đầu.",
     actions: [
-      "Đưa phần an toàn lên khoảng 40\u201350%.",
+      "Đưa phần an toàn lên khoảng 40–50%.",
       "Chỉ giữ cổ phiếu với phần tiền chưa chắc cần sớm.",
       "Rà soát Freistellungsauftrag và thuế nếu có.",
     ],
@@ -94,7 +94,7 @@ const PHASE_TABLE: PhaseRow[] = [
   },
   {
     minYears: 1,
-    status: "DỮNG",
+    status: "DỪNG",
     equityPct: 10,
     title: "Dừng góp cổ phiếu",
     summary:
@@ -102,7 +102,7 @@ const PHASE_TABLE: PhaseRow[] = [
     actions: [
       "Dừng Savings Plan cổ phiếu.",
       "Chuyển phần còn lại cần dùng sang tiền mặt / Tagesgeld / money-market.",
-      "Chỉ giữ lại phần tiền chắc chắn không dùng trong 12\u201318 tháng tới.",
+      "Chỉ giữ lại phần tiền chắc chắn không dùng trong 12–18 tháng tới.",
     ],
   },
   {
@@ -120,10 +120,6 @@ const PHASE_TABLE: PhaseRow[] = [
   },
 ];
 
-/**
- * Trả về PlanPhase theo số năm còn lại đến target, hoặc null nếu target không hợp lệ.
- * Pure function — không có side effect, dễ test.
- */
 export function getPlanPhase(
   target: PlanTarget | null | undefined,
   now: Date = new Date(),

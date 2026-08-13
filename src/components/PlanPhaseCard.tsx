@@ -3,14 +3,14 @@ import type { PlanPhase } from "../lib/types";
 const STATUS_COLOR: Record<string, { bg: string; fg: string }> = {
   "GIỮ":      { bg: "var(--green-100,#dcfce7)",   fg: "var(--green-700,#15803d)" },
   "GIẢM":     { bg: "var(--amber-100,#fef3c7)",   fg: "var(--amber-700,#b45309)" },
-  "DừNG":     { bg: "var(--orange-100,#ffedd5)",  fg: "var(--orange-700,#c2410c)" },
+  "DỪNG":     { bg: "var(--orange-100,#ffedd5)",  fg: "var(--orange-700,#c2410c)" },
   "SỬ DỤNG": { bg: "var(--blue-100,#dbeafe)",    fg: "var(--blue-700,#1d4ed8)" },
 };
 
 const STATUS_ICON: Record<string, string> = {
   "GIỮ":      "📈",
   "GIẢM":     "⚖️",
-  "DừNG":     "🛑",
+  "DỪNG":     "🛑",
   "SỬ DỤNG": "✅",
 };
 
