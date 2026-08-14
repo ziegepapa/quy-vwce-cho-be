@@ -8,6 +8,5 @@
   "asOf": "2026-08-13",
   "fetchedAt": "2026-08-14T07:41:36.929Z",
   "provider": "onvista",
-  "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot",
-  "crossCheckDifferencePct": 0
+  "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
 }
