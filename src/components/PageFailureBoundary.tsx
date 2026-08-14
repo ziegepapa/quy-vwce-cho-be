@@ -1,4 +1,5 @@
 import { Component, Fragment, type ReactNode } from "react";
+import { isRecoverableOperationError } from "../lib/operationErrors";
 
 type Props = {
   children: ReactNode;
@@ -39,7 +40,7 @@ export default class PageFailureBoundary extends Component<Props, State> {
   }
 
   private handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-    if (isExpectedAbort(event.reason)) return;
+    if (isExpectedAbort(event.reason) || isRecoverableOperationError(event.reason)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     this.setState({ failed: true });

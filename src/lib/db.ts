@@ -19,10 +19,11 @@ export {
   isSameAutoQuoteSemantics,
 } from "./db.m06";
 export {
-  ensureInitialized, getSettings, saveSettings, listGoals, listTransactions,
+  ensureInitialized, getSettings, listGoals, listTransactions,
   findTransactionByExternalRef, upsertTransaction, deleteTransaction,
   upsertGoal, deleteGoal,
 } from "./db.m07";
+export { saveSettings } from "./recoverableSettingsSave";
 export {
   listDepotStatements,
   findDepotStatementByStatementId,
