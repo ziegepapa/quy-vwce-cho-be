@@ -30,18 +30,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * - 1: legacy (pre multi-asset)
  * - 2: instruments + effective quotes
  * - 3: candidates + preferences authoritative; quotes diagnostic only
+ * - 4: tombstones in deletedGoals / deletedTransactions
  *
  * Dexie DB version is independent (DEXIE_DB_VERSION = 4).
  */
 export function isSupportedBackupSchema(version: unknown): version is number {
   if (typeof version !== "number" || !Number.isFinite(version)) return false;
   if (!Number.isInteger(version)) return false;
-  return version === 1 || version === 2 || version === BACKUP_SCHEMA_VERSION;
+  // List every supported version explicitly so old files keep loading after
+  // BACKUP_SCHEMA_VERSION bumps to the next value.
+  return version === 1 || version === 2 || version === 3 || version === BACKUP_SCHEMA_VERSION;
 }
 
 /** One canonical user-facing message so the UI cannot omit a supported version. */
 export function unsupportedBackupSchemaMessage(version: unknown): string {
-  return `schemaVersion không khớp (file: ${String(version)}; hỗ trợ: 1, 2 hoặc ${BACKUP_SCHEMA_VERSION})`;
+  return `schemaVersion kh\u00f4ng kh\u1edbp (file: ${String(version)}; h\u1ed7 tr\u1ee3: 1, 2, 3 ho\u1eb7c ${BACKUP_SCHEMA_VERSION})`;
 }
 
 /**
@@ -51,7 +54,7 @@ export function unsupportedBackupSchemaMessage(version: unknown): string {
  */
 export function validateBackupPayload(value: unknown): BackupPayloadValidation {
   if (!isRecord(value)) {
-    return { ok: false, error: "Cấu trúc backup không hợp lệ" };
+    return { ok: false, error: "C\u1ea5u tr\u00fac backup kh\u00f4ng h\u1ee3p l\u1ec7" };
   }
 
   if (!isSupportedBackupSchema(value.schemaVersion)) {
@@ -66,7 +69,7 @@ export function validateBackupPayload(value: unknown): BackupPayloadValidation {
     !value.exportedAt.trim() ||
     Number.isNaN(Date.parse(value.exportedAt))
   ) {
-    return { ok: false, error: "Backup thiếu hoặc sai trường bắt buộc: exportedAt" };
+    return { ok: false, error: "Backup thi\u1ebfu ho\u1eb7c sai tr\u01b0\u1eddng b\u1eaft bu\u1ed9c: exportedAt" };
   }
 
   const invalidRequired = REQUIRED_ARRAY_FIELDS.filter(
@@ -75,7 +78,7 @@ export function validateBackupPayload(value: unknown): BackupPayloadValidation {
   if (invalidRequired.length > 0) {
     return {
       ok: false,
-      error: `Backup thiếu hoặc sai trường bắt buộc: ${invalidRequired.join(", ")}`,
+      error: `Backup thi\u1ebfu ho\u1eb7c sai tr\u01b0\u1eddng b\u1eaft bu\u1ed9c: ${invalidRequired.join(", ")}`,
     };
   }
 
@@ -85,7 +88,7 @@ export function validateBackupPayload(value: unknown): BackupPayloadValidation {
   if (invalidOptional.length > 0) {
     return {
       ok: false,
-      error: `Backup có trường không hợp lệ: ${invalidOptional.join(", ")}`,
+      error: `Backup c\u00f3 tr\u01b0\u1eddng kh\u00f4ng h\u1ee3p l\u1ec7: ${invalidOptional.join(", ")}`,
     };
   }
 
@@ -94,7 +97,57 @@ export function validateBackupPayload(value: unknown): BackupPayloadValidation {
     if (!validation.ok) {
       return {
         ok: false,
-        error: `Backup transactions[${index}] không hợp lệ: ${validation.error}`,
+        error: `Backup transactions[${index}] kh\u00f4ng h\u1ee3p l\u1ec7: ${validation.error}`,
+      };
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // v4 tombstone arrays: optional, but if present each entry must carry deletedAt.
+  // AN TOAN DU LIEU (DELETE-TOMBSTONE-BACKUP-001-b): do NOT run
+  // validateTransactionNumbers on deletedTransactions -- tombstones carry
+  // deletion intent only, not live accounting data; their numeric fields were
+  // already validated when each row was first written to the database.
+  // -------------------------------------------------------------------------
+  if (value.deletedGoals !== undefined && !Array.isArray(value.deletedGoals)) {
+    return { ok: false, error: "Backup c\u00f3 tr\u01b0\u1eddng kh\u00f4ng h\u1ee3p l\u1ec7: deletedGoals" };
+  }
+  if (value.deletedTransactions !== undefined && !Array.isArray(value.deletedTransactions)) {
+    return { ok: false, error: "Backup c\u00f3 tr\u01b0\u1eddng kh\u00f4ng h\u1ee3p l\u1ec7: deletedTransactions" };
+  }
+  for (const [index, g] of ((value.deletedGoals as unknown[] | undefined) ?? []).entries()) {
+    if (!g || typeof g !== "object" || !((g as { deletedAt?: unknown }).deletedAt)) {
+      return { ok: false, error: `Backup deletedGoals[${index}] thi\u1ebfu deletedAt` };
+    }
+  }
+  for (const [index, t] of ((value.deletedTransactions as unknown[] | undefined) ?? []).entries()) {
+    if (!t || typeof t !== "object" || !((t as { deletedAt?: unknown }).deletedAt)) {
+      return { ok: false, error: `Backup deletedTransactions[${index}] thi\u1ebfu deletedAt` };
+    }
+  }
+
+  // Fail-closed duplicate-id guard: an id that appears in both the live and
+  // the deleted array signals a corrupted or manually edited file.  Check
+  // BEFORE any table is cleared so the database is never touched on a bad file.
+  const liveGoalIds = new Set(
+    (value.goals as Array<{ id: unknown }>).map((g) => g.id),
+  );
+  for (const g of (value.deletedGoals as Array<{ id: unknown }> | undefined) ?? []) {
+    if (liveGoalIds.has(g.id)) {
+      return {
+        ok: false,
+        error: `Backup goals: id tr\u00f9ng gi\u1eefa live v\u00e0 deleted: ${String(g.id)}`,
+      };
+    }
+  }
+  const liveTxIds = new Set(
+    (value.transactions as Array<{ id: unknown }>).map((t) => t.id),
+  );
+  for (const t of (value.deletedTransactions as Array<{ id: unknown }> | undefined) ?? []) {
+    if (liveTxIds.has(t.id)) {
+      return {
+        ok: false,
+        error: `Backup transactions: id tr\u00f9ng gi\u1eefa live v\u00e0 deleted: ${String(t.id)}`,
       };
     }
   }

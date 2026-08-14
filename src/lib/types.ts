@@ -1,7 +1,7 @@
 export type GoalMode = "nominal" | "purchasing_power";
 export type GoalUrgency = "hard" | "flexible";
 
-/** V10-A — một người cần được báo tin trong tình huống khẩn cấp. */
+/** V10-A -- mot nguoi can duoc bao tin trong tinh huong khan cap. */
 export type EmergencyContact = {
   id: string;
   name: string;
@@ -11,8 +11,8 @@ export type EmergencyContact = {
 };
 
 /**
- * V10-A — NƠI CẤT một giấy tờ gốc. Không bao giờ là bản chụp giấy tờ,
- * và tuyệt đối không chứa mật khẩu, PIN hay TAN.
+ * V10-A -- NOI CAT mot giay to goc. Khong bao gio la ban chup giay to,
+ * va tuyet doi khong chua mat khau, PIN hay TAN.
  */
 export type DocumentLocation = {
   id: string;
@@ -21,10 +21,10 @@ export type DocumentLocation = {
 };
 
 /**
- * V10-A — Hồ sơ khẩn cấp.
+ * V10-A -- Ho so khan cap.
  *
- * Lưu bên trong AppSettings chứ không phải bảng riêng, để thừa hưởng sẵn
- * cơ chế đồng bộ và sao lưu của settings mà không phải nâng phiên bản Dexie.
+ * Luu ben trong AppSettings chu khong phai bang rieng, de thua huong san
+ * co che dong bo va sao luu cua settings ma khong phai nang phien ban Dexie.
  */
 export type Notfallmappe = {
   purpose: string;
@@ -37,12 +37,12 @@ export type Notfallmappe = {
   contacts: EmergencyContact[];
   documents: DocumentLocation[];
   wishes: string;
-  /** V10-A2 — lần in gần nhất. Bản in giấy mới là bản người thân dùng được. */
+  /** V10-A2 -- lan in gan nhat. Ban in giay moi la ban nguoi than dung duoc. */
   lastPrintedAt?: string;
   updatedAt: string;
 };
 
-/** Multi-asset foundation — instrument keyed by normalized ISIN. */
+/** Multi-asset foundation -- instrument keyed by normalized ISIN. */
 export type Instrument = {
   isin: string;
   name: string;
@@ -129,25 +129,25 @@ export type DepotStatement = {
   deletedAt?: string;
 };
 
-/** Trạng thái kế hoạch đầu tư theo số năm còn lại đến ngày cần tiền. */
+/** Trang thai ke hoach dau tu theo so nam con lai den ngay can tien. */
 export type PlanStatus = "GIỮ" | "GIẢM" | "DỪNG" | "SỬ DỤNG";
 
 /**
- * PLAN-GLIDE-PATH-001 — thông tin về mốc sử dụng tiền.
- * Lưu trong AppSettings để thừa hưởng cơ chế sync/backup mà không cần nâng DB version.
+ * PLAN-GLIDE-PATH-001 -- thong tin ve moc su dung tien.
+ * Luu trong AppSettings de thua huong co che sync/backup ma khong can nang DB version.
  */
 export type PlanTarget = {
-  /** ISO date, ví dụ "2042-01-01" */
+  /** ISO date, vi du "2042-01-01" */
   targetUseDate: string;
-  /** true = cần gần như toàn bộ số tiền */
+  /** true = can gan nhu toan bo so tien */
   needFullAmount: boolean;
-  /** Nếu chỉ cần một phần (euro, tùy chọn) */
+  /** Neu chi can mot phan (euro, tuy chon) */
   partialNeedEuro?: number;
-  /** Năm đã hiện reminder lần cuối — tránh spam */
+  /** Nam da hien reminder lan cuoi -- tranh spam */
   lastGlideReminderYear?: number;
 };
 
-/** Kết quả tính toán phase hiện tại cho UI — chỉ hướng dẫn, không lệnh giao dịch. */
+/** Ket qua tinh toan phase hien tai cho UI -- chi huong dan, khong lenh giao dich. */
 export type PlanPhase = {
   status: PlanStatus;
   yearsLeft: number;
@@ -171,14 +171,14 @@ export type AppSettings = {
   latestPriceDate: string;
   contributionY1: number; contributionY2: number; disclaimerAccepted: boolean; onboardingDone: boolean;
   notfallmappe?: Notfallmappe;
-  /** V10-C — nested to inherit settings backup/sync without a remote schema change. */
+  /** V10-C -- nested to inherit settings backup/sync without a remote schema change. */
   depotStatements?: DepotStatement[];
   /**
-   * CASH-MODEL-OPTIONAL-001 r1 — how the money that paid for a purchase is
+   * CASH-MODEL-OPTIONAL-001 r1 -- how the money that paid for a purchase is
    * tracked.
    *
    * false (default): securities-first. The euros left a bank or broker account
-   * this app never sees, so a buy without a matching `cash_in` is not a missing
+   * this app never sees, so a buy without a matching cash_in is not a missing
    * deposit and must not be reported as one.
    * true: the full double-entry ledger, where a buy really does need its
    * funding entry and the gap is worth naming.
@@ -188,7 +188,7 @@ export type AppSettings = {
    * is why neither DEXIE_DB_VERSION nor BACKUP_SCHEMA_VERSION moves.
    */
   trackInAppCash?: boolean;
-  /** PLAN-GLIDE-PATH-001 — lộ trình giảm rủi ro theo năm. Optional để tương thích ngược. */
+  /** PLAN-GLIDE-PATH-001 -- lo trinh giam rui ro theo nam. Optional de tuong thich nguoc. */
   planTarget?: PlanTarget;
   createdAt: string; updatedAt: string;
 };
@@ -239,9 +239,12 @@ export type BackupPayload = {
   quotes?: Quote[];
   quoteCandidates?: QuoteCandidate[];
   quotePreferences?: QuoteSelectionPreference[];
+  /** DELETE-TOMBSTONE-BACKUP-001-b (v4): soft-deleted rows carried across backups. */
+  deletedGoals?: Goal[];
+  deletedTransactions?: Transaction[];
 };
 
-export const BACKUP_SCHEMA_VERSION = 3;
+export const BACKUP_SCHEMA_VERSION = 4;
 export const SCHEMA_VERSION = BACKUP_SCHEMA_VERSION;
 
 /** IndexedDB version remains 4; depot snapshots ride inside synced settings. */
@@ -257,7 +260,7 @@ export type QuoteMigrationMeta = {
   lastError?: string;
 };
 
-/** Hiển thị ở Cài đặt — đổi khi ship UI lớn */
+/** Hien thi o Cai dat -- doi khi ship UI lon */
 export const APP_VERSION = "1.8.0";
 
 export const VWCE_ISIN = "IE00BK5BQT80";
