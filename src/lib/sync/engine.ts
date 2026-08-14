@@ -471,6 +471,15 @@ async function pullDeltaUnlocked(userId: string): Promise<{ pulled: number; conf
       const candidates = await db.outbox.where("entityId").equals(entityId).toArray();
       const localPending = candidates.find((item) => item.table === table);
       if (localPending?.op === "recover") continue;
+      // AN TOAN DU LIEU (DELETE-TOMBSTONE-BACKUP-001, BAY 4): mot viec "delete" con
+      // trong outbox la y muon MOI NHAT cua nguoi dung, va outbox la duong DUY NHAT
+      // de may chu biet dong nay da bi xoa. Neu khong chan o day, nhanh else ben duoi
+      // se store.put(...) hang con song tu may chu len tren tombstone -> dong da xoa
+      // SONG LAI. Chi bo qua hang cua may chu; khong day gi, khong xoa viec dang cho.
+      // Danh doi da biet, co test khoa lai: watermark lastPulledAt van tien len, nen
+      // neu viec xoa nay chet trong outbox thi hang con song tren may chu se khong
+      // duoc chao lai cho toi khi Owner bam thu lai dong bo.
+      if (localPending?.op === "delete" && currentRemote.state === "present") continue;
       if (localPending?.op === "upsert") {
         if (localPending.expectedRemoteVersion !== undefined) {
           if (localPending.expectedRemoteVersion !== currentRemote.version) {
