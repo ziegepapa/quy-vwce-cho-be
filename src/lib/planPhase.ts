@@ -70,7 +70,7 @@ const PHASE_TABLE: PhaseRow[] = [
     equityPct: 100,
     title: "Giai đoạn tăng trưởng",
     summary:
-      "Còn nhiều thời gian. Giữ nguyên Sparplan cổ phiếu, không phản ứng theo biến động ngắn hạn.",
+      "Còn nhiều thời gian. Giữ nguyên kế hoạch góp định kỳ vào cổ phiếu, không phản ứng theo biến động ngắn hạn.",
     actions: [
       "Giữ mức góp hiện tại vào VWCE (và EIMI nếu có).",
       "Mỗi năm chỉ rà soát 1 lần (sinh nhật hoặc tháng 01).",
@@ -87,7 +87,7 @@ const PHASE_TABLE: PhaseRow[] = [
     actions: [
       "Giảm tiền mới vào cổ phiếu xuống khoảng 80–90% mức hiện tại.",
       "Chuyển khoảng 10% giá trị danh mục sang phần an toàn trong tháng này.",
-      "Không dừng hẳn Sparplan cổ phiếu.",
+      "Không dừng hẳn kế hoạch góp định kỳ vào cổ phiếu.",
     ],
   },
   {
@@ -132,10 +132,10 @@ const PHASE_TABLE: PhaseRow[] = [
     equityPct: 10,
     title: "Dừng góp cổ phiếu",
     summary:
-      "Còn khoảng 1 năm. Dừng Sparplan cổ phiếu, chuyển gần như toàn bộ phần cần dùng sang an toàn.",
+      "Còn khoảng 1 năm. Dừng kế hoạch góp định kỳ vào cổ phiếu, chuyển gần như toàn bộ phần cần dùng sang an toàn.",
     actions: [
-      "Dừng Savings Plan cổ phiếu.",
-      "Chuyển phần còn lại cần dùng sang tiền mặt / Tagesgeld / money-market.",
+      "Dừng kế hoạch góp định kỳ vào cổ phiếu.",
+      "Chuyển phần còn lại cần dùng sang tiền mặt, tài khoản tiết kiệm linh hoạt hoặc quỹ thị trường tiền tệ.",
       "Chỉ giữ lại phần tiền chắc chắn không dùng trong 12–18 tháng tới.",
     ],
   },
