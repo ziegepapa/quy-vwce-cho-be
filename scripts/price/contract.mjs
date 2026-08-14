@@ -193,7 +193,15 @@ export function legacyV1ToQuoteRow(v1) {
   };
 }
 
-/** V2 VWCE quote → legacy schema 1 payload. */
+/**
+ * V2 VWCE quote → legacy schema 1 payload.
+ *
+ * PRICE-LEGACY-MIRROR-HONESTY-001: never fabricate cross-check evidence. When
+ * the v2 row carries no finite crossCheckDifferencePct (e.g. the primary
+ * provider itself was onvista, so no independent cross-check ran), the field is
+ * omitted instead of being published as 0, which would read as "cross-checked,
+ * 0% difference". A genuine 0 is still preserved.
+ */
 export function quoteRowToLegacyV1(q, ticker = "VWCE") {
   return {
     schemaVersion: 1,
@@ -208,7 +216,9 @@ export function quoteRowToLegacyV1(q, ticker = "VWCE") {
     providerUrl: q.providerUrl,
     crossCheckedWith: q.crossCheckedWith,
     crossCheckDifferencePct:
-      typeof q.crossCheckDifferencePct === "number" ? q.crossCheckDifferencePct : 0,
+      typeof q.crossCheckDifferencePct === "number" && Number.isFinite(q.crossCheckDifferencePct)
+        ? q.crossCheckDifferencePct
+        : undefined,
   };
 }
 
