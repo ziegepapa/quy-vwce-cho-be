@@ -1,0 +1,23 @@
+.simulation-operation-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.simulation-operation-error > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.simulation-operation-error button {
+  flex: none;
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .simulation-operation-error {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
