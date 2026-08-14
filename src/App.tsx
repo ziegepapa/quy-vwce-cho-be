@@ -23,7 +23,7 @@ import { conflictCtaLabel, hasLogoutBlockers, openSyncConflictSection, readSyncC
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
 import Goals from "./pages/Goals";
-import Simulation from "./pages/Simulation";
+import Simulation from "./pages/SimulationRoute";
 import SettingsPage from "./pages/Settings";
 import Notfallmappe from "./pages/Notfallmappe";
 import Onboarding from "./pages/Onboarding";
