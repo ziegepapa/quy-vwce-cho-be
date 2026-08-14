@@ -581,7 +581,7 @@ export default function SettingsPage({
               </div>
               <Segmented
                 value={settings.accountType}
-                options={[{ value: "parent", label: "Cha/mệ" }, { value: "child", label: "Bé" }]}
+                options={[{ value: "parent", label: "Cha/mẹ" }, { value: "child", label: "Bé" }]}
                 onChange={(v) => patchSettings({ accountType: v as "child" | "parent" })} />
             </div>
           </section>
