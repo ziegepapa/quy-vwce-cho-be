@@ -16,12 +16,20 @@ import {
   isSupportedBackupSchema,
   unsupportedBackupSchemaMessage,
 } from "../lib/backupSchema";
+import {
+  PENDING_SYNC_ACCEPT_LABEL,
+  PENDING_SYNC_IMPORT_RISK,
+  PENDING_SYNC_IMPORT_TITLE,
+  PENDING_SYNC_PUSH_FIRST_LABEL,
+  pendingSyncCountLine,
+  pendingSyncImportBlock,
+} from "../lib/backupImportGate";
 import { csvEscape, formatDateVN, parseDecimal } from "../lib/calc";
 import type { ThemeChoice } from "../lib/theme";
 import { THEME_OPTIONS, persistTheme, readTheme } from "../lib/theme";
 import { useAuth } from "../lib/auth";
 import { listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
-import type { OutboxItem } from "../lib/sync/types";
+import type { OutboxItem, PendingSyncSummary } from "../lib/sync/types";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import SettingsPricePanel from "../components/SettingsPricePanel";
 import SyncConflictSection from "../components/SyncConflictSection";
@@ -33,6 +41,8 @@ type SaveState = "saved" | "dirty" | "saving" | "error";
 
 const SETTINGS_AUTOSAVE_MS = 650;
 const SETTINGS_SAVE_ERROR = "Không lưu được Cài đặt. Bản đang chỉnh vẫn còn trên màn hình.";
+const PENDING_SYNC_PUSH_ERROR =
+  "Không đẩy được các thay đổi đang chờ. Dữ liệu trên thiết bị vẫn được giữ nguyên.";
 
 function pctDisplay(decimal: number): string {
   if (!Number.isFinite(decimal)) return "—";
@@ -171,6 +181,8 @@ export default function SettingsPage({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [pendingSync, setPendingSync] = useState<PendingSyncSummary | null>(null);
+  const [pendingSyncPushing, setPendingSyncPushing] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
   const [dead, setDead] = useState<OutboxItem[]>([]);
   const [deadRetrying, setDeadRetrying] = useState(false);
@@ -194,6 +206,8 @@ export default function SettingsPage({
   const mounted = useRef(true);
   const flushRef = useRef<() => Promise<void>>(async () => undefined);
   const onSettingsChangedRef = useRef(onSettingsChanged);
+  /** Đã tải bản sao lưu an toàn cho đúng file đang chờ hay chưa. */
+  const safetyBackupDone = useRef(false);
 
   useEffect(() => {
     onSettingsChangedRef.current = onSettingsChanged;
@@ -353,7 +367,40 @@ export default function SettingsPage({
   function doImport(file: File) {
     if (readOnly) { showBlocked(); return; }
     setActionError(null);
+    setPendingSync(null);
+    safetyBackupDone.current = false;
     setPendingFile(file);
+  }
+
+  function closeImport() {
+    setPendingFile(null);
+    setPendingSync(null);
+  }
+
+  /**
+   * DELETE-TOMBSTONE-BACKUP-001 — đẩy hết việc đang chờ trước khi khôi phục, để
+   * việc xoá tới được máy chủ trước khi outbox bị xoá sạch.
+   *
+   * Sau khi đẩy xong chỉ xóa cảnh báo trên màn hình; gate thật vẫn nằm ở
+   * `importBackup` và sẽ đếm lại outbox ở lần bấm sau — nếu vẫn còn việc treo
+   * (ví dụ đang offline) thì cảnh báo quay lại.
+   */
+  async function pushPendingSyncBeforeImport() {
+    if (readOnly) { showBlocked(); return; }
+    const userId = auth.user?.id;
+    if (!userId) return;
+    setPendingSyncPushing(true);
+    setActionError(null);
+    try {
+      await reviveDeadOutbox();
+      await pushOutbox(userId);
+      setDead(await listDeadOutbox());
+      setPendingSync(null);
+    } catch {
+      setActionError(PENDING_SYNC_PUSH_ERROR);
+    } finally {
+      setPendingSyncPushing(false);
+    }
   }
 
   async function confirmImport() {
@@ -365,28 +412,45 @@ export default function SettingsPage({
     try {
       let data: BackupPayload;
       try { data = JSON.parse(await file.text()); } catch {
-        alert("JSON không hợp lệ"); return;
+        alert("JSON không hợp lệ"); closeImport(); return;
       }
-      if (!data || typeof data !== "object") { alert("Cấu trúc backup không hợp lệ"); return; }
+      if (!data || typeof data !== "object") {
+        alert("Cấu trúc backup không hợp lệ"); closeImport(); return;
+      }
       if (!isSupportedBackupSchema(data.schemaVersion)) {
         alert(unsupportedBackupSchemaMessage(data.schemaVersion));
+        closeImport();
         return;
+      }
+      if (!safetyBackupDone.current) {
+        try {
+          const current = await exportBackup();
+          downloadJson(current, `ban-sao-luu-truoc-khi-nhap-json-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
+          safetyBackupDone.current = true;
+        } catch {
+          alert("Không tạo được bản sao lưu trước khi nhập. Dữ liệu chưa bị thay đổi.");
+          closeImport();
+          return;
+        }
       }
       try {
-        const current = await exportBackup();
-        downloadJson(current, `ban-sao-luu-truoc-khi-nhap-json-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
-      } catch {
-        alert("Không tạo được bản sao lưu trước khi nhập. Dữ liệu chưa bị thay đổi.");
+        if (pendingSync) await importBackup(data, { acceptPendingSyncRisk: true });
+        else await importBackup(data);
+      } catch (error) {
+        const blocked = pendingSyncImportBlock(error);
+        if (!blocked) throw error;
+        // Giữ hộp xác nhận mở để cảnh báo hiện ngay tại chỗ người dùng đã bấm.
+        setPendingSync(blocked);
         return;
       }
-      await importBackup(data);
       alert("Nhập backup thành công");
+      closeImport();
       onReload();
     } catch {
       alert("Không nhập được backup. Dữ liệu hiện tại vẫn được giữ nguyên.");
+      closeImport();
     } finally {
       setImporting(false);
-      setPendingFile(null);
     }
   }
 
@@ -808,13 +872,31 @@ export default function SettingsPage({
                   Toàn bộ dữ liệu local hiện có trên iPhone sẽ được thay bằng nội dung file này.
                   Ứng dụng sẽ tải một bản sao lưu trước khi tiếp tục. Thao tác này không tự ghi đè dữ liệu trong tài khoản.
                 </p>
+                {pendingSync ? (
+                  <div className="settings-inline-status settings-import-warning" role="alert">
+                    <p><strong>{PENDING_SYNC_IMPORT_TITLE}</strong></p>
+                    <p>{pendingSyncCountLine(pendingSync)}</p>
+                    <p>{PENDING_SYNC_IMPORT_RISK}</p>
+                  </div>
+                ) : null}
                 <div className="delete-actions">
-                  <button type="button" className="danger" disabled={importing}
+                  {pendingSync && auth.user?.id ? (
+                    <button type="button" className="secondary"
+                      disabled={importing || pendingSyncPushing}
+                      onClick={() => void pushPendingSyncBeforeImport()}>
+                      {pendingSyncPushing ? "Đang đẩy đồng bộ…" : PENDING_SYNC_PUSH_FIRST_LABEL}
+                    </button>
+                  ) : null}
+                  <button type="button" className="danger" disabled={importing || pendingSyncPushing}
                     onClick={() => void confirmImport()}>
-                    {importing ? "Đang nhập…" : "Xác nhận thay dữ liệu trên thiết bị"}
+                    {importing
+                      ? "Đang nhập…"
+                      : pendingSync
+                        ? PENDING_SYNC_ACCEPT_LABEL
+                        : "Xác nhận thay dữ liệu trên thiết bị"}
                   </button>
-                  <button type="button" className="secondary" disabled={importing}
-                    onClick={() => setPendingFile(null)}>Quay lại</button>
+                  <button type="button" className="secondary" disabled={importing || pendingSyncPushing}
+                    onClick={() => closeImport()}>Quay lại</button>
                 </div>
               </div>
             ) : null}

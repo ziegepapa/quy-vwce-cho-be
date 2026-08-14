@@ -47,6 +47,19 @@ export type RecoveryOutboxItem = OutboxCommon & {
 export type OutboxOp = OrdinaryOutboxItem["op"] | RecoveryOutboxItem["op"];
 export type OutboxItem = OrdinaryOutboxItem | RecoveryOutboxItem;
 
+/**
+ * DELETE-TOMBSTONE-BACKUP-001 — ảnh chụp outbox trước một thao tác xoá-rồi-ghi-lại
+ * toàn bộ dữ liệu cục bộ (khôi phục sao lưu).
+ *
+ * `deletes` là con số quan trọng: một việc "delete" chưa đẩy là đường DUY NHẤT để
+ * máy chủ biết dòng đó đã bị xoá.
+ */
+export type PendingSyncSummary = {
+  total: number;
+  deletes: number;
+  dead: number;
+};
+
 export type RecoverySessionResult =
   | { status: "queued"; confirmed: number; pending: number }
   | { status: "confirmed"; confirmed: number }
