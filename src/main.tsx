@@ -4,6 +4,7 @@ import { HashRouter } from "react-router-dom";
 import { AuthProvider } from "./lib/auth";
 import App from "./App";
 import AppFailureBoundary from "./components/AppFailureBoundary";
+import ModalAccessibilityManager from "./components/ModalAccessibilityManager";
 import "./index.css";
 import "./styles/dock.css";
 import "./styles/nav.css";
@@ -18,12 +19,14 @@ import "./styles/aurora-theme.css";
 import "./styles/overview-focal-merge.css";
 import "./styles/night-ledger.css";
 import "./styles/dark-screen-finish.css";
+import "./styles/accessibility-foundations.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppFailureBoundary>
       <HashRouter>
         <AuthProvider>
+          <ModalAccessibilityManager />
           <App />
         </AuthProvider>
       </HashRouter>

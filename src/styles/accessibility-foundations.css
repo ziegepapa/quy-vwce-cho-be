@@ -1,0 +1,42 @@
+/* Keyboard focus must remain visible in every theme and on every control type. */
+:where(
+  button,
+  a[href],
+  input:not([type="hidden"]),
+  select,
+  textarea,
+  summary,
+  [role="button"],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+:where([role="dialog"], [role="alertdialog"])[aria-modal="true"] {
+  overscroll-behavior: contain;
+}
+
+/* Compact desktop controls keep their size; touch devices always get 44px targets. */
+@media (pointer: coarse) {
+  :where(button, summary, [role="button"]) {
+    min-block-size: var(--touch-min);
+    min-inline-size: var(--touch-min);
+  }
+}
+
+/* Catch animations that do not use the duration tokens. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
