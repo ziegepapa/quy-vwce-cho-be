@@ -82,14 +82,14 @@ export function defaultGoals(): Goal[] {
 }
 export const CHECKLIST_LABELS = [
   { key: "emergency_fund", label: "Quỹ dự phòng còn đủ" },
-  { key: "no_debt", label: "Không có Dispokredit hoặc nợ tiêu dùng lãi cao" },
+  { key: "no_debt", label: "Không có thấu chi (Dispokredit) hoặc nợ tiêu dùng lãi cao" },
   { key: "goals_ok", label: "Ngày và số tiền mục tiêu còn chính xác" },
   { key: "inflation_updated", label: "Đã cập nhật mục tiêu theo lạm phát" },
-  { key: "cash_bucket", label: "Cash bucket trong 36 tháng tới đủ tiến độ" },
-  { key: "sparplan", label: "Sparplan còn phù hợp" },
-  { key: "freistellung", label: "Freistellungsauftrag đã được kiểm tra" },
-  { key: "vorab", label: "Có cash cho Vorabpauschale" },
-  { key: "broker_fees", label: "Phí và điều kiện broker đã được kiểm tra" },
+  { key: "cash_bucket", label: "Phần tiền an toàn cho 36 tháng tới đủ tiến độ" },
+  { key: "sparplan", label: "Kế hoạch góp định kỳ còn phù hợp" },
+  { key: "freistellung", label: "Miễn trừ thuế (Freistellungsauftrag) đã được kiểm tra" },
+  { key: "vorab", label: "Có đủ tiền mặt cho thuế tạm tính (Vorabpauschale)" },
+  { key: "broker_fees", label: "Phí và điều kiện nhà môi giới đã được kiểm tra" },
   { key: "backup", label: "Đã xuất bản sao lưu" },
   { key: "notfallmappe", label: "Hồ sơ khẩn cấp đã được rà lại và in ra giấy" },
 ];
