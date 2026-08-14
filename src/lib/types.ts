@@ -130,7 +130,7 @@ export type DepotStatement = {
 };
 
 /** Trang thai ke hoach dau tu theo so nam con lai den ngay can tien. */
-export type PlanStatus = "GI\u1eee" | "GI\u1ea2M" | "D\u1eebNG" | "S\u1eec D\u1ee4NG";
+export type PlanStatus = "GIỮ" | "GIẢM" | "DỪNG" | "SỬ DỤNG";
 
 /**
  * PLAN-GLIDE-PATH-001 -- thong tin ve moc su dung tien.
