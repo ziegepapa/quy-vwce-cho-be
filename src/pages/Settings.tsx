@@ -26,11 +26,13 @@ import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import SettingsPricePanel from "../components/SettingsPricePanel";
 import SyncConflictSection from "../components/SyncConflictSection";
 import PlanRoadmapSection from "../components/PlanRoadmapSection";
+import "../styles/settings-operation-errors.css";
 
 type SettingsTab = "general" | "prices" | "data";
 type SaveState = "saved" | "dirty" | "saving" | "error";
 
 const SETTINGS_AUTOSAVE_MS = 650;
+const SETTINGS_SAVE_ERROR = "Không lưu được Cài đặt. Bản đang chỉnh vẫn còn trên màn hình.";
 
 function pctDisplay(decimal: number): string {
   if (!Number.isFinite(decimal)) return "—";
@@ -158,12 +160,15 @@ export default function SettingsPage({
   const [settingsLoadAttempt, setSettingsLoadAttempt] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [metaBackup, setMetaBackup] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
   const [checklist, setChecklist] = useState<AnnualChecklist | null>(null);
   const [checklistYear, setChecklistYear] = useState(new Date().getFullYear());
+  const [checklistBusyKey, setChecklistBusyKey] = useState<string | null>(null);
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
@@ -223,7 +228,9 @@ export default function SettingsPage({
 
   useEffect(() => {
     if (readOnly) return;
-    void getOrCreateChecklist(checklistYear).then(setChecklist);
+    void getOrCreateChecklist(checklistYear)
+      .then(setChecklist)
+      .catch(() => setActionError("Không tải được checklist. Hãy thử mở lại Cài đặt."));
   }, [checklistYear, readOnly]);
 
   useEffect(() => {
@@ -253,11 +260,11 @@ export default function SettingsPage({
         await saveSettings(partial);
         await onSettingsChangedRef.current?.();
         if (mounted.current) setSaveError(null);
-      } catch (reason) {
+      } catch {
         failed = true;
         pendingSettings.current = { ...partial, ...pendingSettings.current };
         if (mounted.current) {
-          setSaveError(reason instanceof Error ? reason.message : "Không lưu được cài đặt.");
+          setSaveError(SETTINGS_SAVE_ERROR);
           setSaveState("error");
         }
       } finally {
@@ -308,7 +315,7 @@ export default function SettingsPage({
       if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
       const partial = pendingSettings.current;
       pendingSettings.current = {};
-      if (Object.keys(partial).length > 0) void saveSettings(partial);
+      if (Object.keys(partial).length > 0) void saveSettings(partial).catch(() => undefined);
     };
   }, []);
 
@@ -333,13 +340,19 @@ export default function SettingsPage({
   }
 
   async function doExport() {
-    const payload = await exportBackup();
-    downloadJson(payload, `vwce-backup-${payload.exportedAt.slice(0, 10)}.json`);
-    setMetaBackup(payload.exportedAt);
+    setActionError(null);
+    try {
+      const payload = await exportBackup();
+      downloadJson(payload, `vwce-backup-${payload.exportedAt.slice(0, 10)}.json`);
+      setMetaBackup(payload.exportedAt);
+    } catch {
+      setActionError("Không xuất được bản sao lưu JSON. Dữ liệu không bị thay đổi.");
+    }
   }
 
   function doImport(file: File) {
     if (readOnly) { showBlocked(); return; }
+    setActionError(null);
     setPendingFile(file);
   }
 
@@ -348,6 +361,7 @@ export default function SettingsPage({
     const file = pendingFile;
     if (!file) return;
     setImporting(true);
+    setActionError(null);
     try {
       let data: BackupPayload;
       try { data = JSON.parse(await file.text()); } catch {
@@ -361,12 +375,15 @@ export default function SettingsPage({
       try {
         const current = await exportBackup();
         downloadJson(current, `ban-sao-luu-truoc-khi-nhap-json-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`);
-      } catch { /* */ }
+      } catch {
+        alert("Không tạo được bản sao lưu trước khi nhập. Dữ liệu chưa bị thay đổi.");
+        return;
+      }
       await importBackup(data);
       alert("Nhập backup thành công");
       onReload();
-    } catch (reason) {
-      alert(reason instanceof Error ? reason.message : "Lỗi nhập");
+    } catch {
+      alert("Không nhập được backup. Dữ liệu hiện tại vẫn được giữ nguyên.");
     } finally {
       setImporting(false);
       setPendingFile(null);
@@ -374,22 +391,27 @@ export default function SettingsPage({
   }
 
   async function exportCsv() {
-    const transactions = await listTransactions();
-    const header = "date,type,amount,unitPrice,quantity,fee,tax,instrumentIsin,notes\n";
-    const rows = transactions
-      .map((t) => [
-        csvEscape(t.date), csvEscape(t.type), csvEscape(t.amount),
-        csvEscape(t.unitPrice ?? ""), csvEscape(t.quantity ?? ""),
-        csvEscape(t.fee ?? ""), csvEscape(t.tax ?? ""),
-        csvEscape(t.instrumentIsin ?? ""), csvEscape(t.notes ?? ""),
-      ].join(","))
-      .join("\n");
-    const anchor = document.createElement("a");
-    anchor.href = URL.createObjectURL(
-      new Blob(["\uFEFF" + header + rows], { type: "text/csv;charset=utf-8" }),
-    );
-    anchor.download = "vwce-transactions.csv";
-    anchor.click();
+    setActionError(null);
+    try {
+      const transactions = await listTransactions();
+      const header = "date,type,amount,unitPrice,quantity,fee,tax,instrumentIsin,notes\n";
+      const rows = transactions
+        .map((t) => [
+          csvEscape(t.date), csvEscape(t.type), csvEscape(t.amount),
+          csvEscape(t.unitPrice ?? ""), csvEscape(t.quantity ?? ""),
+          csvEscape(t.fee ?? ""), csvEscape(t.tax ?? ""),
+          csvEscape(t.instrumentIsin ?? ""), csvEscape(t.notes ?? ""),
+        ].join(","))
+        .join("\n");
+      const anchor = document.createElement("a");
+      anchor.href = URL.createObjectURL(
+        new Blob(["\uFEFF" + header + rows], { type: "text/csv;charset=utf-8" }),
+      );
+      anchor.download = "vwce-transactions.csv";
+      anchor.click();
+    } catch {
+      setActionError("Không xuất được CSV giao dịch. Dữ liệu không bị thay đổi.");
+    }
   }
 
   if (settingsLoading) {
@@ -431,7 +453,19 @@ export default function SettingsPage({
         </span>
       </header>
 
-      {saveError ? <p className="settings-error settings-global-error" role="alert">{saveError}</p> : null}
+      {saveError ? (
+        <div className="settings-retry-error" role="alert">
+          <span>{saveError}</span>
+          <button type="button" className="secondary" onClick={() => void flushRef.current()}>Thử lưu lại</button>
+        </div>
+      ) : null}
+
+      {actionError ? (
+        <div className="settings-retry-error" role="alert">
+          <span>{actionError}</span>
+          <button type="button" className="secondary" onClick={() => setActionError(null)}>Đóng</button>
+        </div>
+      ) : null}
 
       <nav className="settings-tabs" role="tablist" aria-label="Nhóm cài đặt">
         <button type="button" role="tab" aria-selected={activeTab === "general"}
@@ -589,13 +623,22 @@ export default function SettingsPage({
                 <label key={item.key} className="switch-row">
                   <span>{item.label}</span>
                   <input type="checkbox" className="ios-switch" checked={item.done}
+                    disabled={checklistBusyKey === item.key}
                     onChange={async () => {
                       if (readOnly) { showBlocked(); return; }
+                      setChecklistBusyKey(item.key);
+                      setActionError(null);
                       const items = checklist.items.map((c) =>
                         c.key === item.key ? { ...c, done: !c.done } : c);
                       const next = { ...checklist, items, updatedAt: new Date().toISOString() };
-                      await db.annualChecklists.put(next);
-                      setChecklist(next);
+                      try {
+                        await db.annualChecklists.put(next);
+                        setChecklist(next);
+                      } catch {
+                        setActionError("Không lưu được checklist. Trạng thái trước đó vẫn được giữ nguyên.");
+                      } finally {
+                        setChecklistBusyKey(null);
+                      }
                     }} />
                 </label>
               ))}
@@ -709,7 +752,7 @@ export default function SettingsPage({
                   onClick={async () => {
                     if (readOnly) { showBlocked(); return; }
                     if (!auth.user?.id) return;
-                    setDeadRetrying(true); setDeadSyncedMsg(false);
+                    setDeadRetrying(true); setDeadSyncedMsg(false); setActionError(null);
                     try {
                       await reviveDeadOutbox();
                       await pushOutbox(auth.user.id);
@@ -719,6 +762,8 @@ export default function SettingsPage({
                         setDeadSyncedMsg(true);
                         window.setTimeout(() => setDeadSyncedMsg(false), 4000);
                       }
+                    } catch {
+                      setActionError("Không đồng bộ được. Dữ liệu local vẫn được giữ nguyên.");
                     } finally { setDeadRetrying(false); }
                   }}>
                   {deadRetrying ? "Đang thử lại…" : "Thử lại đồng bộ"}
@@ -738,13 +783,13 @@ export default function SettingsPage({
               </div>
               <span className="settings-icon-bubble" aria-hidden>↥</span>
             </div>
-            <button type="button" className="group-action" onClick={doExport}>
+            <button type="button" className="group-action" onClick={() => void doExport()}>
               <span><strong>Xuất JSON</strong><small>Bản sao lưu đầy đủ</small></span>
             </button>
             <label className="group-action">
               <span><strong>Nhập file JSON</strong><small>Khôi phục từ một bản sao lưu JSON</small></span>
               <input type="file" accept="application/json,.json" hidden
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) void doImport(f); e.target.value = ""; }} />
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = ""; }} />
             </label>
             <p className="settings-inline-status settings-import-warning" role="note">
               ⚠️ Nhập một bản sao lưu sẽ{" "}
@@ -802,13 +847,20 @@ export default function SettingsPage({
                   placeholder="XOA" autoCapitalize="characters" />
                 <div className="delete-actions">
                   <button type="button" className="danger"
-                    disabled={deleteConfirm.trim().toUpperCase() !== "XOA"}
+                    disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== "XOA"}
                     onClick={async () => {
                       if (readOnly) { showBlocked(); return; }
-                      await clearAllData();
-                      window.location.reload();
-                    }}>Xác nhận xóa</button>
-                  <button type="button" className="secondary"
+                      setDeleteBusy(true); setActionError(null);
+                      try {
+                        await clearAllData();
+                        window.location.reload();
+                      } catch {
+                        setActionError("Không xóa được dữ liệu. Dữ liệu trên thiết bị vẫn được giữ nguyên.");
+                      } finally {
+                        setDeleteBusy(false);
+                      }
+                    }}>{deleteBusy ? "Đang xóa…" : "Xác nhận xóa"}</button>
+                  <button type="button" className="secondary" disabled={deleteBusy}
                     onClick={() => { setDeleteStep(0); setDeleteConfirm(""); }}>Hủy</button>
                 </div>
               </div>
