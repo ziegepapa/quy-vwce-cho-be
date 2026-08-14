@@ -18,16 +18,17 @@ const VALID: BackupPayload = {
 };
 
 describe("isSupportedBackupSchema", () => {
-  it("accepts 1, 2 and BACKUP_SCHEMA_VERSION (3)", () => {
+  it("accepts 1, 2, 3 and BACKUP_SCHEMA_VERSION (4)", () => {
     expect(isSupportedBackupSchema(1)).toBe(true);
     expect(isSupportedBackupSchema(2)).toBe(true);
-    expect(isSupportedBackupSchema(BACKUP_SCHEMA_VERSION)).toBe(true);
     expect(isSupportedBackupSchema(3)).toBe(true);
+    expect(isSupportedBackupSchema(BACKUP_SCHEMA_VERSION)).toBe(true);
+    expect(isSupportedBackupSchema(4)).toBe(true);
   });
 
   it("rejects other values", () => {
     expect(isSupportedBackupSchema(0)).toBe(false);
-    expect(isSupportedBackupSchema(4)).toBe(false);
+    expect(isSupportedBackupSchema(5)).toBe(false);
     expect(isSupportedBackupSchema(undefined)).toBe(false);
     expect(isSupportedBackupSchema("1")).toBe(false);
     expect(isSupportedBackupSchema(1.5)).toBe(false);
@@ -38,7 +39,7 @@ describe("isSupportedBackupSchema", () => {
 describe("unsupportedBackupSchemaMessage", () => {
   it("names every supported backup schema exactly", () => {
     expect(unsupportedBackupSchemaMessage(999)).toBe(
-      "schemaVersion không khớp (file: 999; hỗ trợ: 1, 2 hoặc 3)",
+      "schemaVersion kh\u00f4ng kh\u1edbp (file: 999; h\u1ed7 tr\u1ee3: 1, 2, 3 ho\u1eb7c 4)",
     );
   });
 });
@@ -53,11 +54,11 @@ describe("validateBackupPayload", () => {
   it("rejects non-object and array roots", () => {
     expect(validateBackupPayload(null)).toEqual({
       ok: false,
-      error: "Cấu trúc backup không hợp lệ",
+      error: "C\u1ea5u tr\u00fac backup kh\u00f4ng h\u1ee3p l\u1ec7",
     });
     expect(validateBackupPayload([])).toEqual({
       ok: false,
-      error: "Cấu trúc backup không hợp lệ",
+      error: "C\u1ea5u tr\u00fac backup kh\u00f4ng h\u1ee3p l\u1ec7",
     });
   });
 
@@ -65,7 +66,7 @@ describe("validateBackupPayload", () => {
     const result = validateBackupPayload({ ...VALID, schemaVersion: 999 });
     expect(result).toEqual({
       ok: false,
-      error: "schemaVersion không khớp (file: 999; hỗ trợ: 1, 2 hoặc 3)",
+      error: "schemaVersion kh\u00f4ng kh\u1edbp (file: 999; h\u1ed7 tr\u1ee3: 1, 2, 3 ho\u1eb7c 4)",
     });
   });
 
@@ -74,18 +75,36 @@ describe("validateBackupPayload", () => {
     const result = validateBackupPayload(missingTransactions);
     expect(result).toEqual({
       ok: false,
-      error: "Backup thiếu hoặc sai trường bắt buộc: transactions",
+      error: "Backup thi\u1ebfu ho\u1eb7c sai tr\u01b0\u1eddng b\u1eaft bu\u1ed9c: transactions",
     });
   });
 
   it("rejects invalid exportedAt and malformed optional arrays", () => {
     expect(validateBackupPayload({ ...VALID, exportedAt: "not-a-date" })).toEqual({
       ok: false,
-      error: "Backup thiếu hoặc sai trường bắt buộc: exportedAt",
+      error: "Backup thi\u1ebfu ho\u1eb7c sai tr\u01b0\u1eddng b\u1eaft bu\u1ed9c: exportedAt",
     });
     expect(validateBackupPayload({ ...VALID, quoteCandidates: {} })).toEqual({
       ok: false,
-      error: "Backup có trường không hợp lệ: quoteCandidates",
+      error: "Backup c\u00f3 tr\u01b0\u1eddng kh\u00f4ng h\u1ee3p l\u1ec7: quoteCandidates",
     });
+  });
+
+  it("rejects deletedGoals entry missing deletedAt", () => {
+    const result = validateBackupPayload({
+      ...VALID,
+      deletedGoals: [{ id: "g1" } as unknown as import("./types").Goal],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/deletedGoals\[0\]/);
+  });
+
+  it("rejects deletedTransactions entry missing deletedAt", () => {
+    const result = validateBackupPayload({
+      ...VALID,
+      deletedTransactions: [{ id: "t1" } as unknown as import("./types").Transaction],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/deletedTransactions\[0\]/);
   });
 });
