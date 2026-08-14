@@ -1,0 +1,36 @@
+.nfm-save-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-control, 12px);
+  background: var(--danger-050);
+  color: var(--danger-600);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.nfm-save-error button {
+  flex: none;
+  min-height: 40px;
+  margin: 0;
+}
+
+.nfm-status.is-error {
+  color: var(--danger-600);
+}
+
+@media (max-width: 520px) {
+  .nfm-save-error {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media print {
+  .nfm-save-error {
+    display: none !important;
+  }
+}

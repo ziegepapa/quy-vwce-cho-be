@@ -13,6 +13,7 @@ import { buildEquitySeries, formatDateVN, formatMoney } from "../lib/calc";
 import { printNotfallmappe } from "../lib/printNotfallmappe";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import "../styles/notfallmappe.css";
+import "../styles/notfallmappe-save-state.css";
 
 /**
  * V10-A7 — Hồ sơ khẩn cấp.
@@ -37,6 +38,8 @@ const SECRET_RE =
 /** IBAN đầy đủ, ví dụ DE89 3704 0044 0532 0130 00. */
 const IBAN_RE = /\b[A-Z]{2}\s?\d{2}(?:\s?[A-Z0-9]{4}){3,7}\b/;
 
+type SaveState = "saved" | "saving" | "error";
+
 export default function NotfallmappePage() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [data, setData] = useState<NotfallmappeData | null>(null);
@@ -45,16 +48,25 @@ export default function NotfallmappePage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialLoadError, setInitialLoadError] = useState(false);
   const [initialLoadAttempt, setInitialLoadAttempt] = useState(0);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   const rootRef = useRef<HTMLDivElement>(null);
   // dataRef luôn giữ snapshot mới nhất để các handler có thể merge đúng
   const dataRef = useRef<NotfallmappeData | null>(null);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  const saveSequence = useRef(0);
+  const mounted = useRef(true);
 
   useEffect(() => {
     dataRef.current = data;
   }, [data]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,6 +172,33 @@ export default function NotfallmappePage() {
     );
   }
 
+  function enqueueSave(next: NotfallmappeData): Promise<boolean> {
+    const sequence = ++saveSequence.current;
+    if (mounted.current) {
+      setSaveState("saving");
+      setSaveError(null);
+    }
+    const run = async () => {
+      try {
+        await saveSettings({ notfallmappe: next });
+        if (mounted.current && sequence === saveSequence.current) {
+          setSaveState("saved");
+          setSaveError(null);
+        }
+        return true;
+      } catch {
+        if (mounted.current && sequence === saveSequence.current) {
+          setSaveState("error");
+          setSaveError("Không lưu được Hồ sơ khẩn cấp. Bản đang chỉnh vẫn còn trên màn hình.");
+        }
+        return false;
+      }
+    };
+    const queued = saveQueue.current.then(run, run);
+    saveQueue.current = queued.then(() => undefined, () => undefined);
+    return queued;
+  }
+
   /**
    * Lưu ngay — không debounce.
    * enqueueOutbox được gọi bên trong saveSettings, đảm bảo outboxCount > 0
@@ -169,7 +208,7 @@ export default function NotfallmappePage() {
   function save(next: NotfallmappeData) {
     setData(next);
     dataRef.current = next;
-    void saveSettings({ notfallmappe: next });
+    void enqueueSave(next);
   }
 
   function patch(p: Partial<NotfallmappeData>) {
@@ -237,38 +276,46 @@ export default function NotfallmappePage() {
     });
   }
 
-  async function persist(extra?: Partial<NotfallmappeData>) {
-    if (readOnly) { showBlocked(); return; }
+  async function persist(extra?: Partial<NotfallmappeData>): Promise<boolean> {
+    if (readOnly) { showBlocked(); return false; }
     const base = dataRef.current;
-    if (!base) return;
-    setSaving(true);
+    if (!base) return false;
     const next: NotfallmappeData = { ...base, ...extra, updatedAt: nowIso() };
-    try {
-      await saveSettings({ notfallmappe: next });
-      setData(next);
-      dataRef.current = next;
-    } finally {
-      setSaving(false);
-    }
+    setData(next);
+    dataRef.current = next;
+    return enqueueSave(next);
   }
 
   async function handlePrint() {
     if (readOnly) { showBlocked(); return; }
-    await persist({ lastPrintedAt: nowIso() });
+    const saved = await persist({ lastPrintedAt: nowIso() });
+    if (!saved) return;
     const root = rootRef.current;
     if (!root) return;
     printNotfallmappe(root);
   }
 
+  function retrySave() {
+    if (readOnly) { showBlocked(); return; }
+    const latest = dataRef.current;
+    if (latest) void enqueueSave(latest);
+  }
+
   const childLabel = settings?.childName?.trim() || "bé";
 
-  const statusText = saving
+  const statusText = saveState === "saving"
     ? "Đang lưu…"
-    : data.updatedAt
-      ? `Đã lưu · cập nhật ${formatDateVN(data.updatedAt.slice(0, 10))}`
-      : "Đã lưu";
+    : saveState === "error"
+      ? "Chưa lưu được"
+      : data.updatedAt
+        ? `Đã lưu · cập nhật ${formatDateVN(data.updatedAt.slice(0, 10))}`
+        : "Đã lưu";
 
-  const statusClass = saving ? "nfm-status is-saving" : "nfm-status";
+  const statusClass = saveState === "saving"
+    ? "nfm-status is-saving"
+    : saveState === "error"
+      ? "nfm-status is-error"
+      : "nfm-status";
 
   return (
     <div className="nfm" ref={rootRef}>
@@ -476,7 +523,14 @@ export default function NotfallmappePage() {
         </div>
       </section>
 
-      <p className={statusClass}>{statusText}</p>
+      <p className={statusClass} role="status" aria-live="polite">{statusText}</p>
+
+      {saveError ? (
+        <div className="nfm-save-error" role="alert">
+          <span>{saveError}</span>
+          <button type="button" className="secondary" onClick={retrySave}>Thử lưu lại</button>
+        </div>
+      ) : null}
 
       <div className="nfm-actions">
         <button type="button" className="secondary" onClick={handlePrint}>In / Lưu PDF</button>
