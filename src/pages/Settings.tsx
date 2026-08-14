@@ -153,6 +153,9 @@ export default function SettingsPage({
     requestedTab === "prices" || requestedTab === "data" ? requestedTab : "general";
 
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsLoadError, setSettingsLoadError] = useState(false);
+  const [settingsLoadAttempt, setSettingsLoadAttempt] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [metaBackup, setMetaBackup] = useState("");
@@ -193,14 +196,30 @@ export default function SettingsPage({
 
   useEffect(() => {
     mounted.current = true;
+    let cancelled = false;
+    setSettingsLoading(true);
+    setSettingsLoadError(false);
     void (async () => {
-      setSettings(await getSettings());
-      setMetaBackup((await db.appMetadata.get("meta"))?.lastBackupAt ?? "");
-      if (auth.user?.id) setDead(await listDeadOutbox());
-      else setDead([]);
+      try {
+        const nextSettings = await getSettings();
+        const nextMetaBackup = (await db.appMetadata.get("meta"))?.lastBackupAt ?? "";
+        const nextDead = auth.user?.id ? await listDeadOutbox() : [];
+        if (cancelled) return;
+        setSettings(nextSettings);
+        setMetaBackup(nextMetaBackup);
+        setDead(nextDead);
+      } catch {
+        if (cancelled) return;
+        setSettingsLoadError(true);
+      } finally {
+        if (!cancelled) setSettingsLoading(false);
+      }
     })();
-    return () => { mounted.current = false; };
-  }, [auth.user?.id]);
+    return () => {
+      cancelled = true;
+      mounted.current = false;
+    };
+  }, [auth.user?.id, settingsLoadAttempt]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -373,7 +392,25 @@ export default function SettingsPage({
     anchor.click();
   }
 
-  if (!settings) return <p className="muted">Đang tải…</p>;
+  if (settingsLoading) {
+    return (
+      <div className="empty card" role="status" aria-live="polite" aria-busy="true">
+        <p>Đang tải Cài đặt…</p>
+      </div>
+    );
+  }
+
+  if (settingsLoadError || !settings) {
+    return (
+      <section className="empty card" role="alert">
+        <h1 className="page-title">Không tải được Cài đặt</h1>
+        <p>Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy thử tải lại.</p>
+        <button type="button" onClick={() => setSettingsLoadAttempt((attempt) => attempt + 1)}>
+          Thử lại
+        </button>
+      </section>
+    );
+  }
 
   const saveLabel =
     saveState === "saving" ? "Đang lưu…"
