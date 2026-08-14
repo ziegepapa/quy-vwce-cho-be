@@ -581,7 +581,7 @@ export default function SettingsPage({
               </div>
               <Segmented
                 value={settings.accountType}
-                options={[{ value: "parent", label: "Cha/mạ" }, { value: "child", label: "Bé" }]}
+                options={[{ value: "parent", label: "Cha/mệ" }, { value: "child", label: "Bé" }]}
                 onChange={(v) => patchSettings({ accountType: v as "child" | "parent" })} />
             </div>
           </section>
@@ -662,7 +662,7 @@ export default function SettingsPage({
               <div>
                 <p className="settings-card-eyebrow">Giao diện</p>
                 <h3>Chủ đề</h3>
-                <p>Lựa chọn được nhứ ngay trên thiết bị này.</p>
+                <p>Lựa chọn được nhớ ngay trên thiết bị này.</p>
               </div>
             </div>
             <Segmented value={theme} options={THEME_OPTIONS}
