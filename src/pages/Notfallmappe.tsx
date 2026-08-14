@@ -42,6 +42,9 @@ export default function NotfallmappePage() {
   const [data, setData] = useState<NotfallmappeData | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [txs, setTxs] = useState<Transaction[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [initialLoadError, setInitialLoadError] = useState(false);
+  const [initialLoadAttempt, setInitialLoadAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
   const { readOnly, showBlocked } = useRecoveryReadOnly();
 
@@ -54,14 +57,30 @@ export default function NotfallmappePage() {
   }, [data]);
 
   useEffect(() => {
-    (async () => {
-      const s = await getSettings();
-      setSettings(s);
-      setData(s.notfallmappe ?? defaultNotfallmappe());
-      setGoals(await listGoals());
-      setTxs(await listTransactions());
+    let cancelled = false;
+    setInitialLoading(true);
+    setInitialLoadError(false);
+    void (async () => {
+      try {
+        const [nextSettings, nextGoals, nextTransactions] = await Promise.all([
+          getSettings(),
+          listGoals(),
+          listTransactions(),
+        ]);
+        if (cancelled) return;
+        setSettings(nextSettings);
+        setData(nextSettings.notfallmappe ?? defaultNotfallmappe());
+        setGoals(nextGoals);
+        setTxs(nextTransactions);
+      } catch {
+        if (cancelled) return;
+        setInitialLoadError(true);
+      } finally {
+        if (!cancelled) setInitialLoading(false);
+      }
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [initialLoadAttempt]);
 
   const snap = useMemo(() => {
     const price = settings?.latestVwcePrice ?? 0;
@@ -121,7 +140,25 @@ export default function NotfallmappePage() {
     return out;
   }, [data]);
 
-  if (!data) return <p className="muted">Đang tải…</p>;
+  if (initialLoading) {
+    return (
+      <div className="empty card" role="status" aria-live="polite" aria-busy="true">
+        <p>Đang tải Hồ sơ khẩn cấp…</p>
+      </div>
+    );
+  }
+
+  if (initialLoadError || !data) {
+    return (
+      <section className="empty card" role="alert">
+        <h1 className="page-title">Không tải được Hồ sơ khẩn cấp</h1>
+        <p>Hồ sơ trên thiết bị không bị thay đổi. Không có nội dung nhạy cảm nào được hiển thị.</p>
+        <button type="button" onClick={() => setInitialLoadAttempt((attempt) => attempt + 1)}>
+          Thử lại
+        </button>
+      </section>
+    );
+  }
 
   /**
    * Lưu ngay — không debounce.
