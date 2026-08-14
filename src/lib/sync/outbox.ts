@@ -3,6 +3,7 @@ import { nowIso, uid } from "../defaults";
 import type {
   EntityTable,
   OrdinaryOutboxItem,
+  PendingSyncSummary,
   RecoveryOutboxItem,
 } from "./types";
 
@@ -115,4 +116,27 @@ export async function enqueueRecoveryItem(
 
 export async function outboxCount(): Promise<number> {
   return db.outbox.count();
+}
+
+/**
+ * DELETE-TOMBSTONE-BACKUP-001 — dem viec dong bo con treo truoc mot thao tac
+ * xoa-roi-ghi-lai toan bo du lieu cuc bo (khoi phuc sao luu).
+ *
+ * `deletes` la con so quan trong: outbox la duong DUY NHAT de may chu biet mot
+ * dong da bi xoa. Neu no bien mat cung outbox thi lan keo du lieu sau se mang
+ * dong VAN CON SONG tren may chu tro lai.
+ *
+ * `dead` cung phai chan: `pushOutboxUnlocked` bo qua item da chet MAI MAI cho
+ * toi khi co nguoi bam `reviveDeadOutbox`, nen mot viec xoa da chet co the nam
+ * do rat lau ma khong ai biet.
+ */
+export async function summarizePendingSync(): Promise<PendingSyncSummary> {
+  const items = await db.outbox.toArray();
+  let deletes = 0;
+  let dead = 0;
+  for (const item of items) {
+    if (item.op === "delete") deletes += 1;
+    if (item.dead === true) dead += 1;
+  }
+  return { total: items.length, deletes, dead };
 }
