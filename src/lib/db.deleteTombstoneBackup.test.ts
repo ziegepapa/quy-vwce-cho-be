@@ -1,20 +1,20 @@
 /**
- * DELETE-TOMBSTONE-BACKUP-001 — xoá chưa đồng bộ + khôi phục sao lưu.
+ * DELETE-TOMBSTONE-BACKUP-001 -- xoa chua dong bo + khoi phuc sao luu.
  *
- * Chuỗi lỗi, đọc từ code trên main:
- * 1. db.m07b `deleteTransaction`/`deleteGoal` ghi tombstone cục bộ VÀ xếp một
- *    việc "delete" vào outbox. Outbox là đường DUY NHẤT để máy chủ biết dòng đó
- *    đã bị xoá (`sync/engine` chỉ gọi `update({ deleted_at })` từ outbox).
- * 2. db.m08 `exportBackup` lọc bỏ mọi dòng có `deletedAt`, nên file sao lưu
- *    không mang theo thông tin đã xoá.
- * 3. db.m09 `importBackup` xoá sạch 13 bảng — gồm cả `outbox` và `syncMeta`.
- * 4. Vì `syncMeta` mất, lần đồng bộ sau là hydrate lần đầu và kéo lại dòng vẫn
- *    còn sống trên máy chủ ⇒ dòng đã xoá "sống lại".
+ * Chuoi loi, doc tu code tren main:
+ * 1. db.m07b `deleteTransaction`/`deleteGoal` ghi tombstone cuc bo VA xep mot
+ *    viec "delete" vao outbox. Outbox la duong DUY NHAT de may chu biet dong do
+ *    da bi xoa (`sync/engine` chi goi `update({ deleted_at })` tu outbox).
+ * 2. db.m08 `exportBackup` loc bo moi dong co `deletedAt`, nen file sao luu
+ *    khong mang theo thong tin da xoa.
+ * 3. db.m09 `importBackup` xoa sach 13 bang -- gom ca `outbox` va `syncMeta`.
+ * 4. Vi `syncMeta` mat, lan dong bo sau la hydrate lan dau va keo lai dong van
+ *    con song tren may chu => dong da xoa "song lai".
  *
- * Bước 4 cần máy chủ nên không mô phỏng ở đây; các test dưới đây khoá đúng những
- * điều kiện tạo ra nó, và khoá cả hệ quả khi người dùng chấp nhận rủi ro.
+ * Buoc 4 can may chu nen khong mo phong o day; cac test duoi day khoa dung nhung
+ * dieu kien tao ra no, va khoa ca he qua khi nguoi dung chap nhan rui ro.
  *
- * Phải polyfill IndexedDB TRƯỚC khi import db (Dexie khởi tạo ngay khi load module).
+ * Phai polyfill IndexedDB TRUOC khi import db (Dexie khoi tao ngay khi load module).
  */
 import "fake-indexeddb/auto";
 
@@ -49,7 +49,7 @@ const TX: Transaction = {
 
 const GOAL: Goal = {
   id: "goal_delete_tombstone_backup",
-  name: "Mục tiêu sẽ bị xoá",
+  name: "M\u1ee5c ti\u00eau s\u1ebd b\u1ecb xo\u00e1",
   dueDate: "2030-01-01",
   amount: 1000,
   mode: "nominal",
@@ -69,8 +69,8 @@ beforeEach(async () => {
   await db.settings.put(defaultSettings());
 });
 
-describe("DELETE-TOMBSTONE-BACKUP-001 — điều kiện tạo ra lỗi", () => {
-  it("giữ tombstone cục bộ và xếp việc xoá vào outbox, nhưng file sao lưu không mang theo thông tin đã xoá", async () => {
+describe("DELETE-TOMBSTONE-BACKUP-001 -- \u0111i\u1ec1u ki\u1ec7n t\u1ea1o ra l\u1ed7i", () => {
+  it("gi\u1eef tombstone c\u1ee5c b\u1ed9 v\u00e0 x\u1ebfp vi\u1ec7c xo\u00e1 v\u00e0o outbox, nh\u01b0ng file sao l\u01b0u kh\u00f4ng mang theo th\u00f4ng tin \u0111\u00e3 xo\u00e1", async () => {
     await upsertTransaction(TX, { sync: false });
     await deleteTransaction(TX.id);
 
@@ -89,8 +89,8 @@ describe("DELETE-TOMBSTONE-BACKUP-001 — điều kiện tạo ra lỗi", () => 
   });
 });
 
-describe("DELETE-TOMBSTONE-BACKUP-001 — gate khi nhập sao lưu", () => {
-  it("chặn khi còn việc xoá giao dịch chưa đẩy, và không thay đổi dữ liệu nào", async () => {
+describe("DELETE-TOMBSTONE-BACKUP-001 -- gate khi nh\u1eadp sao l\u01b0u", () => {
+  it("ch\u1eb7n khi c\u00f2n vi\u1ec7c xo\u00e1 giao d\u1ecbch ch\u01b0a \u0111\u1ea9y, v\u00e0 kh\u00f4ng thay \u0111\u1ed5i d\u1eef li\u1ec7u n\u00e0o", async () => {
     await upsertTransaction(TX, { sync: false });
     await deleteTransaction(TX.id);
     const backup = await exportBackup();
@@ -101,7 +101,7 @@ describe("DELETE-TOMBSTONE-BACKUP-001 — gate khi nhập sao lưu", () => {
     );
 
     expect(pendingSyncImportBlock(error)).toEqual({ total: 1, deletes: 1, dead: 0 });
-    expect(String((error as Error).message)).toContain("chưa đồng bộ xong");
+    expect(String((error as Error).message)).toContain("ch\u01b0a \u0111\u1ed3ng b\u1ed9 xong");
 
     const pending = await db.outbox.toArray();
     expect(pending).toHaveLength(1);
@@ -109,19 +109,19 @@ describe("DELETE-TOMBSTONE-BACKUP-001 — gate khi nhập sao lưu", () => {
     expect((await db.transactions.get(TX.id))?.deletedAt).toBeTruthy();
   });
 
-  it("chặn khi còn việc xoá mục tiêu chưa đẩy", async () => {
+  it("ch\u1eb7n khi c\u00f2n vi\u1ec7c xo\u00e1 m\u1ee5c ti\u00eau ch\u01b0a \u0111\u1ea9y", async () => {
     await upsertGoal(GOAL, { sync: false });
     await deleteGoal(GOAL.id);
     const backup = await exportBackup();
 
-    await expect(importBackup(backup)).rejects.toThrow(/chưa đồng bộ xong/);
+    await expect(importBackup(backup)).rejects.toThrow(/ch\u01b0a \u0111\u1ed3ng b\u1ed9 xong/);
 
     expect(await db.outbox.count()).toBe(1);
     expect((await db.goals.get(GOAL.id))?.deletedAt).toBeTruthy();
     expect(await listGoals()).toHaveLength(0);
   });
 
-  it("chặn khi còn việc đã thử gửi nhiều lần không thành công, kể cả khi đó không phải việc xoá", async () => {
+  it("ch\u1eb7n khi c\u00f2n vi\u1ec7c \u0111\u00e3 th\u1eed g\u1eedi nhi\u1ec1u l\u1ea7n kh\u00f4ng th\u00e0nh c\u00f4ng, k\u1ec3 c\u1ea3 khi \u0111\u00f3 kh\u00f4ng ph\u1ea3i vi\u1ec7c xo\u00e1", async () => {
     await upsertTransaction(TX, { sync: false });
     const backup = await exportBackup();
     await db.outbox.put({
@@ -136,12 +136,12 @@ describe("DELETE-TOMBSTONE-BACKUP-001 — gate khi nhập sao lưu", () => {
       dead: true,
     });
 
-    await expect(importBackup(backup)).rejects.toThrow(/chưa đồng bộ xong/);
+    await expect(importBackup(backup)).rejects.toThrow(/ch\u01b0a \u0111\u1ed3ng b\u1ed9 xong/);
 
     expect(await db.outbox.count()).toBe(1);
   });
 
-  it("từ chối payload sai trước khi xét việc đồng bộ còn treo", async () => {
+  it("t\u1eeb ch\u1ed1i payload sai tr\u01b0\u1edbc khi x\u00e9t vi\u1ec7c \u0111\u1ed3ng b\u1ed9 c\u00f2n treo", async () => {
     await upsertTransaction(TX, { sync: false });
     await deleteTransaction(TX.id);
     const broken = { ...(await exportBackup()), schemaVersion: 999 };
@@ -152,8 +152,8 @@ describe("DELETE-TOMBSTONE-BACKUP-001 — gate khi nhập sao lưu", () => {
   });
 });
 
-describe("DELETE-TOMBSTONE-BACKUP-001 — không chặn quá tay", () => {
-  it("không chặn khi outbox rỗng", async () => {
+describe("DELETE-TOMBSTONE-BACKUP-001 -- kh\u00f4ng ch\u1eb7n qu\u00e1 tay", () => {
+  it("kh\u00f4ng ch\u1eb7n khi outbox r\u1ed7ng", async () => {
     await upsertTransaction(TX, { sync: false });
     const backup = await exportBackup();
 
@@ -162,7 +162,7 @@ describe("DELETE-TOMBSTONE-BACKUP-001 — không chặn quá tay", () => {
     expect((await listTransactions()).map((row) => row.id)).toEqual([TX.id]);
   });
 
-  it("không chặn khi chỉ còn việc upsert bình thường — phạm vi cố ý của hướng (a)", async () => {
+  it("kh\u00f4ng ch\u1eb7n khi ch\u1ec9 c\u00f2n vi\u1ec7c upsert b\u00ecnh th\u01b0\u1eddng -- ph\u1ea1m vi c\u1ed1 \u00fd c\u1ee7a h\u01b0\u1edbng (a)", async () => {
     await upsertTransaction(TX);
     expect(await db.outbox.count()).toBe(1);
     const backup = await exportBackup();
@@ -173,20 +173,20 @@ describe("DELETE-TOMBSTONE-BACKUP-001 — không chặn quá tay", () => {
   });
 });
 
-describe("DELETE-TOMBSTONE-BACKUP-001 — hệ quả khi người dùng chấp nhận rủi ro", () => {
-  it("cho nhập, nhưng việc xoá mất đường lên máy chủ — hành vi đã biết, khoá lại để không âm thầm đổi", async () => {
+describe("DELETE-TOMBSTONE-BACKUP-001 -- he qua khi nguoi dung chap nhan rui ro", () => {
+  it("cho nhap; v4 import khoi phuc tombstone vao IndexedDB, outbox = 0 (khong co userId)", async () => {
     await upsertTransaction(TX, { sync: false });
     await deleteTransaction(TX.id);
     const backup = await exportBackup();
 
     await importBackup(backup, { acceptPendingSyncRisk: true });
 
-    // Đây CHÍNH LÀ rủi ro còn lại của hướng (a): outbox bị xoá cùng lúc với
-    // clear-and-restore, nên việc xoá không bao giờ tới được máy chủ nữa và một
-    // lần kéo dữ liệu đầy đủ sau đó sẽ mang dòng còn sống trên máy chủ trở lại.
-    // Hướng (b) — tombstone trong backup v4 — mới đóng được lỗ này.
+    // Huong (b) da ship: tombstone duoc khoi phuc, khong mat di lam.
+    // outbox la 0 vi test nay khong thiet lap userId trong syncMeta (fresh install).
+    // Neu co userId, importV4 se xep viec "delete" vao outbox de may chu biet.
     expect(await db.outbox.count()).toBe(0);
-    expect(await db.transactions.get(TX.id)).toBeUndefined();
+    // Tombstone duoc khoi phuc vao IndexedDB -- khong phai undefined nua.
+    expect((await db.transactions.get(TX.id))?.deletedAt).toBeTruthy();
     expect(await listTransactions()).toHaveLength(0);
   });
 });
