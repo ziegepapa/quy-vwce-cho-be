@@ -59,9 +59,8 @@ describe("Notfallmappe save state", () => {
 
     fireEvent.change(purpose, { target: { value: "Bản nháp vẫn ở trên màn hình" } });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Không lưu được Hồ sơ khẩn cấp",
-    );
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Không lưu được Hồ sơ khẩn cấp");
     expect(screen.queryByText("NOTFALLMAPPE_SECRET_CANARY")).toBeNull();
     expect(purpose.value).toBe("Bản nháp vẫn ở trên màn hình");
 
@@ -85,7 +84,7 @@ describe("Notfallmappe save state", () => {
     await waitFor(() => expect(dbMocks.saveSettings).toHaveBeenCalledTimes(1));
     expect(dbMocks.saveSettings.mock.calls[0][0].notfallmappe.purpose).toBe("A");
 
-    first.resolve();
+    first.resolve(undefined);
 
     await waitFor(() => expect(dbMocks.saveSettings).toHaveBeenCalledTimes(2));
     expect(dbMocks.saveSettings.mock.calls[1][0].notfallmappe.purpose).toBe("AB");
@@ -97,9 +96,8 @@ describe("Notfallmappe save state", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "In / Lưu PDF" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Không lưu được Hồ sơ khẩn cấp",
-    );
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Không lưu được Hồ sơ khẩn cấp");
     expect(printMock).not.toHaveBeenCalled();
   });
 });
