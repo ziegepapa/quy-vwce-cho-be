@@ -275,7 +275,14 @@ describe("importBackup rollback", () => {
       ],
     };
 
-    await expect(importBackup(bad)).rejects.toThrow(/price/);
+    // PR3 — saveManualQuoteForIsin(VWCE) mirror giá vào `settings`
+    // (applyResolvedEffective + syncSettings), nên outbox còn một việc upsert.
+    // Test này kiểm tra VALIDATE PAYLOAD, không kiểm tra gate đồng bộ, nên bỏ
+    // qua gate một cách tường minh. Gate có test riêng ở backupImportGate.test.ts
+    // và db.deleteTombstoneBackup.test.ts.
+    await expect(importBackup(bad, { acceptPendingSyncRisk: true })).rejects.toThrow(
+      /price/,
+    );
 
     const s = await getSettings();
     expect(s.planName).toBe("KeepMe");

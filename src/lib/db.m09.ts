@@ -262,7 +262,7 @@ async function importV3(payload: BackupPayload): Promise<void> {
 async function importV4(payload: BackupPayload): Promise<void> {
   // AN TOAN DU LIEU (DELETE-TOMBSTONE-BACKUP-001-b): read userId BEFORE the
   // clear-and-restore transaction wipes syncMeta.  If userId was set, enqueue
-  // a "delete" for every tombstone AFTER the transaction so the server learns
+  // a "delete" for every tombstone inside the transaction so the server learns
   // about each deletion on the next sync.  On a fresh install userId is null
   // and we skip the step -- the server never had those rows.
   const priorSyncMeta = await db.syncMeta.toArray();
@@ -371,23 +371,28 @@ async function importV4(payload: BackupPayload): Promise<void> {
         updatedAt: t,
       };
       await db.appMetadataRows.put(migrated);
+
+      // AN TOAN DU LIEU (PR3): enqueue the tombstone deletes INSIDE this same
+      // transaction, as the last step.  clearAllTables() runs first in this same
+      // transaction and db.outbox is in scope, so these writes survive the commit.
+      // Enqueuing after the commit left a window: if the process died in between,
+      // the tombstones were restored with no "delete" queued, and because the
+      // outbox is the only channel that tells the server a row is gone, the next
+      // sync pulled the still-live server row back and the deleted row came back.
+      // Skip when userId is null: a fresh install means the server never had these
+      // rows, so there is nothing to delete on the server side.
+      if (userId) {
+        for (const g of payload.deletedGoals ?? []) {
+          const ver = (g as Goal & { version?: number }).version ?? 1;
+          await enqueueOutbox("goals", g.id, "delete", null, ver);
+        }
+        for (const tx of payload.deletedTransactions ?? []) {
+          const ver = (tx as Transaction & { version?: number }).version ?? 1;
+          await enqueueOutbox("transactions", tx.id, "delete", null, ver);
+        }
+      }
     },
   );
-
-  // Enqueue a "delete" for each tombstone AFTER the transaction has committed.
-  // The outbox was cleared inside the transaction, so enqueue must come after.
-  // Skip when userId is null: a fresh install means the server never had these
-  // rows, so there is nothing to delete on the server side.
-  if (userId) {
-    for (const g of payload.deletedGoals ?? []) {
-      const ver = (g as Goal & { version?: number }).version ?? 1;
-      await enqueueOutbox("goals", g.id, "delete", null, ver);
-    }
-    for (const tx of payload.deletedTransactions ?? []) {
-      const ver = (tx as Transaction & { version?: number }).version ?? 1;
-      await enqueueOutbox("transactions", tx.id, "delete", null, ver);
-    }
-  }
 }
 
 export async function importBackup(payload: BackupPayload): Promise<void> {

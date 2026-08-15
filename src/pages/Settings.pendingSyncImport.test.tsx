@@ -9,6 +9,9 @@ import type { AppSettings } from "../lib/types";
  * DELETE-TOMBSTONE-BACKUP-001 — cảnh báo phải hiện NGAY trong hộp xác nhận nhập
  * sao lưu, và ba hành động phải chạy đúng. Đây cũng là regression test nguyên văn
  * cho copy tiếng Việt trong khi chờ Owner chụp ảnh trên iPhone.
+ *
+ * PR3 — câu rủi ro đã đổi: gate bây giờ chặn cả khi việc còn treo là một `upsert`
+ * bình thường, nên câu cũ (chỉ nói tới dòng đã xoá sống lại) là thiếu.
  */
 
 const dbMocks = vi.hoisted(() => ({
@@ -58,6 +61,8 @@ const CONFIRM_LABEL = "Xác nhận thay dữ liệu trên thiết bị";
 const ACCEPT_LABEL = "Vẫn nhập (chấp nhận rủi ro)";
 const PUSH_FIRST_LABEL = "Đẩy đồng bộ trước";
 const WARNING_TITLE = "Còn thay đổi chưa đồng bộ xong";
+const RISK_TEXT =
+  "Nhập sao lưu sẽ xoá hàng đợi đồng bộ: thay đổi chưa đẩy sẽ mất, và dòng đã xoá có thể xuất hiện lại.";
 
 function blocked(total: number, deletes: number, dead: number) {
   return {
@@ -130,7 +135,7 @@ beforeEach(() => {
 
 afterEach(() => cleanup());
 
-describe("cảnh báo nhập sao lưu khi còn việc xoá chưa đẩy", () => {
+describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", () => {
   it("hiện cảnh báo ngay trong hộp xác nhận và không nhập im lặng", async () => {
     dbMocks.importBackup.mockRejectedValueOnce(blocked(2, 1, 0));
     const { container, onReload } = renderSettings();
@@ -143,17 +148,27 @@ describe("cảnh báo nhập sao lưu khi còn việc xoá chưa đẩy", () => 
     expect(
       screen.getByText("Còn 2 việc đồng bộ chưa xong (trong đó 1 việc xoá)."),
     ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Nhập sao lưu bây giờ có thể làm giao dịch hoặc mục tiêu đã xoá xuất hiện lại.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(RISK_TEXT)).toBeTruthy();
 
     // Hộp xác nhận PHẢI còn mở, và không có gì được nhập.
     expect(screen.getByText("Thay dữ liệu trên thiết bị bằng file này?")).toBeTruthy();
     expect(dbMocks.importBackup).toHaveBeenCalledTimes(1);
     expect(onReload).not.toHaveBeenCalled();
     expect(window.alert).not.toHaveBeenCalled();
+  });
+
+  it("hiện đúng cảnh báo khi việc còn treo chỉ là một upsert bình thường (PR3)", async () => {
+    dbMocks.importBackup.mockRejectedValueOnce(blocked(1, 0, 0));
+    const { container } = renderSettings();
+    await screen.findByText("Nhập file JSON");
+    await selectBackupFile(container);
+
+    fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
+
+    await screen.findByText(WARNING_TITLE);
+    expect(screen.getByText("Còn 1 việc đồng bộ chưa xong.")).toBeTruthy();
+    expect(screen.getByText(RISK_TEXT)).toBeTruthy();
+    expect(screen.getByRole("button", { name: ACCEPT_LABEL })).toBeTruthy();
   });
 
   it("đổi nút xác nhận thành nhãn chấp nhận rủi ro và truyền đúng cờ, không tải sao lưu hai lần", async () => {

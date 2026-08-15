@@ -13,10 +13,15 @@ describe("copy tiếng Việt của gate nhập sao lưu", () => {
   it("khoá nguyên văn tiêu đề, câu rủi ro và nhãn hành động", () => {
     expect(PENDING_SYNC_IMPORT_TITLE).toBe("Còn thay đổi chưa đồng bộ xong");
     expect(PENDING_SYNC_IMPORT_RISK).toBe(
-      "Nhập sao lưu bây giờ có thể làm giao dịch hoặc mục tiêu đã xoá xuất hiện lại.",
+      "Nhập sao lưu sẽ xoá hàng đợi đồng bộ: thay đổi chưa đẩy sẽ mất, và dòng đã xoá có thể xuất hiện lại.",
     );
     expect(PENDING_SYNC_PUSH_FIRST_LABEL).toBe("Đẩy đồng bộ trước");
     expect(PENDING_SYNC_ACCEPT_LABEL).toBe("Vẫn nhập (chấp nhận rủi ro)");
+  });
+
+  it("nói rõ cả hai hậu quả: mất thay đổi chưa đẩy VÀ dòng đã xoá quay lại", () => {
+    expect(PENDING_SYNC_IMPORT_RISK).toContain("thay đổi chưa đẩy sẽ mất");
+    expect(PENDING_SYNC_IMPORT_RISK).toContain("đã xoá có thể xuất hiện lại");
   });
 
   it("nêu rõ số việc xoá khi có", () => {
@@ -36,6 +41,26 @@ describe("copy tiếng Việt của gate nhập sao lưu", () => {
       "Còn 2 việc đồng bộ chưa xong (trong đó 1 việc xoá). 1 việc đã thử gửi nhiều lần nhưng chưa thành công.",
     );
   });
+
+  it("một `upsert` bình thường cũng được đếm vào tổng (PR3)", () => {
+    expect(
+      pendingSyncCountLine({ total: 1, deletes: 0, dead: 0, upserts: 1, recovers: 0, conflicts: 0 }),
+    ).toBe("Còn 1 việc đồng bộ chưa xong.");
+  });
+
+  it("nói thêm về xung đột chưa xử lý (PR3)", () => {
+    expect(
+      pendingSyncCountLine({ total: 1, deletes: 0, dead: 0, upserts: 1, recovers: 0, conflicts: 2 }),
+    ).toBe(
+      "Còn 1 việc đồng bộ chưa xong. Có 2 xung đột chưa xử lý. Hãy xử lý xung đột trước khi nhập.",
+    );
+  });
+
+  it("khi outbox rỗng mà còn xung đột thì không nói 'Còn 0 việc' (PR3)", () => {
+    expect(
+      pendingSyncCountLine({ total: 0, deletes: 0, dead: 0, upserts: 0, recovers: 0, conflicts: 1 }),
+    ).toBe("Có 1 xung đột chưa xử lý. Hãy xử lý xung đột trước khi nhập.");
+  });
 });
 
 describe("nhận diện lỗi bị chặn", () => {
@@ -44,7 +69,7 @@ describe("nhận diện lỗi bị chặn", () => {
     expect(error.name).toBe("PendingSyncImportBlockedError");
     expect(error.message).toContain("Còn thay đổi chưa đồng bộ xong");
     expect(error.message).toContain("trong đó 1 việc xoá");
-    expect(error.message).toContain("đã xoá xuất hiện lại");
+    expect(error.message).toContain("đã xoá có thể xuất hiện lại");
   });
 
   it("nhận ra lỗi thật", () => {
@@ -59,6 +84,17 @@ describe("nhận diện lỗi bị chặn", () => {
       pendingSync: { total: 2, deletes: 1, dead: 0 },
     };
     expect(pendingSyncImportBlock(plain)).toEqual({ total: 2, deletes: 1, dead: 0 });
+  });
+
+  it("vẫn nhận ra khi summary mang đủ sáu trường (PR3)", () => {
+    const summary = { total: 3, deletes: 1, dead: 0, upserts: 2, recovers: 0, conflicts: 1 };
+    expect(pendingSyncImportBlock(new PendingSyncImportBlockedError(summary))).toEqual(summary);
+    expect(
+      pendingSyncImportBlock({
+        name: "PendingSyncImportBlockedError",
+        pendingSync: summary,
+      }),
+    ).toEqual(summary);
   });
 
   it("không nhận nhầm lỗi khác", () => {
