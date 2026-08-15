@@ -129,14 +129,26 @@ export async function outboxCount(): Promise<number> {
  * `dead` cung phai chan: `pushOutboxUnlocked` bo qua item da chet MAI MAI cho
  * toi khi co nguoi bam `reviveDeadOutbox`, nen mot viec xoa da chet co the nam
  * do rat lau ma khong ai biet.
+ *
+ * PR3 — dem THEM tung loai op va so xung dot chua xu ly, vi gate khong con hep
+ * o viec xoa nua. `importBackup` xoa sach ca `outbox` va `conflicts`: mot
+ * `upsert` chua day cung mat vinh vien, va mot xung dot chua xu ly cung bien mat
+ * truoc khi nguoi dung kip chon ben nao.
  */
 export async function summarizePendingSync(): Promise<PendingSyncSummary> {
   const items = await db.outbox.toArray();
   let deletes = 0;
   let dead = 0;
+  let upserts = 0;
+  let recovers = 0;
   for (const item of items) {
     if (item.op === "delete") deletes += 1;
+    if (item.op === "upsert") upserts += 1;
+    if (item.op === "recover") recovers += 1;
     if (item.dead === true) dead += 1;
   }
-  return { total: items.length, deletes, dead };
+  // Cung mot cach doc nhu `listConflicts` trong engine: chi tinh xung dot CHUA
+  // duoc giai quyet.
+  const unresolved = await db.conflicts.filter((conflict) => !conflict.resolved).toArray();
+  return { total: items.length, deletes, dead, upserts, recovers, conflicts: unresolved.length };
 }

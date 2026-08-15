@@ -9,22 +9,34 @@ import type { PendingSyncSummary } from "./sync/types";
 
 export const PENDING_SYNC_IMPORT_TITLE = "Còn thay đổi chưa đồng bộ xong";
 
+/**
+ * PR3 — câu rủi ro cũ chỉ nói tới dòng đã xoá sống lại, nên nó SAI khi việc còn
+ * treo là một `upsert` bình thường. Nhập sao lưu xoá sạch cả hàng đợi đồng bộ,
+ * nên phải nói rõ cả hai hậu quả.
+ */
 export const PENDING_SYNC_IMPORT_RISK =
-  "Nhập sao lưu bây giờ có thể làm giao dịch hoặc mục tiêu đã xoá xuất hiện lại.";
+  "Nhập sao lưu sẽ xoá hàng đợi đồng bộ: thay đổi chưa đẩy sẽ mất, và dòng đã xoá có thể xuất hiện lại.";
 
 export const PENDING_SYNC_PUSH_FIRST_LABEL = "Đẩy đồng bộ trước";
 
 export const PENDING_SYNC_ACCEPT_LABEL = "Vẫn nhập (chấp nhận rủi ro)";
 
 export function pendingSyncCountLine(summary: PendingSyncSummary): string {
+  const conflicts = summary.conflicts ?? 0;
   const base =
     summary.deletes > 0
       ? `Còn ${summary.total} việc đồng bộ chưa xong (trong đó ${summary.deletes} việc xoá).`
       : `Còn ${summary.total} việc đồng bộ chưa xong.`;
+  const parts: string[] = [];
+  // Khi chi con xung dot (outbox rong) thi cau "Con 0 viec..." chi gay hoang mang.
+  if (summary.total > 0 || conflicts === 0) parts.push(base);
   if (summary.dead > 0) {
-    return `${base} ${summary.dead} việc đã thử gửi nhiều lần nhưng chưa thành công.`;
+    parts.push(`${summary.dead} việc đã thử gửi nhiều lần nhưng chưa thành công.`);
   }
-  return base;
+  if (conflicts > 0) {
+    parts.push(`Có ${conflicts} xung đột chưa xử lý. Hãy xử lý xung đột trước khi nhập.`);
+  }
+  return parts.join(" ");
 }
 
 export class PendingSyncImportBlockedError extends Error {
@@ -40,6 +52,12 @@ export class PendingSyncImportBlockedError extends Error {
   }
 }
 
+/**
+ * CHỈ kiểm tra ba trường gốc. `upserts`/`recovers`/`conflicts` là tuỳ chọn, nên
+ * một payload cũ (hoặc một lỗi đã đi qua ranh giới module trước khi PR3 ship)
+ * vẫn phải được nhận ra — nếu bắt buộc đủ sáu trường thì giao diện sẽ âm thầm
+ * coi lỗi bị chặn là một lỗi lạ và hiện "Không nhập được backup".
+ */
 function isPendingSyncSummary(value: unknown): value is PendingSyncSummary {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;

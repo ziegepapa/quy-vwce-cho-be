@@ -53,11 +53,24 @@ export type OutboxItem = OrdinaryOutboxItem | RecoveryOutboxItem;
  *
  * `deletes` là con số quan trọng: một việc "delete" chưa đẩy là đường DUY NHẤT để
  * máy chủ biết dòng đó đã bị xoá.
+ *
+ * PR3 — gate không còn hẹp ở việc xoá. `total` và `conflicts` là hai con số quyết
+ * định: nhập sao lưu xoá sạch `outbox` VÀ `conflicts`, nên BẤT KỲ việc đồng bộ nào
+ * còn treo (kể cả một `upsert` bình thường) đều mất vĩnh viễn, và một xung đột
+ * chưa xử lý sẽ biến mất mà người dùng chưa từng chọn bên nào.
+ *
+ * Ba trường mới để TUỲ CHỌN có chủ ý: `pendingSyncImportBlock` nhận diện lỗi theo
+ * hình dạng khi nó đi qua ranh giới module, và những payload cũ chỉ mang ba trường
+ * đầu vẫn phải được nhận ra.
  */
 export type PendingSyncSummary = {
   total: number;
   deletes: number;
   dead: number;
+  upserts?: number;
+  recovers?: number;
+  /** Số xung đột CHƯA xử lý (`db.conflicts` với `resolved` còn trống). */
+  conflicts?: number;
 };
 
 export type RecoverySessionResult =

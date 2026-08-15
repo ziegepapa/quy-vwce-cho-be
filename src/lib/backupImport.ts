@@ -27,10 +27,19 @@ export type ImportBackupOptions = {
  * Vì vậy chặn TRƯỚC khi có bất kỳ thay đổi nào, và chỉ đi tiếp khi người dùng
  * chấp nhận rủi ro một cách tường minh.
  *
- * Phạm vi CỐ Ý hẹp: chỉ việc "delete" còn treo và việc đã chết (dead). Việc
- * "upsert" bình thường không chặn luồng khôi phục — mất một chỉnh sửa chưa đẩy
- * khi khôi phục bản cũ là ngữ nghĩa mong đợi của "khôi phục", khác hẳn với một
- * dòng đã xoá quay lại. Sẽ xem lại trong SPEC backup schema v4 + tombstones.
+ * PR3 — phạm vi hẹp cũ (chỉ việc "delete" và việc đã chết) là SAI, không phải
+ * "cố ý":
+ *
+ * 1. Một `upsert` bình thường chưa đẩy cũng mất VĨNH VIỄN khi outbox bị xoá
+ *    sạch. Nó không giống "khôi phục bản cũ": thay đổi đó có thể mới hơn cả file
+ *    sao lưu, và không có đường nào lấy lại.
+ * 2. Một `recover` đang chờ là dữ liệu người dùng chưa từng lên máy chủ.
+ * 3. Một xung đột CHƯA xử lý cũng bị xoá cùng `conflicts` — người dùng mất luôn
+ *    quyền chọn bên nào, im lặng.
+ *
+ * Vì vậy gate bây giờ fail-closed: chặn khi CÒN BẤT KỲ item nào trong outbox,
+ * HOẶC còn bất kỳ xung đột chưa xử lý. Owner vẫn có đường đi tiếp tường minh
+ * bằng `acceptPendingSyncRisk`.
  */
 export async function importBackup(
   payload: BackupPayload,
@@ -40,7 +49,7 @@ export async function importBackup(
   if (!validation.ok) throw new Error(validation.error);
   if (options?.acceptPendingSyncRisk !== true) {
     const pendingSync = await summarizePendingSync();
-    if (pendingSync.deletes > 0 || pendingSync.dead > 0) {
+    if (pendingSync.total > 0 || (pendingSync.conflicts ?? 0) > 0) {
       throw new PendingSyncImportBlockedError(pendingSync);
     }
   }
