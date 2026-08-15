@@ -114,7 +114,11 @@ describe("reconcileTombstoneOutbox -- vá tombstone mồ côi", () => {
       "goals:delete",
       "transactions:delete",
     ]);
-    expect(items.find((item) => item.table === "goals")?.version).toBe(7);
+    // `OutboxItem` la union va `RecoveryOutboxItem` KHONG co `version`, nen doc
+    // truc tiep `.version` khong qua duoc tsc. `toMatchObject` giu nguyen y nghia
+    // kiem tra ma khong can narrowing -- dung dang da dung o tren.
+    const goalItem = items.find((item) => item.table === "goals");
+    expect(goalItem).toMatchObject({ op: "delete", version: 7 });
   });
 
   it("chạy hai lần vẫn chỉ có một việc -- đúng nghĩa idempotent", async () => {
