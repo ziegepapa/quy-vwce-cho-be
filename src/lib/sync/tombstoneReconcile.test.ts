@@ -32,11 +32,12 @@ function tx(id: string, extra: Record<string, unknown> = {}) {
   return {
     id,
     date: "2026-08-15",
-    type: "adjust",
+    type: "cash_in",
     amount: 50,
     notes: "",
     createdAt: T,
     updatedAt: T,
+    source: "manual",
     version: 3,
     ...extra,
   } as never;
@@ -116,7 +117,7 @@ describe("reconcileTombstoneOutbox -- vá tombstone mồ côi", () => {
     expect(items.find((item) => item.table === "goals")?.version).toBe(7);
   });
 
-  it("chạy hai lần vẫn chỉ có một việc -- đúng nghiĩa idempotent", async () => {
+  it("chạy hai lần vẫn chỉ có một việc -- đúng nghĩa idempotent", async () => {
     await db.transactions.put(tx("recon_tx_twice", { deletedAt: T }));
 
     await reconcileTombstoneOutbox(USER_ID);

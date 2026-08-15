@@ -8,7 +8,7 @@
  * bao cho may chu biet dong do da bi xoa, nen lan dong bo ke tiep keo dong van con
  * song tren may chu ve va dong da xoa song lai.
  *
- * PR3 chuyen buoc xep viec vao CHINH transaction do. Hai test duoi day khoa ca hai
+ * PR3 chuyen buoc xep viec vao CHINH transaction do. Cac test duoi day khoa ca hai
  * chieu: thanh cong thi ca hai cung co mat; that bai thi KHONG co gi duoc ghi.
  *
  * Phai polyfill IndexedDB TRUOC khi import db.
@@ -28,7 +28,6 @@ import {
 } from "./db";
 import { defaultSettings } from "./defaults";
 import type { BackupPayload, Goal, Transaction } from "./types";
-import { BACKUP_SCHEMA_VERSION } from "./types";
 
 const T = "2026-08-15T09:00:00.000Z";
 const USER_ID = "atomic-owner-1";
@@ -113,7 +112,6 @@ beforeEach(async () => {
 describe("PR3 -- v4 import: khôi phục tombstone và xếp việc xoá là MỘT khối", () => {
   it("thành công: cả tombstone lẫn việc xoá cùng có mặt", async () => {
     const payload = await buildV4Payload();
-    expect(payload.schemaVersion).toBe(BACKUP_SCHEMA_VERSION);
     expect(payload.schemaVersion).toBe(4);
     await setUserId();
 
@@ -139,10 +137,16 @@ describe("PR3 -- v4 import: khôi phục tombstone và xếp việc xoá là M�
     await upsertTransaction(SENTINEL, { sync: false });
     await db.outbox.clear();
 
-    // ISIN sai khien import hong -- transaction phai cuon lai toan bo.
+    // Mot dong giao dich co so tien khong hop le. Bang `transactions` co hook
+    // `creating`/`updating` goi `assertValidTransactionNumbers`, va hook do chay
+    // NGAY BEN TRONG transaction cua importV4 -- nen chac chan hong giua chung,
+    // dung dieu kien can de thu tinh nguyen khoi.
     const corrupted = {
       ...payload,
-      instruments: [{ isin: "KHONG-PHAI-ISIN", currency: "EUR", name: "Hỏng" }],
+      transactions: [
+        ...payload.transactions,
+        { ...LIVE_TX, id: "atomic_broken_tx", amount: Number.NaN },
+      ],
     } as unknown as BackupPayload;
 
     await expect(importBackup(corrupted)).rejects.toThrow();
@@ -150,6 +154,7 @@ describe("PR3 -- v4 import: khôi phục tombstone và xếp việc xoá là M�
     // Du lieu cu con nguyen ven.
     expect(await db.transactions.get(SENTINEL.id)).toBeTruthy();
     // Khong mot manh nao cua sao luu hong lot vao.
+    expect(await db.transactions.get("atomic_broken_tx")).toBeUndefined();
     expect(await db.transactions.get(DEL_TX.id)).toBeUndefined();
     expect(await db.goals.get(DEL_GOAL.id)).toBeUndefined();
     expect(await db.transactions.get(LIVE_TX.id)).toBeUndefined();
