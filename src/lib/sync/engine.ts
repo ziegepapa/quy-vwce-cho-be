@@ -16,6 +16,7 @@ import type {
   SyncStatus,
 } from "./types";
 import { enqueueOutbox, outboxCount, removeOutboxForEntity } from "./outbox";
+import { reconcileTombstoneOutbox } from "./tombstoneReconcile";
 
 export { enqueueOutbox, outboxCount, removeOutboxForEntity };
 
@@ -515,6 +516,14 @@ export async function pullDelta(userId: string): Promise<{ pulled: number; confl
   return withUserSyncLock(userId, ({ networkAllowed }) => networkAllowed ? pullDeltaUnlocked(userId) : Promise.resolve({ pulled: 0, conflicts: 0 }));
 }
 async function runSyncUnlocked(userId: string, networkAllowed: boolean) {
+  // AN TOAN DU LIEU (PR3): va lai khoang trong giua tombstone va outbox TRUOC MOI
+  // viec khac. Mot tombstone khong co viec "delete" nao trong outbox la mot dong da
+  // xoa ma may chu khong bao gio duoc bao; lan pull ke tiep se keo hang con song tren
+  // may chu ve va dong do SONG LAI. Buoc nay chi ghi vao IndexedDB nen chay duoc ca
+  // khi offline -- viec vua xep duoc dem ngay vao outboxCount() ben duoi va se len
+  // may chu o lan sync co mang dau tien. Idempotent: tombstone da co san item bat ky
+  // (upsert, recover hay delete) thi giu nguyen item do, khong dung toi.
+  await reconcileTombstoneOutbox(userId);
   const online = isOnline();
   if (!online || !supabase || !networkAllowed) {
     const pending = await outboxCount();
