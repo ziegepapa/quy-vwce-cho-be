@@ -119,6 +119,26 @@ async function markDeleteSynced(store: Table<SyncEntity, string>, entityId: stri
   if (!current || !Boolean(current.deletedAt)) return;
   await store.put({ ...current, deleteSyncedAt: nowIso() });
 }
+/**
+ * PR5 -- thoi diem xoa gui len may chu phai la thoi diem NGUOI DUNG xoa, khong
+ * phai thoi diem day len.
+ *
+ * Truoc PR5, nhanh delete cua `pushOne` gui `nowIso()`, nen moi lan day lai ghi
+ * de `deleted_at` bang thoi diem hien tai. Cong voi vong lap day lai cua Defect
+ * B (PR4 da chan), mot hang goal bi xoa luc 14/08 20:03 da bi doi thanh 16/08
+ * 09:49 roi 16/08 10:45 tren production: so lieu kiem toan sai gan 39 gio.
+ *
+ * Tombstone cuc bo giu `deletedAt` that nen doc thang tu do. Chi "goals" va
+ * "transactions" giu tombstone; cac bang khac bi xoa han cuc bo nen khong con
+ * gi de doc -- rieng truong hop do moi dung `nowIso()` lam muc du phong.
+ */
+async function tombstoneDeletedAt(item: OrdinaryOutboxItem): Promise<string | null> {
+  const store = markableDeleteStore(item);
+  if (!store) return null;
+  const current = await store.get(item.entityId);
+  const deletedAt = current?.deletedAt;
+  return typeof deletedAt === "string" && deletedAt ? deletedAt : null;
+}
 function objectPayload(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
@@ -246,7 +266,11 @@ async function pushOne(userId: string, item: OrdinaryOutboxItem): Promise<void> 
   if (!supabase) throw new Error("Sync unavailable");
   const remote = REMOTE_TABLE[item.table];
   if (item.op === "delete") {
-    const { error } = await supabase.from(remote).update({ deleted_at: nowIso() }).eq("user_id", userId).eq("id", item.entityId);
+    // AN TOAN DU LIEU (PR5): gui thoi diem xoa THAT cua tombstone. Gui nowIso()
+    // o day lam mat vinh vien thoi diem nguoi dung xoa, va moi lan day lai lai
+    // ghi de them mot lan nua.
+    const deletedAt = await tombstoneDeletedAt(item);
+    const { error } = await supabase.from(remote).update({ deleted_at: deletedAt ?? nowIso() }).eq("user_id", userId).eq("id", item.entityId);
     if (error) throw new Error("Sync failed");
     return;
   }
