@@ -197,6 +197,22 @@ export type Goal = {
   inflationRate: number; bufferPct: number; urgency: GoalUrgency; protectedAmount: number; notes: string;
   createdAt: string; updatedAt: string;
   deletedAt?: string;
+  /**
+   * PR4 -- thoi diem may chu XAC NHAN da nhan lenh xoa cua dong nay.
+   *
+   * CHI CUC BO. Khong bao gio duoc gui len may chu va khong nam trong `data`:
+   * `upsertGoal` xoa no truoc khi ghi va truoc khi xep outbox.
+   *
+   * `reconcileTombstoneOutbox` dung truong nay de phan biet hai trang thai
+   * truoc day giong het nhau -- tombstone CHUA tung duoc bao cho may chu (phai
+   * chua) va tombstone DA day thanh cong (binh thuong, khong duoc dung toi).
+   * Thieu no, reconciler xep lai mot viec "delete" o MOI lan dong bo, mai mai.
+   *
+   * Tuy chon nen khong nang DEXIE_DB_VERSION va khong index nen khong doi
+   * schema Dexie. Hang cu doc len khong co truong nay se duoc chua dung mot lan
+   * roi danh dau.
+   */
+  deleteSyncedAt?: string;
 };
 
 /**
@@ -224,6 +240,8 @@ export type Transaction = {
   sourceVersion?: number;
   externalRef?: string;
   deletedAt?: string;
+  /** PR4 -- xem `Goal.deleteSyncedAt`. Chi cuc bo, khong bao gio gui len may chu. */
+  deleteSyncedAt?: string;
 };
 export type ChecklistItem = { key: string; label: string; done: boolean };
 export type AnnualChecklist = { id: string; year: number; items: ChecklistItem[]; createdAt: string; updatedAt: string };

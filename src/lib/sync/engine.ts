@@ -96,6 +96,29 @@ function entityStore(table: EntityTable): Table<SyncEntity, string> {
   if (table === "annualChecklists") return db.annualChecklists as unknown as Table<SyncEntity, string>;
   return db.monthlySnapshots as unknown as Table<SyncEntity, string>;
 }
+/**
+ * PR4 -- chi "goals" va "transactions" giu tombstone lai trong IndexedDB. Cac
+ * bang khac bi xoa han khi may chu bao da xoa, nen khong co hang nao de danh
+ * dau va cung khong co gi cho reconciler day lai.
+ */
+function markableDeleteStore(item: OrdinaryOutboxItem): Table<SyncEntity, string> | null {
+  if (item.op !== "delete") return null;
+  if (item.table !== "goals" && item.table !== "transactions") return null;
+  return entityStore(item.table);
+}
+/**
+ * PR4 -- ghi lai rang may chu DA nhan duoc lenh xoa cua hang nay.
+ *
+ * `reconcileTombstoneOutbox` doc dau nay de khong xep lai mot viec "delete" da
+ * hoan thanh. Chi danh dau khi hang van con la tombstone: neu no da song lai
+ * (pull ve mot ban con song, hoac nguoi dung tao lai) thi khong con gi de xac
+ * nhan.
+ */
+async function markDeleteSynced(store: Table<SyncEntity, string>, entityId: string): Promise<void> {
+  const current = await store.get(entityId);
+  if (!current || !Boolean(current.deletedAt)) return;
+  await store.put({ ...current, deleteSyncedAt: nowIso() });
+}
 function objectPayload(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
@@ -263,9 +286,16 @@ async function attemptOutboxItem(userId: string, expectedItem: OrdinaryOutboxIte
   }
   try {
     await pushOne(userId, current);
-    await db.transaction("rw", [db.outbox, db.conflicts], async () => {
+    // AN TOAN DU LIEU (PR4): dau xac nhan phai duoc ghi TRONG CUNG giao dich voi
+    // viec xoa outbox item. Neu tach lam hai buoc, mot lan dung o giua lai de
+    // lai dung trang thai ma reconciler khong phan biet duoc -- tombstone khong
+    // co outbox item, khong co dau -- va no se day lai lenh xoa nay o moi lan
+    // dong bo, mai mai.
+    const tombstoneStore = markableDeleteStore(current);
+    await db.transaction("rw", [db.outbox, db.conflicts, ...(tombstoneStore ? [tombstoneStore] : [])], async () => {
       await db.outbox.delete(current.id);
       await closeReplacementConflicts(current);
+      if (tombstoneStore) await markDeleteSynced(tombstoneStore, current.entityId);
     });
     return { kind: "confirmed" };
   } catch (error) {
@@ -499,7 +529,11 @@ async function pullDeltaUnlocked(userId: string): Promise<{ pulled: number; conf
       if (currentRemote.state === "deleted") {
         if (table === "goals" || table === "transactions") {
           const current = await store.get(entityId);
-          if (current) await store.put({ ...current, deletedAt: currentRemote.deletedAt, updatedAt: currentRemote.updatedAt ?? currentRemote.deletedAt, version: currentRemote.version });
+          // AN TOAN DU LIEU (PR4): may chu DA co deleted_at, nen tombstone nay
+          // khong con gi de bao nua. Danh dau ngay tai day, neu khong thi lan
+          // dong bo ke tiep reconciler se xep them mot viec "delete" thua --
+          // dung mot lan ghi thua tren MOI thiet bi keo ban xoa nay ve.
+          if (current) await store.put({ ...current, deletedAt: currentRemote.deletedAt, updatedAt: currentRemote.updatedAt ?? currentRemote.deletedAt, version: currentRemote.version, deleteSyncedAt: nowIso() });
         } else await store.delete(entityId);
       } else {
         const remotePayload = withoutDeletionMarkers(currentRemote.data);
@@ -523,6 +557,9 @@ async function runSyncUnlocked(userId: string, networkAllowed: boolean) {
   // khi offline -- viec vua xep duoc dem ngay vao outboxCount() ben duoi va se len
   // may chu o lan sync co mang dau tien. Idempotent: tombstone da co san item bat ky
   // (upsert, recover hay delete) thi giu nguyen item do, khong dung toi.
+  //
+  // PR4: va tombstone da co `deleteSyncedAt` thi bo qua han. Thieu dieu kien do,
+  // buoc nay xep lai mot viec "delete" da hoan thanh o MOI lan dong bo.
   await reconcileTombstoneOutbox(userId);
   const online = isOnline();
   if (!online || !supabase || !networkAllowed) {
@@ -564,7 +601,9 @@ async function priorResolution(conflict: ConflictRecord, online: boolean): Promi
 async function applyRemoteDeletion(table: EntityTable, store: Table<SyncEntity, string>, entityId: string, remote: VerifiedRemote): Promise<void> {
   if (table === "goals" || table === "transactions") {
     const current = await store.get(entityId);
-    if (current) await store.put({ ...current, id: entityId, deletedAt: remote.deletedAt, updatedAt: remote.updatedAt ?? remote.deletedAt ?? nowIso(), version: remote.version });
+    // PR4: chon "may chu da xoa" khi giai quyet xung dot cung la mot xac nhan --
+    // may chu da co deleted_at, khong con gi de day len nua.
+    if (current) await store.put({ ...current, id: entityId, deletedAt: remote.deletedAt, updatedAt: remote.updatedAt ?? remote.deletedAt ?? nowIso(), version: remote.version, deleteSyncedAt: nowIso() });
     else await store.delete(entityId);
   } else await store.delete(entityId);
 }

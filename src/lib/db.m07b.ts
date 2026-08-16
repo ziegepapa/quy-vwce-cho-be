@@ -137,6 +137,10 @@ export async function upsertTransaction(
   const { deletedAt: _drop, ...rest } = tx as Transaction & { deletedAt?: string; version?: number };
   const next = { ...rest, updatedAt: nowIso(), version: ver } as Transaction & { version: number };
   delete (next as { deletedAt?: string }).deletedAt;
+  // PR4: `deleteSyncedAt` la dau CUC BO cua vong doi tombstone. Mot dong song
+  // lai khong duoc mang no theo, va no khong bao gio duoc di vao payload day len
+  // may chu.
+  delete (next as { deleteSyncedAt?: string }).deleteSyncedAt;
   await db.transactions.put(next as Transaction);
   if (opts?.sync !== false) {
     await enqueueOutbox("transactions", next.id, "upsert", next, ver);
@@ -158,6 +162,10 @@ export async function deleteTransaction(id: string, opts?: { sync?: boolean }): 
     updatedAt: nowIso(),
     version: ver,
   };
+  // PR4: tombstone MOI chua duoc may chu xac nhan. Xoa dau xac nhan cu (neu dong
+  // nay tung bi xoa roi song lai) de reconciler van chua duoc neu viec "delete"
+  // vua xep bi mat.
+  delete (tombstone as { deleteSyncedAt?: string }).deleteSyncedAt;
   await db.transactions.put(tombstone as Transaction);
   if (opts?.sync !== false) {
     await enqueueOutbox("transactions", id, "delete", null, ver);
@@ -169,6 +177,9 @@ export async function upsertGoal(g: Goal, opts?: { sync?: boolean }): Promise<vo
   const { deletedAt: _drop, ...rest } = g as Goal & { deletedAt?: string; version?: number };
   const next = { ...rest, updatedAt: nowIso(), version: ver } as Goal & { version: number };
   delete (next as { deletedAt?: string }).deletedAt;
+  // PR4: xem chu thich trong upsertTransaction -- dau cuc bo khong duoc song sot
+  // qua mot lan hoi sinh, va khong duoc day len may chu.
+  delete (next as { deleteSyncedAt?: string }).deleteSyncedAt;
   await db.goals.put(next as Goal);
   if (opts?.sync !== false) {
     await enqueueOutbox("goals", next.id, "upsert", next, ver);
@@ -190,6 +201,8 @@ export async function deleteGoal(id: string, opts?: { sync?: boolean }): Promise
     updatedAt: nowIso(),
     version: ver,
   };
+  // PR4: xem chu thich trong deleteTransaction.
+  delete (tombstone as { deleteSyncedAt?: string }).deleteSyncedAt;
   await db.goals.put(tombstone as Goal);
   if (opts?.sync !== false) {
     await enqueueOutbox("goals", id, "delete", null, ver);
