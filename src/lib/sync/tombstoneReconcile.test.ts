@@ -8,12 +8,24 @@
  * mot ban sao luu duoc khoi phuc tren thiet bi khac.
  *
  * `reconcileTombstoneOutbox` chay o dau moi lan dong bo va phai:
+ *  - tombstone da co `deleteSyncedAt` => may chu DA xac nhan, bo qua han;
  *  - tombstone KHONG co item nao  => xep dung MOT viec "delete";
  *  - tombstone DA co item bat ky   => GIU NGUYEN item do, khong dung toi.
  *
- * Dieu kien thu hai la thiet yeu: `enqueueOutbox` goi `removeOutboxForEntity`
+ * Dieu kien thu ba la thiet yeu: `enqueueOutbox` goi `removeOutboxForEntity`
  * truoc tien, nen mot lan xep de dai se xoa mat item `recover` hoac `upsert`
  * dang cho cua chinh dong do.
+ *
+ * PR4 -- dieu kien thu nhat cung thiet yeu, va no thieu trong ban PR3.
+ *
+ * Sau mot lan day THANH CONG, outbox item bi xoa con tombstone o lai IndexedDB
+ * vinh vien. Trang thai khoe manh do trong giong het trang thai hong, nen ban cu
+ * xep lai mot viec "delete" o MOI lan dong bo, mai mai. Do duoc tren production
+ * 16/08/2026: mot hang goal di tu version 11 len 22 trong 23 phut.
+ *
+ * Test cu bo sot vi no chay reconcile hai lan MA KHONG day o giua, nen outbox
+ * item con nguyen va nhanh `preserved` che mat loi. Vong lap muoi lan ben duoi
+ * va `tombstoneRepush.test.ts` (day that qua supabase gia) khoa lai ca hai huong.
  *
  * Import truc tiep tu db.m01a va ./outbox de khong keo supabase vao test.
  * Phai polyfill IndexedDB TRUOC khi import db.
@@ -217,5 +229,59 @@ describe("reconcileTombstoneOutbox -- giữ nguyên việc đang chờ", () => {
     expect(items).toHaveLength(2);
     expect(items.find((item) => item.entityId === "recon_goal_kept")?.op).toBe("upsert");
     expect(items.find((item) => item.entityId === "recon_tx_orphan_2")?.op).toBe("delete");
+  });
+});
+
+/**
+ * PR4 -- tombstone da duoc may chu xac nhan thi khong con la viec chua lam.
+ *
+ * Day la nhanh ma ban PR3 khong co. Neu xoa dieu kien `deleteSyncedAt` trong
+ * `tombstoneRows`, toan bo khoi nay do -- do la y do.
+ */
+describe("reconcileTombstoneOutbox -- tombstone đã được máy chủ xác nhận", () => {
+  it("bỏ qua tombstone đã có deleteSyncedAt -- không xếp lại việc xoá", async () => {
+    await db.transactions.put(tx("recon_tx_confirmed", { deletedAt: T, deleteSyncedAt: T }));
+    await db.goals.put(goal("recon_goal_confirmed", { deletedAt: T, deleteSyncedAt: T }));
+
+    expect(await reconcileTombstoneOutbox(USER_ID)).toEqual({ enqueued: 0, preserved: 0 });
+    expect(await db.outbox.count()).toBe(0);
+  });
+
+  it("chạy mười lần liên tiếp vẫn không sinh việc nào", async () => {
+    await db.goals.put(goal("recon_goal_confirmed_loop", { deletedAt: T, deleteSyncedAt: T }));
+
+    for (let i = 0; i < 10; i += 1) {
+      expect(await reconcileTombstoneOutbox(USER_ID)).toEqual({ enqueued: 0, preserved: 0 });
+    }
+
+    expect(await db.outbox.count()).toBe(0);
+  });
+
+  it("vá cái chưa xác nhận, bỏ qua cái đã xác nhận", async () => {
+    await db.transactions.put(tx("recon_tx_unconfirmed", { deletedAt: T }));
+    await db.transactions.put(tx("recon_tx_confirmed_2", { deletedAt: T, deleteSyncedAt: T }));
+
+    expect(await reconcileTombstoneOutbox(USER_ID)).toEqual({ enqueued: 1, preserved: 0 });
+
+    const items = await db.outbox.toArray();
+    expect(items).toHaveLength(1);
+    expect(items[0].entityId).toBe("recon_tx_unconfirmed");
+  });
+
+  it("dấu xác nhận không được đụng tới việc đang chờ của cùng dòng", async () => {
+    await db.goals.put(goal("recon_goal_confirmed_pending", { deletedAt: T, deleteSyncedAt: T }));
+    await enqueueOutbox(
+      "goals",
+      "recon_goal_confirmed_pending",
+      "upsert",
+      { id: "recon_goal_confirmed_pending" },
+      5,
+    );
+    const before = await db.outbox.toArray();
+    expect(before).toHaveLength(1);
+
+    expect(await reconcileTombstoneOutbox(USER_ID)).toEqual({ enqueued: 0, preserved: 0 });
+
+    expect(await db.outbox.toArray()).toEqual(before);
   });
 });
