@@ -16,6 +16,11 @@
  * `remoteMock.ops` ghi lai tung lenh (`push:goals`, `pull:goals`), nen so lan
  * ghi la mot con so kiem tra duoc chu khong phai suy doan.
  *
+ * PR5 -- them mot truc do thu hai: KHONG chi dem so lan ghi, ma con kiem tra
+ * GIA TRI duoc ghi. `pushOne` truoc PR5 gui `nowIso()`, nen moi lan day lai lam
+ * sai lech `deleted_at`. Cac test duoi day so mot mot voi hang so cung, thu ma
+ * `nowIso()` khong bao gio bang duoc.
+ *
  * Phai polyfill IndexedDB TRUOC khi import db.
  */
 import "fake-indexeddb/auto";
@@ -25,6 +30,9 @@ const USER_ID = "owner-repush-1";
 const NOW = "2026-08-16T08:00:00.000Z";
 const DELETED_AT = "2026-08-16T09:00:00.000Z";
 const REMOTE_DELETED_AT = "2026-08-16T10:00:00.000Z";
+// Moc xoa THAT cua hang goal_619db5f6 tren production. Giu nguyen con so nay
+// lam vat chung: chinh no la thu da bi `nowIso()` ghi de mat.
+const REAL_DELETED_AT = "2026-08-14T20:03:44.194Z";
 // Co y de rat xa trong qua khu: sau lan pull dau tien, `lastPulledAt` thanh
 // nowIso() that cua may chay test, nen hang nay khong bao gio bi keo ve lai du
 // dong ho CI la ngay nao. Khong co no, mot lan pull thua co the lam ket qua doi
@@ -107,7 +115,7 @@ vi.mock("../supabase", () => {
 });
 
 import { db } from "../db.m01a";
-import { runSync } from "./engine";
+import { enqueueOutbox, runSync } from "./engine";
 import type { EntityTable } from "./types";
 import type { Goal, Transaction } from "../types";
 
@@ -171,7 +179,8 @@ describe("một lần xoá chỉ được đẩy lên máy chủ đúng một l�
     // Truoc PR4 con so nay la 3: moi lan dong bo mot lenh UPDATE thua.
     expect(pushCount("goals")).toBe(1);
     expect(remoteRow("goals", "goal-repush")?.version).toBe(5);
-    expect(typeof remoteRow("goals", "goal-repush")?.deleted_at).toBe("string");
+    // PR5: dung mot lan ghi, va ghi dung moc xoa that.
+    expect(remoteRow("goals", "goal-repush")?.deleted_at).toBe(DELETED_AT);
     expect(await db.outbox.count()).toBe(0);
 
     const local = await db.goals.get("goal-repush");
@@ -190,6 +199,7 @@ describe("một lần xoá chỉ được đẩy lên máy chủ đúng một l�
 
     expect(pushCount("transactions")).toBe(1);
     expect(remoteRow("transactions", "tx-repush")?.version).toBe(5);
+    expect(remoteRow("transactions", "tx-repush")?.deleted_at).toBe(DELETED_AT);
     expect(await db.outbox.count()).toBe(0);
 
     const local = await db.transactions.get("tx-repush");
@@ -246,6 +256,61 @@ describe("kéo về một dòng máy chủ đã xoá", () => {
 
     expect(pushCount("goals")).toBe(0);
     expect(remoteRow("goals", "goal-pulled")?.version).toBe(6);
+    expect(await db.outbox.count()).toBe(0);
+  });
+});
+
+describe("PR5 -- mốc gửi lên là thời điểm xoá THẬT, không phải thời điểm đẩy", () => {
+  it("goal xoá từ 14/08 vẫn lên máy chủ đúng mốc 14/08", async () => {
+    // Dung lai ca that: tombstone nam cho hai ngay roi moi len duoc may chu.
+    await db.goals.put({ ...goalTombstone("goal-real"), deletedAt: REAL_DELETED_AT, updatedAt: REAL_DELETED_AT });
+    setRemote("goals", "goal-real", goal("goal-real", SERVER_COPY), 11);
+
+    await runSync(USER_ID);
+
+    expect(pushCount("goals")).toBe(1);
+    // Mot hang so cung: `nowIso()` khong the nao bang duoc gia tri nay.
+    expect(remoteRow("goals", "goal-real")?.deleted_at).toBe(REAL_DELETED_AT);
+  });
+
+  it("transaction cũng gửi đúng mốc xoá của chính nó", async () => {
+    await db.transactions.put({ ...transactionTombstone("tx-real"), deletedAt: REAL_DELETED_AT, updatedAt: REAL_DELETED_AT });
+    setRemote("transactions", "tx-real", transaction("tx-real", SERVER_COPY), 4);
+
+    await runSync(USER_ID);
+
+    expect(pushCount("transactions")).toBe(1);
+    expect(remoteRow("transactions", "tx-real")?.deleted_at).toBe(REAL_DELETED_AT);
+  });
+
+  it("đẩy hỏng rồi đẩy lại: mốc vẫn là mốc xoá thật, không phải mốc thử lại", async () => {
+    await db.goals.put({ ...goalTombstone("goal-real-retry"), deletedAt: REAL_DELETED_AT, updatedAt: REAL_DELETED_AT });
+    setRemote("goals", "goal-real-retry", goal("goal-real-retry", SERVER_COPY), 4);
+
+    remoteMock.failUpdate = true;
+    await runSync(USER_ID);
+    expect(pushCount("goals")).toBe(0);
+
+    remoteMock.failUpdate = false;
+    await runSync(USER_ID);
+
+    expect(pushCount("goals")).toBe(1);
+    expect(remoteRow("goals", "goal-real-retry")?.deleted_at).toBe(REAL_DELETED_AT);
+  });
+
+  it("không còn dòng cục bộ thì vẫn ghi một mốc hợp lệ, không ghi null", async () => {
+    // Viec "delete" mo coi: hang cuc bo da bien mat (vi du sau mot lan nhap sao
+    // luu). Khong con gi de doc, nen nowIso() la muc du phong dung -- nhung
+    // TUYET DOI khong duoc gui null, vi null nghia la "chua xoa" va se lam dong
+    // da xoa song lai tren moi thiet bi khac.
+    setRemote("goals", "goal-gone", goal("goal-gone", SERVER_COPY), 4);
+    await enqueueOutbox("goals", "goal-gone", "delete", null, 3);
+    expect(await db.goals.get("goal-gone")).toBeUndefined();
+
+    await runSync(USER_ID);
+
+    expect(pushCount("goals")).toBe(1);
+    expect(typeof remoteRow("goals", "goal-gone")?.deleted_at).toBe("string");
     expect(await db.outbox.count()).toBe(0);
   });
 });
