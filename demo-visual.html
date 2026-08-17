@@ -7,48 +7,35 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overscroll-behavior:none}
-
-/* ─── THEMES ─── */
 :root,.theme-vault{
-  --bg:#06060a;
-  --g:rgba(255,255,255,.042);--gb:rgba(255,255,255,.09);
+  --bg:#06060a;--g:rgba(255,255,255,.042);--gb:rgba(255,255,255,.09);
   --text:#f0eeff;--sub:rgba(240,238,255,.55);--dim:rgba(240,238,255,.28);
-  --vi:#8b5cf6;--vi2:#5b21b6;
-  --em:#10b981;--am:#f59e0b;--re:#f87171;
+  --vi:#8b5cf6;--vi2:#5b21b6;--em:#10b981;--am:#f59e0b;--re:#f87171;
   --gv:rgba(139,92,246,.28);--ge:rgba(16,185,129,.22);
   --au1:rgba(91,33,182,.50);--au2:rgba(16,185,129,.20);--au3:rgba(139,92,246,.16);
-  --bar-bg:rgba(6,6,10,.80);
-  --pill-bg:rgba(8,5,20,.86);
+  --bar-bg:rgba(6,6,10,.80);--pill-bg:rgba(8,5,20,.86);
 }
 .theme-ocean{
-  --bg:#020d17;
-  --g:rgba(6,182,212,.04);--gb:rgba(6,182,212,.12);
+  --bg:#020d17;--g:rgba(6,182,212,.04);--gb:rgba(6,182,212,.12);
   --text:#e0f7ff;--sub:rgba(224,247,255,.55);--dim:rgba(224,247,255,.28);
-  --vi:#06b6d4;--vi2:#0e7490;
-  --em:#3b82f6;--am:#f59e0b;--re:#f87171;
+  --vi:#06b6d4;--vi2:#0e7490;--em:#3b82f6;--am:#f59e0b;--re:#f87171;
   --gv:rgba(6,182,212,.28);--ge:rgba(59,130,246,.22);
   --au1:rgba(6,182,212,.40);--au2:rgba(59,130,246,.25);--au3:rgba(14,116,144,.18);
-  --bar-bg:rgba(2,13,23,.82);
-  --pill-bg:rgba(2,10,20,.88);
+  --bar-bg:rgba(2,13,23,.82);--pill-bg:rgba(2,10,20,.88);
 }
 .theme-ember{
-  --bg:#0b0602;
-  --g:rgba(251,146,60,.04);--gb:rgba(251,146,60,.10);
+  --bg:#0b0602;--g:rgba(251,146,60,.04);--gb:rgba(251,146,60,.10);
   --text:#fff4e8;--sub:rgba(255,244,232,.55);--dim:rgba(255,244,232,.28);
-  --vi:#f97316;--vi2:#c2410c;
-  --em:#eab308;--am:#fb923c;--re:#f87171;
+  --vi:#f97316;--vi2:#c2410c;--em:#eab308;--am:#fb923c;--re:#f87171;
   --gv:rgba(249,115,22,.28);--ge:rgba(234,179,8,.22);
   --au1:rgba(249,115,22,.45);--au2:rgba(234,179,8,.22);--au3:rgba(194,65,12,.18);
-  --bar-bg:rgba(11,6,2,.82);
-  --pill-bg:rgba(10,5,2,.88);
+  --bar-bg:rgba(11,6,2,.82);--pill-bg:rgba(10,5,2,.88);
 }
-
 body{
   font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
   background:var(--bg);color:var(--text);
   min-height:100dvh;max-width:430px;margin:0 auto;
-  position:relative;overflow-x:hidden;
-  transition:background .4s,color .4s;
+  position:relative;overflow-x:hidden;transition:background .4s;
 }
 body::before{
   content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
@@ -56,8 +43,7 @@ body::before{
     radial-gradient(ellipse 80% 55% at 15% -10%,var(--au1) 0%,transparent 58%),
     radial-gradient(ellipse 55% 38% at 92% 10%,var(--au2) 0%,transparent 52%),
     radial-gradient(ellipse 45% 45% at 5%  90%,var(--au3) 0%,transparent 52%);
-  animation:au 14s ease-in-out infinite alternate;
-  transition:background .5s;
+  animation:au 14s ease-in-out infinite alternate;transition:background .5s;
 }
 @keyframes au{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(22deg)}}
 body::after{
@@ -67,44 +53,18 @@ body::after{
 .app{position:relative;z-index:2;min-height:100dvh;padding-bottom:84px}
 
 /* topbar */
-.bar{
-  position:sticky;top:0;z-index:50;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:12px 18px;
-  background:var(--bar-bg);
-  backdrop-filter:blur(28px) saturate(2);
-  -webkit-backdrop-filter:blur(28px) saturate(2);
-  border-bottom:1px solid var(--gb);
-}
-.bar-logo{
-  font-size:16px;font-weight:900;letter-spacing:-.03em;
-  background:linear-gradient(120deg,#fff 0%,var(--vi) 130%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-}
+.bar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:var(--bar-bg);backdrop-filter:blur(28px) saturate(2);-webkit-backdrop-filter:blur(28px) saturate(2);border-bottom:1px solid var(--gb)}
+.bar-logo{font-size:16px;font-weight:900;letter-spacing:-.03em;background:linear-gradient(120deg,#fff 0%,var(--vi) 130%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .bar-r{display:flex;align-items:center;gap:10px}
-.sync-pill{
-  display:flex;align-items:center;gap:5px;
-  font-size:11px;font-weight:700;letter-spacing:.04em;
-  color:var(--em);background:rgba(255,255,255,.06);
-  border:1px solid var(--gb);border-radius:100px;
-  padding:5px 12px;cursor:pointer;transition:transform .12s;
-}
+.sync-pill{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--em);background:rgba(255,255,255,.06);border:1px solid var(--gb);border-radius:100px;padding:5px 12px;cursor:pointer;transition:transform .12s}
 .sync-pill:active{transform:scale(.94)}
 .bar-clock{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin-ico{animation:spin .75s linear infinite;display:none}
 
-/* glass card */
-.gl{
-  background:var(--g);border:1px solid var(--gb);border-radius:20px;
-  backdrop-filter:blur(22px) saturate(1.7);
-  -webkit-backdrop-filter:blur(22px) saturate(1.7);
-  position:relative;overflow:hidden;
-}
-.gl::before{
-  content:'';position:absolute;inset:0 0 auto 0;height:1px;
-  background:linear-gradient(90deg,transparent 5%,rgba(255,255,255,.13) 50%,transparent 95%);
-}
+/* glass */
+.gl{background:var(--g);border:1px solid var(--gb);border-radius:20px;backdrop-filter:blur(22px) saturate(1.7);-webkit-backdrop-filter:blur(22px) saturate(1.7);position:relative;overflow:hidden}
+.gl::before{content:'';position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent 5%,rgba(255,255,255,.13) 50%,transparent 95%)}
 
 /* screens */
 .screen{display:none}
@@ -112,62 +72,30 @@ body::after{
 @keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 
 /* pill nav */
-.pill{
-  position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
-  z-index:100;display:flex;gap:2px;
-  background:var(--pill-bg);
-  border:1px solid rgba(255,255,255,.10);border-radius:100px;padding:5px;
-  backdrop-filter:blur(30px) saturate(2.2);
-  -webkit-backdrop-filter:blur(30px) saturate(2.2);
-  box-shadow:0 10px 40px rgba(0,0,0,.60),0 1px 0 rgba(255,255,255,.07) inset;
-}
-.pb{
-  padding:8px 15px;border-radius:100px;
-  font-size:11px;font-weight:700;letter-spacing:.04em;
-  color:var(--dim);border:none;background:none;cursor:pointer;
-  transition:all .2s cubic-bezier(.4,0,.2,1);white-space:nowrap;
-}
-.pb.on{
-  background:rgba(var(--vi-r,139),var(--vi-g,92),var(--vi-b,246),.22);
-  background:color-mix(in srgb,var(--vi) 22%,transparent);
-  color:var(--text);
-  box-shadow:0 0 18px color-mix(in srgb,var(--vi) 28%,transparent);
-}
+.pill{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:100;display:flex;gap:2px;background:var(--pill-bg);border:1px solid rgba(255,255,255,.10);border-radius:100px;padding:5px;backdrop-filter:blur(30px) saturate(2.2);-webkit-backdrop-filter:blur(30px) saturate(2.2);box-shadow:0 10px 40px rgba(0,0,0,.60),0 1px 0 rgba(255,255,255,.07) inset}
+.pb{padding:8px 15px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--dim);border:none;background:none;cursor:pointer;transition:all .2s cubic-bezier(.4,0,.2,1);white-space:nowrap}
+.pb.on{background:color-mix(in srgb,var(--vi) 22%,transparent);color:var(--text);box-shadow:0 0 18px color-mix(in srgb,var(--vi) 28%,transparent)}
 
 /* ═ shared */
 .s-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
 .s-title{font-size:20px;font-weight:900;letter-spacing:-.02em}
 
-/* ═══════════════════════════
-   S1 — OVERVIEW (compact)
-══════════════════════════ */
+/* ═════════════════════════════
+   S1 OVERVIEW
+════════════════════════════ */
 .ov{padding:14px 14px 0;display:flex;flex-direction:column;gap:9px}
 
 /* hero */
-.hero{
-  padding:26px 22px 22px;
-  background:linear-gradient(148deg,color-mix(in srgb,var(--vi) 26%,transparent) 0%,color-mix(in srgb,var(--em) 7%,transparent) 100%),var(--g);
-  border-color:color-mix(in srgb,var(--vi) 22%,transparent);
-  box-shadow:0 0 55px color-mix(in srgb,var(--vi) 14%,transparent) inset;
-}
+.hero{padding:26px 22px 22px;background:linear-gradient(148deg,color-mix(in srgb,var(--vi) 26%,transparent) 0%,color-mix(in srgb,var(--em) 7%,transparent) 100%),var(--g);border-color:color-mix(in srgb,var(--vi) 22%,transparent);box-shadow:0 0 55px color-mix(in srgb,var(--vi) 14%,transparent) inset}
 .h-eye{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
-.h-num{
-  font-size:66px;font-weight:900;letter-spacing:-.05em;line-height:.95;
-  background:linear-gradient(128deg,#fff 0%,color-mix(in srgb,var(--vi) 70%,#fff) 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 0 20px color-mix(in srgb,var(--vi) 38%,transparent));
-}
+.h-num{font-size:66px;font-weight:900;letter-spacing:-.05em;line-height:.95;background:linear-gradient(128deg,#fff 0%,color-mix(in srgb,var(--vi) 70%,#fff) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px color-mix(in srgb,var(--vi) 38%,transparent))}
 .h-row{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
 .bdg{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;border-radius:100px;padding:4px 11px}
 .bdg-up{color:var(--em);background:color-mix(in srgb,var(--em) 10%,transparent);border:1px solid color-mix(in srgb,var(--em) 24%,transparent)}
 .bdg-neu{color:var(--dim);background:rgba(255,255,255,.05);border:1px solid var(--gb)}
 
-/* compact price row */
-.price-row{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:12px 16px;
-  transition:border-color .38s,background .38s;
-}
+/* price compact */
+.price-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;transition:border-color .38s,background .38s}
 .price-row.stale{border-color:color-mix(in srgb,var(--am) 45%,transparent);background:color-mix(in srgb,var(--am) 4%,transparent)}
 .pr-left{display:flex;flex-direction:column;gap:2px}
 .pr-label{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);transition:color .3s}
@@ -175,49 +103,32 @@ body::after{
 .pr-cur{font-size:13px;font-weight:300;color:var(--dim)}
 .pr-tilde{font-size:16px;font-weight:200;color:var(--am);display:none;margin-right:1px}
 .pr-tilde.show{display:inline}
-.pr-big{
-  font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1;
-  background:linear-gradient(128deg,#fff 20%,var(--em) 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  transition:all .38s;
-}
-.pr-big.dim{
-  -webkit-text-fill-color:unset;color:rgba(240,238,255,.18);
-  text-decoration:line-through;
-  text-decoration-color:color-mix(in srgb,var(--am) 55%,transparent);text-decoration-thickness:2px;
-  font-size:20px;
-}
+.pr-big{font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1;background:linear-gradient(128deg,#fff 20%,var(--em) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;transition:all .38s}
+.pr-big.dim{-webkit-text-fill-color:unset;color:rgba(240,238,255,.18);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--am) 55%,transparent);text-decoration-thickness:2px;font-size:20px}
 .pr-ts{font-size:9px;color:var(--dim);margin-top:1px;transition:color .3s}
 .pr-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
-.pr-pill{
-  display:inline-flex;align-items:center;gap:4px;
-  font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
-  border-radius:100px;padding:3px 8px;
-}
+.pr-pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;border-radius:100px;padding:3px 8px}
 .pr-pill.live{color:var(--em);background:color-mix(in srgb,var(--em) 9%,transparent);border:1px solid color-mix(in srgb,var(--em) 22%,transparent)}
 .pr-pill.old{color:var(--am);background:color-mix(in srgb,var(--am) 8%,transparent);border:1px solid color-mix(in srgb,var(--am) 26%,transparent)}
 .dl{width:5px;height:5px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em);animation:blink 2s ease-in-out infinite}
 .da{width:5px;height:5px;border-radius:50%;background:var(--am);animation:sblink 1.3s ease-in-out infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 @keyframes sblink{0%,100%{opacity:1}50%{opacity:.1}}
-.stale-bar{
-  display:none;padding:8px 16px;
-  background:color-mix(in srgb,var(--am) 6%,transparent);
-  border-top:1px solid color-mix(in srgb,var(--am) 20%,transparent);
-  border-radius:0 0 20px 20px;margin-top:-12px;
-  justify-content:space-between;align-items:center;gap:8px;
-}
+.stale-bar{display:none;padding:8px 16px;background:color-mix(in srgb,var(--am) 6%,transparent);border-top:1px solid color-mix(in srgb,var(--am) 20%,transparent);border-radius:0 0 20px 20px;margin-top:-12px;justify-content:space-between;align-items:center;gap:8px}
 .stale-bar.show{display:flex}
 .sb-txt{font-size:10px;color:color-mix(in srgb,var(--am) 80%,#fff);line-height:1.5}
 .sb-txt strong{color:var(--am);display:block;font-size:10px}
-.sb-btn{
-  flex-shrink:0;font-size:10px;font-weight:700;color:var(--am);
-  background:color-mix(in srgb,var(--am) 13%,transparent);
-  border:1px solid color-mix(in srgb,var(--am) 30%,transparent);
-  border-radius:7px;padding:5px 10px;cursor:pointer;
-}
+.sb-btn{flex-shrink:0;font-size:10px;font-weight:700;color:var(--am);background:color-mix(in srgb,var(--am) 13%,transparent);border:1px solid color-mix(in srgb,var(--am) 30%,transparent);border-radius:7px;padding:5px 10px;cursor:pointer}
 
-/* COMPACT bottom strip: price-demo inline + 2 mini stat */
+/* demo toggle */
+.demo-inline{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--am) 13%,transparent);background:color-mix(in srgb,var(--am) 3%,transparent)}
+.di-lbl{font-size:10px;color:var(--dim)}
+.tog{width:36px;height:20px;background:rgba(255,255,255,.10);border-radius:100px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--am)}
+.tog::after{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s cubic-bezier(.4,0,.2,1);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.tog.on::after{left:18px}
+
+/* 2 mini stat */
 .ov-bottom{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .stat-mini{padding:13px 14px}
 .sm-lbl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
@@ -229,24 +140,54 @@ body::after{
 .sm-gv::after{background:var(--gv)}
 .sm-ge::after{background:var(--ge)}
 
-/* demo toggle — inline compact */
-.demo-inline{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:8px 12px;border-radius:10px;
-  border:1px solid color-mix(in srgb,var(--am) 13%,transparent);
-  background:color-mix(in srgb,var(--am) 3%,transparent);
-}
-.di-lbl{font-size:10px;color:var(--dim)}
-.tog{width:36px;height:20px;background:rgba(255,255,255,.10);border-radius:100px;
-  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
-.tog.on{background:var(--am)}
-.tog::after{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;
-  background:#fff;border-radius:50%;transition:left .2s cubic-bezier(.4,0,.2,1);box-shadow:0 1px 4px rgba(0,0,0,.3)}
-.tog.on::after{left:18px}
+/* ─── STREAK CARD ─── */
+.streak-card{padding:16px 18px}
+.sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sc-left{display:flex;align-items:center;gap:10px}
+.sc-flame{font-size:28px;line-height:1;filter:drop-shadow(0 0 8px rgba(251,146,60,.55))}
+.sc-text{}
+.sc-title{font-size:12px;font-weight:700;color:var(--sub)}
+.sc-count{font-size:30px;font-weight:900;letter-spacing:-.04em;line-height:1;background:linear-gradient(128deg,var(--am),#fff 80%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sc-label{font-size:10px;color:var(--dim);margin-top:1px}
+.sc-right{text-align:right}
+.sc-next-lbl{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+.sc-next-date{font-size:15px;font-weight:800;color:var(--vi)}
+.sc-next-sub{font-size:9px;color:var(--dim);margin-top:2px}
+/* dot trail */
+.sc-dots{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+.dot{width:10px;height:10px;border-radius:50%;background:color-mix(in srgb,var(--vi) 18%,transparent);border:1px solid color-mix(in srgb,var(--vi) 25%,transparent);transition:all .3s}
+.dot.done{background:var(--em);border-color:transparent;box-shadow:0 0 5px color-mix(in srgb,var(--em) 60%,transparent)}
+.dot.cur{background:var(--am);border-color:transparent;box-shadow:0 0 6px color-mix(in srgb,var(--am) 70%,transparent);animation:pulse-dot 1.8s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
 
-/* ═══════════════════════════
-   S2 — GIAO DỊCH
-══════════════════════════ */
+/* ─── PERFORMANCE BAR CARD ─── */
+.perf-card{padding:16px 18px}
+.perf-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.perf-title{font-size:12px;font-weight:700;color:var(--sub)}
+.perf-return{font-size:22px;font-weight:900;letter-spacing:-.03em;background:linear-gradient(128deg,#fff,var(--em));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.perf-return-sub{font-size:10px;color:var(--dim);margin-left:3px}
+/* stacked bar */
+.perf-bar-wrap{margin-bottom:12px}
+.perf-bar-track{height:10px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden;position:relative}
+.perf-bar-base{position:absolute;left:0;top:0;bottom:0;border-radius:5px 0 0 5px;background:linear-gradient(90deg,color-mix(in srgb,var(--vi) 70%,transparent),color-mix(in srgb,var(--vi) 40%,transparent));transition:width .8s cubic-bezier(.4,0,.2,1)}
+.perf-bar-gain{position:absolute;top:0;bottom:0;border-radius:0 5px 5px 0;background:linear-gradient(90deg,var(--em),color-mix(in srgb,var(--em) 70%,#fff));transition:left .8s cubic-bezier(.4,0,.2,1),width .8s cubic-bezier(.4,0,.2,1)}
+.perf-legend{display:flex;justify-content:space-between;margin-top:8px}
+.pl-item{display:flex;align-items:center;gap:5px}
+.pl-dot{width:8px;height:8px;border-radius:50%}
+.pl-dot.base{background:var(--vi)}
+.pl-dot.gain{background:var(--em)}
+.pl-txt{font-size:10px;color:var(--dim)}
+.pl-val{font-size:11px;font-weight:800;color:var(--sub);margin-left:2px}
+/* monthly pace */
+.perf-pace{display:flex;align-items:center;justify-content:space-between;padding-top:11px;border-top:1px solid rgba(255,255,255,.05)}
+.pp-item{text-align:center}
+.pp-lbl{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+.pp-val{font-size:14px;font-weight:800}
+.pp-sep{font-size:18px;color:var(--gb);font-weight:100}
+
+/* ═════════════════════════════
+   S2 GIAO DỊCH
+════════════════════════════ */
 .tx-wrap{padding:14px;display:flex;flex-direction:column;gap:10px}
 .add-btn{font-size:11px;font-weight:700;color:var(--vi);background:color-mix(in srgb,var(--vi) 9%,transparent);border:1px solid color-mix(in srgb,var(--vi) 22%,transparent);border-radius:100px;padding:6px 14px;cursor:pointer}
 .sum3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
@@ -267,24 +208,15 @@ body::after{
 .tx-amt{font-size:16px;font-weight:800}
 .tx-sec{font-size:10px;color:var(--dim);margin-top:2px}
 
-/* ═══════════════════════════
-   S3 — MÔ PHỎNG
-══════════════════════════ */
+/* ═════════════════════════════
+   S3 MÔ PHỎNG
+════════════════════════════ */
 .sim-wrap{padding:14px;display:flex;flex-direction:column;gap:12px}
-.mode-tabs{
-  display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;
-  background:rgba(255,255,255,.04);border-radius:14px;padding:4px;
-  border:1px solid var(--gb);
-}
+.mode-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;background:rgba(255,255,255,.04);border-radius:14px;padding:4px;border:1px solid var(--gb)}
 .mtab{padding:10px 4px;border-radius:10px;border:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--dim);background:none;transition:all .2s;text-align:center;line-height:1.3}
 .mtab small{font-size:10px;font-weight:500;display:block;margin-top:1px;opacity:.7}
 .mtab.on{background:color-mix(in srgb,var(--vi) 20%,transparent);color:var(--text);box-shadow:0 2px 12px color-mix(in srgb,var(--vi) 20%,transparent)}
-.sim-headline{
-  background:var(--bar-bg);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-radius:18px;border:1px solid var(--gb);
-  padding:18px 20px;position:sticky;top:56px;z-index:10;
-}
+.sim-headline{background:var(--bar-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:18px;border:1px solid var(--gb);padding:18px 20px;position:sticky;top:56px;z-index:10}
 .sh-big{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1;background:linear-gradient(128deg,#fff 10%,var(--vi) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .sh-sub{font-size:12px;color:var(--dim);margin-top:5px}
 .sh-note{font-size:10px;color:var(--dim);margin-top:3px;opacity:.7}
@@ -324,9 +256,9 @@ body::after{
 .show-all-btn:active{background:rgba(255,255,255,.07)}
 .sim-note{font-size:10px;color:var(--dim);text-align:center;padding:4px 0}
 
-/* ═══════════════════════════
-   S4 — CÀI ĐẶT
-══════════════════════════ */
+/* ═════════════════════════════
+   S4 CÀI ĐẶT
+════════════════════════════ */
 .set-wrap{padding:14px;display:flex;flex-direction:column;gap:10px}
 .set-dt{padding:18px 20px}
 .dt-lbl{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
@@ -343,38 +275,19 @@ body::after{
 .si-ico.v{background:color-mix(in srgb,var(--vi) 14%,transparent)}
 .si-ico.e{background:color-mix(in srgb,var(--em) 14%,transparent)}
 .si-ico.a{background:rgba(245,158,11,.14)}
-.si-ico.r{background:rgba(248,113,113,.14)}
 .sr-body{flex:1}
 .sr-name{font-size:14px;font-weight:600}
 .sr-sub{font-size:10px;color:var(--dim);margin-top:2px}
 .sr-arr{font-size:15px;color:var(--dim)}
-
-/* THEME SELECTOR */
 .theme-picker{display:flex;gap:8px;padding:12px 16px 14px}
-.th-opt{
-  flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
-  padding:10px 6px;border-radius:14px;cursor:pointer;
-  border:1.5px solid var(--gb);
-  background:rgba(255,255,255,.03);
-  transition:all .22s;
-}
-.th-opt.sel{
-  border-color:color-mix(in srgb,var(--vi) 55%,transparent);
-  background:color-mix(in srgb,var(--vi) 10%,transparent);
-  box-shadow:0 0 14px color-mix(in srgb,var(--vi) 18%,transparent);
-}
-.th-dot{
-  width:28px;height:28px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;
-}
+.th-opt{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 6px;border-radius:14px;cursor:pointer;border:1.5px solid var(--gb);background:rgba(255,255,255,.03);transition:all .22s}
+.th-opt.sel{border-color:color-mix(in srgb,var(--vi) 55%,transparent);background:color-mix(in srgb,var(--vi) 10%,transparent);box-shadow:0 0 14px color-mix(in srgb,var(--vi) 18%,transparent)}
+.th-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px}
 .th-dot.vault{background:linear-gradient(135deg,#5b21b6,#10b981)}
 .th-dot.ocean{background:linear-gradient(135deg,#06b6d4,#3b82f6)}
 .th-dot.ember{background:linear-gradient(135deg,#f97316,#eab308)}
 .th-name{font-size:11px;font-weight:700;color:var(--sub)}
 .th-opt.sel .th-name{color:var(--text)}
-
-/* lang selector */
 .lang-options{display:flex;gap:7px;padding:10px 16px 14px}
 .lang-opt{flex:1;padding:9px 6px;border-radius:12px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--gb);color:var(--dim);transition:all .2s}
 .lang-opt.selected{background:color-mix(in srgb,var(--vi) 16%,transparent);border-color:color-mix(in srgb,var(--vi) 35%,transparent);color:var(--text);box-shadow:0 0 14px color-mix(in srgb,var(--vi) 18%,transparent)}
@@ -390,10 +303,7 @@ body::after{
 <div class="bar">
   <div class="bar-logo">VWCE Vault</div>
   <div class="bar-r">
-    <div class="sync-pill" onclick="doSync()">
-      <span class="spin-ico" id="sic">&#8635;</span>
-      <span id="slbl">&#8635;&nbsp;Sync</span>
-    </div>
+    <div class="sync-pill" onclick="doSync()"><span class="spin-ico" id="sic">&#8635;</span><span id="slbl">&#8635;&nbsp;Sync</span></div>
     <div class="bar-clock" id="clock"></div>
   </div>
 </div>
@@ -402,7 +312,6 @@ body::after{
 <div class="screen active" id="s1">
 <div class="ov">
 
-  <!-- hero NAV -->
   <div class="gl hero">
     <div class="h-eye">Portfolio VWCE &middot; NAV hi&#7879;n t&#7841;i</div>
     <div class="h-num">&euro;&thinsp;9.847</div>
@@ -412,15 +321,10 @@ body::after{
     </div>
   </div>
 
-  <!-- compact price -->
   <div class="gl price-row" id="prow">
     <div class="pr-left">
       <div class="pr-label" id="pr-lbl">GI&Aacute; VWCE</div>
-      <div class="pr-num">
-        <span class="pr-tilde" id="pr-tilde">~</span>
-        <span class="pr-cur">&euro;</span>
-        <span class="pr-big" id="pr-big">169,62</span>
-      </div>
+      <div class="pr-num"><span class="pr-tilde" id="pr-tilde">~</span><span class="pr-cur">&euro;</span><span class="pr-big" id="pr-big">169,62</span></div>
       <div class="pr-ts" id="pr-ts">C&#7853;p nh&#7853;t 17/08 &middot; 09:14</div>
     </div>
     <div class="pr-right">
@@ -433,13 +337,11 @@ body::after{
     <button class="sb-btn">C&#7853;p nh&#7853;t&nbsp;&rarr;</button>
   </div>
 
-  <!-- demo toggle compact -->
   <div class="demo-inline">
     <span class="di-lbl">&#127381;&nbsp;Gi&#7843; l&#7853;p gi&aacute; c&#361; &gt;4h</span>
     <div class="tog" id="stog" onclick="toggleStale()"></div>
   </div>
 
-  <!-- 2 mini stats -->
   <div class="ov-bottom">
     <div class="gl stat-mini sm-ge">
       <div class="sm-lbl">C&#7893; ph&#7847;n VWCE</div>
@@ -450,6 +352,63 @@ body::after{
       <div class="sm-lbl">Sparplan th&aacute;ng</div>
       <div class="sm-val sm-am">&euro;200</div>
       <div class="sm-sub">T8 &middot; t&#7921; &#273;&#7897;ng</div>
+    </div>
+  </div>
+
+  <!-- STREAK CARD -->
+  <div class="gl streak-card">
+    <div class="sc-top">
+      <div class="sc-left">
+        <div class="sc-flame">&#128293;</div>
+        <div class="sc-text">
+          <div class="sc-title">Chu&#7895;i Sparplan</div>
+          <div class="sc-count">14</div>
+          <div class="sc-label">th&aacute;ng li&ecirc;n ti&#7871;p</div>
+        </div>
+      </div>
+      <div class="sc-right">
+        <div class="sc-next-lbl">Mua ti&#7871;p</div>
+        <div class="sc-next-date">01/09</div>
+        <div class="sc-next-sub">&euro;200 &middot; 14 ng&agrave;y n&#7919;a</div>
+      </div>
+    </div>
+    <div class="sc-dots" id="sc-dots"></div>
+  </div>
+
+  <!-- PERFORMANCE BAR -->
+  <div class="gl perf-card">
+    <div class="perf-top">
+      <span class="perf-title">Hi&#7879;u su&#7845;t danh m&#7909;c</span>
+      <span>
+        <span class="perf-return">+33,1%</span>
+        <span class="perf-return-sub">&euro;+2.447</span>
+      </span>
+    </div>
+    <div class="perf-bar-wrap">
+      <div class="perf-bar-track">
+        <div class="perf-bar-base" id="pbb" style="width:75%"></div>
+        <div class="perf-bar-gain" id="pbg" style="left:75%;width:25%"></div>
+      </div>
+      <div class="perf-legend">
+        <div class="pl-item"><div class="pl-dot base"></div><span class="pl-txt">V&#7889;n g&oacute;p<span class="pl-val">&euro;7.400</span></span></div>
+        <div class="pl-item"><div class="pl-dot gain"></div><span class="pl-txt">L&atilde;i<span class="pl-val" style="color:var(--em)">&euro;2.447</span></span></div>
+      </div>
+    </div>
+    <div class="perf-pace">
+      <div class="pp-item">
+        <div class="pp-lbl">Trung b&igrave;nh / th&aacute;ng</div>
+        <div class="pp-val" style="color:var(--em)">+&euro;175</div>
+      </div>
+      <div class="pp-sep">|</div>
+      <div class="pp-item">
+        <div class="pp-lbl">Gi&aacute; mua TB</div>
+        <div class="pp-val">127,45&nbsp;&euro;</div>
+      </div>
+      <div class="pp-sep">|</div>
+      <div class="pp-item">
+        <div class="pp-lbl">Th&aacute;ng tham gia</div>
+        <div class="pp-val">Jun 2025</div>
+      </div>
     </div>
   </div>
 
@@ -467,32 +426,16 @@ body::after{
   </div>
   <div class="mo-lbl">Th&aacute;ng 8 &middot; 2026</div>
   <div class="gl tx-card">
-    <div class="tx-item">
-      <div class="tx-ico buy">&#128200;</div>
-      <div class="tx-b"><div class="tx-name">Mua VWCE</div><div class="tx-meta">01/08/2026 &middot; Sparplan</div></div>
-      <div class="tx-r"><div class="tx-amt" style="color:var(--em)">+1,18&nbsp;cp</div><div class="tx-sec">&euro;200,00</div></div>
-    </div>
+    <div class="tx-item"><div class="tx-ico buy">&#128200;</div><div class="tx-b"><div class="tx-name">Mua VWCE</div><div class="tx-meta">01/08/2026 &middot; Sparplan</div></div><div class="tx-r"><div class="tx-amt" style="color:var(--em)">+1,18&nbsp;cp</div><div class="tx-sec">&euro;200,00</div></div></div>
   </div>
   <div class="mo-lbl">Th&aacute;ng 7 &middot; 2026</div>
   <div class="gl tx-card">
-    <div class="tx-item">
-      <div class="tx-ico buy">&#128200;</div>
-      <div class="tx-b"><div class="tx-name">Mua VWCE</div><div class="tx-meta">01/07/2026 &middot; Sparplan</div></div>
-      <div class="tx-r"><div class="tx-amt" style="color:var(--em)">+1,21&nbsp;cp</div><div class="tx-sec">&euro;200,00</div></div>
-    </div>
-    <div class="tx-item">
-      <div class="tx-ico div">&#127381;</div>
-      <div class="tx-b"><div class="tx-name">C&#7893; t&#7913;c VWCE</div><div class="tx-meta">15/07/2026 &middot; Aussch&uuml;ttung</div></div>
-      <div class="tx-r"><div class="tx-amt" style="color:var(--vi)">+&euro;14,30</div><div class="tx-sec">t&aacute;i &#273;&#7847;u t&#432;</div></div>
-    </div>
+    <div class="tx-item"><div class="tx-ico buy">&#128200;</div><div class="tx-b"><div class="tx-name">Mua VWCE</div><div class="tx-meta">01/07/2026 &middot; Sparplan</div></div><div class="tx-r"><div class="tx-amt" style="color:var(--em)">+1,21&nbsp;cp</div><div class="tx-sec">&euro;200,00</div></div></div>
+    <div class="tx-item"><div class="tx-ico div">&#127381;</div><div class="tx-b"><div class="tx-name">C&#7893; t&#7913;c VWCE</div><div class="tx-meta">15/07/2026 &middot; Aussch&uuml;ttung</div></div><div class="tx-r"><div class="tx-amt" style="color:var(--vi)">+&euro;14,30</div><div class="tx-sec">t&aacute;i &#273;&#7847;u t&#432;</div></div></div>
   </div>
   <div class="mo-lbl">Th&aacute;ng 6 &middot; 2026</div>
   <div class="gl tx-card">
-    <div class="tx-item">
-      <div class="tx-ico buy">&#128200;</div>
-      <div class="tx-b"><div class="tx-name">Mua VWCE</div><div class="tx-meta">01/06/2026 &middot; Sparplan</div></div>
-      <div class="tx-r"><div class="tx-amt" style="color:var(--em)">+1,25&nbsp;cp</div><div class="tx-sec">&euro;200,00</div></div>
-    </div>
+    <div class="tx-item"><div class="tx-ico buy">&#128200;</div><div class="tx-b"><div class="tx-name">Mua VWCE</div><div class="tx-meta">01/06/2026 &middot; Sparplan</div></div><div class="tx-r"><div class="tx-amt" style="color:var(--em)">+1,25&nbsp;cp</div><div class="tx-sec">&euro;200,00</div></div></div>
   </div>
 </div>
 </div>
@@ -518,10 +461,7 @@ body::after{
   <div class="gl sim-inputs">
     <div class="mode-section" id="ms-ac">
       <div class="inp-row"><div class="inp-lbl">G&oacute;p m&#7895;i th&aacute;ng (EUR)</div><input class="inp" id="m" type="number" value="200" min="50" max="5000" oninput="sim()"></div>
-      <div class="yr-row2">
-        <div class="yr-top"><span class="yr-lbl">Th&#7901;i h&#7841;n</span><span class="yr-val" id="yr-disp">15 n&#259;m</span></div>
-        <input class="yr-slider" id="yr" type="range" min="1" max="40" value="15" oninput="updYr();sim()">
-      </div>
+      <div class="yr-row2"><div class="yr-top"><span class="yr-lbl">Th&#7901;i h&#7841;n</span><span class="yr-val" id="yr-disp">15 n&#259;m</span></div><input class="yr-slider" id="yr" type="range" min="1" max="40" value="15" oninput="updYr();sim()"></div>
     </div>
     <div class="mode-section" id="ms-b" style="display:none">
       <div class="inp-row"><div class="inp-lbl">Mu&#7889;n c&oacute; (EUR)</div><input class="inp" id="tgt" type="number" value="50000" min="1000" oninput="sim()"></div>
@@ -551,26 +491,14 @@ body::after{
     <div class="dt-date" id="dt-d"></div>
     <div class="dt-sync"><span class="sdot"></span>&#272;&#7891;ng b&#7897; l&uacute;c&nbsp;<span id="ls">--:--</span></div>
   </div>
-
-  <!-- THEME PICKER -->
   <div class="set-sec">Giao di&#7879;n</div>
   <div class="gl set-block">
     <div class="theme-picker">
-      <div class="th-opt sel" id="th-vault" onclick="setTheme('vault')">
-        <div class="th-dot vault"></div>
-        <span class="th-name">Vault</span>
-      </div>
-      <div class="th-opt" id="th-ocean" onclick="setTheme('ocean')">
-        <div class="th-dot ocean"></div>
-        <span class="th-name">Ocean</span>
-      </div>
-      <div class="th-opt" id="th-ember" onclick="setTheme('ember')">
-        <div class="th-dot ember"></div>
-        <span class="th-name">Ember</span>
-      </div>
+      <div class="th-opt sel" id="th-vault" onclick="setTheme('vault')"><div class="th-dot vault"></div><span class="th-name">Vault</span></div>
+      <div class="th-opt" id="th-ocean" onclick="setTheme('ocean')"><div class="th-dot ocean"></div><span class="th-name">Ocean</span></div>
+      <div class="th-opt" id="th-ember" onclick="setTheme('ember')"><div class="th-dot ember"></div><span class="th-name">Ember</span></div>
     </div>
   </div>
-
   <div class="set-sec">Ng&ocirc;n ng&#7919;</div>
   <div class="gl set-block">
     <div class="lang-options">
@@ -578,47 +506,23 @@ body::after{
       <div class="lang-opt" id="lang-de" onclick="setLang('de')">&#127465;&#127466;<small>Deutsch</small></div>
     </div>
   </div>
-
   <div class="set-sec">&#272;&#7891;ng b&#7897;</div>
   <div class="gl set-block">
-    <div class="set-row" onclick="doSync()">
-      <div class="si-ico e">&#8635;</div>
-      <div class="sr-body"><div class="sr-name">&#272;&#7891;ng b&#7897; ngay</div><div class="sr-sub">C&#7853;p nh&#7853;t gi&aacute; VWCE &amp; d&#7919; li&#7879;u</div></div>
-      <span class="sr-arr">&#8250;</span>
-    </div>
-    <div class="set-row">
-      <div class="si-ico v">&#128203;</div>
-      <div class="sr-body"><div class="sr-name">Xu&#7845;t sao l&#432;u</div><div class="sr-sub">JSON &middot; Backup v4</div></div>
-      <span class="sr-arr">&#8250;</span>
-    </div>
-    <div class="set-row">
-      <div class="si-ico v">&#128229;</div>
-      <div class="sr-body"><div class="sr-name">Nh&#7853;p sao l&#432;u</div><div class="sr-sub">Ki&#7875;m tra tr&#432;&#7899;c khi ghi</div></div>
-      <span class="sr-arr">&#8250;</span>
-    </div>
+    <div class="set-row" onclick="doSync()"><div class="si-ico e">&#8635;</div><div class="sr-body"><div class="sr-name">&#272;&#7891;ng b&#7897; ngay</div><div class="sr-sub">C&#7853;p nh&#7853;t gi&aacute; VWCE &amp; d&#7919; li&#7879;u</div></div><span class="sr-arr">&#8250;</span></div>
+    <div class="set-row"><div class="si-ico v">&#128203;</div><div class="sr-body"><div class="sr-name">Xu&#7845;t sao l&#432;u</div><div class="sr-sub">JSON &middot; Backup v4</div></div><span class="sr-arr">&#8250;</span></div>
+    <div class="set-row"><div class="si-ico v">&#128229;</div><div class="sr-body"><div class="sr-name">Nh&#7853;p sao l&#432;u</div><div class="sr-sub">Ki&#7875;m tra tr&#432;&#7899;c khi ghi</div></div><span class="sr-arr">&#8250;</span></div>
   </div>
-
   <div class="set-sec">T&agrave;i kho&#7843;n</div>
   <div class="gl set-block">
-    <div class="set-row">
-      <div class="si-ico a">&#128100;</div>
-      <div class="sr-body"><div class="sr-name">H&#7891; s&#417; kh&#7849;n c&#7845;p</div><div class="sr-sub">Notfallmappe &middot; Verschl&uuml;sselt</div></div>
-      <span class="sr-arr">&#8250;</span>
-    </div>
-    <div class="set-row">
-      <div class="si-ico v">&#128274;</div>
-      <div class="sr-body"><div class="sr-name">B&#7843;o m&#7853;t &amp; MFA</div><div class="sr-sub">X&aacute;c th&#7921;c 2 b&#432;&#7899;c &#273;&atilde; b&#7853;t</div></div>
-      <span class="sr-arr">&#8250;</span>
-    </div>
+    <div class="set-row"><div class="si-ico a">&#128100;</div><div class="sr-body"><div class="sr-name">H&#7891; s&#417; kh&#7849;n c&#7845;p</div><div class="sr-sub">Notfallmappe &middot; Verschl&uuml;sselt</div></div><span class="sr-arr">&#8250;</span></div>
+    <div class="set-row"><div class="si-ico v">&#128274;</div><div class="sr-body"><div class="sr-name">B&#7843;o m&#7853;t &amp; MFA</div><div class="sr-sub">X&aacute;c th&#7921;c 2 b&#432;&#7899;c &#273;&atilde; b&#7853;t</div></div><span class="sr-arr">&#8250;</span></div>
   </div>
-
   <button class="abmeld">&#128275;&nbsp;Abmelden</button>
   <div class="ver">VWCE Vault &middot; v1.8.0 &middot; local-first</div>
 </div>
 </div>
 
 </div>
-
 <div class="pill">
   <button class="pb on" onclick="nav('s1',this)">Overview</button>
   <button class="pb" onclick="nav('s2',this)">Giao d&#7883;ch</button>
@@ -633,8 +537,6 @@ function nav(id,el){
   document.getElementById(id).classList.add('active');
   el.classList.add('on');
 }
-
-// clock
 function tick(){
   const n=new Date();
   const hm=n.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
@@ -646,7 +548,6 @@ function tick(){
 }
 tick();setInterval(tick,1000);
 
-// sync
 function doSync(){
   const lbl=document.getElementById('slbl'),ico=document.getElementById('sic');
   lbl.textContent='...';ico.style.display='inline-block';
@@ -657,7 +558,6 @@ function doSync(){
   },1400);
 }
 
-// stale
 let stale=false;
 function toggleStale(){
   stale=!stale;
@@ -674,21 +574,36 @@ function toggleStale(){
   document.getElementById('stale-c').classList.toggle('show',stale);
 }
 
-// themes
-let curTheme='vault';
 function setTheme(t){
-  curTheme=t;
   document.body.className='theme-'+t;
-  ['vault','ocean','ember'].forEach(x=>{
-    document.getElementById('th-'+x).classList.toggle('sel',x===t);
-  });
+  ['vault','ocean','ember'].forEach(x=>document.getElementById('th-'+x).classList.toggle('sel',x===t));
 }
-
-// lang
 function setLang(l){
   document.getElementById('lang-vi').classList.toggle('selected',l==='vi');
   document.getElementById('lang-de').classList.toggle('selected',l==='de');
 }
+
+// build streak dots (14 done, 1 current = this month)
+(function(){
+  const TOTAL=18,DONE=14;
+  const c=document.getElementById('sc-dots');
+  for(let i=0;i<TOTAL;i++){
+    const d=document.createElement('div');
+    if(i<DONE)d.className='dot done';
+    else if(i===DONE)d.className='dot cur';
+    else d.className='dot';
+    c.appendChild(d);
+  }
+})();
+
+// performance bar animation on load
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    document.getElementById('pbb').style.width='75.2%';
+    document.getElementById('pbg').style.left='75.2%';
+    document.getElementById('pbg').style.width='24.8%';
+  },300);
+});
 
 // SIMULATION
 const START=9847,DEP0=7400;
@@ -697,26 +612,21 @@ let simMode='A',showAll=false;
 function setMode(m){
   simMode=m;
   ['A','B','C'].forEach(x=>document.getElementById('mt-'+x.toLowerCase()).classList.toggle('on',x===m));
-  const flex=(x)=>{const el=document.getElementById(x);el.style.display='flex';el.style.flexDirection='column';el.style.gap='12px';};
+  const show=(x)=>{const el=document.getElementById(x);el.style.display='flex';el.style.flexDirection='column';el.style.gap='12px';};
   const hide=(x)=>{document.getElementById(x).style.display='none';};
-  if(m==='A'){flex('ms-ac');hide('ms-b');hide('ms-c');}
-  else if(m==='B'){hide('ms-ac');flex('ms-b');hide('ms-c');}
-  else{flex('ms-ac');hide('ms-b');flex('ms-c');} // mode C shows monthly + target
-  if(m==='C'){document.getElementById('ms-ac').innerHTML=document.getElementById('ms-ac').innerHTML;} // no-op, ms-ac has years slider for mode C
+  if(m==='A'){show('ms-ac');hide('ms-b');hide('ms-c');}
+  else if(m==='B'){hide('ms-ac');show('ms-b');hide('ms-c');}
+  else{show('ms-ac');hide('ms-b');show('ms-c');}
   sim();
 }
-
 function updYr(){
   document.getElementById('yr-disp').textContent=document.getElementById('yr').value+' n\u0103m';
 }
-
 function fmtE(n){return '\u20ac\u2009'+Math.round(n).toLocaleString('de-DE');}
-
 function sim(){
   const rate=(parseFloat(document.getElementById('rt').value)||6.5)/100;
   const nowY=new Date().getFullYear();
   let monthly,years,headline,dep;
-
   if(simMode==='A'){
     monthly=parseFloat(document.getElementById('m').value)||200;
     years=parseInt(document.getElementById('yr').value)||15;
@@ -753,7 +663,6 @@ function sim(){
   document.getElementById('sh-note').textContent='tr\u01b0\u1edbc thu\u1ebf \u00b7 danh ngh\u0129a';
   buildTable(monthly,rate,years,nowY);
 }
-
 const MILESTONES=new Set([0,1,3,5,10,15,20,25,30]);
 function buildTable(monthly,rate,totalYears,nowY){
   let n2=START;
@@ -770,30 +679,18 @@ function buildTable(monthly,rate,totalYears,nowY){
   data.forEach(({yi,y,nav:nv,dep:dv,isCur})=>{
     const pct=Math.min(100,Math.round(nv/maxNav*100));
     const prog=totalYears>0?yi/totalYears:0;
-    // color: start at --vi, shift to --em
     const col=isCur?'var(--sub)':`color-mix(in srgb,var(--em) ${Math.round(prog*80)}%,var(--vi))`;
     const d=document.createElement('div');
     d.className='yr-row-item'+(isCur?' now':'');
-    d.innerHTML=`
-      <div class="yr-cell-year">
-        <span class="yr-y">${y}</span>
-        ${isCur?'<span class="yr-badge-now">now</span>':''}
-      </div>
-      <div class="yr-cell-nav">
-        <div class="yr-nav-val" style="color:${col}">${fmtE(nv)}</div>
-        <div class="yr-bar-bg"><div class="yr-bar-fill" style="width:${pct}%;background:${col}"></div></div>
-      </div>
-      <div class="yr-dep">${fmtE(dv)}</div>`;
+    d.innerHTML=`<div class="yr-cell-year"><span class="yr-y">${y}</span>${isCur?'<span class="yr-badge-now">now</span>':''}</div><div class="yr-cell-nav"><div class="yr-nav-val" style="color:${col}">${fmtE(nv)}</div><div class="yr-bar-bg"><div class="yr-bar-fill" style="width:${pct}%;background:${col}"></div></div></div><div class="yr-dep">${fmtE(dv)}</div>`;
     rows.appendChild(d);
   });
 }
-
 function toggleAll(){
   showAll=!showAll;
   document.getElementById('show-all-btn').textContent=showAll?'Thu g\u1ecdn':'Hi\u1ec7n t\u1ea5t c\u1ea3 c\u00e1c n\u0103m';
   sim();
 }
-
 updYr();sim();
 </script>
 </body>
