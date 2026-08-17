@@ -55,6 +55,9 @@ export default defineConfig({
       // PR0.1: test cong nhap sao luu cua PR3. Da doc tron Settings.tsx,
       // Settings.pendingSyncImport.test.tsx va backupImportGate.ts truoc khi bat.
       "src/pages/Settings.pendingSyncImport.test.tsx",
+      // PR0.2: test ranh gioi loi toan app. Da doc tron AppFailureBoundary.tsx
+      // va AppFailureBoundary.test.tsx tren main truoc khi bat.
+      "src/components/AppFailureBoundary.test.tsx",
     ],
   },
 });
