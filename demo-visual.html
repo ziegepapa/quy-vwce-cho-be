@@ -3,23 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Visual Demo v3</title>
+<title>Demo v4 — quy-vwce-cho-be</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overscroll-behavior:none}
 :root{
   --bg:#07070a;
-  --glass:rgba(255,255,255,0.045);
-  --glass-b:rgba(255,255,255,0.10);
-  --glass-hi:rgba(255,255,255,0.07);
+  --g:rgba(255,255,255,.046);
+  --gb:rgba(255,255,255,.10);
+  --gh:rgba(255,255,255,.075);
   --text:#f1f0ff;
-  --muted:rgba(241,240,255,0.38);
-  --violet:#8b5cf6;
-  --violet2:#6d28d9;
-  --emerald:#10b981;
-  --amber:#f59e0b;
-  --glow-v:rgba(139,92,246,0.32);
-  --glow-e:rgba(16,185,129,0.25);
+  --muted:rgba(241,240,255,.38);
+  --vi:#8b5cf6;--vi2:#6d28d9;
+  --em:#10b981;--am:#f59e0b;
+  --re:#f87171;
+  --gv:rgba(139,92,246,.30);
+  --ge:rgba(16,185,129,.24);
+  --ga:rgba(245,158,11,.28);
 }
 body{
   font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
@@ -27,434 +27,667 @@ body{
   min-height:100dvh;max-width:430px;margin:0 auto;
   position:relative;overflow-x:hidden;
 }
-/* aurora */
 body::before{
-  content:'';position:fixed;inset:0;
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
-    radial-gradient(ellipse 70% 50% at 18% -8%, rgba(109,40,217,.42) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 40% at 88% 14%, rgba(16,185,129,.20) 0%, transparent 55%),
-    radial-gradient(ellipse 45% 55% at 8%  82%, rgba(139,92,246,.14) 0%, transparent 55%);
-  pointer-events:none;z-index:0;
-  animation:aurora 13s ease-in-out infinite alternate;
+    radial-gradient(ellipse 70% 50% at 18% -5%,rgba(109,40,217,.44) 0%,transparent 60%),
+    radial-gradient(ellipse 55% 40% at 88% 12%,rgba(16,185,129,.22) 0%,transparent 55%),
+    radial-gradient(ellipse 40% 50% at 5% 85%,rgba(139,92,246,.14) 0%,transparent 55%);
+  animation:au 13s ease-in-out infinite alternate;
 }
-@keyframes aurora{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(20deg)}}
-/* noise */
+@keyframes au{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(22deg)}}
 body::after{
-  content:'';position:fixed;inset:0;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.032'/%3E%3C/svg%3E");
-  pointer-events:none;z-index:1;opacity:.55;
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
 }
-.app{position:relative;z-index:2;min-height:100dvh;display:flex;flex-direction:column;padding-bottom:88px}
+.app{position:relative;z-index:2;min-height:100dvh;padding-bottom:86px}
 
-/* floating pill nav */
-.nav-pill{
-  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
-  z-index:100;display:flex;gap:3px;
-  background:rgba(12,9,26,.78);
-  border:1px solid var(--glass-b);border-radius:100px;padding:5px;
-  backdrop-filter:blur(28px) saturate(1.9);
-  -webkit-backdrop-filter:blur(28px) saturate(1.9);
-  box-shadow:0 8px 32px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.07) inset;
+/* ─ top bar */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;
+  background:rgba(7,7,10,.72);
+  backdrop-filter:blur(24px) saturate(1.8);
+  -webkit-backdrop-filter:blur(24px) saturate(1.8);
+  border-bottom:1px solid var(--gb);
 }
-.nav-btn{
-  padding:9px 18px;border-radius:100px;
-  font-size:12px;font-weight:700;letter-spacing:.04em;
-  color:var(--muted);border:none;background:none;cursor:pointer;
-  transition:all .22s cubic-bezier(.4,0,.2,1);white-space:nowrap;
+.topbar-logo{font-size:15px;font-weight:800;letter-spacing:-.02em;
+  background:linear-gradient(130deg,#fff,var(--vi));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.sync-btn{
+  display:flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:700;letter-spacing:.06em;
+  color:var(--em);background:rgba(16,185,129,.10);
+  border:1px solid rgba(16,185,129,.25);border-radius:100px;
+  padding:6px 12px;cursor:pointer;transition:all .15s;
 }
-.nav-btn.active{
-  background:rgba(139,92,246,.18);color:var(--text);
-  box-shadow:0 0 18px rgba(139,92,246,.28);
-}
+.sync-btn:active{transform:scale(.95)}
+.sync-spin{display:inline-block;animation:spin .8s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.topbar-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 
-/* screens */
-.screen{display:none}
-.screen.active{
-  display:block;
-  animation:fadeUp .3s cubic-bezier(.4,0,.2,1) both;
-}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-
-/* glass card */
-.glass{
-  background:var(--glass);
-  border:1px solid var(--glass-b);
-  border-radius:20px;
+/* ─ glass */
+.gl{
+  background:var(--g);border:1px solid var(--gb);border-radius:20px;
   backdrop-filter:blur(22px) saturate(1.7);
   -webkit-backdrop-filter:blur(22px) saturate(1.7);
   position:relative;overflow:hidden;
 }
-.glass::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent);
-}
+.gl::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent)}
 
-/* ═══ SCREEN 1: OVERVIEW ═══ */
-.bento{padding:20px 16px 0;display:flex;flex-direction:column;gap:11px}
+/* ─ screens */
+.screen{display:none}
+.screen.active{display:block;animation:fu .28s cubic-bezier(.4,0,.2,1) both}
+@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 
-/* hero */
-.b-hero{
-  padding:30px 24px 26px;
-  background:linear-gradient(145deg,rgba(109,40,217,.22) 0%,rgba(16,185,129,.08) 100%),var(--glass);
+/* ─ floating pill nav */
+.pill{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  z-index:100;display:flex;gap:2px;
+  background:rgba(10,7,22,.80);
+  border:1px solid var(--gb);border-radius:100px;padding:5px;
+  backdrop-filter:blur(28px) saturate(2);
+  -webkit-backdrop-filter:blur(28px) saturate(2);
+  box-shadow:0 8px 32px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.07) inset;
 }
-.b-hero-label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-.b-hero-nav{
-  font-size:64px;font-weight:800;letter-spacing:-.045em;line-height:1;
-  background:linear-gradient(130deg,#fff 10%,rgba(139,92,246,.85) 100%);
+.pb{
+  padding:8px 14px;border-radius:100px;
+  font-size:11px;font-weight:700;letter-spacing:.04em;
+  color:var(--muted);border:none;background:none;cursor:pointer;
+  transition:all .22s cubic-bezier(.4,0,.2,1);white-space:nowrap;
+}
+.pb.on{background:rgba(139,92,246,.20);color:var(--text);box-shadow:0 0 16px rgba(139,92,246,.25)}
+
+/* ═════════════════════════════
+   S1 — OVERVIEW
+════════════════════════════ */
+.bento{padding:16px;display:flex;flex-direction:column;gap:10px}
+.hero{
+  padding:28px 22px 24px;
+  background:linear-gradient(150deg,rgba(109,40,217,.24) 0%,rgba(16,185,129,.08) 100%),var(--g);
+}
+.hero-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+.hero-nav{
+  font-size:62px;font-weight:800;letter-spacing:-.045em;line-height:1;
+  background:linear-gradient(130deg,#fff 5%,rgba(139,92,246,.88) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
 }
-.b-hero-row{display:flex;align-items:center;gap:10px;margin-top:13px}
-.badge-up{
+.hero-row{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.badge{
   display:inline-flex;align-items:center;gap:5px;
-  font-size:12px;font-weight:700;color:var(--emerald);
-  background:rgba(16,185,129,.11);border:1px solid rgba(16,185,129,.24);
-  border-radius:100px;padding:4px 12px;
+  font-size:12px;font-weight:700;border-radius:100px;padding:4px 12px;
 }
-.upd{font-size:12px;color:var(--muted)}
+.badge.up{color:var(--em);background:rgba(16,185,129,.11);border:1px solid rgba(16,185,129,.24)}
+.badge.neu{color:var(--muted);background:rgba(255,255,255,.06);border:1px solid var(--gb);font-size:11px}
 
-/* 2-col row */
-.b-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-.b-sm{padding:18px 16px}
-.b-sm-label{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
-.b-sm-val{font-size:28px;font-weight:800;letter-spacing:-.025em;line-height:1}
-.b-sm-sub{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
-.accent-v{background:linear-gradient(130deg,#fff 0%,var(--emerald) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.accent-a{color:var(--amber)}
-
-/* glow blobs on small cards */
-.gv::after,.ge::after{
-  content:'';position:absolute;width:70px;height:70px;border-radius:50%;filter:blur(26px);
-  bottom:-18px;right:-8px;pointer-events:none;
+/* price card with freshness */
+.price-gl{
+  padding:20px 22px;
+  transition:border-color .4s,background .4s,box-shadow .4s;
 }
-.gv::after{background:var(--glow-v)}
-.ge::after{background:var(--glow-e)}
-
-/* wide single card */
-.b-wide{padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
-.b-wide-label{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.b-wide-val{font-size:22px;font-weight:800;letter-spacing:-.02em}
-.b-wide-sub{font-size:11px;color:var(--muted);margin-top:4px}
-.coin-icon{font-size:32px;flex-shrink:0;filter:drop-shadow(0 0 10px rgba(245,158,11,.5))}
-
-/* sparkline placeholder */
-.spark-wrap{padding:0 20px 20px}
-.spark-label{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);padding:18px 0 10px}
-.spark{
-  width:100%;height:56px;
-  background:linear-gradient(180deg,rgba(139,92,246,.18) 0%,transparent 100%);
-  border-radius:10px;
-  position:relative;overflow:hidden;
+.price-gl.stale{
+  border-color:rgba(245,158,11,.45);
+  background:rgba(245,158,11,.05);
+  box-shadow:0 0 28px rgba(245,158,11,.12) inset;
 }
-.spark svg{width:100%;height:100%}
-
-/* ═══ SCREEN 2: PRICE ═══ */
-.price-wrap{padding:20px 16px 0;display:flex;flex-direction:column;gap:14px}
-.toggle-card{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 18px;
-}
-.tg-lbl{font-size:13px;color:var(--muted)}
-.tg-val{font-size:13px;font-weight:700}
-.tog{
-  width:48px;height:28px;background:rgba(255,255,255,.12);
-  border-radius:100px;position:relative;cursor:pointer;
-  transition:background .25s;flex-shrink:0;
-}
-.tog.on{background:var(--amber)}
-.tog::after{
-  content:'';position:absolute;left:3px;top:3px;
-  width:22px;height:22px;background:#fff;border-radius:50%;
-  transition:left .22s cubic-bezier(.4,0,.2,1);
-  box-shadow:0 2px 6px rgba(0,0,0,.35);
-}
-.tog.on::after{left:23px}
-
-.price-card{padding:28px 24px 22px;transition:border-color .35s,background .35s}
-.price-card.stale{border-color:rgba(245,158,11,.38);background:rgba(245,158,11,.04)}
-.pc-eye{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;transition:color .3s}
-.pc-row{display:flex;align-items:baseline;gap:3px}
-.pc-cur{font-size:26px;font-weight:300;color:var(--muted);line-height:1}
-.pc-num{
-  font-size:58px;font-weight:800;letter-spacing:-.045em;line-height:1;
-  background:linear-gradient(130deg,#fff 20%,var(--emerald) 100%);
+.pgl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.pgl-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transition:color .3s}
+.pgl-status{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;border-radius:100px;padding:3px 10px}
+.pgl-status.live{color:var(--em);background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.22)}
+.pgl-status.old{color:var(--am);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.28);display:none}
+.pgl-status.old.show{display:flex}
+.pgl-status.live.hide{display:none}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em);animation:ld 2s ease-in-out infinite}
+@keyframes ld{0%,100%{opacity:1}50%{opacity:.3}}
+.adot{width:6px;height:6px;border-radius:50%;background:var(--am);animation:ad 1.3s ease-in-out infinite}
+@keyframes ad{0%,100%{opacity:1}50%{opacity:.1}}
+.pgl-num{display:flex;align-items:baseline;gap:3px}
+.pgl-cur{font-size:22px;font-weight:300;color:var(--muted);line-height:1}
+.pgl-big{
+  font-size:44px;font-weight:800;letter-spacing:-.04em;line-height:1;
+  background:linear-gradient(130deg,#fff 20%,var(--em) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  transition:all .35s;
+  transition:all .4s;
 }
-.pc-num.dim{
+.pgl-big.dim{
   -webkit-text-fill-color:unset;
   color:rgba(241,240,255,.20);
-  font-size:48px;
   text-decoration:line-through;
-  text-decoration-color:rgba(245,158,11,.55);
+  text-decoration-color:rgba(245,158,11,.6);
   text-decoration-thickness:2px;
+  font-size:36px;
 }
-.pc-tilde{font-size:38px;font-weight:200;color:var(--amber);margin-right:1px;display:none}
-.pc-tilde.show{display:inline}
-.fresh-pill,.stale-pill{
-  display:inline-flex;align-items:center;gap:6px;
-  font-size:12px;font-weight:700;border-radius:100px;padding:5px 12px;margin-top:13px;
+.pgl-tilde{font-size:32px;font-weight:200;color:var(--am);margin-right:1px;display:none}
+.pgl-tilde.show{display:inline}
+.pgl-time{font-size:11px;color:var(--muted);margin-top:8px;transition:color .3s}
+/* stale alert inline */
+.stale-inline{
+  display:none;margin-top:14px;
+  padding:12px 14px;border-radius:12px;
+  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.28);
 }
-.fresh-pill{color:var(--emerald);background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.25)}
-.stale-pill{color:var(--amber);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.30);display:none}
-.stale-pill.show{display:inline-flex}
-.fdot{width:7px;height:7px;border-radius:50%;background:var(--emerald);box-shadow:0 0 6px var(--emerald);animation:pd 2s ease-in-out infinite}
-.sdot{width:7px;height:7px;border-radius:50%;background:var(--amber);animation:sb 1.4s ease-in-out infinite}
-@keyframes pd{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
-@keyframes sb{0%,100%{opacity:1}50%{opacity:.18}}
-
-.stale-alert{display:none;padding:18px 20px;border-color:rgba(245,158,11,.32);background:rgba(245,158,11,.04);flex-direction:column;gap:10px}
-.stale-alert.show{display:flex}
-.sa-title{font-size:13px;font-weight:700;color:var(--amber)}
-.sa-body{font-size:12px;color:rgba(241,240,255,.5);line-height:1.65}
-.sa-cta{
-  align-self:flex-start;font-size:12px;font-weight:700;color:var(--amber);
-  background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.32);
-  border-radius:9px;padding:7px 14px;cursor:pointer;
+.stale-inline.show{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.si-text{font-size:12px;color:rgba(241,240,255,.55);line-height:1.5}
+.si-text strong{color:var(--am);display:block;font-size:13px;margin-bottom:2px}
+.si-cta{
+  flex-shrink:0;font-size:11px;font-weight:700;color:var(--am);
+  background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);
+  border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap;
 }
 
-.compare{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-.cmp{padding:16px}
-.cmp-lbl{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;margin-bottom:8px}
-.cmp-val{font-size:20px;font-weight:800}
-.cmp-desc{font-size:10px;margin-top:5px}
+/* demo toggle */
+.demo-tog-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;
+  background:rgba(245,158,11,.04);border:1px solid rgba(245,158,11,.12);
+  border-radius:12px;margin-top:4px;
+}
+.demo-tog-lbl{font-size:11px;color:var(--muted)}
+.tog2{width:40px;height:24px;background:rgba(255,255,255,.12);border-radius:100px;
+  position:relative;cursor:pointer;transition:background .22s;flex-shrink:0}
+.tog2.on{background:var(--am)}
+.tog2::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;
+  background:#fff;border-radius:50%;transition:left .2s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 1px 5px rgba(0,0,0,.3)}
+.tog2.on::after{left:19px}
 
-/* ═══ SCREEN 3: MOTION ═══ */
-.motion-wrap{padding:20px 16px 0;display:flex;flex-direction:column;gap:14px}
-.m-card{padding:22px}
-.m-title{font-size:14px;font-weight:700;margin-bottom:5px}
-.m-desc{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:18px}
-.m-btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  border:none;cursor:pointer;font-size:14px;font-weight:700;border-radius:14px;padding:13px 26px;
-  background:linear-gradient(135deg,var(--violet),var(--violet2));
-  color:#fff;box-shadow:0 4px 20px var(--glow-v);
-  transition:transform .12s,box-shadow .12s;
+/* 2-col row */
+.b2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bsm{padding:16px 15px}
+.bsm-lbl{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.bsm-val{font-size:26px;font-weight:800;letter-spacing:-.025em;line-height:1}
+.bsm-sub{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
+.av{background:linear-gradient(130deg,#fff,var(--em));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.aa{color:var(--am)}
+.glob-v::after,.glob-e::after{
+  content:'';position:absolute;width:60px;height:60px;border-radius:50%;filter:blur(24px);
+  bottom:-16px;right:-6px;pointer-events:none;
 }
-.m-btn:active{transform:scale(.95);box-shadow:0 2px 10px var(--glow-v)}
-.m-btn.ghost{background:var(--glass);border:1px solid var(--glass-b);color:var(--text);box-shadow:none}
-.c-hero{
-  font-size:58px;font-weight:800;letter-spacing:-.04em;
-  background:linear-gradient(130deg,#fff 0%,var(--violet) 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  margin:8px 0 20px;
+.glob-v::after{background:var(--gv)}
+.glob-e::after{background:var(--ge)}
+
+/* ═════════════════════════════
+   S2 — GIAO DỊCH
+════════════════════════════ */
+.txlist{padding:16px;display:flex;flex-direction:column;gap:10px}
+.tx-header{display:flex;justify-content:space-between;align-items:center}
+.tx-title{font-size:17px;font-weight:800}
+.tx-add-btn{
+  display:flex;align-items:center;gap:5px;
+  font-size:12px;font-weight:700;color:var(--vi);
+  background:rgba(139,92,246,.10);border:1px solid rgba(139,92,246,.25);
+  border-radius:100px;padding:6px 14px;cursor:pointer;
 }
-.pwa-pop{
-  display:none;align-items:center;gap:14px;padding:16px;margin-top:14px;
-  border-color:rgba(139,92,246,.38);
-  background:linear-gradient(135deg,rgba(109,40,217,.12),rgba(16,185,129,.06));
-  animation:popIn .38s cubic-bezier(.34,1.56,.64,1) both;
+.tx-summary{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
 }
-.pwa-pop.show{display:flex}
-@keyframes popIn{from{opacity:0;transform:scale(.88) translateY(8px)}to{opacity:1;transform:none}}
-.pwa-icon{width:46px;height:46px;flex-shrink:0;border-radius:12px;
-  background:linear-gradient(135deg,var(--violet),var(--emerald));
-  display:flex;align-items:center;justify-content:center;font-size:24px;
-  box-shadow:0 4px 16px var(--glow-v);}
-.pwa-txt{flex:1}
-.pwa-txt b{font-size:13px;display:block;margin-bottom:2px}
-.pwa-txt span{font-size:12px;color:var(--muted)}
-.pwa-add{background:linear-gradient(135deg,var(--violet),var(--violet2));color:#fff;
-  font-size:12px;font-weight:700;padding:9px 16px;border-radius:10px;
-  border:none;cursor:pointer;box-shadow:0 2px 12px var(--glow-v);flex-shrink:0;}
+.ts-card{padding:12px;text-align:center}
+.ts-label{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.ts-val{font-size:18px;font-weight:800}
+.tx-month-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tx-card{padding:16px 18px}
+.tx-row{display:flex;align-items:center;gap:14px}
+.tx-icon{
+  width:38px;height:38px;border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.tx-icon.buy{background:rgba(16,185,129,.14);box-shadow:0 0 14px rgba(16,185,129,.18)}
+.tx-icon.div{background:rgba(139,92,246,.14);box-shadow:0 0 14px rgba(139,92,246,.18)}
+.tx-body{flex:1}
+.tx-name{font-size:14px;font-weight:700}
+.tx-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.tx-right{text-align:right}
+.tx-eur{font-size:15px;font-weight:800}
+.tx-shares{font-size:11px;color:var(--muted);margin-top:2px}
+.tx-divider{height:1px;background:var(--gb);margin:4px 0}
+
+/* ═════════════════════════════
+   S3 — MÔ PHỊNG
+════════════════════════════ */
+.simwrap{padding:16px;display:flex;flex-direction:column;gap:12px}
+.sim-title{font-size:17px;font-weight:800}
+.sim-input-card{padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.si-row{display:flex;justify-content:space-between;align-items:center}
+.si-lbl{font-size:13px;color:var(--muted)}
+.si-val{font-size:15px;font-weight:700}
+.si-input{
+  background:rgba(255,255,255,.08);border:1px solid var(--gb);
+  border-radius:10px;padding:8px 14px;color:var(--text);
+  font-size:16px;font-weight:700;width:110px;text-align:right;
+  font-family:inherit;outline:none;
+}
+.si-input:focus{border-color:rgba(139,92,246,.5);box-shadow:0 0 10px rgba(139,92,246,.15)}
+.sim-btn{
+  width:100%;padding:14px;border:none;border-radius:14px;cursor:pointer;
+  font-size:15px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,var(--vi),var(--vi2));
+  box-shadow:0 4px 20px var(--gv);
+  transition:transform .1s,box-shadow .1s;
+}
+.sim-btn:active{transform:scale(.97);box-shadow:0 2px 10px var(--gv)}
+.sim-result-card{padding:0;overflow:hidden}
+.sr-header{display:grid;grid-template-columns:2fr 1.5fr 1.5fr;gap:0;
+  padding:10px 16px;background:rgba(255,255,255,.04);
+  border-bottom:1px solid var(--gb);
+  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sr-row{display:grid;grid-template-columns:2fr 1.5fr 1.5fr;padding:11px 16px;
+  border-bottom:1px solid rgba(255,255,255,.04);align-items:center}
+.sr-row:last-child{border-bottom:none}
+.sr-row.current{background:rgba(139,92,246,.08)}
+.sr-year{font-size:13px;font-weight:700}
+.sr-nav{font-size:14px;font-weight:800}
+.sr-dep{font-size:12px;color:var(--muted)}
+.sr-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px}
+.sr-badge.now{background:rgba(139,92,246,.2);color:var(--vi)}
+
+/* ═════════════════════════════
+   S4 — CÀI ĐẶT
+════════════════════════════ */
+.setwrap{padding:16px;display:flex;flex-direction:column;gap:10px}
+.set-section-label{font-size:11px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);padding:4px 4px 0}
+.set-card{padding:0;overflow:hidden}
+.set-row{
+  display:flex;align-items:center;gap:14px;
+  padding:15px 18px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;
+  transition:background .15s;
+}
+.set-row:last-child{border-bottom:none}
+.set-row:active{background:rgba(255,255,255,.04)}
+.set-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.set-icon.vi{background:rgba(139,92,246,.15)}
+.set-icon.em{background:rgba(16,185,129,.15)}
+.set-icon.am{background:rgba(245,158,11,.15)}
+.set-icon.re{background:rgba(248,113,113,.15)}
+.set-body{flex:1}
+.set-name{font-size:14px;font-weight:600}
+.set-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.set-arrow{font-size:16px;color:var(--muted)}
+.sync-status{display:flex;align-items:center;gap:6px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em)}
+.set-version{text-align:center;padding:20px;font-size:12px;color:rgba(241,240,255,.2)}
+.abmeld-btn{
+  margin:4px 0;width:100%;padding:14px;border:none;border-radius:14px;cursor:pointer;
+  font-size:14px;font-weight:700;color:var(--re);
+  background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.20);
+  transition:all .15s;
+}
+.abmeld-btn:active{background:rgba(248,113,113,.16)}
+
+/* datetime display */
+.datetime-card{padding:18px 20px}
+.dt-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.dt-time{font-size:38px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+  background:linear-gradient(130deg,#fff,var(--vi));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.dt-date{font-size:13px;color:var(--muted);margin-top:6px}
+.dt-sync{font-size:11px;color:var(--em);margin-top:4px;display:flex;align-items:center;gap:5px}
 </style>
 </head>
 <body>
 <div class="app">
 
-<!-- ══ SCREEN 1: OVERVIEW ══ -->
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">VWCE Vault</div>
+  <div class="topbar-right">
+    <div class="sync-btn" onclick="doSync()">
+      <span class="sync-spin" id="spin">&#8635;</span>
+      <span id="sync-label">&#8635; Sync</span>
+    </div>
+    <div class="topbar-time" id="clock"></div>
+  </div>
+</div>
+
+<!-- ══ S1: OVERVIEW ══ -->
 <div class="screen active" id="s1">
 <div class="bento">
 
-  <!-- Hero NAV -->
-  <div class="glass b-hero">
-    <div class="b-hero-label">Portfolio VWCE &middot; Hi&#7879;n t&#7841;i</div>
-    <div class="b-hero-nav">&euro;&thinsp;9.847</div>
-    <div class="b-hero-row">
-      <div class="badge-up">&#9650; +&euro;312 th&aacute;ng n&agrave;y</div>
-      <span class="upd">+3,3% YTD</span>
+  <!-- Hero -->
+  <div class="gl hero">
+    <div class="hero-label">Portfolio VWCE &middot; NAV hi&#7879;n t&#7841;i</div>
+    <div class="hero-nav">&euro;&thinsp;9.847</div>
+    <div class="hero-row">
+      <div class="badge up">&#9650; +&euro;312 th&aacute;ng n&agrave;y</div>
+      <div class="badge neu">+3,3% YTD</div>
     </div>
   </div>
 
-  <!-- Row 1: Gi&aacute; + C&#7893; ph&#7847;n -->
-  <div class="b-row">
-    <div class="glass b-sm ge">
-      <div class="b-sm-label">Gi&aacute; VWCE</div>
-      <div class="b-sm-val accent-v">&euro;169,62</div>
-      <div class="b-sm-sub">C&#7853;p nh&#7853;t 5 ph&uacute;t tr&#432;&#7899;c</div>
+  <!-- Price card with freshness state -->
+  <div class="gl price-gl" id="pgc">
+    <div class="pgl-top">
+      <div class="pgl-label" id="pgl-lbl" style="color:var(--muted)">GI&Aacute; VWCE</div>
+      <div class="pgl-status live" id="live-pill"><span class="ldot"></span>LIVE</div>
+      <div class="pgl-status old" id="old-pill"><span class="adot"></span>GI&Aacute; C&#361;</div>
     </div>
-    <div class="glass b-sm gv">
-      <div class="b-sm-label">S&#7889; c&#7893; ph&#7847;n</div>
-      <div class="b-sm-val">58,06</div>
-      <div class="b-sm-sub">VWCE ETF</div>
+    <div class="pgl-num">
+      <span class="pgl-tilde" id="tilde">~</span>
+      <span class="pgl-cur">&euro;</span>
+      <span class="pgl-big" id="pbn">169,62</span>
     </div>
-  </div>
-
-  <!-- Row 2: G&oacute;p + L&#7907;i nhu&#7853;n -->
-  <div class="b-row">
-    <div class="glass b-sm">
-      <div class="b-sm-label">G&oacute;p h&agrave;ng th&aacute;ng</div>
-      <div class="b-sm-val accent-a">&euro;200</div>
-      <div class="b-sm-sub">&#273;&#7883;nh k&#7923; &middot; th&aacute;ng n&agrave;y &#273;&atilde; g&oacute;p</div>
-    </div>
-    <div class="glass b-sm">
-      <div class="b-sm-label">T&#7893;ng l&#7907;i nhu&#7853;n</div>
-      <div class="b-sm-val" style="color:var(--emerald)">+8,4%</div>
-      <div class="b-sm-sub">t&#7915; l&#7847;n &#273;&#7847;u t&#432;</div>
-    </div>
-  </div>
-
-  <!-- Sparkline placeholder -->
-  <div class="glass" style="padding:0 20px 20px">
-    <div style="font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);padding:18px 0 12px">Gi&aacute; VWCE &middot; 6 th&aacute;ng</div>
-    <div style="position:relative;height:56px">
-      <svg viewBox="0 0 340 56" preserveAspectRatio="none" style="width:100%;height:100%">
-        <defs>
-          <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="rgba(139,92,246,0.35)"/>
-            <stop offset="100%" stop-color="rgba(139,92,246,0)"/>
-          </linearGradient>
-        </defs>
-        <path d="M0,42 L28,38 L56,40 L84,32 L112,34 L140,28 L168,30 L196,22 L224,18 L252,20 L280,12 L308,10 L340,6" fill="none" stroke="rgba(139,92,246,0.7)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-        <path d="M0,42 L28,38 L56,40 L84,32 L112,34 L140,28 L168,30 L196,22 L224,18 L252,20 L280,12 L308,10 L340,6 L340,56 L0,56 Z" fill="url(#sg)"/>
-        <circle cx="340" cy="6" r="3.5" fill="var(--violet)" filter="drop-shadow(0 0 4px var(--violet))"/>
-      </svg>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:8px">
-      <span style="font-size:10px;color:var(--muted)">Th&aacute;ng 3</span>
-      <span style="font-size:10px;color:var(--muted)">Th&aacute;ng 8</span>
-    </div>
-  </div>
-
-</div>
-</div>
-
-<!-- ══ SCREEN 2: PRICE ══ -->
-<div class="screen" id="s2">
-<div class="price-wrap">
-
-  <div class="glass toggle-card">
-    <div>
-      <div class="tg-lbl">Gi&#7843; l&#7853;p gi&aacute; ?</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <span class="tg-val" id="tlbl">Gi&aacute; m&#7899;i</span>
-      <div class="tog" id="tg" onclick="toggleStale()"></div>
-    </div>
-  </div>
-
-  <div class="glass price-card" id="pc">
-    <div class="pc-eye" id="pce" style="color:var(--muted)">GI&Aacute; VWCE &middot; C&#7852;P NH&#7852;T 5 PH&Uacute;T TR&#431;&#7898;C</div>
-    <div class="pc-row">
-      <span class="pc-tilde" id="tilde">~</span>
-      <span class="pc-cur">&euro;</span>
-      <span class="pc-num" id="pcn">169,62</span>
-    </div>
-    <div class="fresh-pill" id="fp"><span class="fdot"></span>Gi&aacute; m&#7899;i &middot; 17/08 09:14</div>
-    <div class="stale-pill" id="sp"><span class="sdot"></span>C&#361; &middot; 08:30 h&ocirc;m qua</div>
-  </div>
-
-  <div class="glass stale-alert" id="sa">
-    <div class="sa-title">&#9888; Gi&aacute; c&oacute; th&#7875; kh&ocirc;ng c&ograve;n ch&iacute;nh x&aacute;c</div>
-    <div class="sa-body">C&aacute;c s&#7889; li&#7879;u NAV, l&atilde;i / l&#7895; &#273;&#7873;u d&#7921;a tr&ecirc;n gi&aacute; n&agrave;y.<br>Gi&aacute; cu&#7889;i c&ugrave;ng ghi nh&#7853;n: <strong style="color:var(--amber)">08:30 h&ocirc;m qua</strong></div>
-    <button class="sa-cta">T&#7843;i l&#7841;i gi&aacute; ngay &rarr;</button>
-  </div>
-
-  <div class="compare">
-    <div class="glass cmp" style="border-color:var(--glass-b)">
-      <div class="cmp-lbl" style="color:var(--muted)">Hi&#7879;n t&#7841;i</div>
-      <div class="cmp-val">&euro; 169,62</div>
-      <div class="cmp-desc" style="color:var(--muted)">Badge nh&#7887; &mdash; kh&oacute; th&#7845;y</div>
-    </div>
-    <div class="glass cmp" style="border-color:rgba(245,158,11,.32);background:rgba(245,158,11,.04)">
-      <div class="cmp-lbl" style="color:var(--amber)">Visual B</div>
-      <div class="cmp-val" style="color:rgba(241,240,255,.22);text-decoration:line-through;text-decoration-color:rgba(245,158,11,.55)">169,62</div>
-      <div class="cmp-desc" style="color:var(--amber)">G&#7841;ch + m&#7901; &mdash; r&#245; ngay</div>
-    </div>
-  </div>
-
-</div>
-</div>
-
-<!-- ══ SCREEN 3: MOTION ══ -->
-<div class="screen" id="s3">
-<div class="motion-wrap">
-
-  <div class="glass m-card">
-    <div class="m-title">Count-up khi m&#7903; app</div>
-    <div class="m-desc">T&#7893;ng t&agrave;i s&#7843;n &#273;&#7871;m t&#7915; 0 l&ecirc;n mỗi lần load &mdash; c&#7843;m gi&aacute;c &ldquo;app &#273;ang t&iacute;nh cho m&igrave;nh&rdquo;.</div>
-    <div class="c-hero" id="cnum">&euro;&thinsp;0</div>
-    <button class="m-btn" onclick="runCount()">&#9654;&nbsp; Ch&#7841;y th&#7917;</button>
-  </div>
-
-  <div class="glass m-card">
-    <div class="m-title">PWA install banner</div>
-    <div class="m-desc">Thay browser prompt m&#7863;c &#273;&#7883;nh b&#7857;ng banner custom &mdash; &#273;&#7865;p h&#417;n, r&otilde; h&#417;n.</div>
-    <button class="m-btn ghost" onclick="showPWA()">Hi&#7879;n banner</button>
-    <div class="glass pwa-pop" id="pp">
-      <div class="pwa-icon">&#128176;</div>
-      <div class="pwa-txt">
-        <b>Th&ecirc;m v&agrave;o m&agrave;n h&igrave;nh ch&iacute;nh</b>
-        <span>M&#7903; nhanh, offline, kh&ocirc;ng c&#7847;n browser</span>
+    <div class="pgl-time" id="pgl-time">C&#7853;p nh&#7853;t 17/08/2026 &middot; 09:14 Uhr</div>
+    <!-- stale inline alert -->
+    <div class="stale-inline" id="si">
+      <div class="si-text">
+        <strong>&#9888; D&#7919; li&#7879;u c&oacute; th&#7875; l&#7895;i th&#7901;i</strong>
+        Gi&aacute; cu&#7889;i: 16/08 08:30 &mdash; NAV c&oacute; th&#7875; sai
       </div>
-      <button class="pwa-add" onclick="document.getElementById('pp').classList.remove('show')">Th&ecirc;m</button>
+      <button class="si-cta">C&#7853;p nh&#7853;t &rarr;</button>
+    </div>
+  </div>
+
+  <!-- Demo toggle for stale -->
+  <div class="demo-tog-row">
+    <span class="demo-tog-lbl">&#127381; Demo: gi&#7843; l&#7853;p gi&aacute; c&#361; &gt;4h</span>
+    <div class="tog2" id="stog" onclick="toggleStale()"></div>
+  </div>
+
+  <!-- 2-col: C&#7893; ph&#7847;n + G&oacute;p -->
+  <div class="b2">
+    <div class="gl bsm glob-e">
+      <div class="bsm-lbl">C&#7893; ph&#7847;n VWCE</div>
+      <div class="bsm-val">58,06</div>
+      <div class="bsm-sub">at &euro;169,62</div>
+    </div>
+    <div class="gl bsm glob-v">
+      <div class="bsm-lbl">G&oacute;p h&agrave;ng th&aacute;ng</div>
+      <div class="bsm-val aa">&euro;200</div>
+      <div class="bsm-sub">Sparplan &middot; &#273;&atilde; g&oacute;p T8</div>
     </div>
   </div>
 
 </div>
 </div>
 
+<!-- ══ S2: GIAO DỊCH ══ -->
+<div class="screen" id="s2">
+<div class="txlist">
+  <div class="tx-header">
+    <div class="tx-title">Giao d&#7883;ch</div>
+    <div class="tx-add-btn">+ Th&ecirc;m</div>
+  </div>
+
+  <!-- summary -->
+  <div class="tx-summary">
+    <div class="gl ts-card">
+      <div class="ts-label">T&#7893;ng &#273;&atilde; g&oacute;p</div>
+      <div class="ts-val" style="font-size:16px;color:var(--am)">&euro;7.400</div>
+    </div>
+    <div class="gl ts-card">
+      <div class="ts-label">L&#7907;i nhu&#7853;n</div>
+      <div class="ts-val" style="color:var(--em)">+8,4%</div>
+    </div>
+    <div class="gl ts-card">
+      <div class="ts-label">S&#7889; l&#7847;n mua</div>
+      <div class="ts-val">37</div>
+    </div>
+  </div>
+
+  <!-- month: T8 -->
+  <div class="tx-month-label">Th&aacute;ng 8 &middot; 2026</div>
+  <div class="gl tx-card">
+    <div class="tx-row">
+      <div class="tx-icon buy">&#128200;</div>
+      <div class="tx-body">
+        <div class="tx-name">Mua VWCE</div>
+        <div class="tx-meta">01/08/2026 &middot; Sparplan</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-eur" style="color:var(--em)">+1,18 cp</div>
+        <div class="tx-shares">&euro;200,00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- month: T7 -->
+  <div class="tx-month-label">Th&aacute;ng 7 &middot; 2026</div>
+  <div class="gl tx-card">
+    <div class="tx-row">
+      <div class="tx-icon buy">&#128200;</div>
+      <div class="tx-body">
+        <div class="tx-name">Mua VWCE</div>
+        <div class="tx-meta">01/07/2026 &middot; Sparplan</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-eur" style="color:var(--em)">+1,21 cp</div>
+        <div class="tx-shares">&euro;200,00</div>
+      </div>
+    </div>
+    <div class="tx-divider"></div>
+    <div class="tx-row" style="margin-top:4px">
+      <div class="tx-icon div">&#127381;</div>
+      <div class="tx-body">
+        <div class="tx-name">C&#7893; t&#7913;c VWCE</div>
+        <div class="tx-meta">15/07/2026 &middot; Aussch&uuml;ttung</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-eur" style="color:var(--vi)">+&euro;14,30</div>
+        <div class="tx-shares">t&#225;i &#273;&#7847;u t&#432;</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- month: T6 -->
+  <div class="tx-month-label">Th&aacute;ng 6 &middot; 2026</div>
+  <div class="gl tx-card">
+    <div class="tx-row">
+      <div class="tx-icon buy">&#128200;</div>
+      <div class="tx-body">
+        <div class="tx-name">Mua VWCE</div>
+        <div class="tx-meta">01/06/2026 &middot; Sparplan</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-eur" style="color:var(--em)">+1,25 cp</div>
+        <div class="tx-shares">&euro;200,00</div>
+      </div>
+    </div>
+  </div>
+
+</div>
 </div>
 
-<!-- pill nav -->
-<div class="nav-pill">
-  <button class="nav-btn active" onclick="nav('s1',this)">Overview</button>
-  <button class="nav-btn" onclick="nav('s2',this)">Gi&aacute; c&#361;</button>
-  <button class="nav-btn" onclick="nav('s3',this)">Motion</button>
+<!-- ══ S3: MÔ PHỊNG ══ -->
+<div class="screen" id="s3">
+<div class="simwrap">
+  <div class="sim-title">Mô phỏng Sparplan</div>
+
+  <div class="gl sim-input-card">
+    <div class="si-row">
+      <span class="si-lbl">G&oacute;p h&agrave;ng th&aacute;ng</span>
+      <input class="si-input" id="inp-monthly" type="number" value="200" min="50" max="2000" onchange="calcSim()">
+    </div>
+    <div class="si-row">
+      <span class="si-lbl">T&#259;ng tr&#432;&#7903;ng/n&#259;m (%)</span>
+      <input class="si-input" id="inp-growth" type="number" value="7" min="1" max="20" onchange="calcSim()">
+    </div>
+    <div class="si-row">
+      <span class="si-lbl">&#272;&atilde; &#273;&#7847;u t&#432;</span>
+      <span class="si-val">&euro;9.847</span>
+    </div>
+    <button class="sim-btn" onclick="calcSim()">T&iacute;nh to&aacute;n</button>
+  </div>
+
+  <div class="gl sim-result-card" id="simres">
+    <div class="sr-header">
+      <span>N&#259;m</span><span>NAV</span><span>&#272;&atilde; g&oacute;p</span>
+    </div>
+    <div id="sim-rows"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══ S4: CÀI ĐẶT ══ -->
+<div class="screen" id="s4">
+<div class="setwrap">
+
+  <!-- datetime -->
+  <div class="gl datetime-card">
+    <div class="dt-label">Ng&agrave;y &middot; Gi&#7901; hi&#7879;n t&#7841;i</div>
+    <div class="dt-time" id="dt-big"></div>
+    <div class="dt-date" id="dt-date"></div>
+    <div class="dt-sync"><span style="width:6px;height:6px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em);display:inline-block"></span>&#272;&#7891;ng b&#7897; l&uacute;c <span id="last-sync">22:13</span></div>
+  </div>
+
+  <!-- sync -->
+  <div class="set-section-label">&#272;&#7891;ng b&#7897;</div>
+  <div class="gl set-card">
+    <div class="set-row" onclick="doSync()">
+      <div class="set-icon em">&#8635;</div>
+      <div class="set-body">
+        <div class="set-name">&#272;&#7891;ng b&#7897; ngay</div>
+        <div class="set-sub">C&#7853;p nh&#7853;t gi&aacute; VWCE v&agrave; d&#7919; li&#7879;u</div>
+      </div>
+      <span class="set-arrow">&#8250;</span>
+    </div>
+    <div class="set-row">
+      <div class="set-icon vi">&#128203;</div>
+      <div class="set-body">
+        <div class="set-name">Xu&#7845;t sao l&#432;u</div>
+        <div class="set-sub">JSON &middot; Backup v4</div>
+      </div>
+      <span class="set-arrow">&#8250;</span>
+    </div>
+    <div class="set-row">
+      <div class="set-icon vi">&#128229;</div>
+      <div class="set-body">
+        <div class="set-name">Nh&#7853;p sao l&#432;u</div>
+        <div class="set-sub">Ki&#7875;m tra l&#432;u &yacute; tr&#432;&#7899;c khi ghi</div>
+      </div>
+      <span class="set-arrow">&#8250;</span>
+    </div>
+  </div>
+
+  <!-- account -->
+  <div class="set-section-label">T&agrave;i kho&#7843;n</div>
+  <div class="gl set-card">
+    <div class="set-row">
+      <div class="set-icon am">&#128100;</div>
+      <div class="set-body">
+        <div class="set-name">H&#7891; s&#417; kh&#7849;n c&#7845;p</div>
+        <div class="set-sub">Notfallmappe &middot; Verschl&uuml;sselt</div>
+      </div>
+      <span class="set-arrow">&#8250;</span>
+    </div>
+    <div class="set-row">
+      <div class="set-icon vi">&#128274;</div>
+      <div class="set-body">
+        <div class="set-name">B&#7843;o m&#7853;t &amp; MFA</div>
+        <div class="set-sub">&#272;&atilde; b&#7853;t x&aacute;c th&#7921;c 2 b&#432;&#7899;c</div>
+      </div>
+      <span class="set-arrow">&#8250;</span>
+    </div>
+  </div>
+
+  <!-- app info -->
+  <div class="set-section-label">&#7912;ng d&#7909;ng</div>
+  <div class="gl set-card">
+    <div class="set-row">
+      <div class="set-icon em">&#127760;</div>
+      <div class="set-body">
+        <div class="set-name">Ng&ocirc;n ng&#7919;</div>
+        <div class="set-sub">Ti&#7871;ng Vi&#7879;t</div>
+      </div>
+      <span class="set-arrow">&#8250;</span>
+    </div>
+  </div>
+
+  <button class="abmeld-btn">&#128275; Abmelden</button>
+
+  <div class="set-version">VWCE Vault &middot; v1.8.0 &middot; Local-first</div>
+</div>
+</div>
+
+</div><!-- /app -->
+
+<!-- PILL NAV -->
+<div class="pill">
+  <button class="pb on" onclick="nav('s1',this)">Overview</button>
+  <button class="pb" onclick="nav('s2',this)">Giao d&#7883;ch</button>
+  <button class="pb" onclick="nav('s3',this)">M&ocirc; ph&#7887;ng</button>
+  <button class="pb" onclick="nav('s4',this)">C&agrave;i &#273;&#7863;t</button>
 </div>
 
 <script>
+// nav
 function nav(id,el){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('on'));
   document.getElementById(id).classList.add('active');
-  el.classList.add('active');
+  el.classList.add('on');
 }
 
+// clock
+function tick(){
+  const now=new Date();
+  const hm=now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  const full=now.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+  const el=document.getElementById('clock');
+  if(el) el.textContent=hm;
+  const db=document.getElementById('dt-big');
+  if(db) db.textContent=hm;
+  const dd=document.getElementById('dt-date');
+  if(dd) dd.textContent=full;
+}
+tick();setInterval(tick,1000);
+
+// sync
+function doSync(){
+  const lbl=document.getElementById('sync-label');
+  const sp=document.getElementById('spin');
+  lbl.textContent='...';
+  sp.style.display='inline-block';
+  setTimeout(()=>{
+    lbl.textContent='\u8635 Sync';
+    sp.style.display='none';
+    const ls=document.getElementById('last-sync');
+    if(ls) ls.textContent=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  },1400);
+}
+
+// stale toggle
 let stale=false;
 function toggleStale(){
   stale=!stale;
-  document.getElementById('tg').classList.toggle('on',stale);
-  document.getElementById('tlbl').textContent=stale?'Gi\u00e1 c\u0169':'Gi\u00e1 m\u1edbi';
-  document.getElementById('pc').classList.toggle('stale',stale);
-  const eye=document.getElementById('pce');
-  eye.style.color=stale?'var(--amber)':'var(--muted)';
-  eye.textContent=stale
-    ?'GI\u00c1 VWCE \u00b7 C\u00d3 TH\u1ec2 \u0110\u00c3 C\u0168'
-    :'GI\u00c1 VWCE \u00b7 C\u1eacP NH\u1eacT 5 PH\u00daT TR\u01af\u1edcC';
-  document.getElementById('pcn').classList.toggle('dim',stale);
+  document.getElementById('stog').classList.toggle('on',stale);
+  document.getElementById('pgc').classList.toggle('stale',stale);
+  const lbl=document.getElementById('pgl-lbl');
+  lbl.style.color=stale?'var(--am)':'var(--muted)';
+  document.getElementById('pbn').classList.toggle('dim',stale);
   document.getElementById('tilde').classList.toggle('show',stale);
-  document.getElementById('fp').style.display=stale?'none':'';
-  document.getElementById('sp').classList.toggle('show',stale);
-  document.getElementById('sa').classList.toggle('show',stale);
+  document.getElementById('live-pill').classList.toggle('hide',stale);
+  document.getElementById('old-pill').classList.toggle('show',stale);
+  document.getElementById('pgl-time').style.color=stale?'var(--am)':'var(--muted)';
+  document.getElementById('pgl-time').textContent=stale
+    ?'\u23f1 Gi\u00e1 l\u00fac 16/08 08:30 \u2014 ch\u01b0a c\u1eadp nh\u1eadt'
+    :'C\u1eadp nh\u1eadt 17/08/2026 \u00b7 09:14 Uhr';
+  document.getElementById('si').classList.toggle('show',stale);
 }
 
-function runCount(){
-  const el=document.getElementById('cnum');
-  const t=9847,d=1400,s0=performance.now();
-  (function f(now){
-    const p=Math.min((now-s0)/d,1);
-    const e=1-Math.pow(1-p,4);
-    el.textContent='\u20ac\u2009'+Math.round(e*t).toLocaleString('de-DE');
-    if(p<1) requestAnimationFrame(f);
-  })(s0);
+// simulation
+function calcSim(){
+  const monthly=parseFloat(document.getElementById('inp-monthly').value)||200;
+  const growth=parseFloat(document.getElementById('inp-growth').value)||7;
+  const start=9847;
+  const yr=new Date().getFullYear();
+  let nav=start,dep=7400;
+  const rows=document.getElementById('sim-rows');
+  rows.innerHTML='';
+  for(let i=0;i<=8;i++){
+    const y=yr+i;
+    if(i>0){nav=(nav+monthly*12)*(1+growth/100);dep+=monthly*12;}
+    const isCur=i===0;
+    const d=document.createElement('div');
+    d.className='sr-row'+(isCur?' current':'');
+    d.innerHTML=`
+      <span class="sr-year">${y}${isCur?'&nbsp;<span class="sr-badge now">now</span>':''}</span>
+      <span class="sr-nav" style="color:${nav>start?'var(--em)':'var(--text)'}">&euro;${Math.round(nav).toLocaleString('de-DE')}</span>
+      <span class="sr-dep">&euro;${Math.round(dep).toLocaleString('de-DE')}</span>
+    `;
+    rows.appendChild(d);
+  }
 }
-
-function showPWA(){
-  const p=document.getElementById('pp');
-  p.classList.remove('show');
-  void p.offsetWidth;
-  p.classList.add('show');
-}
+calcSim();
 </script>
 </body>
 </html>
