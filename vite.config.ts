@@ -61,6 +61,22 @@ export default defineConfig({
       // PR0.3: test tai/loi/loc cua Giao dich. Da doc tron Transactions.tsx
       // va Transactions.loadState.test.tsx tren main truoc khi bat.
       "src/pages/Transactions.loadState.test.tsx",
+      // PR0.5 (lo lon 7 file): da doc TOAN VAN tren main 39b4ec66 truoc khi bat
+      // Notfallmappe.tsx; SimulationRoute.tsx + PageFailureBoundary.tsx +
+      // operationErrors.ts; QuoteFeedRefresh.tsx + quoteFreshness.ts;
+      // Settings.tsx; MigrateWizard.tsx + defaults.ts.
+      "src/pages/Notfallmappe.initialLoad.test.tsx",
+      "src/pages/Notfallmappe.saveState.test.tsx",
+      "src/pages/SimulationRoute.test.tsx",
+      "src/components/QuoteFeedRefresh.test.tsx",
+      "src/pages/Settings.initialLoad.test.tsx",
+      "src/pages/Settings.operationErrors.test.tsx",
+      "src/pages/MigrateWizard.test.tsx",
+      // CHUA BAT - can PR sua rieng trong file test, khong sua production:
+      // - src/components/ModalAccessibilityManager.test.tsx (FINDING_NOTION_49:
+      //   fireEvent.click khong di chuyen focus trong jsdom).
+      // - src/pages/Settings.test.tsx (FINDING_NOTION_50: mock cu, thieu
+      //   PlanRoadmapSection va ../lib/recoveryReadOnly).
     ],
   },
 });
