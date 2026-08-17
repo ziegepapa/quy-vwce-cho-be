@@ -58,6 +58,9 @@ export default defineConfig({
       // PR0.2: test ranh gioi loi toan app. Da doc tron AppFailureBoundary.tsx
       // va AppFailureBoundary.test.tsx tren main truoc khi bat.
       "src/components/AppFailureBoundary.test.tsx",
+      // PR0.3: test tai/loi/loc cua Giao dich. Da doc tron Transactions.tsx
+      // va Transactions.loadState.test.tsx tren main truoc khi bat.
+      "src/pages/Transactions.loadState.test.tsx",
     ],
   },
 });
