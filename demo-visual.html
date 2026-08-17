@@ -3,23 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Demo v4 — quy-vwce-cho-be</title>
+<title>VWCE Vault</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overscroll-behavior:none}
 :root{
-  --bg:#07070a;
-  --g:rgba(255,255,255,.046);
-  --gb:rgba(255,255,255,.10);
-  --gh:rgba(255,255,255,.075);
-  --text:#f1f0ff;
-  --muted:rgba(241,240,255,.38);
-  --vi:#8b5cf6;--vi2:#6d28d9;
-  --em:#10b981;--am:#f59e0b;
-  --re:#f87171;
-  --gv:rgba(139,92,246,.30);
-  --ge:rgba(16,185,129,.24);
-  --ga:rgba(245,158,11,.28);
+  --bg:#06060a;
+  --g:rgba(255,255,255,.042);
+  --gb:rgba(255,255,255,.09);
+  --text:#f0eeff;
+  --sub:rgba(240,238,255,.55);
+  --dim:rgba(240,238,255,.28);
+  --vi:#8b5cf6;--vi2:#5b21b6;
+  --em:#10b981;--am:#f59e0b;--re:#f87171;
+  --gv:rgba(139,92,246,.28);
+  --ge:rgba(16,185,129,.22);
 }
 body{
   font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
@@ -27,372 +25,403 @@ body{
   min-height:100dvh;max-width:430px;margin:0 auto;
   position:relative;overflow-x:hidden;
 }
+/* aurora */
 body::before{
   content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
-    radial-gradient(ellipse 70% 50% at 18% -5%,rgba(109,40,217,.44) 0%,transparent 60%),
-    radial-gradient(ellipse 55% 40% at 88% 12%,rgba(16,185,129,.22) 0%,transparent 55%),
-    radial-gradient(ellipse 40% 50% at 5% 85%,rgba(139,92,246,.14) 0%,transparent 55%);
-  animation:au 13s ease-in-out infinite alternate;
+    radial-gradient(ellipse 80% 55% at 15% -10%,rgba(91,33,182,.50) 0%,transparent 58%),
+    radial-gradient(ellipse 55% 38% at 92% 10%,rgba(16,185,129,.20) 0%,transparent 52%),
+    radial-gradient(ellipse 45% 45% at 5%  90%,rgba(139,92,246,.16) 0%,transparent 52%),
+    radial-gradient(ellipse 35% 30% at 85% 88%,rgba(16,185,129,.10) 0%,transparent 48%);
+  animation:au 14s ease-in-out infinite alternate;
 }
-@keyframes au{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(22deg)}}
+@keyframes au{0%{filter:hue-rotate(0deg) brightness(1)}100%{filter:hue-rotate(24deg) brightness(1.06)}}
+/* grain */
 body::after{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.5;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.45;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.032'/%3E%3C/svg%3E");
 }
-.app{position:relative;z-index:2;min-height:100dvh;padding-bottom:86px}
+.app{position:relative;z-index:2;min-height:100dvh;padding-bottom:84px}
 
-/* ─ top bar */
-.topbar{
+/* ── topbar ── */
+.bar{
   position:sticky;top:0;z-index:50;
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px 20px;
-  background:rgba(7,7,10,.72);
-  backdrop-filter:blur(24px) saturate(1.8);
-  -webkit-backdrop-filter:blur(24px) saturate(1.8);
+  padding:13px 18px;
+  background:rgba(6,6,10,.75);
+  backdrop-filter:blur(26px) saturate(1.9);
+  -webkit-backdrop-filter:blur(26px) saturate(1.9);
   border-bottom:1px solid var(--gb);
 }
-.topbar-logo{font-size:15px;font-weight:800;letter-spacing:-.02em;
-  background:linear-gradient(130deg,#fff,var(--vi));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.sync-btn{
-  display:flex;align-items:center;gap:5px;
-  font-size:11px;font-weight:700;letter-spacing:.06em;
-  color:var(--em);background:rgba(16,185,129,.10);
-  border:1px solid rgba(16,185,129,.25);border-radius:100px;
-  padding:6px 12px;cursor:pointer;transition:all .15s;
+.bar-logo{
+  font-size:16px;font-weight:900;letter-spacing:-.03em;
+  background:linear-gradient(120deg,#fff 0%,var(--vi) 120%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
 }
-.sync-btn:active{transform:scale(.95)}
-.sync-spin{display:inline-block;animation:spin .8s linear infinite;display:none}
+.bar-r{display:flex;align-items:center;gap:10px}
+.sync-pill{
+  display:flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:700;letter-spacing:.05em;
+  color:var(--em);background:rgba(16,185,129,.09);
+  border:1px solid rgba(16,185,129,.22);border-radius:100px;
+  padding:5px 12px;cursor:pointer;
+  transition:transform .12s;
+}
+.sync-pill:active{transform:scale(.94)}
+.bar-clock{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;letter-spacing:.02em}
 @keyframes spin{to{transform:rotate(360deg)}}
-.topbar-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.spin-ico{animation:spin .75s linear infinite;display:none}
 
-/* ─ glass */
+/* ── glass card ── */
 .gl{
-  background:var(--g);border:1px solid var(--gb);border-radius:20px;
-  backdrop-filter:blur(22px) saturate(1.7);
-  -webkit-backdrop-filter:blur(22px) saturate(1.7);
+  background:var(--g);
+  border:1px solid var(--gb);
+  border-radius:22px;
+  backdrop-filter:blur(24px) saturate(1.7);
+  -webkit-backdrop-filter:blur(24px) saturate(1.7);
   position:relative;overflow:hidden;
 }
-.gl::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent)}
+.gl::before{
+  content:'';position:absolute;inset:0 0 auto 0;height:1px;
+  background:linear-gradient(90deg,transparent 5%,rgba(255,255,255,.14) 50%,transparent 95%);
+}
 
-/* ─ screens */
+/* ── screens ── */
 .screen{display:none}
 .screen.active{display:block;animation:fu .28s cubic-bezier(.4,0,.2,1) both}
-@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-/* ─ floating pill nav */
+/* ── pill nav ── */
 .pill{
-  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
   z-index:100;display:flex;gap:2px;
-  background:rgba(10,7,22,.80);
-  border:1px solid var(--gb);border-radius:100px;padding:5px;
-  backdrop-filter:blur(28px) saturate(2);
-  -webkit-backdrop-filter:blur(28px) saturate(2);
-  box-shadow:0 8px 32px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.07) inset;
+  background:rgba(8,5,20,.82);
+  border:1px solid rgba(255,255,255,.10);border-radius:100px;padding:5px;
+  backdrop-filter:blur(30px) saturate(2.2);
+  -webkit-backdrop-filter:blur(30px) saturate(2.2);
+  box-shadow:0 10px 40px rgba(0,0,0,.60),0 1px 0 rgba(255,255,255,.08) inset;
 }
 .pb{
-  padding:8px 14px;border-radius:100px;
+  padding:8px 15px;border-radius:100px;
   font-size:11px;font-weight:700;letter-spacing:.04em;
-  color:var(--muted);border:none;background:none;cursor:pointer;
-  transition:all .22s cubic-bezier(.4,0,.2,1);white-space:nowrap;
+  color:var(--dim);border:none;background:none;cursor:pointer;
+  transition:all .2s cubic-bezier(.4,0,.2,1);white-space:nowrap;
 }
-.pb.on{background:rgba(139,92,246,.20);color:var(--text);box-shadow:0 0 16px rgba(139,92,246,.25)}
+.pb.on{
+  background:rgba(139,92,246,.22);color:var(--text);
+  box-shadow:0 0 20px rgba(139,92,246,.22);
+}
 
-/* ═════════════════════════════
+/* ═══════════════════════════
    S1 — OVERVIEW
-════════════════════════════ */
-.bento{padding:16px;display:flex;flex-direction:column;gap:10px}
+══════════════════════════ */
+.ov{padding:14px 14px 0;display:flex;flex-direction:column;gap:10px}
+
+/* HERO card */
 .hero{
-  padding:28px 22px 24px;
-  background:linear-gradient(150deg,rgba(109,40,217,.24) 0%,rgba(16,185,129,.08) 100%),var(--g);
+  padding:30px 24px 26px;
+  background:linear-gradient(148deg,rgba(91,33,182,.28) 0%,rgba(16,185,129,.07) 100%),var(--g);
+  border-color:rgba(139,92,246,.20);
+  box-shadow:0 0 60px rgba(91,33,182,.18) inset;
 }
-.hero-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
-.hero-nav{
-  font-size:62px;font-weight:800;letter-spacing:-.045em;line-height:1;
-  background:linear-gradient(130deg,#fff 5%,rgba(139,92,246,.88) 100%);
+.h-eye{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:11px}
+.h-num{
+  font-size:70px;font-weight:900;letter-spacing:-.05em;line-height:.95;
+  background:linear-gradient(128deg,#fff 0%,rgba(200,180,255,.9) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 24px rgba(139,92,246,.35));
 }
-.hero-row{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
-.badge{
-  display:inline-flex;align-items:center;gap:5px;
+.h-row{display:flex;align-items:center;gap:9px;margin-top:14px;flex-wrap:wrap}
+.bdg{
+  display:inline-flex;align-items:center;gap:4px;
   font-size:12px;font-weight:700;border-radius:100px;padding:4px 12px;
 }
-.badge.up{color:var(--em);background:rgba(16,185,129,.11);border:1px solid rgba(16,185,129,.24)}
-.badge.neu{color:var(--muted);background:rgba(255,255,255,.06);border:1px solid var(--gb);font-size:11px}
+.bdg-up{color:var(--em);background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.22)}
+.bdg-neu{color:var(--dim);background:rgba(255,255,255,.05);border:1px solid var(--gb);font-size:11px}
 
-/* price card with freshness */
-.price-gl{
-  padding:20px 22px;
-  transition:border-color .4s,background .4s,box-shadow .4s;
+/* PRICE card — featured */
+.pcard{
+  padding:22px 22px 18px;
+  transition:border-color .38s,background .38s,box-shadow .38s;
 }
-.price-gl.stale{
+.pcard.stale{
   border-color:rgba(245,158,11,.45);
-  background:rgba(245,158,11,.05);
-  box-shadow:0 0 28px rgba(245,158,11,.12) inset;
+  background:rgba(245,158,11,.045);
+  box-shadow:0 0 30px rgba(245,158,11,.10) inset;
 }
-.pgl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.pgl-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transition:color .3s}
-.pgl-status{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;border-radius:100px;padding:3px 10px}
-.pgl-status.live{color:var(--em);background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.22)}
-.pgl-status.old{color:var(--am);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.28);display:none}
-.pgl-status.old.show{display:flex}
-.pgl-status.live.hide{display:none}
-.ldot{width:6px;height:6px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em);animation:ld 2s ease-in-out infinite}
-@keyframes ld{0%,100%{opacity:1}50%{opacity:.3}}
-.adot{width:6px;height:6px;border-radius:50%;background:var(--am);animation:ad 1.3s ease-in-out infinite}
-@keyframes ad{0%,100%{opacity:1}50%{opacity:.1}}
-.pgl-num{display:flex;align-items:baseline;gap:3px}
-.pgl-cur{font-size:22px;font-weight:300;color:var(--muted);line-height:1}
-.pgl-big{
-  font-size:44px;font-weight:800;letter-spacing:-.04em;line-height:1;
-  background:linear-gradient(130deg,#fff 20%,var(--em) 100%);
+.pc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.pc-eye{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);transition:color .3s}
+.pc-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  border-radius:100px;padding:3px 10px;
+  transition:all .3s;
+}
+.pc-pill.live{color:var(--em);background:rgba(16,185,129,.09);border:1px solid rgba(16,185,129,.20)}
+.pc-pill.old{color:var(--am);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25)}
+.dot-live{width:5px;height:5px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em);animation:blink 2s ease-in-out infinite}
+.dot-stale{width:5px;height:5px;border-radius:50%;background:var(--am);animation:sblink 1.3s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes sblink{0%,100%{opacity:1}50%{opacity:.12}}
+.pc-num{display:flex;align-items:baseline;gap:2px;margin-bottom:6px}
+.pc-cur{font-size:20px;font-weight:300;color:var(--dim);line-height:1;margin-right:2px}
+.pc-tilde{font-size:30px;font-weight:200;color:var(--am);display:none;margin-right:1px}
+.pc-tilde.show{display:inline}
+.pc-big{
+  font-size:50px;font-weight:800;letter-spacing:-.04em;line-height:1;
+  background:linear-gradient(128deg,#fff 15%,var(--em) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  transition:all .4s;
+  transition:all .38s;
 }
-.pgl-big.dim{
+.pc-big.dim{
   -webkit-text-fill-color:unset;
-  color:rgba(241,240,255,.20);
+  color:rgba(240,238,255,.18);
+  font-size:40px;
   text-decoration:line-through;
-  text-decoration-color:rgba(245,158,11,.6);
+  text-decoration-color:rgba(245,158,11,.55);
   text-decoration-thickness:2px;
-  font-size:36px;
 }
-.pgl-tilde{font-size:32px;font-weight:200;color:var(--am);margin-right:1px;display:none}
-.pgl-tilde.show{display:inline}
-.pgl-time{font-size:11px;color:var(--muted);margin-top:8px;transition:color .3s}
-/* stale alert inline */
-.stale-inline{
+.pc-ts{font-size:10px;color:var(--dim);transition:color .3s;margin-top:2px}
+.stale-bar{
   display:none;margin-top:14px;
-  padding:12px 14px;border-radius:12px;
-  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.28);
+  padding:11px 14px;border-radius:12px;
+  background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.24);
+  align-items:center;justify-content:space-between;gap:10px;
 }
-.stale-inline.show{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.si-text{font-size:12px;color:rgba(241,240,255,.55);line-height:1.5}
-.si-text strong{color:var(--am);display:block;font-size:13px;margin-bottom:2px}
-.si-cta{
+.stale-bar.show{display:flex}
+.sb-txt{flex:1}
+.sb-strong{font-size:12px;font-weight:700;color:var(--am);display:block;margin-bottom:2px}
+.sb-detail{font-size:10px;color:rgba(245,158,11,.60);line-height:1.5}
+.sb-btn{
   flex-shrink:0;font-size:11px;font-weight:700;color:var(--am);
-  background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);
-  border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap;
+  background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.32);
+  border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap;
 }
 
-/* demo toggle */
-.demo-tog-row{
+/* demo stale toggle */
+.demo-row{
   display:flex;align-items:center;justify-content:space-between;
-  padding:12px 16px;
-  background:rgba(245,158,11,.04);border:1px solid rgba(245,158,11,.12);
-  border-radius:12px;margin-top:4px;
+  padding:10px 14px;
+  border:1px solid rgba(245,158,11,.12);
+  background:rgba(245,158,11,.03);
+  border-radius:12px;
 }
-.demo-tog-lbl{font-size:11px;color:var(--muted)}
-.tog2{width:40px;height:24px;background:rgba(255,255,255,.12);border-radius:100px;
-  position:relative;cursor:pointer;transition:background .22s;flex-shrink:0}
-.tog2.on{background:var(--am)}
-.tog2::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;
+.demo-lbl{font-size:10px;color:var(--dim)}
+.tog{
+  width:38px;height:22px;background:rgba(255,255,255,.10);border-radius:100px;
+  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;
+}
+.tog.on{background:var(--am)}
+.tog::after{content:'';position:absolute;left:2px;top:2px;width:18px;height:18px;
   background:#fff;border-radius:50%;transition:left .2s cubic-bezier(.4,0,.2,1);
-  box-shadow:0 1px 5px rgba(0,0,0,.3)}
-.tog2.on::after{left:19px}
+  box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.tog.on::after{left:18px}
 
-/* 2-col row */
+/* 2-col secondary */
 .b2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.bsm{padding:16px 15px}
-.bsm-lbl{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.bsm-val{font-size:26px;font-weight:800;letter-spacing:-.025em;line-height:1}
-.bsm-sub{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
-.av{background:linear-gradient(130deg,#fff,var(--em));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.aa{color:var(--am)}
-.glob-v::after,.glob-e::after{
-  content:'';position:absolute;width:60px;height:60px;border-radius:50%;filter:blur(24px);
-  bottom:-16px;right:-6px;pointer-events:none;
+.bsm{padding:16px 16px}
+.bsm .lbl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
+.bsm .val{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.bsm .sub{font-size:10px;color:var(--dim);margin-top:5px;line-height:1.45}
+.v-em{background:linear-gradient(128deg,#fff,var(--em));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.v-am{color:var(--am)}
+/* soft glow blobs */
+.gb-v::after,.gb-e::after{
+  content:'';position:absolute;width:55px;height:55px;border-radius:50%;filter:blur(22px);
+  bottom:-14px;right:-4px;pointer-events:none;z-index:0;
 }
-.glob-v::after{background:var(--gv)}
-.glob-e::after{background:var(--ge)}
+.gb-v::after{background:var(--gv)}
+.gb-e::after{background:var(--ge)}
 
-/* ═════════════════════════════
+/* ═══════════════════════════
    S2 — GIAO DỊCH
-════════════════════════════ */
-.txlist{padding:16px;display:flex;flex-direction:column;gap:10px}
-.tx-header{display:flex;justify-content:space-between;align-items:center}
-.tx-title{font-size:17px;font-weight:800}
-.tx-add-btn{
-  display:flex;align-items:center;gap:5px;
-  font-size:12px;font-weight:700;color:var(--vi);
-  background:rgba(139,92,246,.10);border:1px solid rgba(139,92,246,.25);
+══════════════════════════ */
+.tx-wrap{padding:14px;display:flex;flex-direction:column;gap:10px}
+.s-head{display:flex;align-items:center;justify-content:space-between}
+.s-title{font-size:20px;font-weight:900;letter-spacing:-.02em}
+.add-btn{
+  display:flex;align-items:center;gap:4px;
+  font-size:11px;font-weight:700;color:var(--vi);
+  background:rgba(139,92,246,.09);border:1px solid rgba(139,92,246,.22);
   border-radius:100px;padding:6px 14px;cursor:pointer;
 }
-.tx-summary{
-  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+/* summary strip */
+.sum3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.sum-c{padding:12px 10px;text-align:center}
+.sum-lbl{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.sum-val{font-size:17px;font-weight:800}
+/* month group */
+.mo-lbl{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);padding:0 2px}
+.tx-card{padding:0;overflow:visible}
+.tx-item{display:flex;align-items:center;gap:13px;padding:14px 16px}
+.tx-item+.tx-item{border-top:1px solid rgba(255,255,255,.04)}
+.tx-ico{
+  width:36px;height:36px;border-radius:11px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:17px;
 }
-.ts-card{padding:12px;text-align:center}
-.ts-label{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
-.ts-val{font-size:18px;font-weight:800}
-.tx-month-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.tx-card{padding:16px 18px}
-.tx-row{display:flex;align-items:center;gap:14px}
-.tx-icon{
-  width:38px;height:38px;border-radius:12px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:18px;
-}
-.tx-icon.buy{background:rgba(16,185,129,.14);box-shadow:0 0 14px rgba(16,185,129,.18)}
-.tx-icon.div{background:rgba(139,92,246,.14);box-shadow:0 0 14px rgba(139,92,246,.18)}
-.tx-body{flex:1}
+.tx-ico.buy{background:rgba(16,185,129,.13);box-shadow:0 0 12px rgba(16,185,129,.16)}
+.tx-ico.div{background:rgba(139,92,246,.13);box-shadow:0 0 12px rgba(139,92,246,.16)}
+.tx-b{flex:1}
 .tx-name{font-size:14px;font-weight:700}
-.tx-meta{font-size:11px;color:var(--muted);margin-top:2px}
-.tx-right{text-align:right}
-.tx-eur{font-size:15px;font-weight:800}
-.tx-shares{font-size:11px;color:var(--muted);margin-top:2px}
-.tx-divider{height:1px;background:var(--gb);margin:4px 0}
+.tx-meta{font-size:10px;color:var(--dim);margin-top:2px}
+.tx-r{text-align:right}
+.tx-amt{font-size:16px;font-weight:800}
+.tx-sec{font-size:10px;color:var(--dim);margin-top:2px}
 
-/* ═════════════════════════════
-   S3 — MÔ PHỊNG
-════════════════════════════ */
-.simwrap{padding:16px;display:flex;flex-direction:column;gap:12px}
-.sim-title{font-size:17px;font-weight:800}
-.sim-input-card{padding:18px 20px;display:flex;flex-direction:column;gap:12px}
-.si-row{display:flex;justify-content:space-between;align-items:center}
-.si-lbl{font-size:13px;color:var(--muted)}
-.si-val{font-size:15px;font-weight:700}
-.si-input{
-  background:rgba(255,255,255,.08);border:1px solid var(--gb);
-  border-radius:10px;padding:8px 14px;color:var(--text);
-  font-size:16px;font-weight:700;width:110px;text-align:right;
-  font-family:inherit;outline:none;
+/* ═══════════════════════════
+   S3 — MÔ PHỎNG
+══════════════════════════ */
+.sim-wrap{padding:14px;display:flex;flex-direction:column;gap:12px}
+.sim-params{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.sp-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sp-lbl{font-size:13px;color:var(--sub);flex:1}
+.sp-inp{
+  background:rgba(255,255,255,.07);border:1px solid var(--gb);
+  border-radius:10px;padding:8px 13px;color:var(--text);
+  font-size:16px;font-weight:800;width:105px;text-align:right;
+  font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;
 }
-.si-input:focus{border-color:rgba(139,92,246,.5);box-shadow:0 0 10px rgba(139,92,246,.15)}
-.sim-btn{
-  width:100%;padding:14px;border:none;border-radius:14px;cursor:pointer;
-  font-size:15px;font-weight:700;color:#fff;
-  background:linear-gradient(135deg,var(--vi),var(--vi2));
-  box-shadow:0 4px 20px var(--gv);
-  transition:transform .1s,box-shadow .1s;
-}
-.sim-btn:active{transform:scale(.97);box-shadow:0 2px 10px var(--gv)}
-.sim-result-card{padding:0;overflow:hidden}
-.sr-header{display:grid;grid-template-columns:2fr 1.5fr 1.5fr;gap:0;
-  padding:10px 16px;background:rgba(255,255,255,.04);
+.sp-inp:focus{border-color:rgba(139,92,246,.48);box-shadow:0 0 10px rgba(139,92,246,.14)}
+.sp-fixed{display:flex;align-items:baseline;gap:4px}
+.sp-fixed-num{font-size:18px;font-weight:800;color:var(--vi)}
+.sp-fixed-sub{font-size:10px;color:var(--dim)}
+
+/* glide-path timeline */
+.glide{padding:0;overflow:hidden}
+.glide-head{
+  display:grid;grid-template-columns:80px 1fr 90px;
+  padding:9px 18px;
+  background:rgba(255,255,255,.035);
   border-bottom:1px solid var(--gb);
-  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.sr-row{display:grid;grid-template-columns:2fr 1.5fr 1.5fr;padding:11px 16px;
-  border-bottom:1px solid rgba(255,255,255,.04);align-items:center}
-.sr-row:last-child{border-bottom:none}
-.sr-row.current{background:rgba(139,92,246,.08)}
-.sr-year{font-size:13px;font-weight:700}
-.sr-nav{font-size:14px;font-weight:800}
-.sr-dep{font-size:12px;color:var(--muted)}
-.sr-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px}
-.sr-badge.now{background:rgba(139,92,246,.2);color:var(--vi)}
+}
+.glide-head span{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim)}
+.glide-head span:last-child{text-align:right}
+.gr{display:grid;grid-template-columns:80px 1fr 90px;align-items:center;
+  padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.035);position:relative;}
+.gr:last-child{border-bottom:none}
+.gr.now{background:rgba(139,92,246,.09)}
+.gr-year{display:flex;align-items:center;gap:7px}
+.gr-y{font-size:13px;font-weight:700;color:var(--sub)}
+.gr-badge{
+  font-size:9px;font-weight:800;letter-spacing:.06em;
+  padding:2px 7px;border-radius:100px;
+  background:rgba(139,92,246,.22);color:var(--vi);border:1px solid rgba(139,92,246,.25);
+}
+.gr-nav-wrap{display:flex;flex-direction:column;gap:3px;padding:0 8px}
+.gr-bar-bg{height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.gr-bar-fill{height:100%;border-radius:2px;transition:width .4s ease}
+.gr-nav{font-size:17px;font-weight:800;letter-spacing:-.02em}
+.gr-dep{font-size:12px;font-weight:700;color:var(--dim);text-align:right}
 
-/* ═════════════════════════════
+/* ═══════════════════════════
    S4 — CÀI ĐẶT
-════════════════════════════ */
-.setwrap{padding:16px;display:flex;flex-direction:column;gap:10px}
-.set-section-label{font-size:11px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);padding:4px 4px 0}
-.set-card{padding:0;overflow:hidden}
+══════════════════════════ */
+.set-wrap{padding:14px;display:flex;flex-direction:column;gap:10px}
+.set-dt{padding:20px 22px}
+.dt-lbl{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.dt-big{
+  font-size:44px;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+  background:linear-gradient(128deg,#fff,var(--vi));-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.dt-date{font-size:12px;color:var(--sub);margin-top:7px}
+.dt-sync{font-size:10px;color:var(--em);margin-top:5px;display:flex;align-items:center;gap:5px}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em)}
+.set-sec{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim);padding:4px 2px 0}
+.set-block{padding:0;overflow:hidden}
 .set-row{
-  display:flex;align-items:center;gap:14px;
-  padding:15px 18px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;
-  transition:background .15s;
+  display:flex;align-items:center;gap:13px;
+  padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.04);
+  cursor:pointer;transition:background .12s;
 }
 .set-row:last-child{border-bottom:none}
 .set-row:active{background:rgba(255,255,255,.04)}
-.set-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-.set-icon.vi{background:rgba(139,92,246,.15)}
-.set-icon.em{background:rgba(16,185,129,.15)}
-.set-icon.am{background:rgba(245,158,11,.15)}
-.set-icon.re{background:rgba(248,113,113,.15)}
-.set-body{flex:1}
-.set-name{font-size:14px;font-weight:600}
-.set-sub{font-size:11px;color:var(--muted);margin-top:2px}
-.set-arrow{font-size:16px;color:var(--muted)}
-.sync-status{display:flex;align-items:center;gap:6px}
-.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em)}
-.set-version{text-align:center;padding:20px;font-size:12px;color:rgba(241,240,255,.2)}
-.abmeld-btn{
-  margin:4px 0;width:100%;padding:14px;border:none;border-radius:14px;cursor:pointer;
+.si-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.si-ico.v{background:rgba(139,92,246,.14)}
+.si-ico.e{background:rgba(16,185,129,.14)}
+.si-ico.a{background:rgba(245,158,11,.14)}
+.si-ico.r{background:rgba(248,113,113,.14)}
+.sr-body{flex:1}
+.sr-name{font-size:14px;font-weight:600}
+.sr-sub{font-size:10px;color:var(--dim);margin-top:2px}
+.sr-arr{font-size:15px;color:var(--dim)}
+.abmeld{
+  width:100%;padding:13px;border:none;border-radius:14px;cursor:pointer;
   font-size:14px;font-weight:700;color:var(--re);
-  background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.20);
+  background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.18);
   transition:all .15s;
 }
-.abmeld-btn:active{background:rgba(248,113,113,.16)}
-
-/* datetime display */
-.datetime-card{padding:18px 20px}
-.dt-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-.dt-time{font-size:38px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
-  background:linear-gradient(130deg,#fff,var(--vi));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.dt-date{font-size:13px;color:var(--muted);margin-top:6px}
-.dt-sync{font-size:11px;color:var(--em);margin-top:4px;display:flex;align-items:center;gap:5px}
+.abmeld:active{background:rgba(248,113,113,.14)}
+.ver{text-align:center;padding:18px;font-size:11px;color:rgba(240,238,255,.17)}
 </style>
 </head>
 <body>
 <div class="app">
 
-<!-- TOP BAR -->
-<div class="topbar">
-  <div class="topbar-logo">VWCE Vault</div>
-  <div class="topbar-right">
-    <div class="sync-btn" onclick="doSync()">
-      <span class="sync-spin" id="spin">&#8635;</span>
-      <span id="sync-label">&#8635; Sync</span>
+<!-- topbar -->
+<div class="bar">
+  <div class="bar-logo">VWCE Vault</div>
+  <div class="bar-r">
+    <div class="sync-pill" onclick="doSync()">
+      <span class="spin-ico" id="sp-ico">&#8635;</span>
+      <span id="sp-lbl">&#8635;&nbsp;Sync</span>
     </div>
-    <div class="topbar-time" id="clock"></div>
+    <div class="bar-clock" id="clock"></div>
   </div>
 </div>
 
 <!-- ══ S1: OVERVIEW ══ -->
 <div class="screen active" id="s1">
-<div class="bento">
+<div class="ov">
 
-  <!-- Hero -->
+  <!-- hero NAV -->
   <div class="gl hero">
-    <div class="hero-label">Portfolio VWCE &middot; NAV hi&#7879;n t&#7841;i</div>
-    <div class="hero-nav">&euro;&thinsp;9.847</div>
-    <div class="hero-row">
-      <div class="badge up">&#9650; +&euro;312 th&aacute;ng n&agrave;y</div>
-      <div class="badge neu">+3,3% YTD</div>
+    <div class="h-eye">Portfolio VWCE &middot; NAV hi&#7879;n t&#7841;i</div>
+    <div class="h-num">&euro;&thinsp;9.847</div>
+    <div class="h-row">
+      <div class="bdg bdg-up">&#9650;&nbsp;+&euro;312 th&aacute;ng n&agrave;y</div>
+      <div class="bdg bdg-neu">+3,3%&nbsp;YTD</div>
     </div>
   </div>
 
-  <!-- Price card with freshness state -->
-  <div class="gl price-gl" id="pgc">
-    <div class="pgl-top">
-      <div class="pgl-label" id="pgl-lbl" style="color:var(--muted)">GI&Aacute; VWCE</div>
-      <div class="pgl-status live" id="live-pill"><span class="ldot"></span>LIVE</div>
-      <div class="pgl-status old" id="old-pill"><span class="adot"></span>GI&Aacute; C&#361;</div>
+  <!-- price card -->
+  <div class="gl pcard" id="pc">
+    <div class="pc-top">
+      <span class="pc-eye" id="pc-eye">GI&Aacute; VWCE</span>
+      <span class="pc-pill live" id="pp-live"><span class="dot-live"></span>LIVE</span>
+      <span class="pc-pill old" id="pp-old" style="display:none"><span class="dot-stale"></span>GI&Aacute;&nbsp;C&#361;</span>
     </div>
-    <div class="pgl-num">
-      <span class="pgl-tilde" id="tilde">~</span>
-      <span class="pgl-cur">&euro;</span>
-      <span class="pgl-big" id="pbn">169,62</span>
+    <div class="pc-num">
+      <span class="pc-tilde" id="pc-tilde">~</span>
+      <span class="pc-cur">&euro;</span>
+      <span class="pc-big" id="pc-big">169,62</span>
     </div>
-    <div class="pgl-time" id="pgl-time">C&#7853;p nh&#7853;t 17/08/2026 &middot; 09:14 Uhr</div>
-    <!-- stale inline alert -->
-    <div class="stale-inline" id="si">
-      <div class="si-text">
-        <strong>&#9888; D&#7919; li&#7879;u c&oacute; th&#7875; l&#7895;i th&#7901;i</strong>
-        Gi&aacute; cu&#7889;i: 16/08 08:30 &mdash; NAV c&oacute; th&#7875; sai
+    <div class="pc-ts" id="pc-ts">C&#7853;p nh&#7853;t 17/08/2026 &middot; 09:14&nbsp;Uhr</div>
+    <div class="stale-bar" id="stale-bar">
+      <div class="sb-txt">
+        <span class="sb-strong">&#9888;&nbsp;D&#7919; li&#7879;u c&oacute; th&#7875; l&#7895;i th&#7901;i</span>
+        <span class="sb-detail">Gi&aacute; cu&#7889;i ghi nh&#7853;n: 16/08 08:30 &mdash; NAV c&oacute; th&#7875; sai</span>
       </div>
-      <button class="si-cta">C&#7853;p nh&#7853;t &rarr;</button>
+      <button class="sb-btn">C&#7853;p nh&#7853;t&nbsp;&rarr;</button>
     </div>
   </div>
 
-  <!-- Demo toggle for stale -->
-  <div class="demo-tog-row">
-    <span class="demo-tog-lbl">&#127381; Demo: gi&#7843; l&#7853;p gi&aacute; c&#361; &gt;4h</span>
-    <div class="tog2" id="stog" onclick="toggleStale()"></div>
+  <!-- demo toggle -->
+  <div class="demo-row">
+    <span class="demo-lbl">&#127381;&nbsp;Demo &mdash; gi&#7843; l&#7853;p gi&aacute; c&#361; &gt;4h</span>
+    <div class="tog" id="stog" onclick="toggleStale()"></div>
   </div>
 
-  <!-- 2-col: C&#7893; ph&#7847;n + G&oacute;p -->
+  <!-- secondary 2-col -->
   <div class="b2">
-    <div class="gl bsm glob-e">
-      <div class="bsm-lbl">C&#7893; ph&#7847;n VWCE</div>
-      <div class="bsm-val">58,06</div>
-      <div class="bsm-sub">at &euro;169,62</div>
+    <div class="gl bsm gb-e">
+      <div class="lbl">C&#7893; ph&#7847;n VWCE</div>
+      <div class="val">58,06</div>
+      <div class="sub">at &euro;169,62</div>
     </div>
-    <div class="gl bsm glob-v">
-      <div class="bsm-lbl">G&oacute;p h&agrave;ng th&aacute;ng</div>
-      <div class="bsm-val aa">&euro;200</div>
-      <div class="bsm-sub">Sparplan &middot; &#273;&atilde; g&oacute;p T8</div>
+    <div class="gl bsm gb-v">
+      <div class="lbl">G&oacute;p Sparplan</div>
+      <div class="val v-am">&euro;200</div>
+      <div class="sub">&#273;&atilde; g&oacute;p T8 &middot; t&#7921; &#273;&#7897;ng</div>
     </div>
   </div>
 
@@ -401,84 +430,79 @@ body::after{
 
 <!-- ══ S2: GIAO DỊCH ══ -->
 <div class="screen" id="s2">
-<div class="txlist">
-  <div class="tx-header">
-    <div class="tx-title">Giao d&#7883;ch</div>
-    <div class="tx-add-btn">+ Th&ecirc;m</div>
+<div class="tx-wrap">
+  <div class="s-head">
+    <div class="s-title">Giao d&#7883;ch</div>
+    <div class="add-btn">+&nbsp;Th&ecirc;m</div>
   </div>
 
-  <!-- summary -->
-  <div class="tx-summary">
-    <div class="gl ts-card">
-      <div class="ts-label">T&#7893;ng &#273;&atilde; g&oacute;p</div>
-      <div class="ts-val" style="font-size:16px;color:var(--am)">&euro;7.400</div>
+  <div class="sum3">
+    <div class="gl sum-c">
+      <div class="sum-lbl">T&#7893;ng g&oacute;p</div>
+      <div class="sum-val" style="color:var(--am);font-size:16px">&euro;7.400</div>
     </div>
-    <div class="gl ts-card">
-      <div class="ts-label">L&#7907;i nhu&#7853;n</div>
-      <div class="ts-val" style="color:var(--em)">+8,4%</div>
+    <div class="gl sum-c">
+      <div class="sum-lbl">L&#7907;i nhu&#7853;n</div>
+      <div class="sum-val" style="color:var(--em)">+8,4%</div>
     </div>
-    <div class="gl ts-card">
-      <div class="ts-label">S&#7889; l&#7847;n mua</div>
-      <div class="ts-val">37</div>
+    <div class="gl sum-c">
+      <div class="sum-lbl">S&#7889; l&#7847;n mua</div>
+      <div class="sum-val">37</div>
     </div>
   </div>
 
-  <!-- month: T8 -->
-  <div class="tx-month-label">Th&aacute;ng 8 &middot; 2026</div>
+  <div class="mo-lbl">Th&aacute;ng 8 &middot; 2026</div>
   <div class="gl tx-card">
-    <div class="tx-row">
-      <div class="tx-icon buy">&#128200;</div>
-      <div class="tx-body">
+    <div class="tx-item">
+      <div class="tx-ico buy">&#128200;</div>
+      <div class="tx-b">
         <div class="tx-name">Mua VWCE</div>
         <div class="tx-meta">01/08/2026 &middot; Sparplan</div>
       </div>
-      <div class="tx-right">
-        <div class="tx-eur" style="color:var(--em)">+1,18 cp</div>
-        <div class="tx-shares">&euro;200,00</div>
+      <div class="tx-r">
+        <div class="tx-amt" style="color:var(--em)">+1,18&nbsp;cp</div>
+        <div class="tx-sec">&euro;200,00</div>
       </div>
     </div>
   </div>
 
-  <!-- month: T7 -->
-  <div class="tx-month-label">Th&aacute;ng 7 &middot; 2026</div>
+  <div class="mo-lbl">Th&aacute;ng 7 &middot; 2026</div>
   <div class="gl tx-card">
-    <div class="tx-row">
-      <div class="tx-icon buy">&#128200;</div>
-      <div class="tx-body">
+    <div class="tx-item">
+      <div class="tx-ico buy">&#128200;</div>
+      <div class="tx-b">
         <div class="tx-name">Mua VWCE</div>
         <div class="tx-meta">01/07/2026 &middot; Sparplan</div>
       </div>
-      <div class="tx-right">
-        <div class="tx-eur" style="color:var(--em)">+1,21 cp</div>
-        <div class="tx-shares">&euro;200,00</div>
+      <div class="tx-r">
+        <div class="tx-amt" style="color:var(--em)">+1,21&nbsp;cp</div>
+        <div class="tx-sec">&euro;200,00</div>
       </div>
     </div>
-    <div class="tx-divider"></div>
-    <div class="tx-row" style="margin-top:4px">
-      <div class="tx-icon div">&#127381;</div>
-      <div class="tx-body">
+    <div class="tx-item">
+      <div class="tx-ico div">&#127381;</div>
+      <div class="tx-b">
         <div class="tx-name">C&#7893; t&#7913;c VWCE</div>
         <div class="tx-meta">15/07/2026 &middot; Aussch&uuml;ttung</div>
       </div>
-      <div class="tx-right">
-        <div class="tx-eur" style="color:var(--vi)">+&euro;14,30</div>
-        <div class="tx-shares">t&#225;i &#273;&#7847;u t&#432;</div>
+      <div class="tx-r">
+        <div class="tx-amt" style="color:var(--vi)">+&euro;14,30</div>
+        <div class="tx-sec">t&aacute;i &#273;&#7847;u t&#432;</div>
       </div>
     </div>
   </div>
 
-  <!-- month: T6 -->
-  <div class="tx-month-label">Th&aacute;ng 6 &middot; 2026</div>
+  <div class="mo-lbl">Th&aacute;ng 6 &middot; 2026</div>
   <div class="gl tx-card">
-    <div class="tx-row">
-      <div class="tx-icon buy">&#128200;</div>
-      <div class="tx-body">
+    <div class="tx-item">
+      <div class="tx-ico buy">&#128200;</div>
+      <div class="tx-b">
         <div class="tx-name">Mua VWCE</div>
         <div class="tx-meta">01/06/2026 &middot; Sparplan</div>
       </div>
-      <div class="tx-right">
-        <div class="tx-eur" style="color:var(--em)">+1,25 cp</div>
-        <div class="tx-shares">&euro;200,00</div>
+      <div class="tx-r">
+        <div class="tx-amt" style="color:var(--em)">+1,25&nbsp;cp</div>
+        <div class="tx-sec">&euro;200,00</div>
       </div>
     </div>
   </div>
@@ -486,32 +510,40 @@ body::after{
 </div>
 </div>
 
-<!-- ══ S3: MÔ PHỊNG ══ -->
+<!-- ══ S3: MÔ PHỎNG ══ -->
 <div class="screen" id="s3">
-<div class="simwrap">
-  <div class="sim-title">Mô phỏng Sparplan</div>
-
-  <div class="gl sim-input-card">
-    <div class="si-row">
-      <span class="si-lbl">G&oacute;p h&agrave;ng th&aacute;ng</span>
-      <input class="si-input" id="inp-monthly" type="number" value="200" min="50" max="2000" onchange="calcSim()">
-    </div>
-    <div class="si-row">
-      <span class="si-lbl">T&#259;ng tr&#432;&#7903;ng/n&#259;m (%)</span>
-      <input class="si-input" id="inp-growth" type="number" value="7" min="1" max="20" onchange="calcSim()">
-    </div>
-    <div class="si-row">
-      <span class="si-lbl">&#272;&atilde; &#273;&#7847;u t&#432;</span>
-      <span class="si-val">&euro;9.847</span>
-    </div>
-    <button class="sim-btn" onclick="calcSim()">T&iacute;nh to&aacute;n</button>
+<div class="sim-wrap">
+  <div class="s-head" style="margin-bottom:2px">
+    <div class="s-title">M&ocirc; ph&#7887;ng Sparplan</div>
   </div>
 
-  <div class="gl sim-result-card" id="simres">
-    <div class="sr-header">
-      <span>N&#259;m</span><span>NAV</span><span>&#272;&atilde; g&oacute;p</span>
+  <!-- inputs -->
+  <div class="gl sim-params">
+    <div class="sp-row">
+      <span class="sp-lbl">G&oacute;p h&agrave;ng th&aacute;ng</span>
+      <input class="sp-inp" id="m" type="number" value="200" min="50" max="2000" oninput="sim()">
     </div>
-    <div id="sim-rows"></div>
+    <div class="sp-row">
+      <span class="sp-lbl">T&#259;ng tr&#432;&#7903;ng / n&#259;m&nbsp;(%)</span>
+      <input class="sp-inp" id="g" type="number" value="7" min="1" max="20" oninput="sim()">
+    </div>
+    <div class="sp-row">
+      <span class="sp-lbl" style="color:var(--dim)">V&#7889;n hi&#7879;n c&oacute;</span>
+      <div class="sp-fixed">
+        <span class="sp-fixed-num">&euro;9.847</span>
+        <span class="sp-fixed-sub">NAV</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- glide path table -->
+  <div class="gl glide">
+    <div class="glide-head">
+      <span>N&#259;m</span>
+      <span style="padding-left:8px">NAV d&#7921; b&aacute;o</span>
+      <span>&#272;&atilde; g&oacute;p</span>
+    </div>
+    <div id="glide-rows"></div>
   </div>
 
 </div>
@@ -519,88 +551,66 @@ body::after{
 
 <!-- ══ S4: CÀI ĐẶT ══ -->
 <div class="screen" id="s4">
-<div class="setwrap">
+<div class="set-wrap">
 
-  <!-- datetime -->
-  <div class="gl datetime-card">
-    <div class="dt-label">Ng&agrave;y &middot; Gi&#7901; hi&#7879;n t&#7841;i</div>
-    <div class="dt-time" id="dt-big"></div>
-    <div class="dt-date" id="dt-date"></div>
-    <div class="dt-sync"><span style="width:6px;height:6px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em);display:inline-block"></span>&#272;&#7891;ng b&#7897; l&uacute;c <span id="last-sync">22:13</span></div>
+  <!-- live clock card -->
+  <div class="gl set-dt">
+    <div class="dt-lbl">Ng&agrave;y &middot; Gi&#7901; hi&#7879;n t&#7841;i</div>
+    <div class="dt-big" id="dt"></div>
+    <div class="dt-date" id="dt-d"></div>
+    <div class="dt-sync"><span class="sdot"></span>&#272;&#7891;ng b&#7897; l&uacute;c&nbsp;<span id="ls">--:--</span></div>
   </div>
 
-  <!-- sync -->
-  <div class="set-section-label">&#272;&#7891;ng b&#7897;</div>
-  <div class="gl set-card">
+  <div class="set-sec">&#272;&#7891;ng b&#7897;</div>
+  <div class="gl set-block">
     <div class="set-row" onclick="doSync()">
-      <div class="set-icon em">&#8635;</div>
-      <div class="set-body">
-        <div class="set-name">&#272;&#7891;ng b&#7897; ngay</div>
-        <div class="set-sub">C&#7853;p nh&#7853;t gi&aacute; VWCE v&agrave; d&#7919; li&#7879;u</div>
-      </div>
-      <span class="set-arrow">&#8250;</span>
+      <div class="si-ico e">&#8635;</div>
+      <div class="sr-body"><div class="sr-name">&#272;&#7891;ng b&#7897; ngay</div><div class="sr-sub">C&#7853;p nh&#7853;t gi&aacute; VWCE &amp; d&#7919; li&#7879;u</div></div>
+      <span class="sr-arr">&#8250;</span>
     </div>
     <div class="set-row">
-      <div class="set-icon vi">&#128203;</div>
-      <div class="set-body">
-        <div class="set-name">Xu&#7845;t sao l&#432;u</div>
-        <div class="set-sub">JSON &middot; Backup v4</div>
-      </div>
-      <span class="set-arrow">&#8250;</span>
+      <div class="si-ico v">&#128203;</div>
+      <div class="sr-body"><div class="sr-name">Xu&#7845;t sao l&#432;u</div><div class="sr-sub">JSON &middot; Backup v4</div></div>
+      <span class="sr-arr">&#8250;</span>
     </div>
     <div class="set-row">
-      <div class="set-icon vi">&#128229;</div>
-      <div class="set-body">
-        <div class="set-name">Nh&#7853;p sao l&#432;u</div>
-        <div class="set-sub">Ki&#7875;m tra l&#432;u &yacute; tr&#432;&#7899;c khi ghi</div>
-      </div>
-      <span class="set-arrow">&#8250;</span>
+      <div class="si-ico v">&#128229;</div>
+      <div class="sr-body"><div class="sr-name">Nh&#7853;p sao l&#432;u</div><div class="sr-sub">Ki&#7875;m tra tr&#432;&#7899;c khi ghi</div></div>
+      <span class="sr-arr">&#8250;</span>
     </div>
   </div>
 
-  <!-- account -->
-  <div class="set-section-label">T&agrave;i kho&#7843;n</div>
-  <div class="gl set-card">
+  <div class="set-sec">T&agrave;i kho&#7843;n</div>
+  <div class="gl set-block">
     <div class="set-row">
-      <div class="set-icon am">&#128100;</div>
-      <div class="set-body">
-        <div class="set-name">H&#7891; s&#417; kh&#7849;n c&#7845;p</div>
-        <div class="set-sub">Notfallmappe &middot; Verschl&uuml;sselt</div>
-      </div>
-      <span class="set-arrow">&#8250;</span>
+      <div class="si-ico a">&#128100;</div>
+      <div class="sr-body"><div class="sr-name">H&#7891; s&#417; kh&#7849;n c&#7845;p</div><div class="sr-sub">Notfallmappe &middot; Verschl&uuml;sselt</div></div>
+      <span class="sr-arr">&#8250;</span>
     </div>
     <div class="set-row">
-      <div class="set-icon vi">&#128274;</div>
-      <div class="set-body">
-        <div class="set-name">B&#7843;o m&#7853;t &amp; MFA</div>
-        <div class="set-sub">&#272;&atilde; b&#7853;t x&aacute;c th&#7921;c 2 b&#432;&#7899;c</div>
-      </div>
-      <span class="set-arrow">&#8250;</span>
+      <div class="si-ico v">&#128274;</div>
+      <div class="sr-body"><div class="sr-name">B&#7843;o m&#7853;t &amp; MFA</div><div class="sr-sub">X&aacute;c th&#7921;c 2 b&#432;&#7899;c &#273;&atilde; b&#7853;t</div></div>
+      <span class="sr-arr">&#8250;</span>
     </div>
   </div>
 
-  <!-- app info -->
-  <div class="set-section-label">&#7912;ng d&#7909;ng</div>
-  <div class="gl set-card">
+  <div class="set-sec">&#7912;ng d&#7909;ng</div>
+  <div class="gl set-block">
     <div class="set-row">
-      <div class="set-icon em">&#127760;</div>
-      <div class="set-body">
-        <div class="set-name">Ng&ocirc;n ng&#7919;</div>
-        <div class="set-sub">Ti&#7871;ng Vi&#7879;t</div>
-      </div>
-      <span class="set-arrow">&#8250;</span>
+      <div class="si-ico e">&#127760;</div>
+      <div class="sr-body"><div class="sr-name">Ng&ocirc;n ng&#7919;</div><div class="sr-sub">Ti&#7871;ng Vi&#7879;t</div></div>
+      <span class="sr-arr">&#8250;</span>
     </div>
   </div>
 
-  <button class="abmeld-btn">&#128275; Abmelden</button>
-
-  <div class="set-version">VWCE Vault &middot; v1.8.0 &middot; Local-first</div>
+  <button class="abmeld">&#128275;&nbsp;Abmelden</button>
+  <div class="ver">VWCE Vault &middot; v1.8.0 &middot; local-first</div>
 </div>
 </div>
 
-</div><!-- /app -->
+</div>
 
-<!-- PILL NAV -->
+<!-- pill nav -->
 <div class="pill">
   <button class="pb on" onclick="nav('s1',this)">Overview</button>
   <button class="pb" onclick="nav('s2',this)">Giao d&#7883;ch</button>
@@ -609,7 +619,6 @@ body::after{
 </div>
 
 <script>
-// nav
 function nav(id,el){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.pb').forEach(b=>b.classList.remove('on'));
@@ -619,28 +628,23 @@ function nav(id,el){
 
 // clock
 function tick(){
-  const now=new Date();
-  const hm=now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-  const full=now.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
-  const el=document.getElementById('clock');
-  if(el) el.textContent=hm;
-  const db=document.getElementById('dt-big');
-  if(db) db.textContent=hm;
-  const dd=document.getElementById('dt-date');
-  if(dd) dd.textContent=full;
+  const n=new Date();
+  const hm=n.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  const sec=n.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const dstr=n.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+  const c=document.getElementById('clock'); if(c) c.textContent=hm;
+  const d=document.getElementById('dt'); if(d) d.textContent=sec;
+  const dd=document.getElementById('dt-d'); if(dd) dd.textContent=dstr;
 }
 tick();setInterval(tick,1000);
 
 // sync
 function doSync(){
-  const lbl=document.getElementById('sync-label');
-  const sp=document.getElementById('spin');
-  lbl.textContent='...';
-  sp.style.display='inline-block';
+  const lbl=document.getElementById('sp-lbl'),ico=document.getElementById('sp-ico');
+  lbl.textContent='...';ico.style.display='inline-block';
   setTimeout(()=>{
-    lbl.textContent='\u8635 Sync';
-    sp.style.display='none';
-    const ls=document.getElementById('last-sync');
+    lbl.innerHTML='&#8635;&nbsp;Sync';ico.style.display='none';
+    const ls=document.getElementById('ls');
     if(ls) ls.textContent=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
   },1400);
 }
@@ -650,44 +654,62 @@ let stale=false;
 function toggleStale(){
   stale=!stale;
   document.getElementById('stog').classList.toggle('on',stale);
-  document.getElementById('pgc').classList.toggle('stale',stale);
-  const lbl=document.getElementById('pgl-lbl');
-  lbl.style.color=stale?'var(--am)':'var(--muted)';
-  document.getElementById('pbn').classList.toggle('dim',stale);
-  document.getElementById('tilde').classList.toggle('show',stale);
-  document.getElementById('live-pill').classList.toggle('hide',stale);
-  document.getElementById('old-pill').classList.toggle('show',stale);
-  document.getElementById('pgl-time').style.color=stale?'var(--am)':'var(--muted)';
-  document.getElementById('pgl-time').textContent=stale
-    ?'\u23f1 Gi\u00e1 l\u00fac 16/08 08:30 \u2014 ch\u01b0a c\u1eadp nh\u1eadt'
-    :'C\u1eadp nh\u1eadt 17/08/2026 \u00b7 09:14 Uhr';
-  document.getElementById('si').classList.toggle('show',stale);
+  document.getElementById('pc').classList.toggle('stale',stale);
+  document.getElementById('pc-eye').style.color=stale?'var(--am)':'';
+  document.getElementById('pc-big').classList.toggle('dim',stale);
+  document.getElementById('pc-tilde').classList.toggle('show',stale);
+  document.getElementById('pp-live').style.display=stale?'none':'';
+  document.getElementById('pp-old').style.display=stale?'':'none';
+  const ts=document.getElementById('pc-ts');
+  ts.style.color=stale?'var(--am)':'';
+  ts.textContent=stale
+    :'\u23f1 Gi\u00e1 l\u00fac 16/08 08:30 \u2014 ch\u01b0a c\u1eadp nh\u1eadt'
+    :'C\u1eadp nh\u1eadt 17/08/2026 \u00b7 09:14\u00a0Uhr';
+  document.getElementById('stale-bar').classList.toggle('show',stale);
 }
 
 // simulation
-function calcSim(){
-  const monthly=parseFloat(document.getElementById('inp-monthly').value)||200;
-  const growth=parseFloat(document.getElementById('inp-growth').value)||7;
-  const start=9847;
+const START=9847,DEP0=7400;
+const COLORS=[
+  'var(--sub)','rgba(139,92,246,.8)','rgba(139,92,246,.9)','rgba(139,92,246,1)',
+  'rgba(99,200,150,1)','rgba(16,185,129,1)','rgba(16,185,129,1)',
+  'rgba(16,185,129,1)','rgba(52,211,153,1)'
+];
+function sim(){
+  const mo=parseFloat(document.getElementById('m').value)||200;
+  const gr=parseFloat(document.getElementById('g').value)||7;
   const yr=new Date().getFullYear();
-  let nav=start,dep=7400;
-  const rows=document.getElementById('sim-rows');
+  let nav=START,dep=DEP0;
+  const rows=document.getElementById('glide-rows');
   rows.innerHTML='';
+  // compute max for bar scale
+  let maxNav=START;
+  for(let i=1;i<=8;i++) maxNav=(maxNav+mo*12)*(1+gr/100);
+  nav=START;dep=DEP0;
   for(let i=0;i<=8;i++){
     const y=yr+i;
-    if(i>0){nav=(nav+monthly*12)*(1+growth/100);dep+=monthly*12;}
+    if(i>0){nav=(nav+mo*12)*(1+gr/100);dep+=mo*12;}
     const isCur=i===0;
+    const pct=Math.round(nav/maxNav*100);
+    const gain=Math.round((nav-dep)/dep*100);
+    const color=COLORS[Math.min(i,COLORS.length-1)];
     const d=document.createElement('div');
-    d.className='sr-row'+(isCur?' current':'');
+    d.className='gr'+(isCur?' now':'');
     d.innerHTML=`
-      <span class="sr-year">${y}${isCur?'&nbsp;<span class="sr-badge now">now</span>':''}</span>
-      <span class="sr-nav" style="color:${nav>start?'var(--em)':'var(--text)'}">&euro;${Math.round(nav).toLocaleString('de-DE')}</span>
-      <span class="sr-dep">&euro;${Math.round(dep).toLocaleString('de-DE')}</span>
+      <div class="gr-year">
+        <span class="gr-y">${y}</span>
+        ${isCur?'<span class="gr-badge">now</span>':''}
+      </div>
+      <div class="gr-nav-wrap">
+        <div class="gr-nav" style="color:${color}">&euro;${Math.round(nav).toLocaleString('de-DE')}</div>
+        <div class="gr-bar-bg"><div class="gr-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      </div>
+      <div class="gr-dep">&euro;${Math.round(dep).toLocaleString('de-DE')}</div>
     `;
     rows.appendChild(d);
   }
 }
-calcSim();
+sim();
 </script>
 </body>
 </html>
