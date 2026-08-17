@@ -27,6 +27,10 @@ describe("ModalAccessibilityManager", () => {
   it("focuses the safe action, traps Tab, closes with Escape and restores focus", async () => {
     render(<Harness />);
     const trigger = screen.getByRole("button", { name: "Mở hộp thoại" });
+    // jsdom không di chuyển focus khi fireEvent.click → previousFocus sẽ là
+    // document.body thay vì trigger. Gọi trigger.focus() trước để component
+    // activate() ghi đúng previousFocus, đảm bảo Escape restore về trigger.
+    trigger.focus();
     fireEvent.click(trigger);
     const cancel = await screen.findByRole("button", { name: "Hủy" });
     const proceed = screen.getByRole("button", { name: "Tiếp tục" });
