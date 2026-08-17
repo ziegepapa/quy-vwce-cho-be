@@ -59,7 +59,7 @@ jobs:
       - name: Run isolated Edge Function smoke environment
         run: npm run test:edge-smoke
       - name: Install isolated browser
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
       - name: Build production preview
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
