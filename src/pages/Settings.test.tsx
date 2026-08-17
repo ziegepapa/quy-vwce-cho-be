@@ -46,6 +46,7 @@ vi.mock("../lib/types", () => ({
 vi.mock("../lib/auth", () => ({ useAuth: () => ({ user: null, mfaEnrolled: false }) }));
 vi.mock("../components/SettingsPricePanel", () => ({ default: () => null }));
 vi.mock("../components/SyncConflictSection", () => ({ default: () => null }));
+vi.mock("../components/PlanRoadmapSection", () => ({ default: () => null }));
 
 import SettingsPage from "./Settings";
 
