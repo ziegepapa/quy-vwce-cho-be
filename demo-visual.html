@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Visual Demo — quy-vwce-cho-be</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #09090b;
+    --surface: #18181b;
+    --border: #27272a;
+    --text: #fafafa;
+    --muted: #71717a;
+    --teal: #2dd4bf;
+    --amber: #f59e0b;
+    --red: #f87171;
+    --green: #4ade80;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100dvh;
+    display: flex; flex-direction: column; max-width: 430px; margin: 0 auto;
+  }
+  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100; }
+  .tab { flex: 1; padding: 14px 8px 12px; text-align: center; font-size: 13px;
+    font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all .2s; letter-spacing: .02em; }
+  .tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+  .screen { display: none; flex-direction: column; flex: 1; animation: fadeIn .25s ease; }
+  .screen.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); padding: 20px 20px 8px; }
+
+  /* SCREEN A */
+  .hero-a { padding: 32px 20px 24px;
+    background: linear-gradient(160deg, #0f2027 0%, #09090b 60%);
+    border-bottom: 1px solid var(--border); }
+  .hero-a .eyebrow { font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+  .hero-a .nav { font-size: 52px; font-weight: 700; letter-spacing: -.03em;
+    background: linear-gradient(135deg, #fff 30%, var(--teal) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; }
+  .hero-a .nav-sub { font-size: 15px; color: var(--teal); margin-top: 6px; font-weight: 500; }
+  .hero-a .delta-row { display: flex; gap: 16px; margin-top: 20px; }
+  .chip { background: rgba(45,212,191,.1); border: 1px solid rgba(45,212,191,.2);
+    border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--teal); font-weight: 600; }
+  .chip.amber { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.2); color: var(--amber); }
+  .card-a { margin: 16px; background: var(--surface); border-radius: 16px; overflow: hidden;
+    border: 1px solid var(--border); }
+  .card-row { display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .card-row:last-child { border-bottom: none; }
+  .card-row .key { font-size: 14px; color: var(--muted); }
+  .card-row .val { font-size: 15px; font-weight: 600; }
+  .card-row .val.teal { color: var(--teal); }
+  .card-row .val.amber { color: var(--amber); }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin: 0 16px 16px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--teal), #06b6d4); border-radius: 2px; width: 63%; }
+  .note-a { margin: 0 16px 24px; padding: 12px 14px;
+    background: rgba(45,212,191,.06); border: 1px solid rgba(45,212,191,.15);
+    border-radius: 12px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .note-a strong { color: var(--teal); }
+
+  /* SCREEN B */
+  .toggle-row { display: flex; align-items: center; gap: 10px; padding: 14px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border); }
+  .toggle-label { font-size: 13px; color: var(--muted); flex: 1; }
+  .toggle { width: 44px; height: 26px; background: var(--border); border-radius: 13px;
+    position: relative; cursor: pointer; transition: background .2s; }
+  .toggle.on { background: var(--amber); }
+  .toggle::after { content:''; position: absolute; left: 3px; top: 3px;
+    width: 20px; height: 20px; background: #fff; border-radius: 50%; transition: left .2s; }
+  .toggle.on::after { left: 21px; }
+  .hero-b { padding: 28px 20px 20px; border-bottom: 1px solid var(--border); }
+  .eyebrow-b { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+  .fresh-nav { font-size: 48px; font-weight: 700; letter-spacing: -.03em;
+    background: linear-gradient(135deg, #fff 30%, var(--teal) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .stale-nav { font-size: 48px; font-weight: 700; letter-spacing: -.03em; color: var(--muted); opacity: .5; }
+  .fresh-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+    color: var(--teal); background: rgba(45,212,191,.08); border: 1px solid rgba(45,212,191,.2);
+    border-radius: 8px; padding: 4px 10px; margin-top: 8px; }
+  .stale-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+    color: var(--amber); background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25);
+    border-radius: 8px; padding: 4px 10px; margin-top: 8px; }
+  .stale-info { margin: 16px; padding: 12px 14px;
+    background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.2);
+    border-radius: 12px; font-size: 13px; color: var(--amber); line-height: 1.5; display: none; }
+  .stale-info.show { display: block; }
+  .tilde { font-size: 36px; color: var(--amber); font-weight: 300; margin-right: 2px; vertical-align: middle; }
+  .compare-grid { margin: 0 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .compare-card { background: var(--surface); border-radius: 12px; padding: 14px; }
+  .compare-card.highlight { border: 1px solid rgba(245,158,11,.3); }
+  .compare-card .clabel { font-size: 11px; margin-bottom: 6px; }
+  .compare-card .cval { font-size: 22px; font-weight: 700; }
+  .compare-card .cdesc { font-size: 11px; margin-top: 4px; }
+
+  /* SCREEN C */
+  .c-section { padding: 20px; border-bottom: 1px solid var(--border); }
+  .c-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .c-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+  .demo-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--teal); color: #000; font-size: 14px; font-weight: 700;
+    padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer;
+    transition: transform .1s, opacity .1s; }
+  .demo-btn:active { transform: scale(.96); opacity: .85; }
+  .demo-btn.outline { background: transparent; color: var(--teal); border: 1.5px solid var(--teal); }
+  .count-display { font-size: 46px; font-weight: 700; letter-spacing: -.02em; margin: 8px 0 16px;
+    background: linear-gradient(135deg, #fff 30%, var(--teal) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .slide-demo { overflow: hidden; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); }
+  .slide-inner { display: flex; transition: transform .3s cubic-bezier(.4,0,.2,1); }
+  .slide-page { min-width: 100%; padding: 20px; }
+  .slide-page h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .slide-page p { font-size: 13px; color: var(--muted); }
+  .slide-nav { display: flex; justify-content: space-between; padding: 10px 4px 4px; }
+  .slide-nav button { background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 8px 18px; border-radius: 8px; font-size: 13px; cursor: pointer;
+    transition: border-color .15s, color .15s; }
+  .slide-nav button:hover { border-color: var(--teal); color: var(--teal); }
+  .pwa-banner { display: flex; align-items: center; gap: 12px; background: var(--surface);
+    border: 1px solid var(--teal); border-radius: 14px; padding: 14px;
+    animation: slideUp .4s cubic-bezier(.4,0,.2,1) both; }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .pwa-icon { width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--teal), #06b6d4);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0; }
+  .pwa-text { flex: 1; }
+  .pwa-text b { font-size: 13px; display: block; margin-bottom: 2px; }
+  .pwa-text span { font-size: 12px; color: var(--muted); }
+  .pwa-btn { background: var(--teal); color: #000; font-size: 12px; font-weight: 700;
+    padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; flex-shrink: 0; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <div class="tab active" onclick="show('a',this)">A &middot; Palette</div>
+  <div class="tab" onclick="show('b',this)">B &middot; Gi&aacute; c&utilde;</div>
+  <div class="tab" onclick="show('c',this)">C &middot; Motion</div>
+</div>
+
+<!-- SCREEN A -->
+<div class="screen active" id="screen-a">
+  <div class="hero-a">
+    <div class="eyebrow">T&#7893;ng quan &middot; VWCE</div>
+    <div class="nav">&euro;&thinsp;9.847</div>
+    <div class="nav-sub">&uarr; +&euro;312 th&aacute;ng n&agrave;y</div>
+    <div class="delta-row">
+      <div class="chip">+3,3% YTD</div>
+      <div class="chip amber">63% m&#7909;c ti&ecirc;u</div>
+    </div>
+  </div>
+  <div class="label">S&#7889; li&#7879;u ch&iacute;nh</div>
+  <div class="card-a">
+    <div class="card-row"><span class="key">Gi&aacute; VWCE</span><span class="val teal">&euro; 169,62</span></div>
+    <div class="card-row"><span class="key">S&#7889; c&#7893; ph&#7847;n</span><span class="val">58,06</span></div>
+    <div class="card-row"><span class="key">G&oacute;p &#273;&#7883;nh k&#7923;</span><span class="val">&euro; 200 / th&aacute;ng</span></div>
+    <div class="card-row"><span class="key">C&ograve;n l&#7841;i t&#7899;i m&#7909;c ti&ecirc;u</span><span class="val amber">7 n&#259;m 4 th&aacute;ng</span></div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill"></div></div>
+  <div class="note-a">
+    <strong>Visual A:</strong> Hero s&#7889; l&#7899;n, gradient teal, chip m&agrave;u r&#245; r&agrave;ng.
+    Con s&#7889; &#273;&#7853;p v&agrave;o m&#7855;t ngay khi m&#7903; app.
+  </div>
+</div>
+
+<!-- SCREEN B -->
+<div class="screen" id="screen-b">
+  <div class="toggle-row">
+    <span class="toggle-label">Gi&#7843; l&#7853;p: gi&aacute; &#273;&atilde; c&#361; (&gt; 4 gi&#7901;)</span>
+    <div class="toggle" id="stale-toggle" onclick="toggleStale()"></div>
+  </div>
+  <div class="hero-b" id="hero-fresh">
+    <div class="eyebrow-b" style="color:var(--muted)">GI&Aacute; VWCE &middot; C&#7852;P NH&#7852;T 5 PH&Uacute;T TR&#431;&#7�;C</div>
+    <div class="fresh-nav">&euro; 169,62</div>
+    <div class="fresh-badge">&bull; Gi&aacute; m&#7899;i &middot; 17/08 09:14</div>
+  </div>
+  <div class="hero-b" id="hero-stale" style="display:none">
+    <div class="eyebrow-b" style="color:var(--amber)">GI&Aacute; VWCE &middot; C&Oacute; TH&#7874; &#272;&Atilde; C&#360;</div>
+    <div style="display:flex;align-items:baseline">
+      <span class="tilde">~</span>
+      <span class="stale-nav">169,62</span>
+    </div>
+    <div class="stale-badge">&#9201; Gi&aacute; l&uacute;c 08:30 h&ocirc;m qua &mdash; ch&#432;a c&#7853;p nh&#7853;t</div>
+  </div>
+  <div class="stale-info" id="stale-info">
+    Gi&aacute; hi&#7875;n th&#7883; c&oacute; th&#7875; kh&ocirc;ng c&ograve;n ch&iacute;nh x&aacute;c.
+    C&aacute;c s&#7889; li&#7879;u NAV, l&atilde;i/l&#7895; &#273;&#7873;u d&#7921;a tr&ecirc;n gi&aacute; n&agrave;y.<br><br>
+    <a href="#" style="color:var(--amber);text-decoration:none;font-weight:600">T&#7843;i l&#7841;i gi&aacute; ngay &rarr;</a>
+  </div>
+  <div class="label" style="margin-top:4px">So s&aacute;nh tr&#7921;c quan</div>
+  <div class="compare-grid">
+    <div class="compare-card" style="border:1px solid var(--border)">
+      <div class="clabel" style="color:var(--muted)">HI&#7878;N T&#7840;I</div>
+      <div class="cval">&euro; 169,62</div>
+      <div class="cdesc" style="color:var(--muted)">badge nh&#7887; b&ecirc;n c&#7841;nh</div>
+    </div>
+    <div class="compare-card highlight">
+      <div class="clabel" style="color:var(--amber)">VISUAL B</div>
+      <div class="cval" style="opacity:.5"><span style="font-size:18px;font-weight:300">~</span>169,62</div>
+      <div class="cdesc" style="color:var(--amber)">m&#7901; + d&#7845;u ~ + banner</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN C -->
+<div class="screen" id="screen-c">
+  <div class="c-section">
+    <div class="c-title">1 &middot; Count-up khi load</div>
+    <div class="c-desc">Con s&#7889; hero &#273;&#7871;m t&#7915; 0 l&ecirc;n khi trang t&#7843;i xong &mdash; c&#7843;m gi&aacute;c app &ldquo;&#273;ang t&iacute;nh cho m&igrave;nh&rdquo;.</div>
+    <div class="count-display" id="count-num">&euro;&thinsp;0</div>
+    <button class="demo-btn" onclick="runCount()">&#9654; Ch&#7841;y th&#7917;</button>
+  </div>
+  <div class="c-section">
+    <div class="c-title">2 &middot; Slide chuy&#7875;n m&agrave;n h&igrave;nh</div>
+    <div class="c-desc">Thay v&igrave; nh&#7843;y c&#7913;ng, m&agrave;n h&igrave;nh tr&#432;&#7907;t 300ms &mdash; gi&#7889;ng iOS native.</div>
+    <div class="slide-demo">
+      <div class="slide-inner" id="slider">
+        <div class="slide-page"><h3>T&#7893;ng quan</h3><p>NAV hi&#7879;n t&#7841;i v&agrave; ti&#7871;n &#273;&#7897; m&#7909;c ti&ecirc;u</p></div>
+        <div class="slide-page"><h3>Giao d&#7883;ch</h3><p>L&#7883;ch s&#7917; mua / c&#7893; t&#7913;c</p></div>
+        <div class="slide-page"><h3>M&#7909;c ti&ecirc;u</h3><p>Glide path v&agrave; l&#7897; tr&igrave;nh</p></div>
+      </div>
+      <div class="slide-nav">
+        <button onclick="slide(-1)">&larr; Tr&#432;&#7899;c</button>
+        <span id="slide-dot" style="font-size:12px;color:var(--muted);padding-top:8px">1 / 3</span>
+        <button onclick="slide(1)">Sau &rarr;</button>
+      </div>
+    </div>
+  </div>
+  <div class="c-section">
+    <div class="c-title">3 &middot; PWA install prompt</div>
+    <div class="c-desc">Thay browser bar m&#7863;c &#273;&#7883;nh b&#7857;ng banner custom &#273;&#7865;p h&#417;n.</div>
+    <button class="demo-btn outline" onclick="showPWA()">Hi&#7879;n banner install</button>
+    <div id="pwa-area" class="hidden" style="margin-top:14px">
+      <div class="pwa-banner">
+        <div class="pwa-icon">&#128176;</div>
+        <div class="pwa-text">
+          <b>Th&ecirc;m v&agrave;o m&agrave;n h&igrave;nh ch&iacute;nh</b>
+          <span>M&#7903; nhanh, kh&ocirc;ng c&#7847;n browser</span>
+        </div>
+        <button class="pwa-btn" onclick="document.getElementById('pwa-area').classList.add('hidden')">Th&ecirc;m</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id,el){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+let staleOn=false;
+function toggleStale(){
+  staleOn=!staleOn;
+  document.getElementById('stale-toggle').classList.toggle('on',staleOn);
+  document.getElementById('hero-fresh').style.display=staleOn?'none':'';
+  document.getElementById('hero-stale').style.display=staleOn?'':'none';
+  document.getElementById('stale-info').classList.toggle('show',staleOn);
+}
+
+function runCount(){
+  const el=document.getElementById('count-num');
+  const target=9847;
+  const dur=1300;
+  const start=performance.now();
+  (function step(now){
+    const p=Math.min((now-start)/dur,1);
+    const ease=1-Math.pow(1-p,3);
+    el.innerHTML='&euro;&thinsp;'+Math.round(ease*target).toLocaleString('de-DE');
+    if(p<1) requestAnimationFrame(step);
+  })(performance.now());
+}
+
+let idx=0;
+function slide(d){
+  idx=Math.max(0,Math.min(2,idx+d));
+  document.getElementById('slider').style.transform=`translateX(-${idx*100}%)`;
+  document.getElementById('slide-dot').textContent=(idx+1)+' / 3';
+}
+
+function showPWA(){
+  const a=document.getElementById('pwa-area');
+  a.classList.remove('hidden');
+  const b=a.querySelector('.pwa-banner');
+  b.style.animation='none';
+  void b.offsetWidth;
+  b.style.animation='';
+}
+</script>
+</body>
+</html>
