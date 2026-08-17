@@ -8,16 +8,10 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overscroll-behavior:none}
 :root{
-  --bg:#06060a;
-  --g:rgba(255,255,255,.042);
-  --gb:rgba(255,255,255,.09);
-  --text:#f0eeff;
-  --sub:rgba(240,238,255,.55);
-  --dim:rgba(240,238,255,.28);
-  --vi:#8b5cf6;--vi2:#5b21b6;
-  --em:#10b981;--am:#f59e0b;--re:#f87171;
-  --gv:rgba(139,92,246,.28);
-  --ge:rgba(16,185,129,.22);
+  --bg:#06060a;--g:rgba(255,255,255,.042);--gb:rgba(255,255,255,.09);
+  --text:#f0eeff;--sub:rgba(240,238,255,.55);--dim:rgba(240,238,255,.28);
+  --vi:#8b5cf6;--vi2:#5b21b6;--em:#10b981;--am:#f59e0b;--re:#f87171;
+  --gv:rgba(139,92,246,.28);--ge:rgba(16,185,129,.22);
 }
 body{
   font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
@@ -25,30 +19,27 @@ body{
   min-height:100dvh;max-width:430px;margin:0 auto;
   position:relative;overflow-x:hidden;
 }
-/* aurora */
 body::before{
   content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
     radial-gradient(ellipse 80% 55% at 15% -10%,rgba(91,33,182,.50) 0%,transparent 58%),
     radial-gradient(ellipse 55% 38% at 92% 10%,rgba(16,185,129,.20) 0%,transparent 52%),
-    radial-gradient(ellipse 45% 45% at 5%  90%,rgba(139,92,246,.16) 0%,transparent 52%),
-    radial-gradient(ellipse 35% 30% at 85% 88%,rgba(16,185,129,.10) 0%,transparent 48%);
+    radial-gradient(ellipse 45% 45% at 5% 90%,rgba(139,92,246,.16) 0%,transparent 52%);
   animation:au 14s ease-in-out infinite alternate;
 }
-@keyframes au{0%{filter:hue-rotate(0deg) brightness(1)}100%{filter:hue-rotate(24deg) brightness(1.06)}}
-/* grain */
+@keyframes au{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(24deg)}}
 body::after{
   content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.45;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.032'/%3E%3C/svg%3E");
 }
 .app{position:relative;z-index:2;min-height:100dvh;padding-bottom:84px}
 
-/* ── topbar ── */
+/* topbar */
 .bar{
   position:sticky;top:0;z-index:50;
   display:flex;align-items:center;justify-content:space-between;
-  padding:13px 18px;
-  background:rgba(6,6,10,.75);
+  padding:12px 18px;
+  background:rgba(6,6,10,.78);
   backdrop-filter:blur(26px) saturate(1.9);
   -webkit-backdrop-filter:blur(26px) saturate(1.9);
   border-bottom:1px solid var(--gb);
@@ -64,38 +55,35 @@ body::after{
   font-size:11px;font-weight:700;letter-spacing:.05em;
   color:var(--em);background:rgba(16,185,129,.09);
   border:1px solid rgba(16,185,129,.22);border-radius:100px;
-  padding:5px 12px;cursor:pointer;
-  transition:transform .12s;
+  padding:5px 12px;cursor:pointer;transition:transform .12s;
 }
 .sync-pill:active{transform:scale(.94)}
-.bar-clock{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.bar-clock{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin-ico{animation:spin .75s linear infinite;display:none}
 
-/* ── glass card ── */
+/* glass */
 .gl{
-  background:var(--g);
-  border:1px solid var(--gb);
-  border-radius:22px;
-  backdrop-filter:blur(24px) saturate(1.7);
-  -webkit-backdrop-filter:blur(24px) saturate(1.7);
+  background:var(--g);border:1px solid var(--gb);border-radius:20px;
+  backdrop-filter:blur(22px) saturate(1.7);
+  -webkit-backdrop-filter:blur(22px) saturate(1.7);
   position:relative;overflow:hidden;
 }
 .gl::before{
   content:'';position:absolute;inset:0 0 auto 0;height:1px;
-  background:linear-gradient(90deg,transparent 5%,rgba(255,255,255,.14) 50%,transparent 95%);
+  background:linear-gradient(90deg,transparent 5%,rgba(255,255,255,.13) 50%,transparent 95%);
 }
 
-/* ── screens ── */
+/* screens */
 .screen{display:none}
 .screen.active{display:block;animation:fu .28s cubic-bezier(.4,0,.2,1) both}
 @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-/* ── pill nav ── */
+/* pill nav */
 .pill{
   position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
   z-index:100;display:flex;gap:2px;
-  background:rgba(8,5,20,.82);
+  background:rgba(8,5,20,.84);
   border:1px solid rgba(255,255,255,.10);border-radius:100px;padding:5px;
   backdrop-filter:blur(30px) saturate(2.2);
   -webkit-backdrop-filter:blur(30px) saturate(2.2);
@@ -107,158 +95,135 @@ body::after{
   color:var(--dim);border:none;background:none;cursor:pointer;
   transition:all .2s cubic-bezier(.4,0,.2,1);white-space:nowrap;
 }
-.pb.on{
-  background:rgba(139,92,246,.22);color:var(--text);
-  box-shadow:0 0 20px rgba(139,92,246,.22);
-}
+.pb.on{background:rgba(139,92,246,.22);color:var(--text);box-shadow:0 0 20px rgba(139,92,246,.22)}
 
-/* ═══════════════════════════
+/* ═ shared */
+.s-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.s-title{font-size:20px;font-weight:900;letter-spacing:-.02em}
+.s-sub{font-size:11px;color:var(--dim);margin-top:2px}
+
+/* ══════════════════════════
    S1 — OVERVIEW
-══════════════════════════ */
+═════════════════════════ */
 .ov{padding:14px 14px 0;display:flex;flex-direction:column;gap:10px}
 
-/* HERO card */
+/* hero */
 .hero{
-  padding:30px 24px 26px;
+  padding:28px 22px 24px;
   background:linear-gradient(148deg,rgba(91,33,182,.28) 0%,rgba(16,185,129,.07) 100%),var(--g);
-  border-color:rgba(139,92,246,.20);
-  box-shadow:0 0 60px rgba(91,33,182,.18) inset;
+  border-color:rgba(139,92,246,.18);
+  box-shadow:0 0 60px rgba(91,33,182,.16) inset;
 }
-.h-eye{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:11px}
+.h-eye{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 .h-num{
-  font-size:70px;font-weight:900;letter-spacing:-.05em;line-height:.95;
+  font-size:68px;font-weight:900;letter-spacing:-.05em;line-height:.95;
   background:linear-gradient(128deg,#fff 0%,rgba(200,180,255,.9) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 0 24px rgba(139,92,246,.35));
+  filter:drop-shadow(0 0 22px rgba(139,92,246,.32));
 }
-.h-row{display:flex;align-items:center;gap:9px;margin-top:14px;flex-wrap:wrap}
-.bdg{
-  display:inline-flex;align-items:center;gap:4px;
-  font-size:12px;font-weight:700;border-radius:100px;padding:4px 12px;
-}
+.h-row{display:flex;align-items:center;gap:9px;margin-top:13px;flex-wrap:wrap}
+.bdg{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;border-radius:100px;padding:4px 12px}
 .bdg-up{color:var(--em);background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.22)}
 .bdg-neu{color:var(--dim);background:rgba(255,255,255,.05);border:1px solid var(--gb);font-size:11px}
 
-/* PRICE card — featured */
-.pcard{
-  padding:22px 22px 18px;
-  transition:border-color .38s,background .38s,box-shadow .38s;
+/* COMPACT price row */
+.price-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 18px;
+  transition:border-color .38s,background .38s;
 }
-.pcard.stale{
-  border-color:rgba(245,158,11,.45);
-  background:rgba(245,158,11,.045);
-  box-shadow:0 0 30px rgba(245,158,11,.10) inset;
+.price-row.stale{
+  border-color:rgba(245,158,11,.42);
+  background:rgba(245,158,11,.04);
 }
-.pc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.pc-eye{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);transition:color .3s}
-.pc-pill{
-  display:inline-flex;align-items:center;gap:5px;
-  font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-  border-radius:100px;padding:3px 10px;
-  transition:all .3s;
-}
-.pc-pill.live{color:var(--em);background:rgba(16,185,129,.09);border:1px solid rgba(16,185,129,.20)}
-.pc-pill.old{color:var(--am);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25)}
-.dot-live{width:5px;height:5px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em);animation:blink 2s ease-in-out infinite}
-.dot-stale{width:5px;height:5px;border-radius:50%;background:var(--am);animation:sblink 1.3s ease-in-out infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-@keyframes sblink{0%,100%{opacity:1}50%{opacity:.12}}
-.pc-num{display:flex;align-items:baseline;gap:2px;margin-bottom:6px}
-.pc-cur{font-size:20px;font-weight:300;color:var(--dim);line-height:1;margin-right:2px}
-.pc-tilde{font-size:30px;font-weight:200;color:var(--am);display:none;margin-right:1px}
-.pc-tilde.show{display:inline}
-.pc-big{
-  font-size:50px;font-weight:800;letter-spacing:-.04em;line-height:1;
-  background:linear-gradient(128deg,#fff 15%,var(--em) 100%);
+.pr-left{display:flex;flex-direction:column;gap:2px}
+.pr-label{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);transition:color .3s}
+.pr-num{display:flex;align-items:baseline;gap:2px}
+.pr-cur{font-size:14px;font-weight:300;color:var(--dim)}
+.pr-tilde{font-size:18px;font-weight:200;color:var(--am);display:none;margin-right:1px}
+.pr-tilde.show{display:inline}
+.pr-big{
+  font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1;
+  background:linear-gradient(128deg,#fff 20%,var(--em) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   transition:all .38s;
 }
-.pc-big.dim{
+.pr-big.dim{
   -webkit-text-fill-color:unset;
-  color:rgba(240,238,255,.18);
-  font-size:40px;
+  color:rgba(240,238,255,.20);
   text-decoration:line-through;
-  text-decoration-color:rgba(245,158,11,.55);
-  text-decoration-thickness:2px;
+  text-decoration-color:rgba(245,158,11,.55);text-decoration-thickness:2px;
+  font-size:22px;
 }
-.pc-ts{font-size:10px;color:var(--dim);transition:color .3s;margin-top:2px}
-.stale-bar{
-  display:none;margin-top:14px;
-  padding:11px 14px;border-radius:12px;
-  background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.24);
-  align-items:center;justify-content:space-between;gap:10px;
+.pr-ts{font-size:10px;color:var(--dim);margin-top:1px;transition:color .3s}
+.pr-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.pr-pill{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  border-radius:100px;padding:3px 9px;
 }
-.stale-bar.show{display:flex}
-.sb-txt{flex:1}
-.sb-strong{font-size:12px;font-weight:700;color:var(--am);display:block;margin-bottom:2px}
-.sb-detail{font-size:10px;color:rgba(245,158,11,.60);line-height:1.5}
-.sb-btn{
-  flex-shrink:0;font-size:11px;font-weight:700;color:var(--am);
-  background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.32);
-  border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap;
+.pr-pill.live{color:var(--em);background:rgba(16,185,129,.09);border:1px solid rgba(16,185,129,.20)}
+.pr-pill.old{color:var(--am);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25)}
+.dl{width:5px;height:5px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em);animation:blink 2s ease-in-out infinite}
+.da{width:5px;height:5px;border-radius:50%;background:var(--am);animation:sblink 1.3s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes sblink{0%,100%{opacity:1}50%{opacity:.1}}
+.stale-compact{
+  display:none;padding:9px 16px;
+  background:rgba(245,158,11,.06);border-top:1px solid rgba(245,158,11,.20);
+  justify-content:space-between;align-items:center;gap:8px;
+  border-radius:0 0 20px 20px;margin-top:-1px;
+}
+.stale-compact.show{display:flex}
+.sc-txt{font-size:11px;color:rgba(245,158,11,.75);line-height:1.5}
+.sc-txt strong{color:var(--am);display:block;font-size:11px}
+.sc-btn{
+  flex-shrink:0;font-size:10px;font-weight:700;color:var(--am);
+  background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.30);
+  border-radius:7px;padding:6px 11px;cursor:pointer;
 }
 
-/* demo stale toggle */
+/* demo toggle */
 .demo-row{
   display:flex;align-items:center;justify-content:space-between;
-  padding:10px 14px;
-  border:1px solid rgba(245,158,11,.12);
-  background:rgba(245,158,11,.03);
-  border-radius:12px;
+  padding:9px 14px;
+  border:1px solid rgba(245,158,11,.12);background:rgba(245,158,11,.03);border-radius:12px;
 }
 .demo-lbl{font-size:10px;color:var(--dim)}
-.tog{
-  width:38px;height:22px;background:rgba(255,255,255,.10);border-radius:100px;
-  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;
-}
+.tog{width:38px;height:22px;background:rgba(255,255,255,.10);border-radius:100px;
+  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
 .tog.on{background:var(--am)}
 .tog::after{content:'';position:absolute;left:2px;top:2px;width:18px;height:18px;
   background:#fff;border-radius:50%;transition:left .2s cubic-bezier(.4,0,.2,1);
   box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .tog.on::after{left:18px}
 
-/* 2-col secondary */
+/* 2-col */
 .b2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.bsm{padding:16px 16px}
+.bsm{padding:15px 15px}
 .bsm .lbl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
-.bsm .val{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1}
-.bsm .sub{font-size:10px;color:var(--dim);margin-top:5px;line-height:1.45}
+.bsm .val{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.bsm .sub{font-size:10px;color:var(--dim);margin-top:5px}
 .v-em{background:linear-gradient(128deg,#fff,var(--em));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .v-am{color:var(--am)}
-/* soft glow blobs */
-.gb-v::after,.gb-e::after{
-  content:'';position:absolute;width:55px;height:55px;border-radius:50%;filter:blur(22px);
-  bottom:-14px;right:-4px;pointer-events:none;z-index:0;
-}
+.gb-v::after,.gb-e::after{content:'';position:absolute;width:55px;height:55px;border-radius:50%;filter:blur(22px);bottom:-14px;right:-4px;pointer-events:none;z-index:0}
 .gb-v::after{background:var(--gv)}
 .gb-e::after{background:var(--ge)}
 
-/* ═══════════════════════════
+/* ═════════════════════════
    S2 — GIAO DỊCH
-══════════════════════════ */
+════════════════════════ */
 .tx-wrap{padding:14px;display:flex;flex-direction:column;gap:10px}
-.s-head{display:flex;align-items:center;justify-content:space-between}
-.s-title{font-size:20px;font-weight:900;letter-spacing:-.02em}
-.add-btn{
-  display:flex;align-items:center;gap:4px;
-  font-size:11px;font-weight:700;color:var(--vi);
-  background:rgba(139,92,246,.09);border:1px solid rgba(139,92,246,.22);
-  border-radius:100px;padding:6px 14px;cursor:pointer;
-}
-/* summary strip */
+.add-btn{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--vi);background:rgba(139,92,246,.09);border:1px solid rgba(139,92,246,.22);border-radius:100px;padding:6px 14px;cursor:pointer}
 .sum3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .sum-c{padding:12px 10px;text-align:center}
 .sum-lbl{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
 .sum-val{font-size:17px;font-weight:800}
-/* month group */
 .mo-lbl{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);padding:0 2px}
 .tx-card{padding:0;overflow:visible}
-.tx-item{display:flex;align-items:center;gap:13px;padding:14px 16px}
+.tx-item{display:flex;align-items:center;gap:12px;padding:13px 16px}
 .tx-item+.tx-item{border-top:1px solid rgba(255,255,255,.04)}
-.tx-ico{
-  width:36px;height:36px;border-radius:11px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:17px;
-}
+.tx-ico{width:34px;height:34px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px}
 .tx-ico.buy{background:rgba(16,185,129,.13);box-shadow:0 0 12px rgba(16,185,129,.16)}
 .tx-ico.div{background:rgba(139,92,246,.13);box-shadow:0 0 12px rgba(139,92,246,.16)}
 .tx-b{flex:1}
@@ -268,74 +233,135 @@ body::after{
 .tx-amt{font-size:16px;font-weight:800}
 .tx-sec{font-size:10px;color:var(--dim);margin-top:2px}
 
-/* ═══════════════════════════
+/* ═════════════════════════
    S3 — MÔ PHỎNG
-══════════════════════════ */
+   Structure: 3-mode tabs + headline + inputs + year table
+════════════════════════ */
 .sim-wrap{padding:14px;display:flex;flex-direction:column;gap:12px}
-.sim-params{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
-.sp-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.sp-lbl{font-size:13px;color:var(--sub);flex:1}
-.sp-inp{
+
+/* mode tabs */
+.mode-tabs{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;
+  background:rgba(255,255,255,.04);border-radius:14px;padding:4px;
+  border:1px solid var(--gb);
+}
+.mtab{
+  padding:10px 4px;border-radius:10px;border:none;cursor:pointer;
+  font-size:12px;font-weight:700;color:var(--dim);background:none;
+  transition:all .2s;text-align:center;line-height:1.3;
+}
+.mtab small{font-size:10px;font-weight:500;display:block;margin-top:1px;opacity:.7}
+.mtab.on{
+  background:rgba(139,92,246,.20);color:var(--text);
+  box-shadow:0 2px 12px rgba(139,92,246,.20);
+}
+
+/* sticky headline */
+.sim-headline{
+  background:rgba(6,6,10,.75);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-radius:18px;border:1px solid var(--gb);
+  padding:18px 20px;
+  position:sticky;top:56px;z-index:10;
+}
+.sh-big{
+  font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1;
+  background:linear-gradient(128deg,#fff 10%,var(--vi) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sh-sub{font-size:12px;color:var(--dim);margin-top:5px}
+.sh-note{font-size:10px;color:var(--dim);margin-top:3px;opacity:.7}
+
+/* summary 3-col */
+.sim-sum3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.ss-c{padding:12px 10px;text-align:center}
+.ss-lbl{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.ss-val{font-size:16px;font-weight:800}
+
+/* inputs card */
+.sim-inputs{padding:18px 18px;display:flex;flex-direction:column;gap:12px}
+.inp-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.inp-lbl{font-size:13px;color:var(--sub);flex:1}
+.inp-sublbl{font-size:10px;color:var(--dim);margin-top:2px}
+.inp{
   background:rgba(255,255,255,.07);border:1px solid var(--gb);
-  border-radius:10px;padding:8px 13px;color:var(--text);
-  font-size:16px;font-weight:800;width:105px;text-align:right;
+  border-radius:10px;padding:8px 12px;color:var(--text);
+  font-size:16px;font-weight:800;width:100px;text-align:right;
   font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;
 }
-.sp-inp:focus{border-color:rgba(139,92,246,.48);box-shadow:0 0 10px rgba(139,92,246,.14)}
-.sp-fixed{display:flex;align-items:baseline;gap:4px}
-.sp-fixed-num{font-size:18px;font-weight:800;color:var(--vi)}
-.sp-fixed-sub{font-size:10px;color:var(--dim)}
-
-/* glide-path timeline */
-.glide{padding:0;overflow:hidden}
-.glide-head{
-  display:grid;grid-template-columns:80px 1fr 90px;
-  padding:9px 18px;
-  background:rgba(255,255,255,.035);
-  border-bottom:1px solid var(--gb);
+.inp:focus{border-color:rgba(139,92,246,.48);box-shadow:0 0 10px rgba(139,92,246,.14)}
+/* years slider */
+.yr-row{display:flex;flex-direction:column;gap:6px}
+.yr-top{display:flex;align-items:center;justify-content:space-between}
+.yr-lbl{font-size:13px;color:var(--sub)}
+.yr-val{font-size:16px;font-weight:800;color:var(--vi)}
+.yr-slider{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:4px;border-radius:2px;
+  background:var(--gb);outline:none;
+  transition:background .2s;
 }
-.glide-head span{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim)}
-.glide-head span:last-child{text-align:right}
-.gr{display:grid;grid-template-columns:80px 1fr 90px;align-items:center;
-  padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.035);position:relative;}
-.gr:last-child{border-bottom:none}
-.gr.now{background:rgba(139,92,246,.09)}
-.gr-year{display:flex;align-items:center;gap:7px}
-.gr-y{font-size:13px;font-weight:700;color:var(--sub)}
-.gr-badge{
-  font-size:9px;font-weight:800;letter-spacing:.06em;
-  padding:2px 7px;border-radius:100px;
-  background:rgba(139,92,246,.22);color:var(--vi);border:1px solid rgba(139,92,246,.25);
+.yr-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:22px;height:22px;border-radius:50%;
+  background:linear-gradient(135deg,var(--vi),var(--vi2));
+  cursor:pointer;box-shadow:0 2px 8px var(--gv);
 }
-.gr-nav-wrap{display:flex;flex-direction:column;gap:3px;padding:0 8px}
-.gr-bar-bg{height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
-.gr-bar-fill{height:100%;border-radius:2px;transition:width .4s ease}
-.gr-nav{font-size:17px;font-weight:800;letter-spacing:-.02em}
-.gr-dep{font-size:12px;font-weight:700;color:var(--dim);text-align:right}
+/* mode B/C specific */
+.inp-fixed{display:flex;align-items:baseline;gap:4px}
+.inp-fixed-v{font-size:18px;font-weight:800;color:var(--vi)}
+.inp-fixed-s{font-size:10px;color:var(--dim)}
+/* mode-specific inputs */
+.mode-section{display:flex;flex-direction:column;gap:12px}
 
-/* ═══════════════════════════
+/* year table */
+.yr-table{overflow:hidden}
+.yr-table-head{
+  display:grid;grid-template-columns:70px 1fr 90px;
+  padding:9px 16px;
+  background:rgba(255,255,255,.035);border-bottom:1px solid var(--gb);
+}
+.yr-table-head span{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim)}
+.yr-table-head span:nth-child(2){text-align:center}
+.yr-table-head span:last-child{text-align:right}
+.yr-row-item{display:grid;grid-template-columns:70px 1fr 90px;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.03)}
+.yr-row-item:last-child{border-bottom:none}
+.yr-row-item.now{background:rgba(139,92,246,.09)}
+.yr-cell-year{display:flex;align-items:center;gap:6px}
+.yr-y{font-size:13px;font-weight:700;color:var(--sub)}
+.yr-badge-now{font-size:9px;font-weight:800;padding:2px 7px;border-radius:100px;background:rgba(139,92,246,.22);color:var(--vi);border:1px solid rgba(139,92,246,.25)}
+.yr-cell-nav{display:flex;flex-direction:column;gap:3px;padding:0 6px}
+.yr-nav-val{font-size:16px;font-weight:800;letter-spacing:-.02em;text-align:center}
+.yr-bar-bg{height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.yr-bar-fill{height:100%;border-radius:2px}
+.yr-dep{font-size:12px;font-weight:700;color:var(--dim);text-align:right}
+.show-all-btn{
+  width:100%;padding:11px;border:none;border-radius:12px;cursor:pointer;
+  font-size:12px;font-weight:700;color:var(--dim);
+  background:rgba(255,255,255,.04);border:1px solid var(--gb);
+  margin-top:4px;
+}
+.show-all-btn:active{background:rgba(255,255,255,.07)}
+/* disclaimer */
+.sim-note{font-size:10px;color:var(--dim);text-align:center;padding:4px 0}
+
+/* ═════════════════════════
    S4 — CÀI ĐẶT
-══════════════════════════ */
+════════════════════════ */
 .set-wrap{padding:14px;display:flex;flex-direction:column;gap:10px}
-.set-dt{padding:20px 22px}
-.dt-lbl{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
-.dt-big{
-  font-size:44px;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
-  background:linear-gradient(128deg,#fff,var(--vi));-webkit-background-clip:text;-webkit-text-fill-color:transparent;
-}
+.set-dt{padding:18px 20px}
+.dt-lbl{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+.dt-big{font-size:42px;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums;background:linear-gradient(128deg,#fff,var(--vi));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .dt-date{font-size:12px;color:var(--sub);margin-top:7px}
 .dt-sync{font-size:10px;color:var(--em);margin-top:5px;display:flex;align-items:center;gap:5px}
 .sdot{width:5px;height:5px;border-radius:50%;background:var(--em);box-shadow:0 0 5px var(--em)}
 .set-sec{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim);padding:4px 2px 0}
 .set-block{padding:0;overflow:hidden}
-.set-row{
-  display:flex;align-items:center;gap:13px;
-  padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.04);
-  cursor:pointer;transition:background .12s;
-}
+.set-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .12s}
 .set-row:last-child{border-bottom:none}
 .set-row:active{background:rgba(255,255,255,.04)}
-.si-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.si-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
 .si-ico.v{background:rgba(139,92,246,.14)}
 .si-ico.e{background:rgba(16,185,129,.14)}
 .si-ico.a{background:rgba(245,158,11,.14)}
@@ -344,12 +370,18 @@ body::after{
 .sr-name{font-size:14px;font-weight:600}
 .sr-sub{font-size:10px;color:var(--dim);margin-top:2px}
 .sr-arr{font-size:15px;color:var(--dim)}
-.abmeld{
-  width:100%;padding:13px;border:none;border-radius:14px;cursor:pointer;
-  font-size:14px;font-weight:700;color:var(--re);
-  background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.18);
-  transition:all .15s;
+/* lang selector */
+.lang-options{display:flex;gap:7px;padding:10px 16px 14px}
+.lang-opt{
+  flex:1;padding:9px 6px;border-radius:12px;text-align:center;
+  font-size:13px;font-weight:700;cursor:pointer;
+  background:rgba(255,255,255,.04);border:1px solid var(--gb);
+  color:var(--dim);transition:all .2s;
 }
+.lang-opt.selected{background:rgba(139,92,246,.16);border-color:rgba(139,92,246,.35);color:var(--text);box-shadow:0 0 14px rgba(139,92,246,.18)}
+.lang-opt small{font-size:10px;display:block;margin-top:2px;opacity:.7}
+
+.abmeld{width:100%;padding:13px;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:700;color:var(--re);background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.18);transition:all .15s}
 .abmeld:active{background:rgba(248,113,113,.14)}
 .ver{text-align:center;padding:18px;font-size:11px;color:rgba(240,238,255,.17)}
 </style>
@@ -357,13 +389,12 @@ body::after{
 <body>
 <div class="app">
 
-<!-- topbar -->
 <div class="bar">
   <div class="bar-logo">VWCE Vault</div>
   <div class="bar-r">
     <div class="sync-pill" onclick="doSync()">
-      <span class="spin-ico" id="sp-ico">&#8635;</span>
-      <span id="sp-lbl">&#8635;&nbsp;Sync</span>
+      <span class="spin-ico" id="sic">&#8635;</span>
+      <span id="slbl">&#8635;&nbsp;Sync</span>
     </div>
     <div class="bar-clock" id="clock"></div>
   </div>
@@ -373,7 +404,6 @@ body::after{
 <div class="screen active" id="s1">
 <div class="ov">
 
-  <!-- hero NAV -->
   <div class="gl hero">
     <div class="h-eye">Portfolio VWCE &middot; NAV hi&#7879;n t&#7841;i</div>
     <div class="h-num">&euro;&thinsp;9.847</div>
@@ -383,35 +413,36 @@ body::after{
     </div>
   </div>
 
-  <!-- price card -->
-  <div class="gl pcard" id="pc">
-    <div class="pc-top">
-      <span class="pc-eye" id="pc-eye">GI&Aacute; VWCE</span>
-      <span class="pc-pill live" id="pp-live"><span class="dot-live"></span>LIVE</span>
-      <span class="pc-pill old" id="pp-old" style="display:none"><span class="dot-stale"></span>GI&Aacute;&nbsp;C&#361;</span>
-    </div>
-    <div class="pc-num">
-      <span class="pc-tilde" id="pc-tilde">~</span>
-      <span class="pc-cur">&euro;</span>
-      <span class="pc-big" id="pc-big">169,62</span>
-    </div>
-    <div class="pc-ts" id="pc-ts">C&#7853;p nh&#7853;t 17/08/2026 &middot; 09:14&nbsp;Uhr</div>
-    <div class="stale-bar" id="stale-bar">
-      <div class="sb-txt">
-        <span class="sb-strong">&#9888;&nbsp;D&#7919; li&#7879;u c&oacute; th&#7875; l&#7895;i th&#7901;i</span>
-        <span class="sb-detail">Gi&aacute; cu&#7889;i ghi nh&#7853;n: 16/08 08:30 &mdash; NAV c&oacute; th&#7875; sai</span>
+  <!-- compact price row -->
+  <div class="gl price-row" id="prow">
+    <div class="pr-left">
+      <div class="pr-label" id="pr-lbl">GI&Aacute; VWCE</div>
+      <div class="pr-num">
+        <span class="pr-tilde" id="pr-tilde">~</span>
+        <span class="pr-cur">&euro;</span>
+        <span class="pr-big" id="pr-big">169,62</span>
       </div>
-      <button class="sb-btn">C&#7853;p nh&#7853;t&nbsp;&rarr;</button>
+      <div class="pr-ts" id="pr-ts">C&#7853;p nh&#7853;t 17/08 &middot; 09:14</div>
+    </div>
+    <div class="pr-right">
+      <span class="pr-pill live" id="pp-live"><span class="dl"></span>LIVE</span>
+      <span class="pr-pill old" id="pp-old" style="display:none"><span class="da"></span>GI&Aacute;&nbsp;C&#361;</span>
     </div>
   </div>
+  <!-- stale banner (below the row, same card radius) -->
+  <div class="stale-compact" id="stale-c" style="border-top:1px solid rgba(245,158,11,.18);border-radius:0 0 20px 20px;margin-top:-12px;z-index:-1">
+    <div class="sc-txt">
+      <strong>&#9888;&nbsp;D&#7919; li&#7879;u c&oacute; th&#7875; l&#7895;i th&#7901;i</strong>
+      Gi&aacute; cu&#7889;i: 16/08 08:30 &mdash; NAV c&oacute; th&#7875; sai
+    </div>
+    <button class="sc-btn">C&#7853;p nh&#7853;t&nbsp;&rarr;</button>
+  </div>
 
-  <!-- demo toggle -->
   <div class="demo-row">
     <span class="demo-lbl">&#127381;&nbsp;Demo &mdash; gi&#7843; l&#7853;p gi&aacute; c&#361; &gt;4h</span>
     <div class="tog" id="stog" onclick="toggleStale()"></div>
   </div>
 
-  <!-- secondary 2-col -->
   <div class="b2">
     <div class="gl bsm gb-e">
       <div class="lbl">C&#7893; ph&#7847;n VWCE</div>
@@ -431,120 +462,123 @@ body::after{
 <!-- ══ S2: GIAO DỊCH ══ -->
 <div class="screen" id="s2">
 <div class="tx-wrap">
-  <div class="s-head">
-    <div class="s-title">Giao d&#7883;ch</div>
-    <div class="add-btn">+&nbsp;Th&ecirc;m</div>
-  </div>
-
+  <div class="s-head"><div class="s-title">Giao d&#7883;ch</div><div class="add-btn">+&nbsp;Th&ecirc;m</div></div>
   <div class="sum3">
-    <div class="gl sum-c">
-      <div class="sum-lbl">T&#7893;ng g&oacute;p</div>
-      <div class="sum-val" style="color:var(--am);font-size:16px">&euro;7.400</div>
-    </div>
-    <div class="gl sum-c">
-      <div class="sum-lbl">L&#7907;i nhu&#7853;n</div>
-      <div class="sum-val" style="color:var(--em)">+8,4%</div>
-    </div>
-    <div class="gl sum-c">
-      <div class="sum-lbl">S&#7889; l&#7847;n mua</div>
-      <div class="sum-val">37</div>
-    </div>
+    <div class="gl sum-c"><div class="sum-lbl">T&#7893;ng g&oacute;p</div><div class="sum-val" style="color:var(--am);font-size:15px">&euro;7.400</div></div>
+    <div class="gl sum-c"><div class="sum-lbl">L&#7907;i nhu&#7853;n</div><div class="sum-val" style="color:var(--em)">+8,4%</div></div>
+    <div class="gl sum-c"><div class="sum-lbl">S&#7889; l&#7847;n mua</div><div class="sum-val">37</div></div>
   </div>
-
   <div class="mo-lbl">Th&aacute;ng 8 &middot; 2026</div>
   <div class="gl tx-card">
     <div class="tx-item">
       <div class="tx-ico buy">&#128200;</div>
-      <div class="tx-b">
-        <div class="tx-name">Mua VWCE</div>
-        <div class="tx-meta">01/08/2026 &middot; Sparplan</div>
-      </div>
-      <div class="tx-r">
-        <div class="tx-amt" style="color:var(--em)">+1,18&nbsp;cp</div>
-        <div class="tx-sec">&euro;200,00</div>
-      </div>
+      <div class="tx-b"><div class="tx-name">Mua VWCE</div><div class="tx-meta">01/08/2026 &middot; Sparplan</div></div>
+      <div class="tx-r"><div class="tx-amt" style="color:var(--em)">+1,18&nbsp;cp</div><div class="tx-sec">&euro;200,00</div></div>
     </div>
   </div>
-
   <div class="mo-lbl">Th&aacute;ng 7 &middot; 2026</div>
   <div class="gl tx-card">
     <div class="tx-item">
       <div class="tx-ico buy">&#128200;</div>
-      <div class="tx-b">
-        <div class="tx-name">Mua VWCE</div>
-        <div class="tx-meta">01/07/2026 &middot; Sparplan</div>
-      </div>
-      <div class="tx-r">
-        <div class="tx-amt" style="color:var(--em)">+1,21&nbsp;cp</div>
-        <div class="tx-sec">&euro;200,00</div>
-      </div>
+      <div class="tx-b"><div class="tx-name">Mua VWCE</div><div class="tx-meta">01/07/2026 &middot; Sparplan</div></div>
+      <div class="tx-r"><div class="tx-amt" style="color:var(--em)">+1,21&nbsp;cp</div><div class="tx-sec">&euro;200,00</div></div>
     </div>
     <div class="tx-item">
       <div class="tx-ico div">&#127381;</div>
-      <div class="tx-b">
-        <div class="tx-name">C&#7893; t&#7913;c VWCE</div>
-        <div class="tx-meta">15/07/2026 &middot; Aussch&uuml;ttung</div>
-      </div>
-      <div class="tx-r">
-        <div class="tx-amt" style="color:var(--vi)">+&euro;14,30</div>
-        <div class="tx-sec">t&aacute;i &#273;&#7847;u t&#432;</div>
-      </div>
+      <div class="tx-b"><div class="tx-name">C&#7893; t&#7913;c VWCE</div><div class="tx-meta">15/07/2026 &middot; Aussch&uuml;ttung</div></div>
+      <div class="tx-r"><div class="tx-amt" style="color:var(--vi)">+&euro;14,30</div><div class="tx-sec">t&aacute;i &#273;&#7847;u t&#432;</div></div>
     </div>
   </div>
-
   <div class="mo-lbl">Th&aacute;ng 6 &middot; 2026</div>
   <div class="gl tx-card">
     <div class="tx-item">
       <div class="tx-ico buy">&#128200;</div>
-      <div class="tx-b">
-        <div class="tx-name">Mua VWCE</div>
-        <div class="tx-meta">01/06/2026 &middot; Sparplan</div>
-      </div>
-      <div class="tx-r">
-        <div class="tx-amt" style="color:var(--em)">+1,25&nbsp;cp</div>
-        <div class="tx-sec">&euro;200,00</div>
-      </div>
+      <div class="tx-b"><div class="tx-name">Mua VWCE</div><div class="tx-meta">01/06/2026 &middot; Sparplan</div></div>
+      <div class="tx-r"><div class="tx-amt" style="color:var(--em)">+1,25&nbsp;cp</div><div class="tx-sec">&euro;200,00</div></div>
     </div>
   </div>
-
 </div>
 </div>
 
 <!-- ══ S3: MÔ PHỎNG ══ -->
 <div class="screen" id="s3">
 <div class="sim-wrap">
-  <div class="s-head" style="margin-bottom:2px">
-    <div class="s-title">M&ocirc; ph&#7887;ng Sparplan</div>
+
+  <!-- 3-mode tabs -->
+  <div class="mode-tabs">
+    <button class="mtab on" id="mt-a" onclick="setMode('A')">G&oacute;p &rarr; Nh&#7853;n<small>Mode A</small></button>
+    <button class="mtab" id="mt-b" onclick="setMode('B')">Mu&#7889;n &rarr; G&oacute;p<small>Mode B</small></button>
+    <button class="mtab" id="mt-c" onclick="setMode('C')">G&oacute;p &rarr; Bao gi&#7901;<small>Mode C</small></button>
+  </div>
+
+  <!-- sticky headline -->
+  <div class="sim-headline">
+    <div class="sh-big" id="sh-big">&#8212;</div>
+    <div class="sh-sub" id="sh-sub">sau N n&#259;m &middot; €/th&aacute;ng</div>
+    <div class="sh-note" id="sh-note">tr&#432;&#7899;c thu&#7871; &middot; danh ngh&#297;a</div>
+  </div>
+
+  <!-- summary 3-col -->
+  <div class="sim-sum3">
+    <div class="gl ss-c"><div class="ss-lbl">Cu&#7889;i k&#7923;</div><div class="ss-val" id="ss-end">&mdash;</div></div>
+    <div class="gl ss-c"><div class="ss-lbl">&#272;&atilde; g&oacute;p</div><div class="ss-val" id="ss-dep">&mdash;</div></div>
+    <div class="gl ss-c"><div class="ss-lbl">L&atilde;i</div><div class="ss-val" id="ss-int" style="color:var(--em)">&mdash;</div></div>
   </div>
 
   <!-- inputs -->
-  <div class="gl sim-params">
-    <div class="sp-row">
-      <span class="sp-lbl">G&oacute;p h&agrave;ng th&aacute;ng</span>
-      <input class="sp-inp" id="m" type="number" value="200" min="50" max="2000" oninput="sim()">
-    </div>
-    <div class="sp-row">
-      <span class="sp-lbl">T&#259;ng tr&#432;&#7903;ng / n&#259;m&nbsp;(%)</span>
-      <input class="sp-inp" id="g" type="number" value="7" min="1" max="20" oninput="sim()">
-    </div>
-    <div class="sp-row">
-      <span class="sp-lbl" style="color:var(--dim)">V&#7889;n hi&#7879;n c&oacute;</span>
-      <div class="sp-fixed">
-        <span class="sp-fixed-num">&euro;9.847</span>
-        <span class="sp-fixed-sub">NAV</span>
+  <div class="gl sim-inputs">
+    <!-- mode A/C: monthly + years slider -->
+    <div class="mode-section" id="ms-ac">
+      <div class="inp-row">
+        <div><div class="inp-lbl">G&oacute;p m&#7895;i th&aacute;ng (EUR)</div></div>
+        <input class="inp" id="m" type="number" value="200" min="50" max="5000" oninput="sim()">
       </div>
+      <div class="yr-row">
+        <div class="yr-top">
+          <span class="yr-lbl">Th&#7901;i h&#7841;n</span>
+          <span class="yr-val" id="yr-disp">15 n&#259;m</span>
+        </div>
+        <input class="yr-slider" id="yr" type="range" min="1" max="40" value="15" oninput="updYr();sim()">
+      </div>
+    </div>
+    <!-- mode B: target + year -->
+    <div class="mode-section" id="ms-b" style="display:none">
+      <div class="inp-row">
+        <div><div class="inp-lbl">Mu&#7889;n c&oacute; (EUR)</div></div>
+        <input class="inp" id="tgt" type="number" value="50000" min="1000" oninput="sim()">
+      </div>
+      <div class="inp-row">
+        <div><div class="inp-lbl">V&agrave;o n&#259;m</div></div>
+        <input class="inp" id="tyr" type="number" value="2041" min="2026" max="2066" oninput="sim()">
+      </div>
+    </div>
+    <!-- mode C: target only -->
+    <div class="mode-section" id="ms-c" style="display:none">
+      <div class="inp-row">
+        <div><div class="inp-lbl">M&#7909;c ti&ecirc;u (EUR)</div></div>
+        <input class="inp" id="tgtc" type="number" value="50000" min="1000" oninput="sim()">
+      </div>
+      <div class="inp-row">
+        <div><div class="inp-lbl">G&oacute;p m&#7895;i th&aacute;ng (EUR)</div></div>
+        <input class="inp" id="mc" type="number" value="200" min="50" max="5000" oninput="sim()">
+      </div>
+    </div>
+    <!-- shared rate -->
+    <div class="inp-row">
+      <div><div class="inp-lbl">L&#7907;i nhu&#7853;n / n&#259;m (%)</div></div>
+      <input class="inp" id="rt" type="number" value="6.5" min="0" max="20" step="0.5" oninput="sim()">
     </div>
   </div>
 
-  <!-- glide path table -->
-  <div class="gl glide">
-    <div class="glide-head">
-      <span>N&#259;m</span>
-      <span style="padding-left:8px">NAV d&#7921; b&aacute;o</span>
-      <span>&#272;&atilde; g&oacute;p</span>
+  <!-- year table -->
+  <div class="gl yr-table">
+    <div class="yr-table-head">
+      <span>N&#259;m</span><span style="text-align:center">NAV d&#7921; b&aacute;o</span><span style="text-align:right">&#272;&atilde; g&oacute;p</span>
     </div>
-    <div id="glide-rows"></div>
+    <div id="yr-rows"></div>
   </div>
+  <button class="show-all-btn" id="show-all-btn" onclick="toggleAll()">Hi&#7879;n t&#7845;t c&#7843; c&aacute;c n&#259;m</button>
+  <div class="sim-note">&#9432;&nbsp;&#431;&#7899;c t&iacute;nh &mdash; kh&ocirc;ng ph&#7843;i t&#432; v&#7845;n &#273;&#7847;u t&#432;</div>
 
 </div>
 </div>
@@ -553,7 +587,6 @@ body::after{
 <div class="screen" id="s4">
 <div class="set-wrap">
 
-  <!-- live clock card -->
   <div class="gl set-dt">
     <div class="dt-lbl">Ng&agrave;y &middot; Gi&#7901; hi&#7879;n t&#7841;i</div>
     <div class="dt-big" id="dt"></div>
@@ -580,6 +613,19 @@ body::after{
     </div>
   </div>
 
+  <!-- language selector -->
+  <div class="set-sec">Ng&ocirc;n ng&#7919;</div>
+  <div class="gl set-block">
+    <div class="lang-options">
+      <div class="lang-opt selected" id="lang-vi" onclick="setLang('vi')">
+        &#127989;<small>Ti&#7871;ng Vi&#7879;t</small>
+      </div>
+      <div class="lang-opt" id="lang-de" onclick="setLang('de')">
+        &#127465;&#127466;<small>Deutsch</small>
+      </div>
+    </div>
+  </div>
+
   <div class="set-sec">T&agrave;i kho&#7843;n</div>
   <div class="gl set-block">
     <div class="set-row">
@@ -594,15 +640,6 @@ body::after{
     </div>
   </div>
 
-  <div class="set-sec">&#7912;ng d&#7909;ng</div>
-  <div class="gl set-block">
-    <div class="set-row">
-      <div class="si-ico e">&#127760;</div>
-      <div class="sr-body"><div class="sr-name">Ng&ocirc;n ng&#7919;</div><div class="sr-sub">Ti&#7871;ng Vi&#7879;t</div></div>
-      <span class="sr-arr">&#8250;</span>
-    </div>
-  </div>
-
   <button class="abmeld">&#128275;&nbsp;Abmelden</button>
   <div class="ver">VWCE Vault &middot; v1.8.0 &middot; local-first</div>
 </div>
@@ -610,7 +647,6 @@ body::after{
 
 </div>
 
-<!-- pill nav -->
 <div class="pill">
   <button class="pb on" onclick="nav('s1',this)">Overview</button>
   <button class="pb" onclick="nav('s2',this)">Giao d&#7883;ch</button>
@@ -632,20 +668,20 @@ function tick(){
   const hm=n.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
   const sec=n.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   const dstr=n.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
-  const c=document.getElementById('clock'); if(c) c.textContent=hm;
-  const d=document.getElementById('dt'); if(d) d.textContent=sec;
-  const dd=document.getElementById('dt-d'); if(dd) dd.textContent=dstr;
+  const c=document.getElementById('clock');if(c)c.textContent=hm;
+  const d=document.getElementById('dt');if(d)d.textContent=sec;
+  const dd=document.getElementById('dt-d');if(dd)dd.textContent=dstr;
 }
 tick();setInterval(tick,1000);
 
 // sync
 function doSync(){
-  const lbl=document.getElementById('sp-lbl'),ico=document.getElementById('sp-ico');
+  const lbl=document.getElementById('slbl'),ico=document.getElementById('sic');
   lbl.textContent='...';ico.style.display='inline-block';
   setTimeout(()=>{
     lbl.innerHTML='&#8635;&nbsp;Sync';ico.style.display='none';
     const ls=document.getElementById('ls');
-    if(ls) ls.textContent=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    if(ls)ls.textContent=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
   },1400);
 }
 
@@ -654,62 +690,157 @@ let stale=false;
 function toggleStale(){
   stale=!stale;
   document.getElementById('stog').classList.toggle('on',stale);
-  document.getElementById('pc').classList.toggle('stale',stale);
-  document.getElementById('pc-eye').style.color=stale?'var(--am)':'';
-  document.getElementById('pc-big').classList.toggle('dim',stale);
-  document.getElementById('pc-tilde').classList.toggle('show',stale);
+  const pr=document.getElementById('prow');
+  pr.classList.toggle('stale',stale);
+  document.getElementById('pr-lbl').style.color=stale?'var(--am)':'';
+  document.getElementById('pr-big').classList.toggle('dim',stale);
+  document.getElementById('pr-tilde').classList.toggle('show',stale);
   document.getElementById('pp-live').style.display=stale?'none':'';
   document.getElementById('pp-old').style.display=stale?'':'none';
-  const ts=document.getElementById('pc-ts');
+  const ts=document.getElementById('pr-ts');
   ts.style.color=stale?'var(--am)':'';
-  ts.textContent=stale
-    :'\u23f1 Gi\u00e1 l\u00fac 16/08 08:30 \u2014 ch\u01b0a c\u1eadp nh\u1eadt'
-    :'C\u1eadp nh\u1eadt 17/08/2026 \u00b7 09:14\u00a0Uhr';
-  document.getElementById('stale-bar').classList.toggle('show',stale);
+  ts.textContent=stale?'\u23f1 16/08 08:30 \u2014 ch\u01b0a c\u1eadp nh\u1eadt':'C\u1eadp nh\u1eadt 17/08 \u00b7 09:14';
+  document.getElementById('stale-c').classList.toggle('show',stale);
 }
 
-// simulation
+// lang
+function setLang(l){
+  document.getElementById('lang-vi').classList.toggle('selected',l==='vi');
+  document.getElementById('lang-de').classList.toggle('selected',l==='de');
+}
+
+// ────── SIMULATION ──────
 const START=9847,DEP0=7400;
-const COLORS=[
-  'var(--sub)','rgba(139,92,246,.8)','rgba(139,92,246,.9)','rgba(139,92,246,1)',
-  'rgba(99,200,150,1)','rgba(16,185,129,1)','rgba(16,185,129,1)',
-  'rgba(16,185,129,1)','rgba(52,211,153,1)'
-];
+let simMode='A',showAll=false;
+
+function setMode(m){
+  simMode=m;
+  ['A','B','C'].forEach(x=>document.getElementById('mt-'+x.toLowerCase()).classList.toggle('on',x===m));
+  document.getElementById('ms-ac').style.display=(m==='A'||m==='C')?'flex':'none';
+  document.getElementById('ms-ac').style.flexDirection='column';
+  document.getElementById('ms-ac').style.gap='12px';
+  document.getElementById('ms-b').style.display=m==='B'?'flex':'none';
+  document.getElementById('ms-b').style.flexDirection='column';
+  document.getElementById('ms-b').style.gap='12px';
+  document.getElementById('ms-c').style.display=m==='C'?'flex':'none';
+  document.getElementById('ms-c').style.flexDirection='column';
+  document.getElementById('ms-c').style.gap='12px';
+  sim();
+}
+
+function updYr(){
+  const v=document.getElementById('yr').value;
+  document.getElementById('yr-disp').textContent=v+' n\u0103m';
+}
+
+function fmtE(n){return '\u20ac\u2009'+Math.round(n).toLocaleString('de-DE')}
+
 function sim(){
-  const mo=parseFloat(document.getElementById('m').value)||200;
-  const gr=parseFloat(document.getElementById('g').value)||7;
-  const yr=new Date().getFullYear();
+  const rate=(parseFloat(document.getElementById('rt').value)||6.5)/100;
+  const nowY=new Date().getFullYear();
+  let monthly,years,headline,dep;
+
+  if(simMode==='A'){
+    monthly=parseFloat(document.getElementById('m').value)||200;
+    years=parseInt(document.getElementById('yr').value)||15;
+    let nav=START,d=DEP0;
+    for(let i=0;i<years;i++){nav=(nav+monthly*12)*(1+rate);d+=monthly*12;}
+    headline=nav;dep=d;
+    document.getElementById('sh-big').textContent=fmtE(nav);
+    document.getElementById('sh-sub').textContent='sau '+years+' n\u0103m \u00b7 '+fmtE(monthly)+'/th\u00e1ng';
+
+  } else if(simMode==='B'){
+    const tgt=parseFloat(document.getElementById('tgt').value)||50000;
+    const tyr=parseInt(document.getElementById('tyr').value)||2041;
+    years=Math.max(1,tyr-nowY);
+    // binary search for monthly
+    let lo=0,hi=50000,m2=0;
+    for(let k=0;k<50;k++){
+      m2=(lo+hi)/2;
+      let nav=START,d=DEP0;
+      for(let i=0;i<years;i++){nav=(nav+m2*12)*(1+rate);}
+      if(nav<tgt)lo=m2;else hi=m2;
+    }
+    monthly=Math.max(0,m2);
+    let nav=START,d=DEP0;
+    for(let i=0;i<years;i++){nav=(nav+monthly*12)*(1+rate);d+=monthly*12;}
+    headline=nav;dep=d;
+    document.getElementById('sh-big').textContent=fmtE(monthly)+'/th&aacute;ng';
+    document.getElementById('sh-sub').textContent='c&#7847;n g&oacute;p \u00b7 \u0111\u1ec3 \u0111\u1ea1t '+fmtE(tgt)+' v\u00e0o '+tyr;
+
+  } else { // C
+    monthly=parseFloat(document.getElementById('mc').value)||200;
+    const tgt=parseFloat(document.getElementById('tgtc').value)||50000;
+    let nav=START,d=DEP0,y=0;
+    for(y=0;y<40;y++){
+      nav=(nav+monthly*12)*(1+rate);d+=monthly*12;
+      if(nav>=tgt)break;
+    }
+    years=y+1;headline=nav;dep=d;
+    document.getElementById('sh-big').textContent=(y<40)?(y+1)+' n\u0103m':'> 40 n\u0103m';
+    document.getElementById('sh-sub').textContent='\u0111\u1ec3 \u0111\u1ea1t '+fmtE(tgt)+' \u00b7 g\u00f3p '+fmtE(monthly)+'/th\u00e1ng';
+  }
+
+  const interest=Math.max(0,headline-dep-START);
+  document.getElementById('ss-end').textContent=fmtE(headline);
+  document.getElementById('ss-dep').textContent=fmtE(dep);
+  document.getElementById('ss-int').textContent=fmtE(interest);
+  document.getElementById('sh-note').textContent='tr\u01b0\u1edbc thu\u1ebf \u00b7 danh ngh\u0129a';
+
+  // year table
+  buildTable(monthly,rate,years,nowY);
+}
+
+const MILESTONES=new Set([0,1,3,5,10,15,20,25,30]);
+function buildTable(monthly,rate,totalYears,nowY){
   let nav=START,dep=DEP0;
-  const rows=document.getElementById('glide-rows');
-  rows.innerHTML='';
-  // compute max for bar scale
+  const data=[];
+  data.push({yi:0,y:nowY,nav,dep,isCur:true});
   let maxNav=START;
-  for(let i=1;i<=8;i++) maxNav=(maxNav+mo*12)*(1+gr/100);
+  let n2=START,d2=DEP0;
+  for(let i=1;i<=totalYears;i++){
+    n2=(n2+monthly*12)*(1+rate);d2+=monthly*12;
+    if(n2>maxNav)maxNav=n2;
+  }
   nav=START;dep=DEP0;
-  for(let i=0;i<=8;i++){
-    const y=yr+i;
-    if(i>0){nav=(nav+mo*12)*(1+gr/100);dep+=mo*12;}
-    const isCur=i===0;
-    const pct=Math.round(nav/maxNav*100);
-    const gain=Math.round((nav-dep)/dep*100);
-    const color=COLORS[Math.min(i,COLORS.length-1)];
+  for(let i=1;i<=totalYears;i++){
+    nav=(nav+monthly*12)*(1+rate);dep+=monthly*12;
+    if(showAll||MILESTONES.has(i)||i===totalYears){
+      data.push({yi:i,y:nowY+i,nav,dep,isCur:false});
+    }
+  }
+  const COLS=['var(--sub)','rgba(139,92,246,.75)','rgba(139,92,246,.88)','rgba(139,92,246,1)',
+    'rgba(99,200,150,1)','rgba(16,185,129,1)','rgba(52,211,153,1)'];
+  const rows=document.getElementById('yr-rows');
+  rows.innerHTML='';
+  data.forEach(({yi,y,nav:nv,dep:dv,isCur})=>{
+    const pct=Math.min(100,Math.round(nv/maxNav*100));
+    const tier=Math.min(6,Math.floor(yi/totalYears*6));
+    const col=isCur?'var(--sub)':COLS[tier+1]||COLS[COLS.length-1];
     const d=document.createElement('div');
-    d.className='gr'+(isCur?' now':'');
+    d.className='yr-row-item'+(isCur?' now':'');
     d.innerHTML=`
-      <div class="gr-year">
-        <span class="gr-y">${y}</span>
-        ${isCur?'<span class="gr-badge">now</span>':''}
+      <div class="yr-cell-year">
+        <span class="yr-y">${y}</span>
+        ${isCur?'<span class="yr-badge-now">now</span>':''}
       </div>
-      <div class="gr-nav-wrap">
-        <div class="gr-nav" style="color:${color}">&euro;${Math.round(nav).toLocaleString('de-DE')}</div>
-        <div class="gr-bar-bg"><div class="gr-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="yr-cell-nav">
+        <div class="yr-nav-val" style="color:${col}">${fmtE(nv)}</div>
+        <div class="yr-bar-bg"><div class="yr-bar-fill" style="width:${pct}%;background:${col}"></div></div>
       </div>
-      <div class="gr-dep">&euro;${Math.round(dep).toLocaleString('de-DE')}</div>
+      <div class="yr-dep">${fmtE(dv)}</div>
     `;
     rows.appendChild(d);
-  }
+  });
 }
-sim();
+
+function toggleAll(){
+  showAll=!showAll;
+  document.getElementById('show-all-btn').textContent=showAll?'Thu g\u1ecdn':'Hi\u1ec7n t\u1ea5t c\u1ea3 c\u00e1c n\u0103m';
+  sim();
+}
+
+updYr();sim();
 </script>
 </body>
 </html>
