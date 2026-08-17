@@ -47,6 +47,11 @@ export default defineConfig({
   ],
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: [
+      "src/**/*.test.ts",
+      // PR0: bat dan tung file .test.tsx da doc toan bo source.
+      "src/pages/Goals.loadState.test.tsx",
+      "src/pages/Overview.loadState.test.tsx",
+    ],
   },
 });
