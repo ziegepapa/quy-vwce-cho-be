@@ -294,14 +294,6 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   });
   const pnlPct = hero.pnlPct != null ? hero.pnlPct.toFixed(1) : null;
 
-  /*
-   * OVERVIEW-V10-OFFICIAL-001 r1 · PR1_HERO_MERGE — bốn hằng số của hero stage.
-   * FAIL-CLOSED: label đổi theo trạng thái giá, % chỉ hiện khi valueComplete, và
-   * heroPnlNote gọi describePnlSuppression KHÔNG truyền missingPriceCount nên nó
-   * trả "Chưa có giá cho mã này" thay vì "Thiếu giá cho N mã" — nếu truyền count
-   * thì số N sẽ trùng đúng chữ với insight card ngay bên dưới, vi phạm luật mỗi
-   * số chỉ xuất hiện một lần trên màn 1.
-   */
   const assetsLabel = hasMissingPrices
     ? "Tài sản đã định giá"
     : hasStalePrices
@@ -361,54 +353,159 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   });
 
   return (
-    <div className="ov">
-      {/*
-        OVERVIEW-V10-REBUILD-FROM-DEMO-001 — DOM composition, not CSS override.
-        demo visual-abc: .hero-flex = .hero-left (NAV+PnL) | .hero-ring (ring only).
-        RhythmHero variant=ringOnly: no body/status, no competing card shell.
-      */}
+    <div className="ov v10-pixel">
       <section
-        className={`overview-money-stage v10-stage${mode === "empty" ? " overview-money-stage--empty" : ""}`}
+        className={`v10-gl v10-hero${mode === "empty" ? " v10-hero--empty" : ""}`}
         aria-label="Tổng tài sản và nhịp đóng góp"
       >
         {mode !== "empty" ? (
           <div className="v10-hero-flex">
-            <div className="v10-nav">
-              <p className="v10-nav-label rhythm-assets-label">{assetsLabel}</p>
-              <button
-                type="button"
-                className="rhythm-assets-btn v10-nav-btn"
-                onClick={() => setTraceOpen(true)}
-              >
-                <span className="rhythm-assets-value v10-nav-value">
-                  {formatMoney(hero.assets)}
-                </span>
+            <div className="v10-hero-left">
+              <p className="v10-h-eye">{assetsLabel}</p>
+              <button type="button" className="v10-h-num-btn" onClick={() => setTraceOpen(true)}>
+                <span className="v10-h-num">{formatMoney(hero.assets)}</span>
               </button>
               {pnlValue != null && pnlValue !== 0 ? (
-                <p className={`v10-pnl ${pnlValue >= 0 ? "pos" : "neg"}`}>
-                  {pnlValue >= 0 ? "+" : ""}{formatMoney(Math.abs(pnlValue))}
-                  {showPnlPct ? ` (${pnlPct}%)` : ""}
-                </p>
+                <div className="v10-h-row">
+                  <span className={`v10-bdg ${pnlValue >= 0 ? "v10-bdg-up" : "v10-bdg-down"}`}>
+                    {pnlValue >= 0 ? "▲" : "▼"}{" "}
+                    {pnlValue >= 0 ? "+" : "−"}
+                    {formatMoney(Math.abs(pnlValue))}
+                    {showPnlPct ? ` (${pnlPct}%)` : ""}
+                  </span>
+                </div>
               ) : null}
-              {heroPnlNote ? <p className="v10-pnl-note">{heroPnlNote}</p> : null}
+              {heroPnlNote ? <p className="v10-h-note">{heroPnlNote}</p> : null}
             </div>
-            <RhythmHero
-              variant="ringOnly"
-              streak={streakResult}
-              goals={goals}
-              totalContributed={portfolio.totalContributed}
-              heroLifetimeContribution={heroLifetime.amount}
-              nhipWindowTotal={nhipWindowTotal}
-              nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
-            />
+            <div className="v10-hero-ring">
+              <RhythmHero
+                variant="ringOnly"
+                streak={streakResult}
+                goals={goals}
+                totalContributed={portfolio.totalContributed}
+                heroLifetimeContribution={heroLifetime.amount}
+                nhipWindowTotal={nhipWindowTotal}
+                nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
+              />
+              {streakResult.streakMonths > 0 ? <div className="v10-hr-cap">chuỗi góp</div> : null}
+            </div>
           </div>
         ) : null}
       </section>
 
+      {mode !== "empty" && vwcePrice > 0 ? (
+        <section className="v10-gl v10-price" aria-label="Giá VWCE">
+          <div className={`v10-price-row${hasStalePrices ? " stale" : ""}`}>
+            <div className="v10-pr-left">
+              <div className="v10-pr-label">GIÁ VWCE</div>
+              <div className="v10-pr-num">
+                <span className="v10-pr-cur">€</span>
+                <span className={`v10-pr-big${hasStalePrices ? " dim" : ""}`}>
+                  {vwcePrice.toLocaleString("vi-VN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="v10-pr-ts">
+                {portfolioSnapshot.vwceAsOf
+                  ? `Cập nhật ${portfolioSnapshot.vwceAsOf.slice(8, 10)}/${portfolioSnapshot.vwceAsOf.slice(5, 7)}`
+                  : "Chưa có ngày phiên"}
+              </div>
+            </div>
+            <div className="v10-pr-right">
+              {hasStalePrices ? (
+                <span className="v10-pr-pill old"><span className="v10-da" aria-hidden /> GIÁ CŨ</span>
+              ) : (
+                <span className="v10-pr-pill live"><span className="v10-dl" aria-hidden /> LIVE</span>
+              )}
+            </div>
+          </div>
+          {hasStalePrices ? (
+            <div className="v10-stale-bar">
+              <div className="v10-sb-txt">
+                <strong>Dữ liệu có thể lỗi thời</strong>
+                Giá đang dùng đã quá hạn tin cậy.
+              </div>
+              <Link to="/settings?tab=prices" className="v10-sb-btn">Cập nhật →</Link>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {mode !== "empty" && portfolio.vwceQty > 0 ? (
+        <section className="v10-gl v10-combo" aria-label="Cổ phần">
+          <div className="v10-cr-item">
+            <div className="v10-cr-lbl">Cổ phần</div>
+            <div className="v10-cr-val v10-cr-em">
+              {portfolio.vwceQty.toLocaleString("vi-VN", { maximumFractionDigits: 4 })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {mode !== "empty" && (streakResult.streakMonths > 0 || streakResult.lastContributionDate) ? (
+        <section className="v10-gl v10-streak" aria-label="Chuỗi Sparplan">
+          <div className="v10-sc-top">
+            <div className="v10-sc-left">
+              <span className="v10-sc-flame" aria-hidden>🔥</span>
+              <div>
+                <div className="v10-sc-count-row">
+                  <span className="v10-sc-count">{streakResult.streakMonths}</span>
+                  <span className="v10-sc-unit">tháng liên tiếp</span>
+                </div>
+                <div className="v10-sc-title">Chuỗi góp</div>
+              </div>
+            </div>
+            {streakResult.mostRecentMonth ? (
+              <div className="v10-sc-right">
+                <div className="v10-sc-next-lbl">Gần nhất</div>
+                <div className="v10-sc-next-date">
+                  {streakResult.mostRecentMonth.slice(5, 7)}/{streakResult.mostRecentMonth.slice(0, 4)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {mode !== "empty" && hero.pnl != null && portfolio.vwceCostBasis > 0 && portfolioSnapshot.valueComplete ? (
+        <section className="v10-gl v10-perf" aria-label="Hiệu suất danh mục">
+          <div className="v10-perf-top">
+            <span className="v10-perf-title">Hiệu suất danh mục</span>
+            <span className="v10-perf-return">
+              {hero.pnlPct != null
+                ? `${hero.pnlPct >= 0 ? "+" : ""}${hero.pnlPct.toFixed(1)}%`
+                : formatMoney(hero.pnl)}
+            </span>
+          </div>
+          {(() => {
+            const cost = portfolio.vwceCostBasis;
+            const val = cost + (hero.pnl ?? 0);
+            const total = Math.max(cost, val, 1);
+            const basePct = Math.min(100, (cost / total) * 100);
+            const gainPct = Math.max(0, 100 - basePct);
+            return (
+              <>
+                <div className="v10-perf-bar-track">
+                  <div className="v10-perf-bar-base" style={{ width: `${basePct}%` }} />
+                  {gainPct > 0.5 ? (
+                    <div className="v10-perf-bar-gain" style={{ left: `${basePct}%`, width: `${gainPct}%` }} />
+                  ) : null}
+                </div>
+                <div className="v10-perf-legend">
+                  <div className="v10-pl-item"><div className="v10-pl-dot base" /><span className="v10-pl-txt">Vốn góp</span></div>
+                  <div className="v10-pl-item"><div className="v10-pl-dot gain" /><span className="v10-pl-txt">Lãi</span></div>
+                </div>
+              </>
+            );
+          })()}
+        </section>
+      ) : null}
+
       {cashNegative ? (
         <section className="card">
           <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Sổ đang thiếu bút toán nạp tiền</p>
-          <p className="muted" style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.45 }}>Đã ghi mua hoặc chi nhiều hơn số tiền nạp {formatMoney(hero.cashShortfall)}, nên số dư an toàn đang âm. Ghi khoản nạp tương ứng để tổng tài sản và lãi–lỗ khớp lại.</p>
+          <p className="muted" style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.45 }}>
+            Đã ghi mua hoặc chi nhiều hơn số tiền nạp {formatMoney(hero.cashShortfall)}, nên số dư an toàn đang âm. Ghi khoản nạp tương ứng để tổng tài sản và lãi–lỗ khớp lại.
+          </p>
           <Link to="/transactions" className="action-item" style={{ minHeight: 44 }}>Ghi nạp tiền</Link>
         </section>
       ) : null}
@@ -438,16 +535,8 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
       ) : null}
 
       {mode !== "empty" ? (
-        <section
-          className={`stat-strip${statStripOpen ? "" : " stat-strip-collapsed"}`}
-          aria-label="Chi tiết phân bổ"
-        >
-          <button
-            type="button"
-            className="stat-detail-btn"
-            onClick={() => setStatStripOpen((open) => !open)}
-            aria-expanded={statStripOpen}
-          >
+        <section className={`stat-strip${statStripOpen ? "" : " stat-strip-collapsed"}`} aria-label="Chi tiết phân bổ">
+          <button type="button" className="stat-detail-btn" onClick={() => setStatStripOpen((open) => !open)} aria-expanded={statStripOpen}>
             Số liệu {statStripOpen ? "▴" : "▾"}
           </button>
           {statStripOpen ? (
@@ -510,17 +599,28 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
         <section className="action-stack">
           <Link to={primary.to} className="action-item">
             <div className={`action-icon pri-${primary.priority}`} aria-hidden>!</div>
-            <div className="action-body"><p className="action-title">{primary.title}</p><p className="action-why">{primary.why}</p><span className="action-cta">{primary.cta} →</span></div>
+            <div className="action-body">
+              <p className="action-title">{primary.title}</p>
+              <p className="action-why">{primary.why}</p>
+              <span className="action-cta">{primary.cta} →</span>
+            </div>
           </Link>
           {remainingInsights.length > 0 ? (
             <>
-              <button type="button" className="action-more" onClick={() => setMoreActions((open) => !open)}>{moreActions ? "Thu gọn" : `+${remainingInsights.length} việc khác`}</button>
-              {moreActions ? remainingInsights.map((insight) => (
-                <Link key={insight.id} to={insight.to} className="action-item action-item-sm">
-                  <div className={`action-icon pri-${insight.priority}`} aria-hidden>i</div>
-                  <div className="action-body"><p className="action-title">{insight.title}</p><span className="action-cta">{insight.cta} →</span></div>
-                </Link>
-              )) : null}
+              <button type="button" className="action-more" onClick={() => setMoreActions((open) => !open)}>
+                {moreActions ? "Thu gọn" : `+${remainingInsights.length} việc khác`}
+              </button>
+              {moreActions
+                ? remainingInsights.map((insight) => (
+                    <Link key={insight.id} to={insight.to} className="action-item action-item-sm">
+                      <div className={`action-icon pri-${insight.priority}`} aria-hidden>i</div>
+                      <div className="action-body">
+                        <p className="action-title">{insight.title}</p>
+                        <span className="action-cta">{insight.cta} →</span>
+                      </div>
+                    </Link>
+                  ))
+                : null}
             </>
           ) : null}
         </section>
@@ -531,21 +631,13 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
           phase={planPhase}
           targetDate={planTargetDate}
           onViewFull={() => navigate("/settings?tab=data")}
-          onDismissReminder={
-            planPhase.showReminder
-              ? () => { void handleDismissGlideReminder(); }
-              : undefined
-          }
+          onDismissReminder={planPhase.showReminder ? () => { void handleDismissGlideReminder(); } : undefined}
         />
       ) : null}
 
       <p className="ov-foot">Không phải tư vấn đầu tư. What-if là ước tính; giao dịch vẫn lấy từ sổ local.</p>
 
-      <TraceSheet
-        open={traceOpen}
-        onClose={() => setTraceOpen(false)}
-        model={portfolioTraceModel}
-      />
+      <TraceSheet open={traceOpen} onClose={() => setTraceOpen(false)} model={portfolioTraceModel} />
     </div>
   );
 }
