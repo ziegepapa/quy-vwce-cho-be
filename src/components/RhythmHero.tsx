@@ -47,7 +47,7 @@ export default function RhythmHero({
     : null;
 
   return (
-    <section className="rhythm-hero">
+    <section className="rhythm-hero v10-rhythm">
       <div className="rhythm-hero-inner">
         <div className="rhythm-ring-wrap">
           <svg

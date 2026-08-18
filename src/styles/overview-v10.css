@@ -1,0 +1,158 @@
+/*
+ * overview-v10.css — OVERVIEW-V10-OFFICIAL-001 r1 · PR1_HERO_MERGE.
+ *
+ * CASCADE: file này được import CUỐI CÙNG trong src/main.tsx một cách có chủ ý.
+ * Overview.tsx tự import ../styles/rhythm-hero.css ở tầng component, nên CSS đó
+ * được phát ra TRƯỚC các stylesheet toàn cục trong bundle. Ba vòng polish trước
+ * thất bại vì tin vào thứ tự "trực giác". Ở đây không sửa file CSS cũ nào để
+ * không thêm nợ cascade.
+ *
+ * Phạm vi: CHỈ hình học và khoảng cách. Không token màu mới, không !important,
+ * không selector theme. Màu vẫn do .pos/.neg và các class .rhythm-* cũ cấp —
+ * đó là lý do RhythmHero giữ nguyên toàn bộ class cũ và chỉ thêm .v10-rhythm.
+ *
+ * Mọi selector đều đi qua .ov .overview-money-stage.v10-stage để thắng
+ * night-ledger.css và overview-focal-merge.css bằng specificity, không bằng may.
+ */
+
+.ov .overview-money-stage.v10-stage {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.ov .overview-money-stage.v10-stage.overview-money-stage--empty {
+  justify-content: center;
+}
+
+.ov .overview-money-stage.v10-stage > .v10-nav {
+  order: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+}
+
+.ov .overview-money-stage.v10-stage .v10-nav-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  opacity: 0.72;
+}
+
+.ov .overview-money-stage.v10-stage .v10-nav-btn {
+  display: block;
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ov .overview-money-stage.v10-stage .v10-nav-value {
+  display: block;
+  font-size: clamp(30px, 11vw, 40px);
+  font-weight: 760;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ov .overview-money-stage.v10-stage .v10-pnl {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov .overview-money-stage.v10-stage .v10-pnl-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.3;
+  opacity: 0.72;
+}
+
+/*
+ * Reset vỏ card cũ của .rhythm-hero (padding, min-height, bg, radius, shadow) và
+ * order: -1 từ #93. Không có dòng reset này thì ring vẫn nhảy sang trái.
+ */
+.ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm {
+  order: 2;
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 96px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-hero-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+
+.ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-ring-wrap {
+  width: 64px;
+  height: 64px;
+  margin: 0;
+}
+
+.ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-ring-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-body {
+  margin: 0;
+  text-align: center;
+}
+
+.ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-line1,
+.ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-caption {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+@media (max-width: 360px) {
+  .ov .overview-money-stage.v10-stage {
+    gap: 10px;
+  }
+
+  .ov .overview-money-stage.v10-stage .v10-nav-value {
+    font-size: clamp(26px, 10vw, 34px);
+  }
+
+  .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm {
+    max-width: 84px;
+  }
+
+  .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-ring-wrap {
+    width: 56px;
+    height: 56px;
+  }
+}
