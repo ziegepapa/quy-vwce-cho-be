@@ -1,12 +1,15 @@
-/* Floating Bottom Dock — V9 B1: z-index qua token, luôn nằm dưới navbar */
+/* Bottom dock — visual-abc pill geometry (demo .pill / .pb)
+ * Behavior (scroll hide, reduced motion) kept from production.
+ * Primary destinations only: 4 items from App PRIMARY_NAV.
+ */
 :root {
-  --dock-h: 58px;
+  --dock-h: 52px;
   --dock-pad: 10px;
-  --dock-radius: 26px;
+  --dock-radius: 100px;
 }
 
 .app-shell {
-  padding-bottom: calc(var(--dock-h) + var(--dock-pad) + 16px + var(--safe-bottom)) !important;
+  padding-bottom: calc(var(--dock-h) + var(--dock-pad) + 20px + var(--safe-bottom)) !important;
 }
 
 .app-shell::after {
@@ -17,12 +20,11 @@
   bottom: 0;
   height: 96px;
   pointer-events: none;
-  /* Phải nằm DƯỚI dock, trước đây bằng 40 = trùng --z-dock */
   z-index: calc(var(--z-dock) - 1);
   background: linear-gradient(
     to top,
-    var(--bg-base) 0%,
-    color-mix(in srgb, var(--bg-base) 55%, transparent) 50%,
+    var(--bg-base, #06060a) 0%,
+    color-mix(in srgb, var(--bg-base, #06060a) 55%, transparent) 50%,
     transparent 100%
   );
 }
@@ -30,8 +32,8 @@
 @supports (backdrop-filter: blur(1px)) {
   .app-shell::after {
     background: transparent;
-    backdrop-filter: blur(var(--blur-progressive));
-    -webkit-backdrop-filter: blur(var(--blur-progressive));
+    backdrop-filter: blur(var(--blur-progressive, 12px));
+    -webkit-backdrop-filter: blur(var(--blur-progressive, 12px));
     mask-image: linear-gradient(to top, black 20%, transparent 100%);
     -webkit-mask-image: linear-gradient(to top, black 20%, transparent 100%);
   }
@@ -39,20 +41,21 @@
 
 .bottom-dock {
   position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: calc(10px + var(--safe-bottom));
-  /* Trước đây là 50 — trùng --z-navbar, khiến dock đè lên navbar và menu */
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(18px + var(--safe-bottom));
   z-index: var(--z-dock);
   display: flex;
   justify-content: center;
   pointer-events: none;
   padding: 0;
-  transition: transform 200ms var(--ease-emphasized), opacity 200ms ease;
+  width: auto;
+  max-width: calc(100vw - 24px);
+  transition: transform 200ms var(--ease-emphasized, cubic-bezier(0.4, 0, 0.2, 1)), opacity 200ms ease;
 }
 
 .bottom-dock.is-hidden {
-  transform: translateY(120%);
+  transform: translateX(-50%) translateY(120%);
   opacity: 0;
 }
 
@@ -61,50 +64,41 @@
     transition: none;
   }
   .bottom-dock.is-hidden {
-    transform: none;
+    transform: translateX(-50%);
     opacity: 1;
   }
 }
 
-/* This rule stays fully opaque on purpose: it is the fallback for engines
-   without backdrop-filter, where a translucent bar would put page text
-   directly behind the icons. The glass lives in the @supports block below. */
+/* Demo .pill: pill-bg, radius 100px, blur 30px, inset highlight */
 .bottom-dock-inner {
   pointer-events: auto;
   display: flex;
   align-items: stretch;
-  width: 100%;
+  gap: 2px;
+  width: auto;
+  min-width: min(100%, 22rem);
   max-width: 26rem;
   min-height: var(--dock-h);
-  padding: 4px;
-  border-radius: var(--r-dock);
-  background: var(--color-surface-overlay);
-  border: 0.5px solid rgba(255, 255, 255, 0.6);
-  box-shadow: var(--shadow-dock);
+  padding: 5px;
+  border-radius: 100px;
+  background: var(--pill-bg, rgba(8, 5, 20, 0.86));
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.60),
+    0 1px 0 rgba(255, 255, 255, 0.07) inset;
   overflow: hidden;
 }
 
-/* OVERVIEW-GLASSDOCK-001 r1: the dock is one of only two surfaces in the app
-   that genuinely floats above content, so it is one of only two places where
-   glass carries information -- it tells you the page continues underneath.
-   The blur was already here; what was missing is transparency for it to act
-   on. An opaque bar with a blur behind it is just an opaque bar. */
 @supports (backdrop-filter: blur(1px)) {
   .bottom-dock-inner {
-    background: color-mix(in srgb, var(--color-surface-overlay) 60%, transparent);
-    backdrop-filter: blur(var(--blur-dock)) saturate(180%);
-    -webkit-backdrop-filter: blur(var(--blur-dock)) saturate(180%);
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .bottom-dock-inner {
-    border-color: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--pill-bg, rgba(8, 5, 20, 0.86)) 88%, transparent);
+    backdrop-filter: blur(30px) saturate(2.2);
+    -webkit-backdrop-filter: blur(30px) saturate(2.2);
   }
 }
 
 .dock-item {
-  flex: 1;
+  flex: 1 1 0;
   position: relative;
   z-index: 1;
   display: flex;
@@ -113,49 +107,47 @@
   justify-content: center;
   gap: 2px;
   text-decoration: none;
-  color: var(--text-tertiary);
-  font-size: 10px;
-  font-weight: 600;
-  min-height: 50px;
-  padding: 4px 2px;
-  border-radius: 999px;
-  transition: color var(--d-fast) ease, transform 100ms ease;
+  color: var(--dim, rgba(240, 238, 255, 0.28));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  min-height: 42px;
+  padding: 8px 12px;
+  border-radius: 100px;
+  border: none;
+  background: none;
+  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, box-shadow 0.2s, transform 100ms ease;
   -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
 
 .dock-item:active {
   transform: scale(0.94);
 }
 
+/* Demo .pb.on */
 .dock-item.active {
-  color: var(--primary-600);
+  color: var(--text, #f0eeff);
   font-weight: 700;
+  background: color-mix(in srgb, var(--vi, #8b5cf6) 22%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--vi, #8b5cf6) 28%, transparent);
 }
 
 .dock-item.active::before {
-  content: "";
-  position: absolute;
-  width: 64px;
-  height: 38px;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  border-radius: 999px;
-  background: var(--primary-050);
-  z-index: -1;
+  display: none;
 }
 
 .dock-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
 }
 
 .dock-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
 }
 
 .dock-label {
