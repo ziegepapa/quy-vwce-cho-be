@@ -8,28 +8,30 @@ export type DockItem = {
   icon: ReactNode;
 };
 
+const DEMO_LABELS: Record<string, string> = {
+  "/": "Overview",
+  "/transactions": "Giao dịch",
+  "/simulation": "Mô phỏng",
+  "/settings": "Cài đặt",
+};
+
 const PRIMARY_DOCK_ITEMS = 4;
 
 export default function BottomDock({ items }: { items: DockItem[] }) {
   const primaryItems = items.slice(0, PRIMARY_DOCK_ITEMS);
 
   return (
-    <nav className="visual-abc-dock" aria-label="Điều hướng chính">
-      <div className="visual-abc-dock-pill">
-        {primaryItems.map(({ to, label, icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            className={({ isActive }) =>
-              "visual-abc-dock-item" + (isActive ? " is-active" : "")
-            }
-          >
-            <span className="visual-abc-dock-icon">{icon}</span>
-            <span className="visual-abc-dock-label">{label}</span>
-          </NavLink>
-        ))}
-      </div>
+    <nav className="pill" aria-label="Điều hướng chính">
+      {primaryItems.map(({ to, label }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={to === "/"}
+          className={({ isActive }) => "pb" + (isActive ? " on" : "")}
+        >
+          {DEMO_LABELS[to] ?? label}
+        </NavLink>
+      ))}
     </nav>
   );
 }
