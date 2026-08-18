@@ -66,9 +66,10 @@ jobs:
     runs-on: ubuntu-latest
     # Browsers + OS libs preinstalled — no apt / --with-deps (that path timed
     # out 15m on azure.archive.ubuntu.com before tests started; #162 cancelled).
-    # Keep image tag aligned with @playwright/test major.minor (package.json).
+    # Image tag must match the pinned @playwright/test version below.
     container:
       image: mcr.microsoft.com/playwright:v1.54.2-jammy
+      options: --ipc=host
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -76,6 +77,9 @@ jobs:
         with:
           node-version: "22"
       - run: npm install
+      # package.json uses ^1.54.2; pin exact client so browser revisions match image.
+      - name: Pin Playwright client to image browsers (1.54.2)
+        run: npm install --no-save @playwright/test@1.54.2
       - name: Build production preview
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
