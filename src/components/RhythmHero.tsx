@@ -11,7 +11,7 @@ export type RhythmHeroProps = {
    */
   goals: Goal[];
   totalContributed: number;
-  heroOwnedContribution: number;
+  heroLifetimeContribution: number;
   nhipWindowTotal: number;
   nhipWindowDays: number;
   /**
@@ -32,14 +32,14 @@ const RING_PATH = "M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31";
 export default function RhythmHero({
   streak,
   totalContributed,
-  heroOwnedContribution,
+  heroLifetimeContribution,
   variant = "full",
 }: RhythmHeroProps) {
   const streakMonths = Math.max(0, streak.streakMonths);
   const hasContributions =
     streak.lastContributionDate != null ||
     totalContributed > 0 ||
-    heroOwnedContribution > 0;
+    heroLifetimeContribution > 0;
   const hasActiveStreak = streakMonths > 0;
   const arcPct = hasActiveStreak ? Math.min(100, (streakMonths / 12) * 100) : 0;
   const arcShown = arcPct > 0 ? Math.max(2, arcPct) : 0;
