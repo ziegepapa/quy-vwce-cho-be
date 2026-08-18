@@ -16,9 +16,9 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock("../lib/db", () => dbMocks);
 vi.mock("../components/TodayCenter", () => ({ default: () => null }));
-vi.mock("../components/TraceSheet", () => ({ default: () => null }));
-vi.mock("../components/RhythmHero", () => ({
-  default: () => createElement("div", { "data-testid": "rhythm-hero" }),
+vi.mock("../components/TraceSheet", () => ({
+  default: ({ open }: { open: boolean }) =>
+    open ? createElement("div", { "data-testid": "trace-sheet" }) : null,
 }));
 vi.mock("../components/PlanPhaseCard", () => ({ default: () => null }));
 
@@ -107,11 +107,11 @@ describe("Overview load state", () => {
       await screen.findByRole("heading", { name: "Không tải được Tổng quan" }),
     ).toBeTruthy();
     expect(screen.getByRole("alert")).toBeTruthy();
-    expect(screen.queryByTestId("rhythm-hero")).toBeNull();
+    expect(document.querySelector(".rhythm-hero")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
 
-    expect(await screen.findByTestId("rhythm-hero")).toBeTruthy();
+    await waitFor(() => expect(document.querySelector(".overview-money-stage--empty")).toBeTruthy());
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
     expect(dbMocks.listTransactions).toHaveBeenCalledTimes(2);
@@ -119,21 +119,22 @@ describe("Overview load state", () => {
 });
 
 describe("Overview v10 hero stage — fail-closed", () => {
-  it("mode empty: không render NAV và không render badge lãi–lỗ", async () => {
+  it("mode empty: không render NAV, PnL hoặc ring giả", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([]);
 
     const { container } = renderOverview();
 
-    expect(await screen.findByTestId("rhythm-hero")).toBeTruthy();
-    expect(container.querySelector(".overview-money-stage--empty")).toBeTruthy();
+    await waitFor(() => expect(container.querySelector(".overview-money-stage--empty")).toBeTruthy());
     expect(container.querySelector(".v10-nav")).toBeNull();
     expect(container.querySelector(".v10-nav-value")).toBeNull();
     expect(container.querySelector(".rhythm-assets-btn")).toBeNull();
     expect(container.querySelector(".v10-pnl")).toBeNull();
+    expect(container.querySelector(".rhythm-hero")).toBeNull();
+    expect(container.querySelector(".rhythm-ring-svg")).toBeNull();
   });
 
-  it("hero.pnl == null: NAV vẫn hiện, badge ẩn hoàn toàn, không có phần trăm", async () => {
+  it("hero.pnl == null: NAV vẫn hiện, PnL không render", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([
       cashIn("tx-cash-1", "2026-08-01", 1000),
@@ -141,7 +142,7 @@ describe("Overview v10 hero stage — fail-closed", () => {
 
     const { container } = renderOverview();
 
-    expect(await screen.findByTestId("rhythm-hero")).toBeTruthy();
+    await waitFor(() => expect(container.querySelector(".rhythm-hero")).toBeTruthy());
     const nav = container.querySelector(".v10-nav");
     expect(nav).toBeTruthy();
     const value = container.querySelector(".v10-nav-value");
@@ -152,6 +153,28 @@ describe("Overview v10 hero stage — fail-closed", () => {
     expect(nav?.textContent ?? "").not.toContain("%");
     expect(screen.getByText("Tổng tài sản")).toBeTruthy();
     expect(screen.getByText("Chưa giữ đơn vị nào")).toBeTruthy();
+  });
+
+  it("mode active: NAV mở TraceSheet và ring giữ aria-label streak", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([
+      cashIn("tx-cash-1", "2026-08-01", 1000),
+      cashIn("tx-cash-2", "2026-08-02", 500),
+      cashIn("tx-cash-3", "2026-08-03", 250),
+    ]);
+
+    const { container } = renderOverview();
+
+    const navButton = await waitFor(() => {
+      const button = container.querySelector("button.rhythm-assets-btn.v10-nav-btn");
+      expect(button).toBeTruthy();
+      return button as HTMLButtonElement;
+    });
+    expect(container.querySelector('svg[aria-label="1 tháng liên tiếp"]')).toBeTruthy();
+
+    fireEvent.click(navButton);
+
+    expect(await screen.findByTestId("trace-sheet")).toBeTruthy();
   });
 
   it("!valueComplete: đổi label, ẩn phần trăm, nêu lý do không tính được lãi–lỗ", async () => {
@@ -165,7 +188,7 @@ describe("Overview v10 hero stage — fail-closed", () => {
 
     const { container } = renderOverview();
 
-    expect(await screen.findByTestId("rhythm-hero")).toBeTruthy();
+    await waitFor(() => expect(container.querySelector(".rhythm-hero")).toBeTruthy());
     expect(screen.getByText("Tài sản đã định giá")).toBeTruthy();
     expect(container.querySelector(".v10-pnl")).toBeNull();
     expect(container.querySelector(".v10-nav")?.textContent ?? "").not.toContain("%");
