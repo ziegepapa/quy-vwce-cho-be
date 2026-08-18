@@ -294,6 +294,24 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   });
   const pnlPct = hero.pnlPct != null ? hero.pnlPct.toFixed(1) : null;
 
+  /*
+   * OVERVIEW-V10-OFFICIAL-001 r1 · PR1_HERO_MERGE — bốn hằng số của hero stage.
+   * FAIL-CLOSED: label đổi theo trạng thái giá, % chỉ hiện khi valueComplete, và
+   * heroPnlNote gọi describePnlSuppression KHÔNG truyền missingPriceCount nên nó
+   * trả "Chưa có giá cho mã này" thay vì "Thiếu giá cho N mã" — nếu truyền count
+   * thì số N sẽ trùng đúng chữ với insight card ngay bên dưới, vi phạm luật mỗi
+   * số chỉ xuất hiện một lần trên màn 1.
+   */
+  const assetsLabel = hasMissingPrices
+    ? "Tài sản đã định giá"
+    : hasStalePrices
+      ? "Tài sản ước tính · có giá cũ"
+      : "Tổng tài sản";
+  const pnlValue = hero.pnl;
+  const showPnlPct = pnlPct != null && portfolioSnapshot.valueComplete;
+  const heroPnlNote =
+    hero.pnl == null ? describePnlSuppression(hero.pnlSuppressedReason) : null;
+
   let nearestGoal: Goal | null = null;
   let nearestMonths = Infinity;
   let nearestTarget = 0;
@@ -345,33 +363,28 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
   return (
     <div className="ov">
       <section
-        className={`overview-money-stage${mode === "empty" ? " overview-money-stage--empty" : ""}`}
+        className={`overview-money-stage v10-stage${mode === "empty" ? " overview-money-stage--empty" : ""}`}
         aria-label="Tổng tài sản và nhịp đóng góp"
       >
         {mode !== "empty" ? (
-          <div className="rhythm-assets">
-            <p className="rhythm-assets-label">
-              {hasMissingPrices
-                ? "Tài sản đã định giá"
-                : hasStalePrices
-                  ? "Tài sản ước tính · có giá cũ"
-                  : "Tổng tài sản"}
-            </p>
+          <div className="v10-nav">
+            <p className="v10-nav-label rhythm-assets-label">{assetsLabel}</p>
             <button
               type="button"
-              className="rhythm-assets-btn"
+              className="rhythm-assets-btn v10-nav-btn"
               onClick={() => setTraceOpen(true)}
             >
-              <span className="rhythm-assets-value">
+              <span className="rhythm-assets-value v10-nav-value">
                 {formatMoney(hero.assets)}
-                {hero.pnl != null && hero.pnl !== 0 ? (
-                  <span className={hero.pnl >= 0 ? "pos" : "neg"}>
-                    {hero.pnl >= 0 ? "+" : ""}{formatMoney(Math.abs(hero.pnl))}
-                    {pnlPct ? ` (${pnlPct}%)` : ""}
-                  </span>
-                ) : null}
               </span>
             </button>
+            {pnlValue != null && pnlValue !== 0 ? (
+              <p className={`v10-pnl ${pnlValue >= 0 ? "pos" : "neg"}`}>
+                {pnlValue >= 0 ? "+" : ""}{formatMoney(Math.abs(pnlValue))}
+                {showPnlPct ? ` (${pnlPct}%)` : ""}
+              </p>
+            ) : null}
+            {heroPnlNote ? <p className="v10-pnl-note">{heroPnlNote}</p> : null}
           </div>
         ) : null}
 

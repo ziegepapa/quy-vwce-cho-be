@@ -20,6 +20,7 @@ import "./styles/overview-focal-merge.css";
 import "./styles/night-ledger.css";
 import "./styles/dark-screen-finish.css";
 import "./styles/accessibility-foundations.css";
+import "./styles/overview-v10.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
