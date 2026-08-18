@@ -84,181 +84,90 @@
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-nav-value {
   display: block;
-  font-size: clamp(40px, 12.5vw, 52px);
-  font-weight: 800;
-  line-height: 0.95;
+  font-size: clamp(36px, 11vw, 52px);
+  font-weight: 900;
   letter-spacing: -0.05em;
+  line-height: 0.95;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-pnl {
-  margin: 0;
+  margin: 2px 0 0;
   font-size: 13px;
-  font-weight: 680;
-  line-height: 1.25;
-  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+:root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-pnl.pos {
+  color: var(--em, #10b981);
+}
+
+:root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-pnl.neg {
+  color: var(--re, #f87171);
 }
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-pnl-note {
   margin: 0;
   font-size: 11px;
-  line-height: 1.25;
-  opacity: 0.72;
+  opacity: 0.7;
+  line-height: 1.35;
 }
 
-/* Ring-only sibling — no card, no status copy */
+/* Ring only — sibling of .v10-nav, not a card */
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 76px;
   margin: 0;
   padding: 0;
   border: 0;
-  background: none;
+  background: transparent;
   box-shadow: none;
 }
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only .rhythm-ring-wrap {
-  flex: none;
   width: 76px;
   height: 76px;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only .rhythm-ring-svg {
-  display: block;
   width: 76px;
   height: 76px;
-  max-width: 76px;
+  display: block;
 }
 
-/* Meta / journal sit tight under hero — not competing cards */
-:root .premium-screen-overview .ov > .pulse-goal-line {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 7px;
-  min-height: 36px;
-  margin: 0;
-  padding: 6px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--command-hairline, var(--hairline));
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-:root .premium-screen-overview .ov > .today-center {
-  overflow: visible;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-:root .premium-screen-overview .ov > .today-center .nhip-block {
-  gap: 5px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-:root .premium-screen-overview .ov > .today-center .nhip-meta {
+/* Goal line thin — not a card */
+:root .premium-screen-overview .ov .pulse-goal-line {
   display: flex;
-  flex-wrap: nowrap;
   align-items: center;
-  gap: 7px;
-  width: 100%;
-  min-height: 36px;
+  gap: 8px;
   margin: 0;
-  padding: 6px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--command-hairline, var(--hairline));
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  padding: 10px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.3;
 }
 
-:root .premium-screen-overview .ov > .today-center .nhip-meta-value {
-  flex: 0 0 auto;
-  font-size: 12.5px;
-  font-weight: 680;
+:root .premium-screen-overview .ov .pulse-goal-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  flex-shrink: 0;
 }
 
-:root .premium-screen-overview .ov > .today-center .nhip-meta-caption {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  font-size: 11px;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+:root .premium-screen-overview .ov .pulse-goal-meta {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.7;
 }
 
-:root .premium-screen-overview .ov > .today-center .nhip-meta-hint {
-  flex: 0 0 auto;
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-:root .premium-screen-overview .ov .ownership-journal {
-  gap: 6px;
-  margin: 2px 0 0;
-}
-
-:root .premium-screen-overview .ov .stat-strip {
-  margin: 3px 0 0;
-}
-
-:root .premium-screen-overview .ov .ov-foot {
-  margin: 0 3px;
-}
-
-@media screen and (max-width: 430px) {
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage {
-    padding: 14px 12px 12px;
-  }
-
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-nav-value {
-    font-size: clamp(36px, 12vw, 48px);
-  }
-
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only,
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only .rhythm-ring-wrap,
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only .rhythm-ring-svg {
-    width: 68px;
-    height: 68px;
-    max-width: 68px;
-  }
-}
-
-@media screen and (max-width: 360px) {
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-hero-flex {
-    gap: 10px;
-  }
-
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only,
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only .rhythm-ring-wrap,
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only .rhythm-ring-svg {
-    width: 60px;
-    height: 60px;
-    max-width: 60px;
-  }
-
-  :root .premium-screen-overview .ov > .pulse-goal-line {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
-
-  :root .premium-screen-overview .ov > .pulse-goal-line .pulse-goal-meta {
-    grid-column: 2 / 3;
-  }
+/* Journal / TodayCenter sits tight under hero */
+:root .premium-screen-overview .ov .today-center {
+  margin-top: 0;
 }
