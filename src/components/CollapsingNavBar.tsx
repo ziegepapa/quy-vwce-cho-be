@@ -1,7 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { SyncStatus } from "../lib/sync/types";
-import { SYNC_STATUS_LABEL } from "../lib/sync/types";
-import AvatarMenu, { avatarGradient } from "./AvatarMenu";
+import { useEffect, useState } from "react";
 import "../styles/visual-abc-shell.css";
 
 type BerlinClock = { iso: string; time: string };
@@ -22,7 +19,7 @@ function readBerlinClock(): BerlinClock {
 function TimeDate() {
   const [clock, setClock] = useState<BerlinClock>(() => readBerlinClock());
   useEffect(() => {
-    const id = window.setInterval(() => setClock(readBerlinClock()), 30_000);
+    const id = window.setInterval(() => setClock(readBerlinClock()), 1_000);
     return () => window.clearInterval(id);
   }, []);
   return (
@@ -33,19 +30,19 @@ function TimeDate() {
 }
 
 export default function CollapsingNavBar({
-  displayName,
-  syncStatus,
-  pending,
-  onSignOut,
   onSyncNow,
+  onSignOut,
   onUpdatePrice,
   onSearch,
   onFilter,
   onAddGoal,
   onChangeScenario,
+  displayName,
+  syncStatus,
+  pending,
 }: {
   displayName: string;
-  syncStatus: SyncStatus;
+  syncStatus: string;
   pending: number;
   onSignOut: () => void;
   onSyncNow?: () => void;
@@ -55,10 +52,10 @@ export default function CollapsingNavBar({
   onAddGoal?: () => void;
   onChangeScenario?: () => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const closeMenu = useCallback(() => setMenuOpen(false), []);
-  const initial = (displayName.trim()[0] || "?").toUpperCase();
+  void displayName;
+  void syncStatus;
+  void pending;
+  void onSignOut;
   void onUpdatePrice;
   void onSearch;
   void onFilter;
@@ -67,43 +64,21 @@ export default function CollapsingNavBar({
 
   useEffect(() => {
     document.documentElement.style.removeProperty("--nav-h-dyn");
+    document.documentElement.classList.add("theme-vault");
   }, []);
 
   return (
-    <>
-      <header className="bar">
-        <span className="bar-logo">VWCE Vault</span>
-        <div className="bar-r">
-          {onSyncNow ? (
-            <button type="button" className="sync-pill" onClick={onSyncNow}>
-              ↻ Sync
-            </button>
-          ) : null}
-          <TimeDate />
-          <button
-            ref={triggerRef}
-            type="button"
-            className="bar-avatar"
-            aria-label={`Menu tài khoản, ${SYNC_STATUS_LABEL[syncStatus]}`}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((value) => !value)}
-          >
-            <span className="bar-avatar-mark" style={{ background: avatarGradient(displayName) }}>{initial}</span>
-            <span className={`bar-sync-dot ${syncStatus}`} aria-hidden />
+    <header className="bar">
+      <span className="bar-logo">VWCE Vault</span>
+      <div className="bar-r">
+        {onSyncNow ? (
+          <button type="button" className="sync-pill" onClick={onSyncNow}>
+            <span>↻</span>
+            <span>Sync</span>
           </button>
-        </div>
-      </header>
-      <AvatarMenu
-        open={menuOpen}
-        onClose={closeMenu}
-        displayName={displayName}
-        syncStatus={syncStatus}
-        pending={pending}
-        onSignOut={onSignOut}
-        onSyncNow={onSyncNow}
-        triggerRef={triggerRef}
-      />
-    </>
+        ) : null}
+        <TimeDate />
+      </div>
+    </header>
   );
 }
