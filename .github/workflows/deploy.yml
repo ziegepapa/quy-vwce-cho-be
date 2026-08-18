@@ -44,7 +44,13 @@ jobs:
   preview-smoke:
     needs: test-build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Browser binaries + OS libs come from the Playwright image — no
+    # `playwright install --with-deps` / apt-get in the job (that path was
+    # timing out at 15m on azure.archive.ubuntu.com before tests started).
+    # Image tag must stay aligned with @playwright/test major.minor in package.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.54.2-jammy
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -58,8 +64,6 @@ jobs:
         run: deno check supabase/functions/explain-trace/index.ts
       - name: Run isolated Edge Function smoke environment
         run: npm run test:edge-smoke
-      - name: Install isolated browser
-        run: npx playwright install --with-deps chromium webkit
       - name: Build production preview
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
