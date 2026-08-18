@@ -81,20 +81,34 @@ body::after{
 .s-title{font-size:20px;font-weight:900;letter-spacing:-.02em}
 
 /* ═══════════════════════════════
-   S1 OVERVIEW
+   S1 OVERVIEW  — v10 number diet
 ═══════════════════════════════ */
 .ov{padding:14px 14px 0;display:flex;flex-direction:column;gap:9px}
 
-/* hero */
-.hero{padding:26px 22px 22px;background:linear-gradient(148deg,color-mix(in srgb,var(--vi) 26%,transparent) 0%,color-mix(in srgb,var(--em) 7%,transparent) 100%),var(--g);border-color:color-mix(in srgb,var(--vi) 22%,transparent);box-shadow:0 0 55px color-mix(in srgb,var(--vi) 14%,transparent) inset}
-.h-eye{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
-.h-num{font-size:66px;font-weight:900;letter-spacing:-.05em;line-height:.95;background:linear-gradient(128deg,#fff 0%,color-mix(in srgb,var(--vi) 70%,#fff) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px color-mix(in srgb,var(--vi) 38%,transparent));font-variant-numeric:tabular-nums}
-.h-row{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+/* ── HERO + GOAL RING merged ── */
+.hero{padding:24px 22px 20px;background:linear-gradient(148deg,color-mix(in srgb,var(--vi) 26%,transparent) 0%,color-mix(in srgb,var(--em) 7%,transparent) 100%),var(--g);border-color:color-mix(in srgb,var(--vi) 22%,transparent);box-shadow:0 0 55px color-mix(in srgb,var(--vi) 14%,transparent) inset}
+.hero-flex{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.hero-left{flex:1;min-width:0}
+.h-eye{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.h-num{font-size:52px;font-weight:900;letter-spacing:-.05em;line-height:.95;background:linear-gradient(128deg,#fff 0%,color-mix(in srgb,var(--vi) 70%,#fff) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px color-mix(in srgb,var(--vi) 38%,transparent));font-variant-numeric:tabular-nums;white-space:nowrap}
+.h-row{display:flex;align-items:center;gap:8px;margin-top:11px}
 .bdg{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;border-radius:100px;padding:4px 11px}
 .bdg-up{color:var(--em);background:color-mix(in srgb,var(--em) 10%,transparent);border:1px solid color-mix(in srgb,var(--em) 24%,transparent)}
-.bdg-neu{color:var(--dim);background:rgba(255,255,255,.05);border:1px solid var(--gb)}
 
-/* ── SPARKLINE price card ── */
+/* ring inside hero */
+.hero-ring{position:relative;flex-shrink:0;width:82px;display:flex;flex-direction:column;align-items:center;gap:3px}
+.hr-shell{position:relative;width:76px;height:76px}
+.hr-pulse{position:absolute;inset:6px;border-radius:50%;animation:glow-pulse 3s ease-in-out infinite;pointer-events:none}
+@keyframes glow-pulse{
+  0%,100%{box-shadow:0 0 0px color-mix(in srgb,var(--vi) 0%,transparent)}
+  50%{box-shadow:0 0 20px color-mix(in srgb,var(--vi) 32%,transparent)}
+}
+.hr-svg{width:76px;height:76px;display:block}
+.hr-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.hr-pct{font-size:17px;font-weight:900;letter-spacing:-.03em;color:#fff;text-shadow:0 0 12px color-mix(in srgb,var(--vi) 60%,transparent)}
+.hr-cap{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--dim);white-space:nowrap}
+
+/* ── PRICE + SPARKLINE ── */
 .price-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;transition:border-color .38s,background .38s}
 .price-row.stale{border-color:color-mix(in srgb,var(--am) 45%,transparent);background:color-mix(in srgb,var(--am) 4%,transparent)}
 .pr-left{display:flex;flex-direction:column;gap:2px}
@@ -114,9 +128,7 @@ body::after{
 .da{width:5px;height:5px;border-radius:50%;background:var(--am);animation:sblink 1.3s ease-in-out infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 @keyframes sblink{0%,100%{opacity:1}50%{opacity:.1}}
-
-/* sparkline */
-.sparkline-svg{width:88px;height:32px;display:block;overflow:visible}
+.sparkline-svg{width:88px;height:30px;display:block;overflow:visible}
 
 .stale-bar{display:none;padding:8px 16px;background:color-mix(in srgb,var(--am) 6%,transparent);border-top:1px solid color-mix(in srgb,var(--am) 20%,transparent);border-radius:0 0 20px 20px;margin-top:-12px;justify-content:space-between;align-items:center;gap:8px}
 .stale-bar.show{display:flex}
@@ -132,82 +144,59 @@ body::after{
 .tog::after{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s cubic-bezier(.4,0,.2,1);box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .tog.on::after{left:18px}
 
-/* ── GOAL RING card ── */
-.goal-card{padding:16px 18px}
-.gc-inner{display:flex;align-items:center;gap:16px}
-.gc-ring-wrap{position:relative;flex-shrink:0;width:96px;height:96px}
-.gc-ring-svg{width:96px;height:96px;overflow:visible}
-.gc-ring-pulse{position:absolute;inset:0;border-radius:50%;animation:glow-pulse 2.8s ease-in-out infinite;pointer-events:none}
-@keyframes glow-pulse{
-  0%,100%{box-shadow:0 0 0px color-mix(in srgb,var(--vi) 0%,transparent)}
-  50%{box-shadow:0 0 22px color-mix(in srgb,var(--vi) 35%,transparent)}
-}
-.gc-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.gc-pct{font-size:18px;font-weight:900;letter-spacing:-.03em;background:linear-gradient(128deg,#fff,var(--vi));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.gc-sub{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-top:1px}
-.gc-info{flex:1;display:flex;flex-direction:column;gap:8px}
-.gc-row{}
-.gc-lbl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
-.gc-val{font-size:18px;font-weight:800;letter-spacing:-.02em}
-.gc-val.target{background:linear-gradient(128deg,#fff,var(--vi));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.gc-val.remain{color:var(--dim);font-size:14px;font-weight:700}
-.gc-track{height:3px;background:rgba(255,255,255,.07);border-radius:2px;margin-top:6px;overflow:hidden}
-.gc-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--vi),var(--em));transition:width 1s cubic-bezier(.4,0,.2,1)}
+/* ── COMBO ROW: shares + sparplan ── */
+.combo-row{display:flex;align-items:stretch;padding:0}
+.cr-item{flex:1;padding:13px 16px;position:relative}
+.cr-div{width:1px;background:rgba(255,255,255,.06);margin:11px 0}
+.cr-lbl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.cr-val{font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.cr-unit{font-size:12px;font-weight:600;color:var(--dim);margin-left:1px}
+.cr-em{background:linear-gradient(128deg,#fff,var(--em));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.cr-am{color:var(--am)}
 
-/* 2 mini stat */
-.ov-bottom{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.stat-mini{padding:13px 14px}
-.sm-lbl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
-.sm-val{font-size:23px;font-weight:800;letter-spacing:-.03em;line-height:1}
-.sm-sub{font-size:9px;color:var(--dim);margin-top:4px}
-.sm-em{background:linear-gradient(128deg,#fff,var(--em));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.sm-am{color:var(--am)}
-.sm-gv::after,.sm-ge::after{content:'';position:absolute;width:48px;height:48px;border-radius:50%;filter:blur(20px);bottom:-12px;right:-4px;pointer-events:none;z-index:0}
-.sm-gv::after{background:var(--gv)}
-.sm-ge::after{background:var(--ge)}
-
-/* ─── STREAK CARD ─── */
+/* ── STREAK ── */
 .streak-card{padding:16px 18px}
 .sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.sc-left{display:flex;align-items:center;gap:10px}
+.sc-left{display:flex;align-items:center;gap:11px}
 .sc-flame{font-size:28px;line-height:1;filter:drop-shadow(0 0 10px rgba(251,146,60,.70)) drop-shadow(0 0 20px rgba(251,146,60,.35));animation:flame-bob 2.4s ease-in-out infinite}
 @keyframes flame-bob{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.08) rotate(2deg)}}
-.sc-text{}
-.sc-title{font-size:12px;font-weight:700;color:var(--sub)}
-.sc-count{font-size:30px;font-weight:900;letter-spacing:-.04em;line-height:1;background:linear-gradient(128deg,var(--am),#fff 80%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.sc-label{font-size:10px;color:var(--dim);margin-top:1px}
+.sc-count-row{display:flex;align-items:baseline;gap:6px}
+.sc-count{font-size:26px;font-weight:900;letter-spacing:-.04em;line-height:1;background:linear-gradient(128deg,var(--am),#fff 80%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sc-unit{font-size:11px;font-weight:600;color:var(--sub)}
+.sc-title{font-size:10px;color:var(--dim);margin-top:3px}
 .sc-right{text-align:right}
 .sc-next-lbl{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
-.sc-next-date{font-size:15px;font-weight:800;color:var(--vi)}
-.sc-next-sub{font-size:9px;color:var(--dim);margin-top:2px}
+.sc-next-date{font-size:16px;font-weight:800;color:var(--vi)}
 .sc-dots{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
 .dot{width:10px;height:10px;border-radius:50%;background:color-mix(in srgb,var(--vi) 18%,transparent);border:1px solid color-mix(in srgb,var(--vi) 25%,transparent);transition:all .3s}
 .dot.done{background:var(--em);border-color:transparent;box-shadow:0 0 5px color-mix(in srgb,var(--em) 60%,transparent)}
 .dot.cur{background:var(--am);border-color:transparent;box-shadow:0 0 6px color-mix(in srgb,var(--am) 70%,transparent);animation:pulse-dot 1.8s ease-in-out infinite}
 @keyframes pulse-dot{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
 
-/* ─── PERFORMANCE BAR CARD ─── */
-.perf-card{padding:16px 18px}
-.perf-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+/* ── PERFORMANCE (visual-first, numbers collapsed) ── */
+.perf-card{padding:16px 18px 12px}
+.perf-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:13px}
 .perf-title{font-size:12px;font-weight:700;color:var(--sub)}
 .perf-return{font-size:22px;font-weight:900;letter-spacing:-.03em;background:linear-gradient(128deg,#fff,var(--em));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.perf-return-sub{font-size:10px;color:var(--dim);margin-left:3px}
-.perf-bar-wrap{margin-bottom:12px}
 .perf-bar-track{height:10px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden;position:relative}
 .perf-bar-base{position:absolute;left:0;top:0;bottom:0;border-radius:5px 0 0 5px;background:linear-gradient(90deg,color-mix(in srgb,var(--vi) 70%,transparent),color-mix(in srgb,var(--vi) 40%,transparent));transition:width .8s cubic-bezier(.4,0,.2,1)}
 .perf-bar-gain{position:absolute;top:0;bottom:0;border-radius:0 5px 5px 0;background:linear-gradient(90deg,var(--em),color-mix(in srgb,var(--em) 70%,#fff));transition:left .8s cubic-bezier(.4,0,.2,1),width .8s cubic-bezier(.4,0,.2,1)}
-.perf-legend{display:flex;justify-content:space-between;margin-top:8px}
+.perf-legend{display:flex;gap:16px;margin-top:9px}
 .pl-item{display:flex;align-items:center;gap:5px}
 .pl-dot{width:8px;height:8px;border-radius:50%}
 .pl-dot.base{background:var(--vi)}
 .pl-dot.gain{background:var(--em)}
 .pl-txt{font-size:10px;color:var(--dim)}
-.pl-val{font-size:11px;font-weight:800;color:var(--sub);margin-left:2px}
-.perf-pace{display:flex;align-items:center;justify-content:space-between;padding-top:11px;border-top:1px solid rgba(255,255,255,.05)}
-.pp-item{text-align:center}
+
+.perf-toggle{width:100%;margin-top:12px;padding:8px;border:none;border-top:1px solid rgba(255,255,255,.05);background:none;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-family:inherit;transition:color .18s}
+.perf-toggle:active{color:var(--sub)}
+.perf-detail{max-height:0;overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .3s;opacity:0}
+.perf-detail.open{max-height:80px;opacity:1}
+.perf-pace{display:flex;align-items:center;justify-content:space-between;padding-top:6px}
+.pp-item{text-align:center;flex:1}
 .pp-lbl{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
 .pp-val{font-size:14px;font-weight:800}
-.pp-sep{font-size:18px;color:var(--gb);font-weight:100}
+.pp-sep{width:1px;height:26px;background:rgba(255,255,255,.06)}
 
 /* ═══════════════════════════════
    S2 GIAO DỊCH
@@ -248,8 +237,6 @@ body::after{
 .ss-c{padding:12px 10px;text-align:center}
 .ss-lbl{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
 .ss-val{font-size:16px;font-weight:800}
-
-/* ── SIM AREA CHART ── */
 .sim-chart-card{padding:14px 14px 10px;overflow:hidden}
 .sim-chart-title{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 .sim-chart-svg{width:100%;display:block;overflow:visible}
@@ -257,7 +244,6 @@ body::after{
 .cl-item{display:flex;align-items:center;gap:5px}
 .cl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .cl-txt{font-size:10px;color:var(--dim)}
-
 .sim-inputs{padding:18px;display:flex;flex-direction:column;gap:12px}
 .inp-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .inp-lbl{font-size:13px;color:var(--sub);flex:1}
@@ -350,13 +336,39 @@ body::after{
   <div class="screen active" id="s1">
     <div class="ov">
 
-      <!-- Hero -->
+      <!-- HERO + GOAL RING merged -->
       <div class="gl hero">
-        <div class="h-eye">Portfolio VWCE &middot; NAV hi&#7879;n t&#7841;i</div>
-        <div class="h-num" id="hero-num">&#8364; 0</div>
-        <div class="h-row">
-          <span class="bdg bdg-up">&#9650; +&#8364;312 th&aacute;ng n&agrave;y</span>
-          <span class="bdg bdg-neu">+3,3% YTD</span>
+        <div class="hero-flex">
+          <div class="hero-left">
+            <div class="h-eye">Portfolio VWCE</div>
+            <div class="h-num" id="hero-num">&#8364; 0</div>
+            <div class="h-row">
+              <span class="bdg bdg-up">&#9650; +&#8364;312 th&aacute;ng n&agrave;y</span>
+            </div>
+          </div>
+          <div class="hero-ring">
+            <div class="hr-shell">
+              <div class="hr-pulse"></div>
+              <svg class="hr-svg" viewBox="0 0 76 76">
+                <defs>
+                  <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="var(--vi)"/>
+                    <stop offset="100%" stop-color="var(--em)"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="38" cy="38" r="30" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="7"/>
+                <circle id="goal-arc" cx="38" cy="38" r="30" fill="none"
+                  stroke="url(#ringGrad)" stroke-width="7" stroke-linecap="round"
+                  stroke-dasharray="0 189"
+                  transform="rotate(-90 38 38)"
+                  style="transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)"/>
+              </svg>
+              <div class="hr-center">
+                <div class="hr-pct" id="gc-pct-txt">0%</div>
+              </div>
+            </div>
+            <div class="hr-cap">t&#7899;i &#8364;50k</div>
+          </div>
         </div>
       </div>
 
@@ -375,8 +387,7 @@ body::after{
           <div class="pr-right">
             <span class="pr-pill live" id="pp-live"><span class="dl"></span> LIVE</span>
             <span class="pr-pill old" id="pp-old" style="display:none"><span class="da"></span> GI&Aacute; C&#361;</span>
-            <!-- Sparkline SVG -->
-            <svg class="sparkline-svg" id="spark-svg" viewBox="0 0 88 32" preserveAspectRatio="none">
+            <svg class="sparkline-svg" id="spark-svg" viewBox="0 0 88 30" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stop-color="#10b981" stop-opacity="0.35"/>
@@ -399,61 +410,16 @@ body::after{
         </div>
       </div>
 
-      <!-- Goal Ring -->
-      <div class="gl goal-card">
-        <div class="gc-inner">
-          <div class="gc-ring-wrap">
-            <div class="gc-ring-pulse"></div>
-            <svg class="gc-ring-svg" viewBox="0 0 96 96">
-              <defs>
-                <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="var(--vi)"/>
-                  <stop offset="100%" stop-color="var(--em)"/>
-                </linearGradient>
-              </defs>
-              <!-- bg track -->
-              <circle cx="48" cy="48" r="38" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="9"/>
-              <!-- progress arc -->
-              <circle id="goal-arc" cx="48" cy="48" r="38" fill="none"
-                stroke="url(#ringGrad)" stroke-width="9" stroke-linecap="round"
-                stroke-dasharray="0 239"
-                transform="rotate(-90 48 48)"
-                style="transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)"/>
-            </svg>
-            <div class="gc-center">
-              <div class="gc-pct" id="gc-pct-txt">0%</div>
-              <div class="gc-sub">m&#7909;c ti&ecirc;u</div>
-            </div>
-          </div>
-          <div class="gc-info">
-            <div class="gc-row">
-              <div class="gc-lbl">M&#7908;C TI&Ecirc;U</div>
-              <div class="gc-val target">&#8364; 50.000</div>
-            </div>
-            <div class="gc-row">
-              <div class="gc-lbl">HI&#7878;N T&#7840;I</div>
-              <div class="gc-val" style="font-size:16px;font-weight:800;color:var(--sub)">&#8364; 9.847</div>
-            </div>
-            <div class="gc-track"><div class="gc-fill" id="gc-fill" style="width:0%"></div></div>
-            <div class="gc-row">
-              <div class="gc-lbl" style="margin-top:4px">C&Ograve;N L&#7840;I</div>
-              <div class="gc-val remain">&#8364; 40.153</div>
-            </div>
-          </div>
+      <!-- Combo: shares + sparplan -->
+      <div class="gl combo-row">
+        <div class="cr-item">
+          <div class="cr-lbl">C&#7893; ph&#7847;n</div>
+          <div class="cr-val cr-em">58,06</div>
         </div>
-      </div>
-
-      <!-- 2 mini stats -->
-      <div class="ov-bottom">
-        <div class="gl stat-mini sm-gv">
-          <div class="sm-lbl">C&#7892; ph&#7847;n VWCE</div>
-          <div class="sm-val sm-em">58,06</div>
-          <div class="sm-sub">@ &#8364;169,62</div>
-        </div>
-        <div class="gl stat-mini sm-ge">
-          <div class="sm-lbl">Sparplan th&aacute;ng</div>
-          <div class="sm-val sm-am">&#8364;200</div>
-          <div class="sm-sub">T8 &middot; t&#7921; &#273;&#7897;ng</div>
+        <div class="cr-div"></div>
+        <div class="cr-item">
+          <div class="cr-lbl">Sparplan</div>
+          <div class="cr-val cr-am">&#8364;200<span class="cr-unit">/th</span></div>
         </div>
       </div>
 
@@ -462,16 +428,17 @@ body::after{
         <div class="sc-top">
           <div class="sc-left">
             <span class="sc-flame">&#128293;</span>
-            <div class="sc-text">
+            <div>
+              <div class="sc-count-row">
+                <span class="sc-count">14</span>
+                <span class="sc-unit">th&aacute;ng li&ecirc;n ti&#7871;p</span>
+              </div>
               <div class="sc-title">Chu&#7895;i Sparplan</div>
-              <div class="sc-count">14</div>
-              <div class="sc-label">th&aacute;ng li&ecirc;n ti&#7871;p</div>
             </div>
           </div>
           <div class="sc-right">
             <div class="sc-next-lbl">Mua ti&#7871;p</div>
             <div class="sc-next-date">01/09</div>
-            <div class="sc-next-sub">&#8364;200 &middot; 14 ng&agrave;y n&#7919;a</div>
           </div>
         </div>
         <div class="sc-dots" id="sc-dots"></div>
@@ -481,27 +448,25 @@ body::after{
       <div class="gl perf-card">
         <div class="perf-top">
           <span class="perf-title">Hi&#7879;u su&#7845;t danh m&#7909;c</span>
-          <span>
-            <span class="perf-return">+33,1%</span>
-            <span class="perf-return-sub">&#8364;+2.447</span>
-          </span>
+          <span class="perf-return">+33,1%</span>
         </div>
-        <div class="perf-bar-wrap">
-          <div class="perf-bar-track">
-            <div class="perf-bar-base" id="pbb" style="width:0%"></div>
-            <div class="perf-bar-gain" id="pbg" style="left:0%;width:0%"></div>
-          </div>
-          <div class="perf-legend">
-            <div class="pl-item"><div class="pl-dot base"></div><span class="pl-txt">V&#7889;n g&oacute;p</span><span class="pl-val">&#8364;7.400</span></div>
-            <div class="pl-item"><div class="pl-dot gain"></div><span class="pl-txt">L&atilde;i</span><span class="pl-val">&#8364;2.447</span></div>
-          </div>
+        <div class="perf-bar-track">
+          <div class="perf-bar-base" id="pbb" style="width:0%"></div>
+          <div class="perf-bar-gain" id="pbg" style="left:0%;width:0%"></div>
         </div>
-        <div class="perf-pace">
-          <div class="pp-item"><div class="pp-lbl">TB / th&aacute;ng</div><div class="pp-val" style="color:var(--em)">+&#8364;175</div></div>
-          <div class="pp-sep">|</div>
-          <div class="pp-item"><div class="pp-lbl">Gi&aacute; mua TB</div><div class="pp-val" style="color:var(--sub)">127,45 &#8364;</div></div>
-          <div class="pp-sep">|</div>
-          <div class="pp-item"><div class="pp-lbl">Tham gia</div><div class="pp-val" style="color:var(--dim)">Jun 2025</div></div>
+        <div class="perf-legend">
+          <div class="pl-item"><div class="pl-dot base"></div><span class="pl-txt">V&#7889;n g&oacute;p</span></div>
+          <div class="pl-item"><div class="pl-dot gain"></div><span class="pl-txt">L&atilde;i</span></div>
+        </div>
+        <button class="perf-toggle" id="perf-tg" onclick="togglePerf()">Chi ti&#7871;t &#8250;</button>
+        <div class="perf-detail" id="perf-detail">
+          <div class="perf-pace">
+            <div class="pp-item"><div class="pp-lbl">V&#7889;n g&oacute;p</div><div class="pp-val" style="color:var(--vi)">&#8364;7.400</div></div>
+            <div class="pp-sep"></div>
+            <div class="pp-item"><div class="pp-lbl">L&atilde;i</div><div class="pp-val" style="color:var(--em)">&#8364;2.447</div></div>
+            <div class="pp-sep"></div>
+            <div class="pp-item"><div class="pp-lbl">Gi&aacute; mua TB</div><div class="pp-val" style="color:var(--sub)">&#8364;127</div></div>
+          </div>
         </div>
       </div>
 
@@ -570,7 +535,6 @@ body::after{
         <div class="gl ss-c"><div class="ss-lbl">L&atilde;i</div><div class="ss-val" id="ss-int" style="color:var(--em)">&mdash;</div></div>
       </div>
 
-      <!-- Area Chart -->
       <div class="gl sim-chart-card">
         <div class="sim-chart-title">T&#259;ng tr&#432;&#7903;ng danh m&#7909;c</div>
         <svg id="sim-chart-svg" class="sim-chart-svg" viewBox="0 0 320 100" preserveAspectRatio="none" height="100">
@@ -595,7 +559,6 @@ body::after{
         </div>
       </div>
 
-      <!-- Mode A+C inputs -->
       <div class="mode-section" id="ms-ac">
         <div class="gl sim-inputs">
           <div class="inp-row">
@@ -621,7 +584,6 @@ body::after{
         </div>
       </div>
 
-      <!-- Mode B inputs -->
       <div class="mode-section" id="ms-b" style="display:none">
         <div class="gl sim-inputs">
           <div class="inp-row">
@@ -635,7 +597,6 @@ body::after{
         </div>
       </div>
 
-      <!-- shared: rate + table -->
       <div class="gl sim-inputs" style="padding-top:14px;padding-bottom:14px">
         <div class="inp-row">
           <span class="inp-lbl">L&#7907;i nhu&#7853;n / n&#259;m (%)</span>
@@ -688,7 +649,7 @@ body::after{
         <div class="set-row"><div class="si-ico e">&#128274;</div><div class="sr-body"><div class="sr-name">B&#7843;o m&#7853;t &amp; MFA</div><div class="sr-sub">X&aacute;c th&#7921;c 2 b&#432;&#7899;c &#273;&atilde; b&#7853;t &rsaquo;</div></div><div class="sr-arr">&rsaquo;</div></div>
       </div>
       <button class="abmeld">&#128275; Abmelden</button>
-      <div class="ver">VWCE Vault &middot; v1.9.0 &middot; local-first</div>
+      <div class="ver">VWCE Vault &middot; v1.10.0 &middot; local-first</div>
     </div>
   </div><!-- /s4 -->
 
@@ -724,7 +685,7 @@ function tick(){
 tick();setInterval(tick,1000);
 
 // ─── COUNT-UP HERO ───
-function countUp(el, target, duration){
+function countUp(el,target,duration){
   const start=performance.now();
   const fmt=v=>'\u20ac\u2009'+Math.round(v).toLocaleString('de-DE');
   function step(now){
@@ -739,7 +700,7 @@ function countUp(el, target, duration){
 // ─── SPARKLINE ───
 const SPARK_PRICES=[127.45,130.2,135.8,139.4,145.1,150.3,155.6,160.2,163.8,166.4,168.1,169.62];
 function buildSparkline(){
-  const W=88,H=32,PAD=2;
+  const W=88,H=30,PAD=2;
   const min=Math.min(...SPARK_PRICES)-2;
   const max=Math.max(...SPARK_PRICES)+1;
   const pts=SPARK_PRICES.map((v,i)=>({
@@ -756,19 +717,25 @@ function buildSparkline(){
   dot.setAttribute('cy',last.y.toFixed(1));
 }
 
-// ─── GOAL RING ───
+// ─── GOAL RING (in hero) ───
 function buildGoalRing(){
   const target=50000,current=9847;
   const pct=Math.min(current/target,1);
-  const circ=2*Math.PI*38;
+  const circ=2*Math.PI*30;
   const dash=circ*pct;
   const arc=document.getElementById('goal-arc');
-  // animate after short delay
   setTimeout(()=>{
     arc.style.strokeDasharray=dash.toFixed(1)+' '+circ.toFixed(1);
-    document.getElementById('gc-fill').style.width=(pct*100).toFixed(1)+'%';
-    document.getElementById('gc-pct-txt').textContent=(pct*100).toFixed(1).replace('.',',')+'%';
+    document.getElementById('gc-pct-txt').textContent=Math.round(pct*100)+'%';
   },400);
+}
+
+// ─── PERF DETAIL TOGGLE ───
+let perfOpen=false;
+function togglePerf(){
+  perfOpen=!perfOpen;
+  document.getElementById('perf-detail').classList.toggle('open',perfOpen);
+  document.getElementById('perf-tg').innerHTML=perfOpen?'Thu g\u1ecdn \u2039':'Chi ti\u1ebft \u203a';
 }
 
 // ─── SYNC ───
@@ -822,20 +789,16 @@ function setLang(l){
   }
 })();
 
-// ─── PERF BAR ───
+// ─── ON LOAD ───
 window.addEventListener('load',()=>{
   setTimeout(()=>{
     document.getElementById('pbb').style.width='75.2%';
     document.getElementById('pbg').style.left='75.2%';
     document.getElementById('pbg').style.width='24.8%';
   },300);
-  // count-up hero
   countUp(document.getElementById('hero-num'),9847,1100);
-  // sparkline
   buildSparkline();
-  // goal ring
   buildGoalRing();
-  // sim
   updYr();sim();
 });
 
@@ -904,7 +867,7 @@ function sim(){
 
 // ─── SIM AREA CHART ───
 function buildSimChart(monthly,rate,totalYears){
-  const W=320,H=100,PL=0,PR=0,PT=6,PB=4;
+  const W=320,H=100,PT=6,PB=4;
   let navPts=[],depPts=[];
   let nav=START,dep=DEP0;
   navPts.push(nav);depPts.push(dep);
@@ -915,16 +878,13 @@ function buildSimChart(monthly,rate,totalYears){
   const allVals=[...navPts,...depPts];
   const minV=Math.min(...allVals)*0.97;
   const maxV=Math.max(...allVals)*1.02;
-  const xOf=(i)=>PL+(i/totalYears)*(W-PL-PR);
+  const xOf=(i)=>(i/totalYears)*W;
   const yOf=(v)=>H-PB-(v-minV)/(maxV-minV)*(H-PT-PB);
   function polyline(pts){
     return pts.map((v,i)=>(i===0?'M':'L')+xOf(i).toFixed(1)+' '+yOf(v).toFixed(1)).join(' ');
   }
-  function area(pts,bot){
-    const line=polyline(pts);
-    const last=xOf(totalYears);
-    const first=xOf(0);
-    return line+' L'+last.toFixed(1)+' '+(H-PB)+' L'+first.toFixed(1)+' '+(H-PB)+' Z';
+  function area(pts){
+    return polyline(pts)+' L'+xOf(totalYears).toFixed(1)+' '+(H-PB)+' L'+xOf(0).toFixed(1)+' '+(H-PB)+' Z';
   }
   document.getElementById('chart-gain-area').setAttribute('d',area(navPts));
   document.getElementById('chart-dep-area').setAttribute('d',area(depPts));
