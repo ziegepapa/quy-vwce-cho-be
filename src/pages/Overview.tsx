@@ -388,14 +388,16 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
           </div>
         ) : null}
 
-        <RhythmHero
-          streak={streakResult}
-          goals={goals}
-          totalContributed={portfolio.totalContributed}
-          heroLifetimeContribution={heroLifetime.amount}
-          nhipWindowTotal={nhipWindowTotal}
-          nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
-        />
+        {mode !== "empty" ? (
+          <RhythmHero
+            streak={streakResult}
+            goals={goals}
+            totalContributed={portfolio.totalContributed}
+            heroLifetimeContribution={heroLifetime.amount}
+            nhipWindowTotal={nhipWindowTotal}
+            nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
+          />
+        ) : null}
       </section>
 
       {cashNegative ? (
