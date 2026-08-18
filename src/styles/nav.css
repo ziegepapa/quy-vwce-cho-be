@@ -1,6 +1,10 @@
 /* V9 nav — fixed navbar + portal menu, không gây scroll ngang.
    Quy tắc toàn cục (overflow-x) nằm ở index.css.
-   Thang z-index nằm ở tokens.css. File này không khai báo lại. */
+   Thang z-index nằm ở tokens.css. File này không khai báo lại.
+
+   visual-abc: demo .bar is sticky with always-on bar-bg + blur.
+   Production keeps fixed + safe-area; background is never fully transparent
+   so scrolled hero content cannot show through / sit under the chrome. */
 
 .collapse-nav {
   position: fixed;
@@ -12,15 +16,26 @@
   padding-top: var(--safe-top);
   padding-left: max(16px, var(--safe-left));
   padding-right: max(16px, var(--safe-right));
-  background: transparent;
-  border-bottom: 1px solid transparent;
+  /* Demo .bar: always opaque/blur surface (not transparent at rest) */
+  background: var(--bar-bg, var(--color-surface-translucent));
+  border-bottom: 1px solid var(--gb, var(--hairline));
   transition: background var(--d-base) var(--ease-emphasized),
-    border-color var(--d-base) var(--ease-emphasized);
+    border-color var(--d-base) var(--ease-emphasized),
+    box-shadow var(--d-base) var(--ease-emphasized);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .collapse-nav {
+    background: color-mix(in srgb, var(--bar-bg, var(--color-surface-translucent)) 88%, transparent);
+    backdrop-filter: blur(28px) saturate(2);
+    -webkit-backdrop-filter: blur(28px) saturate(2);
+  }
 }
 
 .collapse-nav.is-condensed {
   background: var(--color-surface-translucent);
   border-bottom-color: var(--hairline);
+  box-shadow: 0 8px 24px -16px rgba(0, 0, 0, 0.45);
 }
 
 @supports (backdrop-filter: blur(1px)) {

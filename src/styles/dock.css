@@ -1,6 +1,11 @@
 /* Bottom dock — visual-abc pill geometry (demo .pill / .pb)
  * Behavior (scroll hide, reduced motion) kept from production.
  * Primary destinations only: 4 items from App PRIMARY_NAV.
+ *
+ * ACCEPTANCE (Owner iPhone):
+ * - Exactly ONE fixed pill, 4 items in a single horizontal row.
+ * - flex-wrap: nowrap; each item flex 1 1 25%; no wrap at 320–430px.
+ * - Safe-area bottom; page padding clears dock + home indicator.
  */
 :root {
   --dock-h: 52px;
@@ -39,6 +44,7 @@
   }
 }
 
+/* Outer fixed host — width constrained so the pill never exceeds viewport */
 .bottom-dock {
   position: fixed;
   left: 50%;
@@ -49,8 +55,9 @@
   justify-content: center;
   pointer-events: none;
   padding: 0;
-  width: auto;
-  max-width: calc(100vw - 24px);
+  width: calc(100vw - 24px);
+  max-width: 26rem;
+  box-sizing: border-box;
   transition: transform 200ms var(--ease-emphasized, cubic-bezier(0.4, 0, 0.2, 1)), opacity 200ms ease;
 }
 
@@ -69,17 +76,20 @@
   }
 }
 
-/* Demo .pill: pill-bg, radius 100px, blur 30px, inset highlight */
+/* Demo .pill: single row, radius 100px, blur 30px, inset highlight */
 .bottom-dock-inner {
   pointer-events: auto;
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: stretch;
   gap: 2px;
-  width: auto;
-  min-width: min(100%, 22rem);
-  max-width: 26rem;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   min-height: var(--dock-h);
   padding: 5px;
+  box-sizing: border-box;
   border-radius: 100px;
   background: var(--pill-bg, rgba(8, 5, 20, 0.86));
   border: 1px solid rgba(255, 255, 255, 0.10);
@@ -97,8 +107,11 @@
   }
 }
 
+/* Equal 25% slots — never grow beyond row, never wrap */
 .dock-item {
-  flex: 1 1 0;
+  flex: 1 1 25%;
+  min-width: 0;
+  max-width: 25%;
   position: relative;
   z-index: 1;
   display: flex;
@@ -110,15 +123,17 @@
   color: var(--dim, rgba(240, 238, 255, 0.28));
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   min-height: 42px;
-  padding: 8px 12px;
+  padding: 6px 2px;
   border-radius: 100px;
   border: none;
   background: none;
+  box-sizing: border-box;
   transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, box-shadow 0.2s, transform 100ms ease;
   -webkit-tap-highlight-color: transparent;
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .dock-item:active {
@@ -143,6 +158,7 @@
   justify-content: center;
   width: 18px;
   height: 18px;
+  flex-shrink: 0;
 }
 
 .dock-icon svg {
@@ -156,6 +172,27 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: inherit;
+}
+
+/* Narrow phones: keep one row, slightly smaller type */
+@media (max-width: 380px) {
+  .dock-item {
+    font-size: 10px;
+    padding: 5px 1px;
+    letter-spacing: 0;
+  }
+  .dock-icon,
+  .dock-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@media (max-width: 340px) {
+  .dock-item {
+    font-size: 9px;
+  }
 }
 
 @media (min-width: 900px) {
