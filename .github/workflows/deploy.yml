@@ -41,10 +41,13 @@ jobs:
           name: site-dist
           path: dist
           retention-days: 2
-  preview-smoke:
+  # Deno edge checks stay on the host runner (setup-deno fails inside the
+  # Playwright container). Browser smoke uses the prebuilt image below so we
+  # never run `playwright install --with-deps` / apt in CI.
+  edge-smoke:
     needs: test-build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -58,8 +61,25 @@ jobs:
         run: deno check supabase/functions/explain-trace/index.ts
       - name: Run isolated Edge Function smoke environment
         run: npm run test:edge-smoke
-      - name: Install isolated browser
-        run: npx playwright install --with-deps chromium webkit
+  preview-smoke:
+    needs: test-build
+    runs-on: ubuntu-latest
+    # Browsers + OS libs preinstalled — no apt / --with-deps (that path timed
+    # out 15m on azure.archive.ubuntu.com before tests started; #162 cancelled).
+    # Image tag must match the pinned @playwright/test version below.
+    container:
+      image: mcr.microsoft.com/playwright:v1.54.2-jammy
+      options: --ipc=host
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+      # package.json uses ^1.54.2; pin exact client so browser revisions match image.
+      - name: Pin Playwright client to image browsers (1.54.2)
+        run: npm install --no-save @playwright/test@1.54.2
       - name: Build production preview
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -86,7 +106,7 @@ jobs:
           if-no-files-found: ignore
   deploy:
     if: github.ref == 'refs/heads/main'
-    needs: [test-build, preview-smoke]
+    needs: [test-build, edge-smoke, preview-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # The only job that writes to the repository: it pushes dist to gh-pages.
