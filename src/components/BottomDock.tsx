@@ -7,7 +7,8 @@ export type DockItem = {
   icon: ReactNode;
 };
 
-/** Mobile dock chỉ giữ bốn đích chính; các đích phụ nằm trong menu avatar. */
+/** Mobile dock = demo visual-abc 4 destinations (PRIMARY_NAV from App).
+ *  Goals + Notfallmappe are secondary (AvatarMenu / deep links), not dock items. */
 const PRIMARY_DOCK_ITEMS = 4;
 
 /**

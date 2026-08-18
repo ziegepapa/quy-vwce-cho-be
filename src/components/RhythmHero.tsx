@@ -4,10 +4,8 @@ import type { ContributionStreakResult } from "../lib/contributionStreak";
 export type RhythmHeroProps = {
   streak: ContributionStreakResult;
   /**
-   * Các input dưới đây vẫn nằm trong adapter của Overview để revision UI này
-   * không đụng vào calculation wiring. Hero cố ý không hiển thị goal, amount
-   * theo cửa sổ 35 ngày, X/Y kế hoạch hoặc horizon nữa: goal là tùy chọn và
-   * ring đã đủ để kể câu chuyện về nhịp.
+   * Inputs kept in Overview adapter so this UI revision does not touch
+   * calculation wiring. Ring is streak months, not goal %.
    */
   goals: Goal[];
   totalContributed: number;
@@ -15,9 +13,9 @@ export type RhythmHeroProps = {
   nhipWindowTotal: number;
   nhipWindowDays: number;
   /**
-   * ringOnly — chỉ SVG streak, không body/status, không shell card.
-   * Dùng trong money stage (NAV | ring) khớp hierarchy demo visual-abc.
-   * full — giữ layout cũ nếu nơi khác còn cần (mặc định full).
+   * ringOnly — SVG streak only, no body/status, no shell card.
+   * Used in money stage (NAV | ring) matching demo visual-abc hierarchy.
+   * full — legacy layout for other call sites (default).
    */
   variant?: "full" | "ringOnly";
 };
@@ -26,9 +24,10 @@ export type RhythmHeroProps = {
 const RING_C = 2 * Math.PI * 30;
 
 /**
- * Hero nhịp: ring là streak (không phải % goal).
- * variant=ringOnly không render body — Overview đặt ring đồng cấp với NAV.
- * Geometry khớp demo visual-abc (76 viewBox, stroke 7, r=30) khi ringOnly.
+ * Hero nhịp: ring is streak (not goal %).
+ * variant=ringOnly does not render body — Overview places ring beside NAV.
+ * Geometry matches demo visual-abc (76 viewBox, stroke 7, r=30) when ringOnly.
+ * Center uses HTML overlay (.v10-hr-center) like demo .hr-center / .hr-pct.
  */
 export default function RhythmHero({
   streak,
@@ -82,21 +81,17 @@ export default function RhythmHero({
           transform="rotate(-90 38 38)"
           className={hasActiveStreak ? "v10-hr-arc" : "v10-hr-arc empty"}
         />
+      </svg>
+      <div className="v10-hr-center" aria-hidden={!hasActiveStreak}>
         {hasActiveStreak ? (
           <>
-            <text x="38" y="35" className="v10-hr-num" textAnchor="middle">
-              {streakMonths}
-            </text>
-            <text x="38" y="48" className="v10-hr-sub" textAnchor="middle">
-              tháng
-            </text>
+            <span className="v10-hr-pct">{streakMonths}</span>
+            <span className="v10-hr-pct-unit">tháng</span>
           </>
         ) : (
-          <text x="38" y="40" className="v10-hr-num empty" textAnchor="middle">
-            —
-          </text>
+          <span className="v10-hr-pct empty">—</span>
         )}
-      </svg>
+      </div>
     </div>
   );
 

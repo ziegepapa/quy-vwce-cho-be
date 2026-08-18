@@ -18,7 +18,7 @@ import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
 import { RecoveryReadOnlyProvider } from "./lib/recoveryReadOnly";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
-import { IconGoal, IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
+import { IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import { conflictCtaLabel, hasLogoutBlockers, openSyncConflictSection, readSyncConflictFocusToken, reconcileVisibleLogoutBlockers, type LogoutBlockerCounts } from "./components/SyncConflictSection";
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
@@ -46,15 +46,13 @@ function persistLogoutCleanupPending(pending: boolean) {
   try { if (pending) window.localStorage.setItem(LOGOUT_CLEANUP_PENDING_KEY, "1"); else window.localStorage.removeItem(LOGOUT_CLEANUP_PENDING_KEY); }
   catch { /* in-memory gate remains */ }
 }
-function IconShield() {
-  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3l7 3v5.5c0 4.3-2.9 8.2-7 9.5-4.1-1.3-7-5.2-7-9.5V6l7-3z" /><path d="M9.2 12.2l2 2 3.6-3.9" /></svg>;
-}
-const NAV: { to: string; label: string; icon: ReactNode }[] = [
+/** Primary dock + sidebar: demo visual-abc 4 destinations only.
+ *  /goals and /notfallmappe remain as secondary routes (AvatarMenu / deep links).
+ *  Do not delete Goal data, schema, or page source. */
+const PRIMARY_NAV: { to: string; label: string; icon: ReactNode }[] = [
   { to: "/", label: "Tổng quan", icon: <IconHome /> },
   { to: "/transactions", label: "Giao dịch", icon: <IconTx /> },
-  { to: "/goals", label: "Mục tiêu", icon: <IconGoal /> },
   { to: "/simulation", label: "Mô phỏng", icon: <IconSim /> },
-  { to: "/notfallmappe", label: "Hồ sơ", icon: <IconShield /> },
   { to: "/settings", label: "Cài đặt", icon: <IconSettings /> },
 ];
 type LogoutBlockers = LogoutBlockerCounts;
@@ -144,10 +142,6 @@ export default function App() {
           if (!needsRecovery) {
             try { setSyncStatus("syncing"); await runSync(auth.user.id); } catch { /* network */ }
             await refreshSyncBadge();
-            // Cập nhật settings sau sync: pullDelta có thể đã ghi data mới từ Supabase
-            // (bao gồm notfallmappe, onboardingDone...) vào DB. Nếu không cập nhật lại
-            // ở đây, React state sẽ giữ giá trị cũ (đọc trước sync) và app có thể
-            // hiện lại Onboarding mặc dù data đã được khôi phục hoàn toàn.
             setSettings(await getSettings());
           }
         } catch { setRecoveryRequired(true); setShowWizard(false); setRecoveryChecked(true); }
@@ -224,7 +218,6 @@ export default function App() {
         if (auth.vaultReady) await runSync(auth.user.id);
       } catch { /* mạng không có cũng không sao */ }
       await refreshSyncBadge();
-      // Cập nhật settings sau sync để phản ánh data mới nhất từ Supabase
       setSettings(await getSettings());
     } catch {
       setSkipError("Không thể lưu trạng thái. Kiểm tra bộ nhớ và thử lại.");
@@ -259,7 +252,7 @@ export default function App() {
   const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
   const focusConflictRequest = readSyncConflictFocusToken(location.state);
   return <div className="app-layout">
-    <aside className="sidebar" aria-label="Điều hướng"><div className="sidebar-brand">Quỹ VWCE</div><nav className="sidebar-nav">{NAV.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
+    <aside className="sidebar" aria-label="Điều hướng"><div className="sidebar-brand">Quỹ VWCE</div><nav className="sidebar-nav">{PRIMARY_NAV.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
     <div className="app-shell">
       {auth.user ? <CollapsingNavBar
         displayName={displayName}
@@ -296,7 +289,7 @@ export default function App() {
         <Route path="/notfallmappe" element={<Notfallmappe />} />
         <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} />} />
       </Routes></RecoveryReadOnlyProvider></main></NavActionsProvider>
-    </div><BottomDock items={NAV} />
+    </div><BottomDock items={PRIMARY_NAV} />
 
     {showSkipConfirm ? (
       <div className="modal-backdrop" role="presentation">
