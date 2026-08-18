@@ -15,8 +15,7 @@ export type RhythmHeroProps = {
   nhipWindowTotal: number;
   nhipWindowDays: number;
   /**
-   * ringOnly — chỉ SVG streak, không body/status, không shell card.
-   * Dùng trong money stage (NAV | ring) khớp hierarchy demo visual-abc.
+   * ringOnly — chỉ SVG streak + center HTML khớp demo visual-abc, không body/status, không shell card.
    * full — giữ layout cũ nếu nơi khác còn cần (mặc định full).
    */
   variant?: "full" | "ringOnly";
@@ -28,7 +27,7 @@ const RING_C = 2 * Math.PI * 30;
 /**
  * Hero nhịp: ring là streak (không phải % goal).
  * variant=ringOnly không render body — Overview đặt ring đồng cấp với NAV.
- * Geometry khớp demo visual-abc (76 viewBox, stroke 7, r=30) khi ringOnly.
+ * Geometry + DOM khớp demo visual-abc (76 viewBox, stroke 7, r=30, .hr-center HTML).
  */
 export default function RhythmHero({
   streak,
@@ -52,10 +51,11 @@ export default function RhythmHero({
       ? "Đang chờ nhịp góp tiếp theo"
       : "Chưa có khoản góp";
 
+  /* Literal demo DOM: .hr-shell > .hr-pulse + svg + .hr-center > .hr-pct */
   const ringDemo = (
     <div className="v10-hr-shell">
       <div className="v10-hr-pulse" aria-hidden />
-      <svg className="v10-hr-svg" viewBox="0 0 76 76" aria-label={ariaLabel}>
+      <svg className="v10-hr-svg" viewBox="0 0 76 76" aria-hidden>
         <defs>
           <linearGradient id="v10RingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="var(--vi, #8b5cf6)" />
@@ -82,21 +82,17 @@ export default function RhythmHero({
           transform="rotate(-90 38 38)"
           className={hasActiveStreak ? "v10-hr-arc" : "v10-hr-arc empty"}
         />
-        {hasActiveStreak ? (
-          <>
-            <text x="38" y="35" className="v10-hr-num" textAnchor="middle">
-              {streakMonths}
-            </text>
-            <text x="38" y="48" className="v10-hr-sub" textAnchor="middle">
-              tháng
-            </text>
-          </>
-        ) : (
-          <text x="38" y="40" className="v10-hr-num empty" textAnchor="middle">
-            —
-          </text>
-        )}
       </svg>
+      <div className="v10-hr-center" role="img" aria-label={ariaLabel}>
+        {hasActiveStreak ? (
+          <div className="v10-hr-pct">
+            {streakMonths}
+            <span className="v10-hr-pct-unit">tháng</span>
+          </div>
+        ) : (
+          <div className="v10-hr-pct v10-hr-pct--empty">—</div>
+        )}
+      </div>
     </div>
   );
 
