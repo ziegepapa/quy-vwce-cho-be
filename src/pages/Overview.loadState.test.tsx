@@ -85,8 +85,12 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("Overview load state", () => {
-  it("announces that the overview is busy while local data is loading", () => {
-    dbMocks.getSettings.mockReturnValue(new Promise(() => undefined));
+  it("announces that the overview is busy while local data is loading", async () => {
+    let resolveSettings: (value: unknown) => void = () => {};
+    const settingsPromise = new Promise((resolve) => {
+      resolveSettings = resolve;
+    });
+    dbMocks.getSettings.mockReturnValue(settingsPromise);
 
     renderOverview();
 
@@ -94,12 +98,14 @@ describe("Overview load state", () => {
     expect(status.getAttribute("aria-busy")).toBe("true");
     expect(screen.getByText("Đang tải dữ liệu Tổng quan…")).toBeTruthy();
     expect(screen.queryByText(/Không phải tư vấn đầu tư/)).toBeNull();
+
+    resolveSettings(defaultSettings());
+    await waitFor(() => expect(status.getAttribute("aria-busy")).not.toBe("true"));
   });
 
-  it("shows a fail-closed error and retries the complete read", async () => {
-    dbMocks.getSettings
-      .mockRejectedValueOnce(new Error("IndexedDB unavailable"))
-      .mockResolvedValueOnce(defaultSettings());
+  it("shows a local retry path when the overview cannot load", async () => {
+    dbMocks.getSettings.mockRejectedValueOnce(new Error("indexeddb offline"));
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
 
     renderOverview();
 
@@ -131,6 +137,7 @@ describe("Overview v10 hero stage — fail-closed", () => {
     expect(container.querySelector(".rhythm-assets-btn")).toBeNull();
     expect(container.querySelector(".v10-pnl")).toBeNull();
     expect(container.querySelector(".rhythm-hero")).toBeNull();
+    expect(container.querySelector(".v10-ring-only")).toBeNull();
     expect(container.querySelector(".rhythm-ring-svg")).toBeNull();
   });
 
@@ -142,7 +149,7 @@ describe("Overview v10 hero stage — fail-closed", () => {
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".rhythm-hero")).toBeTruthy());
+    await waitFor(() => expect(container.querySelector(".v10-ring-only")).toBeTruthy());
     const nav = container.querySelector(".v10-nav");
     expect(nav).toBeTruthy();
     const value = container.querySelector(".v10-nav-value");
@@ -171,6 +178,11 @@ describe("Overview v10 hero stage — fail-closed", () => {
       return button as HTMLButtonElement;
     });
     expect(container.querySelector('svg[aria-label="1 tháng liên tiếp"]')).toBeTruthy();
+    expect(container.querySelector(".v10-hero-flex")).toBeTruthy();
+    expect(container.querySelector(".v10-hero-flex .v10-nav")).toBeTruthy();
+    expect(container.querySelector(".v10-hero-flex .v10-ring-only")).toBeTruthy();
+    expect(container.querySelector(".v10-hero-flex .rhythm-body")).toBeNull();
+    expect(container.querySelector(".v10-hero-flex .rhythm-hero")).toBeNull();
 
     fireEvent.click(navButton);
 
@@ -188,7 +200,7 @@ describe("Overview v10 hero stage — fail-closed", () => {
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".rhythm-hero")).toBeTruthy());
+    await waitFor(() => expect(container.querySelector(".v10-ring-only")).toBeTruthy());
     expect(screen.getByText("Tài sản đã định giá")).toBeTruthy();
     expect(container.querySelector(".v10-pnl")).toBeNull();
     expect(container.querySelector(".v10-nav")?.textContent ?? "").not.toContain("%");

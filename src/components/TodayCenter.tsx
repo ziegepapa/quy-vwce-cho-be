@@ -91,7 +91,10 @@ export default function TodayCenter({
     && delta
     && (Math.abs(delta.value) > 0.005 || Math.abs(delta.quantity) > 0.000001),
   );
-  const showPulseSignal = !valuationReliable || delta === null || pulseChanged;
+  /* First baseline ("Mốc đầu tiên") is not a real delta — omit the row so
+   * it does not become a competing card under the money stage (demo hierarchy).
+   * Unreliable valuation or a real change still surfaces. */
+  const showPulseSignal = !valuationReliable || pulseChanged;
   const showNhipSection = showNhipCopy || showPulseSignal;
 
   const deltaValue = !valueComplete

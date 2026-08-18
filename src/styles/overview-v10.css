@@ -1,31 +1,28 @@
 /*
- * OVERVIEW-V10-HERO-CORRECTION-001 r1.
+ * OVERVIEW-V10-REBUILD-FROM-DEMO-001 r1
  *
- * Root cause của #158: Night Ledger dùng selector 0,4,0 cho money stage,
- * trong khi lớp v10 cũ chỉ có 0,3,0. Vì vậy display:grid và shell geometry cũ
- * vẫn thắng dù file này được import cuối. Corrective selectors dưới đây đi qua
- * :root + route + .ov + v10 classes (>= 0,5,0), không dùng !important.
+ * Structural hierarchy (must match DOM in Overview.tsx):
+ *   .overview-money-stage
+ *     .v10-hero-flex          <- flex row, like demo .hero-flex
+ *       .v10-nav              <- left: label + NAV + PnL
+ *       .v10-ring-only        <- right: ring SVG only (no body)
  *
- * Chỉ sửa composition: một money stage, meta rows mảnh và vertical rhythm.
- * Không thêm màu, shadow, card, chart hoặc data wiring.
+ * Not another specificity war against Night Ledger shells: the DOM itself
+ * no longer mounts RhythmHero full section inside the stage.
  */
 
 :root .premium-screen-overview .ov {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-height: 0;
 }
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  justify-content: stretch;
-  gap: 12px;
-  min-height: 0;
+  display: block;
   margin: 0;
-  padding: 14px;
+  padding: 16px 14px 14px;
+  min-height: 0;
 }
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage.overview-money-stage--empty {
@@ -38,13 +35,24 @@
   box-shadow: none;
 }
 
-:root .premium-screen-overview .ov .overview-money-stage.v10-stage > .v10-nav {
-  order: 0;
+/* Demo .hero-flex: NAV left, ring right, same row */
+:root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-hero-flex {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+:root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-nav {
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  gap: 4px;
   margin: 0;
   padding: 0;
 }
@@ -53,8 +61,9 @@
   margin: 0;
   font-size: 10px;
   font-weight: 740;
-  letter-spacing: 0.11em;
-  opacity: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.72;
 }
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-nav-btn {
@@ -75,196 +84,90 @@
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-nav-value {
   display: block;
-  font-size: clamp(36px, 12vw, 50px);
-  font-weight: 760;
-  line-height: 1;
+  font-size: clamp(36px, 11vw, 52px);
+  font-weight: 900;
   letter-spacing: -0.05em;
+  line-height: 0.95;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-pnl {
-  margin: 0;
+  margin: 2px 0 0;
   font-size: 13px;
-  font-weight: 680;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+:root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-pnl.pos {
+  color: var(--em, #10b981);
+}
+
+:root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-pnl.neg {
+  color: var(--re, #f87171);
 }
 
 :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-pnl-note {
   margin: 0;
   font-size: 11px;
-  line-height: 1.25;
-  opacity: 0.72;
+  opacity: 0.7;
+  line-height: 1.35;
 }
 
-/* RhythmHero chỉ còn vòng streak ở cột phải; shell và status block đều rời fold. */
-:root .premium-screen-overview .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm {
-  order: 0;
-  place-self: center end;
-  width: 64px;
-  max-width: 64px;
-  min-width: 64px;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  overflow: visible;
-}
-
-:root .premium-screen-overview .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm::after {
-  display: none;
-}
-
-:root .premium-screen-overview .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-hero-inner {
-  display: grid;
-  place-items: center;
-  min-height: 0;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-}
-
-:root .premium-screen-overview .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-ring-wrap {
-  flex: none;
-  width: 64px;
-  height: 64px;
-  margin: 0;
-}
-
-:root .premium-screen-overview .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-ring-svg {
-  display: block;
-  width: 64px;
-  height: 64px;
-  max-width: 64px;
-}
-
-:root .premium-screen-overview .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-body {
-  display: none;
-}
-
-/* Goal thật và pulse mốc đều là meta row, không phải card cạnh tranh với NAV. */
-:root .premium-screen-overview .ov > .pulse-goal-line {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 7px;
-  min-height: 36px;
-  margin: 0;
-  padding: 6px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--command-hairline, var(--hairline));
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-:root .premium-screen-overview .ov > .today-center {
-  overflow: visible;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-:root .premium-screen-overview .ov > .today-center .nhip-block {
-  gap: 5px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-:root .premium-screen-overview .ov > .today-center .nhip-meta {
+/* Ring only — sibling of .v10-nav, not a card */
+:root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only {
+  flex: 0 0 auto;
   display: flex;
-  flex-wrap: nowrap;
   align-items: center;
-  gap: 7px;
-  width: 100%;
-  min-height: 36px;
+  justify-content: center;
   margin: 0;
-  padding: 6px 2px;
+  padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--command-hairline, var(--hairline));
-  border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
-:root .premium-screen-overview .ov > .today-center .nhip-meta-value {
-  flex: 0 0 auto;
-  font-size: 12.5px;
-  font-weight: 680;
+:root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only .rhythm-ring-wrap {
+  width: 76px;
+  height: 76px;
 }
 
-:root .premium-screen-overview .ov > .today-center .nhip-meta-caption {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  font-size: 11px;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+:root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-ring-only .rhythm-ring-svg {
+  width: 76px;
+  height: 76px;
+  display: block;
 }
 
-:root .premium-screen-overview .ov > .today-center .nhip-meta-hint {
-  flex: 0 0 auto;
-  font-size: 11px;
-  white-space: nowrap;
+/* Goal line thin — not a card */
+:root .premium-screen-overview .ov .pulse-goal-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.3;
 }
 
-:root .premium-screen-overview .ov .ownership-journal {
-  gap: 6px;
-  margin: 2px 0 0;
+:root .premium-screen-overview .ov .pulse-goal-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  flex-shrink: 0;
 }
 
-:root .premium-screen-overview .ov .stat-strip {
-  margin: 3px 0 0;
+:root .premium-screen-overview .ov .pulse-goal-meta {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.7;
 }
 
-:root .premium-screen-overview .ov .ov-foot {
-  margin: 0 3px;
-}
-
-@media screen and (max-width: 430px) {
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage {
-    gap: 10px;
-    padding: 12px;
-  }
-
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage .v10-nav-value {
-    font-size: clamp(34px, 12vw, 46px);
-  }
-}
-
-@media screen and (max-width: 360px) {
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage {
-    gap: 8px;
-  }
-
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm {
-    width: 56px;
-    max-width: 56px;
-    min-width: 56px;
-  }
-
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-ring-wrap,
-  :root .premium-screen-overview .ov .overview-money-stage.v10-stage > .rhythm-hero.v10-rhythm .rhythm-ring-svg {
-    width: 56px;
-    height: 56px;
-    max-width: 56px;
-  }
-
-  :root .premium-screen-overview .ov > .pulse-goal-line {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
-
-  :root .premium-screen-overview .ov > .pulse-goal-line .pulse-goal-meta {
-    grid-column: 2 / 3;
-  }
+/* Journal / TodayCenter sits tight under hero */
+:root .premium-screen-overview .ov .today-center {
+  margin-top: 0;
 }

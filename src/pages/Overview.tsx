@@ -362,41 +362,46 @@ export default function Overview({ refreshKey = 0 }: { displayName?: string; ref
 
   return (
     <div className="ov">
+      {/*
+        OVERVIEW-V10-REBUILD-FROM-DEMO-001 — DOM composition, not CSS override.
+        demo visual-abc: .hero-flex = .hero-left (NAV+PnL) | .hero-ring (ring only).
+        RhythmHero variant=ringOnly: no body/status, no competing card shell.
+      */}
       <section
         className={`overview-money-stage v10-stage${mode === "empty" ? " overview-money-stage--empty" : ""}`}
         aria-label="Tổng tài sản và nhịp đóng góp"
       >
         {mode !== "empty" ? (
-          <div className="v10-nav">
-            <p className="v10-nav-label rhythm-assets-label">{assetsLabel}</p>
-            <button
-              type="button"
-              className="rhythm-assets-btn v10-nav-btn"
-              onClick={() => setTraceOpen(true)}
-            >
-              <span className="rhythm-assets-value v10-nav-value">
-                {formatMoney(hero.assets)}
-              </span>
-            </button>
-            {pnlValue != null && pnlValue !== 0 ? (
-              <p className={`v10-pnl ${pnlValue >= 0 ? "pos" : "neg"}`}>
-                {pnlValue >= 0 ? "+" : ""}{formatMoney(Math.abs(pnlValue))}
-                {showPnlPct ? ` (${pnlPct}%)` : ""}
-              </p>
-            ) : null}
-            {heroPnlNote ? <p className="v10-pnl-note">{heroPnlNote}</p> : null}
+          <div className="v10-hero-flex">
+            <div className="v10-nav">
+              <p className="v10-nav-label rhythm-assets-label">{assetsLabel}</p>
+              <button
+                type="button"
+                className="rhythm-assets-btn v10-nav-btn"
+                onClick={() => setTraceOpen(true)}
+              >
+                <span className="rhythm-assets-value v10-nav-value">
+                  {formatMoney(hero.assets)}
+                </span>
+              </button>
+              {pnlValue != null && pnlValue !== 0 ? (
+                <p className={`v10-pnl ${pnlValue >= 0 ? "pos" : "neg"}`}>
+                  {pnlValue >= 0 ? "+" : ""}{formatMoney(Math.abs(pnlValue))}
+                  {showPnlPct ? ` (${pnlPct}%)` : ""}
+                </p>
+              ) : null}
+              {heroPnlNote ? <p className="v10-pnl-note">{heroPnlNote}</p> : null}
+            </div>
+            <RhythmHero
+              variant="ringOnly"
+              streak={streakResult}
+              goals={goals}
+              totalContributed={portfolio.totalContributed}
+              heroLifetimeContribution={heroLifetime.amount}
+              nhipWindowTotal={nhipWindowTotal}
+              nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
+            />
           </div>
-        ) : null}
-
-        {mode !== "empty" ? (
-          <RhythmHero
-            streak={streakResult}
-            goals={goals}
-            totalContributed={portfolio.totalContributed}
-            heroLifetimeContribution={heroLifetime.amount}
-            nhipWindowTotal={nhipWindowTotal}
-            nhipWindowDays={CONTRIBUTION_WINDOW_DAYS}
-          />
         ) : null}
       </section>
 
