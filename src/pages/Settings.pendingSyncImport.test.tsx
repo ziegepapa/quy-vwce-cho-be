@@ -57,7 +57,7 @@ const FILE_JSON = JSON.stringify({
   exportedAt: "2026-08-14T06:00:00Z",
 });
 
-const CONFIRM_LABEL = "Xác nhận thay dữ liệu trên thiết bị";
+const CONFIRM_LABEL = "Xác nhận nhập";
 const ACCEPT_LABEL = "Vẫn nhập (chấp nhận rủi ro)";
 const PUSH_FIRST_LABEL = "Đẩy đồng bộ trước";
 const WARNING_TITLE = "Còn thay đổi chưa đồng bộ xong";
@@ -103,7 +103,7 @@ async function selectBackupFile(container: HTMLElement) {
   const file = new File([FILE_JSON], "backup.json", { type: "application/json" });
   Object.defineProperty(file, "text", { value: () => Promise.resolve(FILE_JSON) });
   fireEvent.change(input, { target: { files: [file] } });
-  await screen.findByText("Thay dữ liệu trên thiết bị bằng file này?");
+  await screen.findByText(/Thay dữ liệu bằng file backup\.json\?/);
 }
 
 beforeEach(() => {
@@ -139,7 +139,7 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
   it("hiện cảnh báo ngay trong hộp xác nhận và không nhập im lặng", async () => {
     dbMocks.importBackup.mockRejectedValueOnce(blocked(2, 1, 0));
     const { container, onReload } = renderSettings();
-    await screen.findByText("Nhập file JSON");
+    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
@@ -151,7 +151,7 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
     expect(screen.getByText(RISK_TEXT)).toBeTruthy();
 
     // Hộp xác nhận PHẢI còn mở, và không có gì được nhập.
-    expect(screen.getByText("Thay dữ liệu trên thiết bị bằng file này?")).toBeTruthy();
+    expect(screen.getByText(/Thay dữ liệu bằng file backup\.json\?/)).toBeTruthy();
     expect(dbMocks.importBackup).toHaveBeenCalledTimes(1);
     expect(onReload).not.toHaveBeenCalled();
     expect(window.alert).not.toHaveBeenCalled();
@@ -160,7 +160,7 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
   it("hiện đúng cảnh báo khi việc còn treo chỉ là một upsert bình thường (PR3)", async () => {
     dbMocks.importBackup.mockRejectedValueOnce(blocked(1, 0, 0));
     const { container } = renderSettings();
-    await screen.findByText("Nhập file JSON");
+    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
@@ -174,7 +174,7 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
   it("đổi nút xác nhận thành nhãn chấp nhận rủi ro và truyền đúng cờ, không tải sao lưu hai lần", async () => {
     dbMocks.importBackup.mockRejectedValueOnce(blocked(1, 1, 0));
     const { container, onReload } = renderSettings();
-    await screen.findByText("Nhập file JSON");
+    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
@@ -195,7 +195,7 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
   it("đẩy đồng bộ trước: gọi đúng engine, xoá cảnh báo và không nhập gì", async () => {
     dbMocks.importBackup.mockRejectedValueOnce(blocked(1, 1, 0));
     const { container, onReload } = renderSettings();
-    await screen.findByText("Nhập file JSON");
+    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
@@ -215,7 +215,7 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
     dbMocks.importBackup.mockRejectedValueOnce(blocked(1, 1, 0));
     syncMocks.pushOutbox.mockRejectedValueOnce(new Error("PUSH_SECRET_CANARY"));
     const { container } = renderSettings();
-    await screen.findByText("Nhập file JSON");
+    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
@@ -234,7 +234,7 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
 
   it("luồng bình thường không đổi khi không còn việc đồng bộ treo", async () => {
     const { container, onReload } = renderSettings();
-    await screen.findByText("Nhập file JSON");
+    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));

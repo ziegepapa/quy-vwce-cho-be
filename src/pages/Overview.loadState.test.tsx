@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -7,42 +8,23 @@ import { defaultSettings } from "../lib/defaults";
 
 const dbMocks = vi.hoisted(() => ({
   getSettings: vi.fn(),
-  listGoals: vi.fn(),
-  listInstruments: vi.fn(),
   listQuotes: vi.fn(),
   listTransactions: vi.fn(),
-  saveSettings: vi.fn(),
 }));
 
 vi.mock("../lib/db", () => dbMocks);
-vi.mock("../components/TodayCenter", () => ({ default: () => null }));
-vi.mock("../components/TraceSheet", () => ({
-  default: ({ open }: { open: boolean }) =>
-    open ? createElement("div", { "data-testid": "trace-sheet" }) : null,
-}));
-vi.mock("../components/PlanPhaseCard", () => ({ default: () => null }));
 
 import Overview from "./Overview";
 
 function renderOverview() {
-  return render(
-    createElement(MemoryRouter, null, createElement(Overview)),
-  );
+  return render(createElement(MemoryRouter, null, createElement(Overview)));
 }
 
 const TX_STAMP = "2026-08-01T00:00:00.000Z";
 const MISSING_PRICE_ISIN = "IE00B5BMR087";
 
 function cashIn(id: string, date: string, amount: number) {
-  return {
-    id,
-    date,
-    type: "cash_in",
-    amount,
-    notes: "",
-    createdAt: TX_STAMP,
-    updatedAt: TX_STAMP,
-  };
+  return { id, date, type: "cash_in", amount, notes: "", createdAt: TX_STAMP, updatedAt: TX_STAMP };
 }
 
 function buyWithoutPrice(id: string, date: string) {
@@ -64,125 +46,80 @@ function buyWithoutPrice(id: string, date: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  dbMocks.listGoals.mockResolvedValue([]);
-  dbMocks.listInstruments.mockResolvedValue([]);
   dbMocks.listQuotes.mockResolvedValue([]);
   dbMocks.listTransactions.mockResolvedValue([]);
-  dbMocks.saveSettings.mockResolvedValue(undefined);
 });
 
 afterEach(() => cleanup());
 
 describe("Overview load state", () => {
-  it("announces that the overview is busy while local data is loading", async () => {
-    let resolveSettings: (value: unknown) => void = () => {};
-    const settingsPromise = new Promise((resolve) => {
-      resolveSettings = resolve;
-    });
-    dbMocks.getSettings.mockReturnValue(settingsPromise);
+  it("announces loading without rendering a partial overview", async () => {
+    let resolveSettings: (value: unknown) => void = () => undefined;
+    dbMocks.getSettings.mockReturnValue(new Promise((resolve) => { resolveSettings = resolve; }));
 
     renderOverview();
 
     const status = screen.getByRole("status");
     expect(status.getAttribute("aria-busy")).toBe("true");
-    expect(screen.getByText("Đang tải dữ liệu Tổng quan…")).toBeTruthy();
-    expect(screen.queryByText(/Không phải tư vấn đầu tư/)).toBeNull();
+    expect(status.getAttribute("aria-label")).toBe("Đang tải Tổng quan");
+    expect(document.querySelector(".ov")).toBeNull();
 
     resolveSettings(defaultSettings());
-    await waitFor(() => expect(status.getAttribute("aria-busy")).not.toBe("true"));
+    await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
   });
 
-  it("shows a local retry path when the overview cannot load", async () => {
-    dbMocks.getSettings.mockRejectedValueOnce(new Error("indexeddb offline"));
-    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+  it("shows a fail-closed error and retries the local read", async () => {
+    dbMocks.getSettings.mockRejectedValueOnce(new Error("indexeddb offline")).mockResolvedValueOnce(defaultSettings());
 
     renderOverview();
 
-    expect(
-      await screen.findByRole("heading", { name: "Không tải được Tổng quan" }),
-    ).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Không tải được Tổng quan" })).toBeTruthy();
     expect(screen.getByRole("alert")).toBeTruthy();
-    expect(document.querySelector(".v10-hero-flex")).toBeNull();
+    expect(document.querySelector(".ov")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
 
-    await waitFor(() => expect(document.querySelector(".v10-hero--empty")).toBeTruthy());
-    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    await waitFor(() => expect(document.querySelector(".ov")).toBeTruthy());
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
     expect(dbMocks.listTransactions).toHaveBeenCalledTimes(2);
   });
 });
 
-describe("Overview v10 pixel fold — fail-closed", () => {
-  it("mode empty: không render NAV, PnL hoặc ring giả", async () => {
+describe("Overview demo v10 hierarchy", () => {
+  it("renders the complete five-block hierarchy with empty-state geometry", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".v10-hero--empty")).toBeTruthy());
-    expect(container.querySelector(".v10-hero-flex")).toBeNull();
-    expect(container.querySelector(".v10-h-num")).toBeNull();
-    expect(container.querySelector(".v10-ring-only")).toBeNull();
-    expect(container.querySelector(".v10-price")).toBeNull();
-    expect(container.querySelector(".v10-combo")).toBeNull();
-    expect(container.querySelector(".v10-streak")).toBeNull();
-    expect(container.querySelector(".v10-perf")).toBeNull();
+    await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
+    expect(container.querySelector(".gl.hero .hero-flex .hero-left .h-eye")).toBeTruthy();
+    expect(container.querySelector(".gl.hero .hero-flex .hero-ring .hr-shell .hr-svg")).toBeTruthy();
+    expect(container.querySelector(".gl.hero .hero-flex .hero-ring .hr-shell .hr-center")).toBeTruthy();
+    expect(container.querySelector(".price-row .pr-left .pr-label")).toBeTruthy();
+    expect(container.querySelector(".combo-row .cr-item .cr-lbl")).toBeTruthy();
+    expect(container.querySelector(".streak-card .sc-top .sc-left")).toBeTruthy();
+    expect(container.querySelector(".streak-card .sc-dots")).toBeTruthy();
+    expect(container.querySelector(".perf-card .perf-top")).toBeTruthy();
+    expect(container.querySelector(".perf-card .perf-bar-track")).toBeTruthy();
+    expect(container.querySelector(".perf-card .perf-legend")).toBeTruthy();
+    expect(container.querySelector(".sparkline-svg path")).toBeNull();
   });
 
-  it("hero.pnl == null: NAV vẫn hiện, PnL badge không render", async () => {
+  it("binds streak and portfolio values without inventing a PnL badge", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([
-      cashIn("tx-cash-1", "2026-08-01", 1000),
-    ]);
+    dbMocks.listTransactions.mockResolvedValue([cashIn("tx-cash-1", "2026-08-01", 1000)]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".v10-ring-only")).toBeTruthy());
-    const left = container.querySelector(".v10-hero-left");
-    expect(left).toBeTruthy();
-    const value = container.querySelector(".v10-h-num");
-    expect(value).toBeTruthy();
-    expect((value?.textContent ?? "").trim()).not.toBe("");
-    expect(container.querySelector(".v10-bdg")).toBeNull();
-    expect(left?.textContent ?? "").not.toContain("%");
-    expect(screen.getByText("Tổng tài sản")).toBeTruthy();
-    expect(screen.getByText("Chưa giữ đơn vị nào")).toBeTruthy();
+    await waitFor(() => expect(container.querySelector(".hero")).toBeTruthy());
+    expect(container.querySelector(".h-num")?.textContent?.trim()).not.toBe("");
+    expect(container.querySelector(".h-row .bdg")?.textContent?.trim()).toBe("—");
+    expect(container.querySelector(".hr-pct")?.textContent?.trim()).toBe("1");
+    expect(container.querySelectorAll(".sc-dots .dot.done")).toHaveLength(1);
   });
 
-  it("mode active: NAV mở TraceSheet và ring giữ aria-label streak", async () => {
+  it("preserves the valuation-incomplete label while retaining demo card geometry", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([
-      cashIn("tx-cash-1", "2026-08-01", 1000),
-      cashIn("tx-cash-2", "2026-08-02", 500),
-      cashIn("tx-cash-3", "2026-08-03", 250),
-    ]);
-
-    const { container } = renderOverview();
-
-    const navButton = await waitFor(() => {
-      const button = container.querySelector("button.v10-h-num-btn");
-      expect(button).toBeTruthy();
-      return button as HTMLButtonElement;
-    });
-    expect(container.querySelector('svg[aria-label="1 tháng liên tiếp"]')).toBeTruthy();
-    expect(container.querySelector(".v10-hero-flex")).toBeTruthy();
-    expect(container.querySelector(".v10-hero-flex .v10-hero-left")).toBeTruthy();
-    expect(container.querySelector(".v10-hero-flex .v10-ring-only")).toBeTruthy();
-    expect(container.querySelector(".v10-hero-flex .rhythm-body")).toBeNull();
-    expect(container.querySelector(".v10-streak")).toBeTruthy();
-    expect(container.querySelector(".v10-price")).toBeNull();
-    expect(container.querySelector(".v10-combo")).toBeNull();
-    expect(container.querySelector(".v10-perf")).toBeNull();
-
-    fireEvent.click(navButton);
-
-    expect(await screen.findByTestId("trace-sheet")).toBeTruthy();
-  });
-
-  it("!valueComplete: đổi label, ẩn phần trăm, nêu lý do không tính được lãi–lỗ", async () => {
-    dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listQuotes.mockResolvedValue([]);
     dbMocks.listTransactions.mockResolvedValue([
       cashIn("tx-cash-1", "2026-08-01", 1000),
       cashIn("tx-cash-2", "2026-08-02", 500),
@@ -191,11 +128,10 @@ describe("Overview v10 pixel fold — fail-closed", () => {
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".v10-ring-only")).toBeTruthy());
+    await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
     expect(screen.getByText("Tài sản đã định giá")).toBeTruthy();
-    expect(container.querySelector(".v10-bdg")).toBeNull();
-    expect(container.querySelector(".v10-hero-left")?.textContent ?? "").not.toContain("%");
-    expect(screen.getByText("Chưa có giá cho mã này")).toBeTruthy();
-    expect(container.querySelector(".v10-perf")).toBeNull();
+    expect(container.querySelector(".perf-card .perf-return")?.textContent?.trim()).toBe("—");
+    expect(container.querySelector(".price-row")).toBeTruthy();
+    expect(container.querySelector(".combo-row")).toBeTruthy();
   });
 });

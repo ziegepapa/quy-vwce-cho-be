@@ -37,7 +37,7 @@ describe("Transactions load and empty states", () => {
 
     const status = screen.getByRole("status");
     expect(status.getAttribute("aria-busy")).toBe("true");
-    expect(screen.getByText("Đang tải giao dịch…")).toBeTruthy();
+    expect(status.getAttribute("aria-label")).toBe("Đang tải Giao dịch");
     expect(screen.queryByText("Chưa có giao dịch.")).toBeNull();
   });
 
@@ -74,6 +74,7 @@ describe("Transactions load and empty states", () => {
     render(createElement(Transactions));
 
     expect(await screen.findByText(/Khoản góp tháng 8/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Lọc / PDF" }));
     fireEvent.change(screen.getByLabelText("Tìm"), { target: { value: "không khớp" } });
 
     expect(screen.getByText("Không có giao dịch khớp bộ lọc.")).toBeTruthy();
