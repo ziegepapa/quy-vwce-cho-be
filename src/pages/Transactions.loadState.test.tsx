@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { createElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
 
 const dbMocks = vi.hoisted(() => ({
   deleteTransaction: vi.fn(),
@@ -32,9 +34,24 @@ beforeEach(() => {
   dbMocks.upsertTransaction.mockResolvedValue(undefined);
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  window.localStorage.removeItem(LOCALE_KEY);
+});
 
 describe("Transactions load and empty states", () => {
+  it("keeps the new journal controls fully German when Deutsch is selected", async () => {
+    window.localStorage.setItem(LOCALE_KEY, "de");
+    dbMocks.listTransactions.mockResolvedValue([]);
+    render(createElement(MemoryRouter, null, createElement(LocaleProvider, null, createElement(Transactions))));
+
+    expect(await screen.findByText("Transaktionsjournal")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Schnellfilter" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "VWCE-Käufe" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Einzahlungen" })).toBeTruthy();
+    expect(document.body.textContent).not.toContain("Nhật ký giao dịch");
+  });
+
   it("does not claim the ledger is empty while it is still loading", () => {
     dbMocks.listTransactions.mockReturnValue(new Promise(() => undefined));
     render(createElement(Transactions));
@@ -82,6 +99,22 @@ describe("Transactions load and empty states", () => {
 
     await waitFor(() => expect(document.querySelectorAll(".tx-item")).toHaveLength(120));
     expect(screen.getByText("Đang hiển thị 120/1000 giao dịch")).toBeTruthy();
+  });
+
+  it("offers touch-friendly quick filters before opening advanced search tools", async () => {
+    dbMocks.listTransactions.mockResolvedValue([
+      { id: "tx-buy", date: "2026-08-13", type: "buy_vwce", amount: 100, notes: "VWCE", createdAt: "2026-08-13T00:00:00Z", updatedAt: "2026-08-13T00:00:00Z", source: "manual" },
+      { id: "tx-cash", date: "2026-08-12", type: "cash_in", amount: 100, notes: "Góp", createdAt: "2026-08-12T00:00:00Z", updatedAt: "2026-08-12T00:00:00Z", source: "manual" },
+    ]);
+    render(createElement(Transactions));
+
+    expect(await screen.findByText("Nhật ký giao dịch")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Mua VWCE" }));
+
+    expect(document.querySelectorAll(".tx-item")).toHaveLength(1);
+    expect(document.querySelector(".tx-item")?.textContent).toContain("Mua VWCE");
+    expect(document.querySelector(".tx-item")?.textContent).not.toContain(" · Góp");
+    expect(screen.getByRole("button", { name: "Mua VWCE" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("distinguishes no filter matches from a genuinely empty ledger", async () => {

@@ -100,3 +100,25 @@
 .tx-wrap .tx-visible-count { margin: 10px 2px 7px; color: var(--demo-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
 .tx-wrap .tx-load-more { display: block; width: calc(100% - 20px); min-height: 44px; margin: 12px 10px 4px; color: var(--demo-text); font: inherit; font-size: 13px; font-weight: 800; background: color-mix(in srgb, var(--demo-vi) 12%, var(--demo-g)); border: 1px solid color-mix(in srgb, var(--demo-vi) 34%, var(--demo-gb)); border-radius: 13px; cursor: pointer; }
 .tx-wrap .tx-load-more:active { transform: scale(.985); }
+
+/* TRANSACTIONS-JOURNAL-001: a mobile-first command surface above the bounded ledger. */
+.tx-wrap .tx-journal { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.tx-wrap .tx-journal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 2px; }
+.tx-wrap .tx-journal-head > div { min-width: 0; }
+.tx-wrap .tx-journal .tx-visible-count { margin: 3px 0 0; }
+.tx-wrap .tx-tool-trigger { flex: 0 0 auto; min-height: 38px; padding: 0 12px; color: var(--demo-text); font: inherit; font-size: 11px; font-weight: 800; background: color-mix(in srgb, var(--demo-vi) 10%, var(--demo-g)); border: 1px solid color-mix(in srgb, var(--demo-vi) 28%, var(--demo-gb)); border-radius: 11px; cursor: pointer; }
+.tx-wrap .tx-quick-types { display: flex; gap: 7px; overflow-x: auto; padding: 1px 1px 4px; scrollbar-width: none; }
+.tx-wrap .tx-quick-types::-webkit-scrollbar { display: none; }
+.tx-wrap .tx-quick-types button { flex: 0 0 auto; min-height: 34px; padding: 0 11px; color: var(--demo-dim); font: inherit; font-size: 11px; font-weight: 800; background: color-mix(in srgb, var(--demo-g) 86%, transparent); border: 1px solid var(--demo-gb); border-radius: 999px; cursor: pointer; }
+.tx-wrap .tx-quick-types button.active { color: var(--demo-text); background: color-mix(in srgb, var(--demo-vi) 18%, var(--demo-g)); border-color: color-mix(in srgb, var(--demo-vi) 45%, var(--demo-gb)); box-shadow: 0 5px 16px color-mix(in srgb, var(--demo-vi) 12%, transparent); }
+.tx-wrap .tx-tool-panel { padding: 12px; }
+.tx-wrap .tx-journal .mo-lbl { margin: 2px 2px 0; }
+.tx-wrap .tx-journal .tx-card { box-shadow: 0 8px 22px rgba(0,0,0,.05); }
+.tx-wrap .tx-journal .tx-item { min-height: 62px; }
+.tx-wrap .tx-journal .tx-item:focus-visible, .tx-wrap .tx-tool-trigger:focus-visible, .tx-wrap .tx-quick-types button:focus-visible { outline: 2px solid var(--demo-vi); outline-offset: 2px; }
+
+@media (max-width: 360px) {
+  .tx-wrap .tx-journal-head { align-items: flex-start; }
+  .tx-wrap .tx-tool-trigger { min-height: 36px; padding: 0 10px; font-size: 10px; }
+  .tx-wrap .tx-quick-types { gap: 6px; }
+}
