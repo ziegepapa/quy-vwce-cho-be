@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocale } from "../lib/locale";
 import "../styles/visual-abc-shell.css";
 
 type BerlinClock = { iso: string; time: string };
@@ -45,7 +46,7 @@ export default function CollapsingNavBar({
   syncStatus: string;
   pending: number;
   onSignOut: () => void;
-  onSyncNow?: () => void;
+  onSyncNow?: () => void | Promise<unknown>;
   onUpdatePrice?: () => void;
   onSearch?: () => void;
   onFilter?: () => void;
@@ -53,8 +54,9 @@ export default function CollapsingNavBar({
   onChangeScenario?: () => void;
 }) {
   void displayName;
-  void syncStatus;
-  void pending;
+  const { t } = useLocale();
+  const syncing = syncStatus === "syncing";
+  const syncText = syncing ? t("syncing") : pending > 0 ? `${pending} ${t("sync").toLowerCase()} chờ` : t("sync");
   void onSignOut;
   void onUpdatePrice;
   void onSearch;
@@ -64,7 +66,6 @@ export default function CollapsingNavBar({
 
   useEffect(() => {
     document.documentElement.style.removeProperty("--nav-h-dyn");
-    document.documentElement.classList.add("theme-vault");
   }, []);
 
   return (
@@ -72,9 +73,9 @@ export default function CollapsingNavBar({
       <span className="bar-logo">VWCE Vault</span>
       <div className="bar-r">
         {onSyncNow ? (
-          <button type="button" className="sync-pill" onClick={onSyncNow}>
-            <span>↻</span>
-            <span>Sync</span>
+          <button type="button" className={`sync-pill ${syncStatus}`} onClick={() => void onSyncNow()} disabled={syncing} aria-live="polite">
+            <span className={syncing ? "sync-spin" : ""} aria-hidden>↻</span>
+            <span>{syncText}</span>
           </button>
         ) : null}
         <TimeDate />

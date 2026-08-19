@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 const dbMocks = vi.hoisted(() => ({
   deleteTransaction: vi.fn(),
   listTransactions: vi.fn(),
+  listQuotes: vi.fn(),
   uid: vi.fn(() => "tx-new"),
   upsertInstrument: vi.fn(),
   upsertTransaction: vi.fn(),
@@ -24,6 +25,7 @@ import Transactions from "./Transactions";
 beforeEach(() => {
   vi.clearAllMocks();
   dbMocks.deleteTransaction.mockResolvedValue(undefined);
+  dbMocks.listQuotes.mockResolvedValue([]);
   dbMocks.upsertInstrument.mockResolvedValue(undefined);
   dbMocks.upsertTransaction.mockResolvedValue(undefined);
 });

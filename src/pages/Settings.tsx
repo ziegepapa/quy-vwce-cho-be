@@ -26,6 +26,7 @@ import {
 import { csvEscape, formatDateVN } from "../lib/calc";
 import type { ThemeChoice } from "../lib/theme";
 import { persistTheme, readTheme } from "../lib/theme";
+import { useLocale } from "../lib/locale";
 import { useAuth } from "../lib/auth";
 import { listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
 import type { OutboxItem, PendingSyncSummary } from "../lib/sync/types";
@@ -74,6 +75,7 @@ export default function SettingsPage({
   onSettingsChanged,
   onConflictResolved,
   focusConflictRequest,
+  onSyncNow,
 }: {
   onReload: () => void;
   onOpenMigrate?: () => void;
@@ -82,6 +84,7 @@ export default function SettingsPage({
   onSettingsChanged?: () => void | Promise<void>;
   onConflictResolved?: () => void | Promise<void>;
   focusConflictRequest?: string | null;
+  onSyncNow?: () => Promise<{ message: string; tone: "success" | "error" | "info" }>;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const showAdvanced = searchParams.get("tab") === "advanced";
@@ -100,7 +103,8 @@ export default function SettingsPage({
   const [pendingSync, setPendingSync] = useState<PendingSyncSummary | null>(null);
   const [pendingSyncPushing, setPendingSyncPushing] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
-  const [lang, setLang] = useState("vi");
+  const [syncingNow, setSyncingNow] = useState(false);
+  const { locale, setLocale, t } = useLocale();
   const [dead, setDead] = useState<OutboxItem[]>([]);
   const [clock, setClock] = useState(berlinNow);
   const [mfaEnrollment, setMfaEnrollment] = useState<{
@@ -251,6 +255,24 @@ export default function SettingsPage({
   function pickTheme(next: ThemeChoice) {
     setTheme(next);
     persistTheme(next);
+  }
+
+  async function runVisibleSync() {
+    if (syncingNow) return;
+    setActionError(null);
+    if (!onSyncNow) {
+      setActionError(t("syncNeedsSignIn"));
+      return;
+    }
+    setSyncingNow(true);
+    try {
+      const result = await onSyncNow();
+      if (result.tone === "error") setActionError(result.message);
+      else setMfaMessage(result.message);
+      setDead(auth.user?.id ? await listDeadOutbox() : []);
+    } finally {
+      setSyncingNow(false);
+    }
   }
 
   function downloadJson(payload: BackupPayload, name: string) {
@@ -452,7 +474,7 @@ export default function SettingsPage({
         </div>
       ) : null}
 
-      <div className="set-sec">Giao diện</div>
+      <div className="set-sec">{t("interface")}</div>
       <section className="gl set-block">
         <div className="theme-picker">
           {DEMO_THEME_OPTIONS.map((opt) => (
@@ -469,43 +491,32 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <div className="set-sec">Ngôn ngữ</div>
+      <div className="set-sec">{t("language")}</div>
       <section className="gl set-block">
         <div className="lang-options">
-          <button type="button" className={`lang-opt${lang === "vi" ? " selected" : ""}`} onClick={() => setLang("vi")}>
-            Tiếng Việt<small>UI marker</small>
+          <button type="button" className={`lang-opt${locale === "vi" ? " selected" : ""}`} onClick={() => setLocale("vi")}>
+            {t("vietnamese")}<small>{locale === "vi" ? "Đang dùng" : "Vietnamese"}</small>
           </button>
-          <button type="button" className={`lang-opt${lang === "de" ? " selected" : ""}`} onClick={() => setLang("de")}>
-            Deutsch<small>UI marker</small>
+          <button type="button" className={`lang-opt${locale === "de" ? " selected" : ""}`} onClick={() => setLocale("de")}>
+            {t("german")}<small>{locale === "de" ? "Aktiv" : "Deutsch"}</small>
           </button>
         </div>
       </section>
 
-      <div className="set-sec">Đồng bộ</div>
+      <div className="set-sec">{t("sync")}</div>
       <section className="gl set-block">
         <button
           type="button"
           className="set-row"
-          onClick={() =>
-            void (async () => {
-              if (!auth.user?.id) return;
-              setActionError(null);
-              try {
-                await reviveDeadOutbox();
-                await pushOutbox(auth.user.id);
-                setDead(await listDeadOutbox());
-              } catch {
-                setActionError("Không đồng bộ được. Dữ liệu local vẫn được giữ nguyên.");
-              }
-            })()
-          }
+          disabled={syncingNow}
+          onClick={() => void runVisibleSync()}
         >
           <span className="si-ico e" aria-hidden>
             ↻
           </span>
           <span className="sr-body">
-            <span className="sr-name">Đồng bộ ngay</span>
-            <span className="sr-sub">{syncLabel}</span>
+            <span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span>
+            <span className="sr-sub">{auth.user?.id ? syncLabel : t("syncNeedsSignIn")}</span>
           </span>
           <span className="sr-arr">›</span>
         </button>
@@ -543,7 +554,7 @@ export default function SettingsPage({
         </label>
       </section>
 
-      <div className="set-sec">Tài khoản</div>
+      <div className="set-sec">{t("account")}</div>
       <section className="gl set-block">
         <Link to="/notfallmappe" className="set-row" style={{ textDecoration: "none" }}>
           <span className="si-ico v" aria-hidden>
@@ -671,63 +682,83 @@ export default function SettingsPage({
           setSearchParams(open ? { tab: "advanced" } : {}, { replace: true });
         }}
       >
-        <summary>Nâng cao · giá · kế hoạch · dữ liệu</summary>
-        <SettingsPricePanel refreshKey={refreshKey} onQuotesChanged={onQuotesChanged} />
-        {auth.user?.id ? (
-          <SyncConflictSection
-            userId={auth.user.id}
-            focusRequest={focusConflictRequest}
-            onResolved={async () => {
-              await onConflictResolved?.();
-            }}
+        <summary>{t("advanced")} · giá · kế hoạch · dữ liệu</summary>
+        <p className="advanced-intro">Mỗi nhóm dùng dữ liệu trên thiết bị và chỉ thực hiện thao tác khi bạn xác nhận.</p>
+
+        <details className="advanced-group" open>
+          <summary>{t("prices")}</summary>
+          <SettingsPricePanel refreshKey={refreshKey} onQuotesChanged={onQuotesChanged} />
+        </details>
+
+        <details className="advanced-group" open={Boolean(focusConflictRequest)}>
+          <summary>Đồng bộ & xung đột dữ liệu</summary>
+          {auth.user?.id ? (
+            <SyncConflictSection
+              userId={auth.user.id}
+              focusRequest={focusConflictRequest}
+              onResolved={async () => {
+                await onConflictResolved?.();
+              }}
+            />
+          ) : <p className="advanced-empty">Đăng nhập để xem hàng đợi, xử lý xung đột và đồng bộ dữ liệu giữa các thiết bị.</p>}
+        </details>
+
+        <details className="advanced-group">
+          <summary>{t("plan")}</summary>
+          <PlanRoadmapSection
+            target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
+            onChangeTarget={(next) => patchSettings({ planTarget: next })}
           />
-        ) : null}
-        <PlanRoadmapSection
-          target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
-          onChangeTarget={(next) => patchSettings({ planTarget: next })}
-        />
-        <button type="button" className="set-row" onClick={() => void exportCsv()}>
-          <span className="sr-name">Xuất CSV giao dịch</span>
-        </button>
-        {onOpenMigrate ? (
-          <button type="button" className="set-row" onClick={onOpenMigrate}>
-            <span className="sr-name">Khôi phục dữ liệu trên thiết bị</span>
-          </button>
-        ) : null}
-        <button type="button" className="set-row" onClick={() => setDeleteOpen(true)}>
-          <span className="sr-name" style={{ color: "var(--demo-re)" }}>
-            Xóa toàn bộ dữ liệu local
-          </span>
-        </button>
-        {deleteOpen ? (
-          <div style={{ padding: 12 }}>
-            <p>Gõ XOA để xác nhận.</p>
-            <input placeholder="XOA" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
-            <button
-              type="button"
-              disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== "XOA"}
-              onClick={() =>
-                void (async () => {
-                  if (readOnly) {
-                    showBlocked();
-                    return;
-                  }
-                  setDeleteBusy(true);
-                  try {
-                    await clearAllData();
-                    window.location.reload();
-                  } catch {
-                    setActionError("Không xóa được dữ liệu.");
-                  } finally {
-                    setDeleteBusy(false);
-                  }
-                })()
-              }
-            >
-              Xác nhận xóa
+        </details>
+
+        <details className="advanced-group" open>
+          <summary>{t("dataTools")}</summary>
+          <div className="advanced-actions">
+            <button type="button" className="set-row" onClick={() => void exportCsv()}>
+              <span className="sr-name">Xuất CSV giao dịch</span>
+              <span className="sr-sub">Bảng dữ liệu dùng cho phân tích ngoài ứng dụng</span>
             </button>
+            {onOpenMigrate ? (
+              <button type="button" className="set-row" onClick={onOpenMigrate}>
+                <span className="sr-name">Khôi phục dữ liệu trên thiết bị</span>
+                <span className="sr-sub">Mở quy trình kiểm tra dữ liệu an toàn</span>
+              </button>
+            ) : null}
+            <button type="button" className="set-row" onClick={() => setDeleteOpen(true)}>
+              <span className="sr-name" style={{ color: "var(--demo-re)" }}>Xóa toàn bộ dữ liệu local</span>
+              <span className="sr-sub">Chỉ dùng khi bạn đã có bản sao lưu</span>
+            </button>
+            {deleteOpen ? (
+              <div className="advanced-delete">
+                <p>Gõ XOA để xác nhận. Hành động này không thể hoàn tác trên thiết bị này.</p>
+                <input placeholder="XOA" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
+                <button
+                  type="button"
+                  disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== "XOA"}
+                  onClick={() =>
+                    void (async () => {
+                      if (readOnly) {
+                        showBlocked();
+                        return;
+                      }
+                      setDeleteBusy(true);
+                      try {
+                        await clearAllData();
+                        window.location.reload();
+                      } catch {
+                        setActionError("Không xóa được dữ liệu.");
+                      } finally {
+                        setDeleteBusy(false);
+                      }
+                    })()
+                  }
+                >
+                  Xác nhận xóa
+                </button>
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        </details>
       </details>
 
       <p className="ver">

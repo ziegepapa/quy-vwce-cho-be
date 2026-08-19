@@ -80,3 +80,18 @@
   .tx-wrap .sum-val { font-size: 15px; }
   .tx-wrap .tx-item { gap: 9px; padding-right: 12px; padding-left: 12px; }
 }
+
+.tx-wrap .tx-analysis { padding: 14px 16px; }
+.tx-wrap .tx-analysis-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.tx-wrap .tx-analysis-head strong { display: block; margin-top: 3px; color: var(--demo-text); font-size: 15px; }
+.tx-wrap .analysis-state { flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; }
+.tx-wrap .analysis-state.ok { color: var(--demo-em); background: color-mix(in srgb, var(--demo-em) 12%, transparent); }
+.tx-wrap .analysis-state.warn { color: var(--demo-am); background: color-mix(in srgb, var(--demo-am) 12%, transparent); }
+.tx-wrap .tx-analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.tx-wrap .tx-analysis-grid > div { min-width: 0; padding: 10px; border: 1px solid var(--demo-gb); border-radius: 12px; background: color-mix(in srgb, var(--demo-g) 78%, transparent); }
+.tx-wrap .tx-analysis-grid span { display: block; color: var(--demo-dim); font-size: 10px; line-height: 1.25; }
+.tx-wrap .tx-analysis-grid strong { display: block; margin-top: 4px; color: var(--demo-text); font-size: 14px; font-variant-numeric: tabular-nums; }
+.tx-wrap .tx-analysis-grid strong.pos, .tx-wrap .sum-val.pos { color: var(--demo-em); }
+.tx-wrap .tx-analysis-grid strong.neg, .tx-wrap .sum-val.neg { color: var(--demo-re); }
+.tx-wrap .tx-analysis-note { margin: 10px 0 0; color: var(--demo-am); font-size: 11px; line-height: 1.45; }
+.tx-wrap .analysis-state.neutral { color: var(--demo-sub); background: color-mix(in srgb, var(--demo-sub) 10%, transparent); }

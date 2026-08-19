@@ -8,13 +8,6 @@ export type DockItem = {
   icon: ReactNode;
 };
 
-const DEMO_LABELS: Record<string, string> = {
-  "/": "Overview",
-  "/transactions": "Giao dịch",
-  "/simulation": "Mô phỏng",
-  "/settings": "Cài đặt",
-};
-
 const PRIMARY_DOCK_ITEMS = 4;
 
 export default function BottomDock({ items }: { items: DockItem[] }) {
@@ -29,7 +22,7 @@ export default function BottomDock({ items }: { items: DockItem[] }) {
           end={to === "/"}
           className={({ isActive }) => "pb" + (isActive ? " on" : "")}
         >
-          {DEMO_LABELS[to] ?? label}
+          {label}
         </NavLink>
       ))}
     </nav>
