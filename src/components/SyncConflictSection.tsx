@@ -46,7 +46,7 @@ type SyncConflictSectionProps = {
 function syncStrings(locale: "vi" | "de") {
   return locale === "de" ? {
     settings: "Einstellungen", goals: "Ziele", transactions: "Transaktionen", annualChecklists: "Jahres-Checklisten", monthlySnapshots: "Monatsübersichten",
-    eyebrow: "Synchronisierung erfordert eine Entscheidung", paused: "Die Synchronisierung wurde angehalten, damit keine Daten überschrieben oder verloren gehen. Wählen Sie für jeden Eintrag die zu behaltende Version.",
+    eyebrow: "Synchronisierung erfordert eine Entscheidung", syncStatusEyebrow: "Synchronisierungsstatus", paused: "Die Synchronisierung wurde angehalten, damit keine Daten überschrieben oder verloren gehen. Wählen Sie für jeden Eintrag die zu behaltende Version.",
     conflictHeading: (count: number) => `${count} Datenkonflikt${count === 1 ? "" : "e"} erfordert${count === 1 ? "" : "n"} eine Entscheidung`, conflictAria: (entity: string) => `Datenkonflikt ${entity}`,
     detected: "Erkannt", deviceUpdated: "Gerät aktualisiert", serverUpdated: "Server aktualisiert", serverDeleted: "Die Serverversion wurde gelöscht",
     keepLocal: "Daten auf diesem Gerät behalten", useRemote: "Synchronisierte Daten verwenden", processing: "Wird verarbeitet…", confirmEyebrow: "Auswahl bestätigen", back: "Zurück, nichts ändern",
@@ -56,7 +56,7 @@ function syncStrings(locale: "vi" | "de") {
     resolvedLocal: "Die Daten auf diesem Gerät wurden behalten und erfolgreich synchronisiert.", resolvedLocalPending: "Die Daten auf diesem Gerät wurden behalten. Die Änderung wartet noch auf die Synchronisierung; Serverdaten wurden nicht überschrieben.", resolvedLocalConflict: "Die Auswahl wurde lokal gespeichert, aber der Serverstatus hat sich geändert oder konnte nicht sicher aktualisiert werden. Es wurden keine Daten überschrieben. Prüfen Sie den neuen Konflikt.", resolvedDeleted: "Der Löschstatus des Servers wurde übernommen.", resolvedRemote: "Die aktuelle Serverversion wurde übernommen.", needsNetwork: "Der Serverstatus konnte nicht geprüft werden. Daten wurden nicht verändert.", failed: "Die Auswahl konnte nicht übernommen werden. Daten bleiben unverändert.", unexpected: "Der Konflikt konnte nicht verarbeitet werden. Daten bleiben unverändert.",
   } : {
     settings: "Cài đặt", goals: "Mục tiêu", transactions: "Giao dịch", annualChecklists: "Checklist hằng năm", monthlySnapshots: "Tổng hợp tháng",
-    eyebrow: "Đồng bộ cần quyết định", paused: "Đồng bộ đã dừng để tránh ghi đè hoặc làm mất dữ liệu. Hãy chọn rõ bản dữ liệu cần giữ cho từng mục.",
+    eyebrow: "Đồng bộ cần quyết định", syncStatusEyebrow: "Trạng thái đồng bộ", paused: "Đồng bộ đã dừng để tránh ghi đè hoặc làm mất dữ liệu. Hãy chọn rõ bản dữ liệu cần giữ cho từng mục.",
     conflictHeading: (count: number) => `${count} xung đột cần xử lý`, conflictAria: (entity: string) => `Xung đột ${entity}`,
     detected: "Phát hiện", deviceUpdated: "Thiết bị cập nhật", serverUpdated: "Server cập nhật", serverDeleted: "Bản trên server đã bị xóa",
     keepLocal: "Giữ dữ liệu trên thiết bị này", useRemote: "Dùng dữ liệu đã đồng bộ", processing: "Đang xử lý…", confirmEyebrow: "Xác nhận lựa chọn", back: "Quay lại, chưa thay đổi",
@@ -400,6 +400,8 @@ export default function SyncConflictSection({
       ? text.readFailed
       : text.noConflicts;
 
+  const eyebrow = conflicts && conflicts.length > 0 ? text.eyebrow : text.syncStatusEyebrow;
+
   const feedbackClass = resolutionFeedback?.tone === "success"
     ? "sync-conflict-live"
     : resolutionFeedback?.tone === "warning"
@@ -415,7 +417,7 @@ export default function SyncConflictSection({
     >
       <div className="settings-card-head">
         <div>
-          <p className="settings-card-eyebrow">{text.eyebrow}</p>
+          <p className="settings-card-eyebrow">{eyebrow}</p>
           <h3 id="sync-conflicts-heading">{heading}</h3>
           {!conflictReadFailed ? <p>{conflicts && conflicts.length > 0 ? text.paused : text.noConflictsBody}</p> : null}
           {!conflictReadFailed && conflicts?.length === 0 && onSyncNow ? (

@@ -269,6 +269,28 @@ describe("German locale", () => {
 });
 
 describe("healthy sync state", () => {
+  it("uses a neutral German status eyebrow when no conflict exists", async () => {
+    engineMocks.listConflicts.mockResolvedValue([]);
+    window.localStorage.setItem(LOCALE_KEY, "de");
+
+    render(
+      createElement(
+        LocaleProvider,
+        null,
+        createElement(SyncConflictSection, {
+          userId: "owner-1",
+          onResolved: vi.fn(),
+          onSyncNow: vi.fn().mockResolvedValue(undefined),
+        }),
+      ),
+    );
+
+    expect(await screen.findByRole("heading", { name: "Keine offenen Datenkonflikte" })).toBeTruthy();
+    expect(screen.getByText("Synchronisierungsstatus")).toBeTruthy();
+    expect(screen.queryByText("Synchronisierung erfordert eine Entscheidung")).toBeNull();
+    expect(screen.getByRole("button", { name: "Jetzt synchronisieren" })).toBeTruthy();
+  });
+
   it("keeps a visible clean state and exposes an explicit resync action", async () => {
     engineMocks.listConflicts.mockResolvedValue([]);
     const onSyncNow = vi.fn().mockResolvedValue(undefined);

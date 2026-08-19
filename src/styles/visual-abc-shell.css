@@ -58,7 +58,8 @@ body,
 
 .app-layout:has(.bar) > .app-shell {
   padding-top: calc(var(--safe-top) + var(--demo-bar-h) + 8px) !important;
-  padding-bottom: calc(84px + var(--safe-bottom)) !important;
+  /* Keep final Settings actions and expanded cards fully reachable above the fixed dock on iPhone Safari. */
+  padding-bottom: calc(132px + var(--safe-bottom)) !important;
 }
 
 .app-shell::after {
