@@ -25,7 +25,7 @@ import {
 } from "../lib/backupImportGate";
 import { csvEscape, formatDateVN } from "../lib/calc";
 import type { ThemeChoice } from "../lib/theme";
-import { THEME_OPTIONS, persistTheme, readTheme } from "../lib/theme";
+import { persistTheme, readTheme } from "../lib/theme";
 import { useAuth } from "../lib/auth";
 import { listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
 import type { OutboxItem, PendingSyncSummary } from "../lib/sync/types";
@@ -40,6 +40,12 @@ const SETTINGS_AUTOSAVE_MS = 650;
 const SETTINGS_SAVE_ERROR = "Không lưu được Cài đặt. Bản đang chỉnh vẫn còn trên màn hình.";
 const PENDING_SYNC_PUSH_ERROR =
   "Không đẩy được các thay đổi đang chờ. Dữ liệu trên thiết bị vẫn được giữ nguyên.";
+
+const DEMO_THEME_OPTIONS: Array<{ value: ThemeChoice; label: string; dot: "vault" | "ocean" | "ember" }> = [
+  { value: "premium", label: "Vault", dot: "vault" },
+  { value: "dark", label: "Ocean", dot: "ocean" },
+  { value: "light", label: "Ember", dot: "ember" },
+];
 
 function berlinNow() {
   const now = new Date();
@@ -407,7 +413,7 @@ export default function SettingsPage({
   if (settingsLoadError || !settings) {
     return (
       <main className="demo-v10-screen">
-        <section className="demo-v10-gl" style={{ padding: 18 }} role="alert">
+        <section className="gl" style={{ padding: 18 }} role="alert">
           <h1 className="demo-v10-section-title">Không tải được Cài đặt</h1>
           <button type="button" onClick={() => setSettingsLoadAttempt((a) => a + 1)}>
             Thử lại
@@ -418,20 +424,21 @@ export default function SettingsPage({
   }
 
   return (
-    <main className="demo-v10-screen demo-v10-set" aria-label="Cài đặt">
-      <section className="demo-v10-gl demo-v10-set-dt">
-        <div className="demo-v10-dt-lbl">Berlin</div>
-        <div className="demo-v10-dt-big">{clock.time}</div>
-        <div className="demo-v10-dt-date">{clock.date}</div>
-        <div className="demo-v10-dt-sync">
-          <span className="demo-v10-sdot" aria-hidden />
+    <main className="demo-v10-screen" aria-label="Cài đặt">
+      <div className="set-wrap">
+      <section className="gl set-dt">
+        <div className="dt-lbl">Berlin · giờ hiện tại</div>
+        <div className="dt-big">{clock.time}</div>
+        <div className="dt-date">{clock.date}</div>
+        <div className="dt-sync">
+          <span className="sdot" aria-hidden />
           {syncLabel}
           {saveState === "saving" ? " · Đang lưu…" : saveState === "dirty" ? " · Sẽ tự lưu" : ""}
         </div>
       </section>
 
       {saveError || actionError ? (
-        <div className="demo-v10-gl" style={{ padding: 12 }} role="alert">
+        <div className="gl" style={{ padding: 12 }} role="alert">
           <span>{saveError ?? actionError}</span>
           {saveError ? (
             <button type="button" onClick={() => void flushRef.current()}>
@@ -445,53 +452,40 @@ export default function SettingsPage({
         </div>
       ) : null}
 
-      <div className="demo-v10-set-sec">Giao diện</div>
-      <section className="demo-v10-gl demo-v10-set-block">
-        <div className="demo-v10-theme-picker">
-          {THEME_OPTIONS.map((opt) => (
+      <div className="set-sec">Giao diện</div>
+      <section className="gl set-block">
+        <div className="theme-picker">
+          {DEMO_THEME_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               type="button"
-              className={"demo-v10-th-opt" + (theme === opt.value ? " sel" : "")}
-              onClick={() => pickTheme(opt.value as ThemeChoice)}
+              className={"th-opt" + (theme === opt.value ? " sel" : "")}
+              onClick={() => pickTheme(opt.value)}
             >
-              <span
-                className={
-                  "demo-v10-th-dot " +
-                  (opt.value === "premium" || opt.value === "dark"
-                    ? "vault"
-                    : opt.value === "light"
-                      ? "ocean"
-                      : "ember")
-                }
-                aria-hidden
-              />
-              <span className="demo-v10-th-name">{opt.label}</span>
+              <span className={`th-dot ${opt.dot}`} aria-hidden />
+              <span className="th-name">{opt.label}</span>
             </button>
           ))}
         </div>
       </section>
 
-      <div className="demo-v10-set-sec">Ngôn ngữ</div>
-      <section className="demo-v10-gl demo-v10-set-block">
-        <div className="demo-v10-lang">
-          <button type="button" className={lang === "vi" ? "selected" : ""} onClick={() => setLang("vi")}>
-            VI<small>Tiếng Việt</small>
+      <div className="set-sec">Ngôn ngữ</div>
+      <section className="gl set-block">
+        <div className="lang-options">
+          <button type="button" className={`lang-opt${lang === "vi" ? " selected" : ""}`} onClick={() => setLang("vi")}>
+            Tiếng Việt<small>UI marker</small>
           </button>
-          <button type="button" className={lang === "de" ? "selected" : ""} onClick={() => setLang("de")}>
-            DE<small>Deutsch · UI only</small>
-          </button>
-          <button type="button" className={lang === "en" ? "selected" : ""} onClick={() => setLang("en")}>
-            EN<small>English · UI only</small>
+          <button type="button" className={`lang-opt${lang === "de" ? " selected" : ""}`} onClick={() => setLang("de")}>
+            Deutsch<small>UI marker</small>
           </button>
         </div>
       </section>
 
-      <div className="demo-v10-set-sec">Đồng bộ</div>
-      <section className="demo-v10-gl demo-v10-set-block">
+      <div className="set-sec">Đồng bộ</div>
+      <section className="gl set-block">
         <button
           type="button"
-          className="demo-v10-set-row"
+          className="set-row"
           onClick={() =>
             void (async () => {
               if (!auth.user?.id) return;
@@ -506,36 +500,36 @@ export default function SettingsPage({
             })()
           }
         >
-          <span className="demo-v10-si e" aria-hidden>
+          <span className="si-ico e" aria-hidden>
             ↻
           </span>
-          <span className="demo-v10-sr-body">
-            <span className="demo-v10-sr-name">Đồng bộ ngay</span>
-            <span className="demo-v10-sr-sub">{syncLabel}</span>
+          <span className="sr-body">
+            <span className="sr-name">Đồng bộ ngay</span>
+            <span className="sr-sub">{syncLabel}</span>
           </span>
-          <span className="demo-v10-sr-arr">›</span>
+          <span className="sr-arr">›</span>
         </button>
-        <button type="button" className="demo-v10-set-row" onClick={() => void doExport()}>
-          <span className="demo-v10-si v" aria-hidden>
+        <button type="button" className="set-row" onClick={() => void doExport()}>
+          <span className="si-ico v" aria-hidden>
             ↥
           </span>
-          <span className="demo-v10-sr-body">
-            <span className="demo-v10-sr-name">Xuất JSON</span>
-            <span className="demo-v10-sr-sub">
+          <span className="sr-body">
+            <span className="sr-name">Xuất JSON</span>
+            <span className="sr-sub">
               {metaBackup ? `Sao lưu ${formatDateVN(metaBackup.slice(0, 10))}` : "Chưa có bản sao lưu"}
             </span>
           </span>
-          <span className="demo-v10-sr-arr">›</span>
+          <span className="sr-arr">›</span>
         </button>
-        <label className="demo-v10-set-row">
-          <span className="demo-v10-si a" aria-hidden>
+        <label className="set-row">
+          <span className="si-ico a" aria-hidden>
             ↧
           </span>
-          <span className="demo-v10-sr-body">
-            <span className="demo-v10-sr-name">Nhập sao lưu</span>
-            <span className="demo-v10-sr-sub">JSON backup</span>
+          <span className="sr-body">
+            <span className="sr-name">Nhập sao lưu</span>
+            <span className="sr-sub">JSON backup</span>
           </span>
-          <span className="demo-v10-sr-arr">›</span>
+          <span className="sr-arr">›</span>
           <input
             type="file"
             accept="application/json,.json"
@@ -549,21 +543,21 @@ export default function SettingsPage({
         </label>
       </section>
 
-      <div className="demo-v10-set-sec">Tài khoản</div>
-      <section className="demo-v10-gl demo-v10-set-block">
-        <Link to="/notfallmappe" className="demo-v10-set-row" style={{ textDecoration: "none" }}>
-          <span className="demo-v10-si v" aria-hidden>
+      <div className="set-sec">Tài khoản</div>
+      <section className="gl set-block">
+        <Link to="/notfallmappe" className="set-row" style={{ textDecoration: "none" }}>
+          <span className="si-ico v" aria-hidden>
             🛡
           </span>
-          <span className="demo-v10-sr-body">
-            <span className="demo-v10-sr-name">Hồ sơ khẩn cấp</span>
-            <span className="demo-v10-sr-sub">Notfallmappe</span>
+          <span className="sr-body">
+            <span className="sr-name">Hồ sơ khẩn cấp</span>
+            <span className="sr-sub">Notfallmappe</span>
           </span>
-          <span className="demo-v10-sr-arr">›</span>
+          <span className="sr-arr">›</span>
         </Link>
         <button
           type="button"
-          className="demo-v10-set-row"
+          className="set-row"
           onClick={() =>
             void (async () => {
               if (readOnly) {
@@ -583,21 +577,21 @@ export default function SettingsPage({
             })()
           }
         >
-          <span className="demo-v10-si e" aria-hidden>
+          <span className="si-ico e" aria-hidden>
             ⍁
           </span>
-          <span className="demo-v10-sr-body">
-            <span className="demo-v10-sr-name">MFA / TOTP</span>
-            <span className="demo-v10-sr-sub">
+          <span className="sr-body">
+            <span className="sr-name">MFA / TOTP</span>
+            <span className="sr-sub">
               {auth.mfaEnrolled ? "Đã bật" : mfaBusy ? "Đang tạo…" : "Thiết lập"}
             </span>
           </span>
-          <span className="demo-v10-sr-arr">›</span>
+          <span className="sr-arr">›</span>
         </button>
       </section>
 
       {mfaEnrollment ? (
-        <section className="demo-v10-gl" style={{ padding: 16 }}>
+        <section className="gl" style={{ padding: 16 }}>
           <img src={mfaEnrollment.qrCode} alt="QR TOTP" style={{ width: 180, borderRadius: 12 }} />
           <code style={{ display: "block", marginTop: 8, overflowWrap: "anywhere" }}>{mfaEnrollment.secret}</code>
           <input
@@ -633,10 +627,10 @@ export default function SettingsPage({
           {mfaSetupError ? <p role="alert">{mfaSetupError}</p> : null}
         </section>
       ) : null}
-      {mfaMessage ? <p className="demo-v10-ver">{mfaMessage}</p> : null}
+      {mfaMessage ? <p className="ver">{mfaMessage}</p> : null}
 
       {pendingFile ? (
-        <section className="demo-v10-gl" style={{ padding: 16 }} role="alertdialog">
+        <section className="gl" style={{ padding: 16 }} role="alertdialog">
           <strong>Thay dữ liệu bằng file {pendingFile.name}?</strong>
           {pendingSync ? (
             <div role="alert">
@@ -663,14 +657,14 @@ export default function SettingsPage({
 
       <button
         type="button"
-        className="demo-v10-abmeld"
+        className="abmeld"
         onClick={() => void auth.signOut()}
       >
         🔓 Abmelden
       </button>
 
       <details
-        className="demo-v10-set-advanced"
+        className="set-advanced"
         open={showAdvanced}
         onToggle={(e) => {
           const open = (e.target as HTMLDetailsElement).open;
@@ -692,16 +686,16 @@ export default function SettingsPage({
           target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
           onChangeTarget={(next) => patchSettings({ planTarget: next })}
         />
-        <button type="button" className="demo-v10-set-row" onClick={() => void exportCsv()}>
-          <span className="demo-v10-sr-name">Xuất CSV giao dịch</span>
+        <button type="button" className="set-row" onClick={() => void exportCsv()}>
+          <span className="sr-name">Xuất CSV giao dịch</span>
         </button>
         {onOpenMigrate ? (
-          <button type="button" className="demo-v10-set-row" onClick={onOpenMigrate}>
-            <span className="demo-v10-sr-name">Khôi phục dữ liệu trên thiết bị</span>
+          <button type="button" className="set-row" onClick={onOpenMigrate}>
+            <span className="sr-name">Khôi phục dữ liệu trên thiết bị</span>
           </button>
         ) : null}
-        <button type="button" className="demo-v10-set-row" onClick={() => setDeleteOpen(true)}>
-          <span className="demo-v10-sr-name" style={{ color: "var(--demo-re)" }}>
+        <button type="button" className="set-row" onClick={() => setDeleteOpen(true)}>
+          <span className="sr-name" style={{ color: "var(--demo-re)" }}>
             Xóa toàn bộ dữ liệu local
           </span>
         </button>
@@ -736,9 +730,10 @@ export default function SettingsPage({
         ) : null}
       </details>
 
-      <p className="demo-v10-ver">
+      <p className="ver">
         v{APP_VERSION} · {online ? "Online" : "Offline"}
       </p>
+      </div>
     </main>
   );
 }

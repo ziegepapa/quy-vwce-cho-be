@@ -118,8 +118,9 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
   } = p;
 
   return (
-    <main className="demo-v10-screen demo-v10-sim" aria-label="Mô phỏng">
-      <div className="demo-v10-mode-tabs" role="tablist" aria-label="Chế độ mô phỏng">
+    <main className="demo-v10-screen" aria-label="Mô phỏng">
+      <div className="sim-wrap">
+      <div className="mode-tabs" role="tablist" aria-label="Chế độ mô phỏng">
         {(
           [
             ["A", "Góp → Nhận", "Mode A"],
@@ -132,7 +133,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             type="button"
             role="tab"
             aria-selected={mode === id}
-            className={"demo-v10-mtab" + (mode === id ? " on" : "")}
+            className={"mtab" + (mode === id ? " on" : "")}
             onClick={() => setMode(id)}
           >
             {label}
@@ -141,49 +142,49 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         ))}
       </div>
 
-      <section className="demo-v10-sim-headline">
+      <section className="sim-headline">
         {planUnreachable ? (
           <>
-            <div className="demo-v10-sh-big">—</div>
-            <div className="demo-v10-sh-sub">Chưa có mức góp khả thi</div>
-            <div className="demo-v10-sh-note">kiểm tra mục tiêu / lợi nhuận</div>
+            <div className="sh-big">—</div>
+            <div className="sh-sub">Chưa có mức góp khả thi</div>
+            <div className="sh-note">kiểm tra mục tiêu / lợi nhuận</div>
           </>
         ) : (
           <>
-            <div className="demo-v10-sh-big">{formatMoneyRounded(headlineValue)}</div>
-            <div className="demo-v10-sh-sub">
+            <div className="sh-big">{formatMoneyRounded(headlineValue)}</div>
+            <div className="sh-sub">
               {`sau ${yearsForProject} năm · ${formatMoneyRounded(monthlyForProject)}/tháng`}
             </div>
-            <div className="demo-v10-sh-note">{headlineNote}</div>
+            <div className="sh-note">{headlineNote}</div>
           </>
         )}
       </section>
 
-      <div className="demo-v10-sim-sum3">
-        <div className="demo-v10-gl demo-v10-ss-c">
-          <div className="demo-v10-ss-lbl">Cuối kỳ</div>
-          <div className="demo-v10-ss-val" style={{ color: "var(--demo-vi)" }}>
+      <div className="sim-sum3">
+        <div className="gl ss-c">
+          <div className="ss-lbl">Cuối kỳ</div>
+          <div className="ss-val" style={{ color: "var(--demo-vi)" }}>
             {primary && !planUnreachable ? formatMoneyRounded(headlineValue) : "—"}
           </div>
         </div>
-        <div className="demo-v10-gl demo-v10-ss-c">
-          <div className="demo-v10-ss-lbl">Đã góp</div>
-          <div className="demo-v10-ss-val" style={{ color: "var(--demo-sub)" }}>
+        <div className="gl ss-c">
+          <div className="ss-lbl">Đã góp</div>
+          <div className="ss-val" style={{ color: "var(--demo-sub)" }}>
             {primary && !planUnreachable
               ? formatMoneyRounded(primary.out.contributed + initialBalance)
               : "—"}
           </div>
         </div>
-        <div className="demo-v10-gl demo-v10-ss-c">
-          <div className="demo-v10-ss-lbl">Lãi</div>
-          <div className="demo-v10-ss-val" style={{ color: "var(--demo-em)" }}>
+        <div className="gl ss-c">
+          <div className="ss-lbl">Lãi</div>
+          <div className="ss-val" style={{ color: "var(--demo-em)" }}>
             {primary && !planUnreachable ? formatMoneyRounded(shownInterest) : "—"}
           </div>
         </div>
       </div>
 
-      <section className="demo-v10-gl demo-v10-sim-chart-card">
-        <div className="demo-v10-sim-chart-title">Tăng trưởng danh mục</div>
+      <section className="gl sim-chart-card">
+        <div className="sim-chart-title">Tăng trưởng danh mục</div>
         <SimulationDemoChart
           results={results}
           markers={goalMarkers}
@@ -191,19 +192,19 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           band={band}
           baseRate={baseRate}
         />
-        <div className="demo-v10-chart-legend">
-          <span><i style={{ background: "var(--demo-vi)" }} /> Dự báo</span>
-          {band > 0 ? <span><i style={{ background: "var(--demo-em)" }} /> Biên độ</span> : null}
+        <div className="chart-legend">
+          <span><i style={{ background: "var(--demo-vi)" }} /> Đã góp</span>
+          <span><i style={{ background: "var(--demo-em)" }} /> Danh mục (dự báo)</span>
         </div>
       </section>
 
       {(mode === "A" || mode === "C") && (
-        <section className="demo-v10-gl demo-v10-sim-inputs">
+        <section className="gl sim-inputs">
           {mode === "A" && (
-            <div className="demo-v10-inp-row">
-              <span className="demo-v10-inp-lbl">Góp mỗi tháng (EUR)</span>
+            <div className="inp-row">
+              <span className="inp-lbl">Góp mỗi tháng (EUR)</span>
               <input
-                className="demo-v10-inp"
+                className="inp"
                 type="number"
                 inputMode="decimal"
                 value={monthly}
@@ -214,10 +215,10 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           )}
           {mode === "C" && (
             <>
-              <div className="demo-v10-inp-row">
-                <span className="demo-v10-inp-lbl">Mục tiêu (EUR)</span>
+              <div className="inp-row">
+                <span className="inp-lbl">Mục tiêu (EUR)</span>
                 <input
-                  className="demo-v10-inp"
+                  className="inp"
                   type="number"
                   inputMode="decimal"
                   value={targetAmount}
@@ -225,10 +226,10 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
                   disabled={readOnly}
                 />
               </div>
-              <div className="demo-v10-inp-row">
-                <span className="demo-v10-inp-lbl">Góp mỗi tháng (EUR)</span>
+              <div className="inp-row">
+                <span className="inp-lbl">Góp mỗi tháng (EUR)</span>
                 <input
-                  className="demo-v10-inp"
+                  className="inp"
                   type="number"
                   inputMode="decimal"
                   value={monthly}
@@ -238,13 +239,13 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
               </div>
             </>
           )}
-          <div className="demo-v10-yr-row2">
-            <div className="demo-v10-yr-top">
-              <span className="demo-v10-yr-lbl">Thời hạn</span>
-              <span className="demo-v10-yr-val">{years} năm</span>
+          <div className="yr-row2">
+            <div className="yr-top">
+              <span className="yr-lbl">Thời hạn</span>
+              <span className="yr-val">{years} năm</span>
             </div>
             <input
-              className="demo-v10-yr-slider"
+              className="yr-slider"
               type="range"
               min={1}
               max={MAX_YEARS}
@@ -257,11 +258,11 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
       )}
 
       {mode === "B" && (
-        <section className="demo-v10-gl demo-v10-sim-inputs">
-          <div className="demo-v10-inp-row">
-            <span className="demo-v10-inp-lbl">Muốn có (EUR)</span>
+        <section className="gl sim-inputs">
+          <div className="inp-row">
+            <span className="inp-lbl">Muốn có (EUR)</span>
             <input
-              className="demo-v10-inp"
+              className="inp"
               type="number"
               inputMode="decimal"
               value={targetAmount}
@@ -269,10 +270,10 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
               disabled={readOnly}
             />
           </div>
-          <div className="demo-v10-inp-row">
-            <span className="demo-v10-inp-lbl">Vào năm</span>
+          <div className="inp-row">
+            <span className="inp-lbl">Vào năm</span>
             <input
-              className="demo-v10-inp"
+              className="inp"
               type="number"
               inputMode="numeric"
               value={targetYear}
@@ -280,17 +281,17 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
               disabled={readOnly}
             />
           </div>
-          <p className="demo-v10-sh-note" style={{ margin: 0 }}>
+          <p className="sh-note" style={{ margin: 0 }}>
             {`Còn khoảng ${yearsB} năm · cần ~${requiredMonthlyBase >= 0 ? formatMoneyRounded(requiredMonthlyBase) : "—"}/tháng`}
           </p>
         </section>
       )}
 
-      <section className="demo-v10-gl demo-v10-sim-inputs">
-        <div className="demo-v10-inp-row">
-          <span className="demo-v10-inp-lbl">Lợi nhuận / năm (%)</span>
+      <section className="gl sim-inputs">
+        <div className="inp-row">
+          <span className="inp-lbl">Lợi nhuận / năm (%)</span>
           <input
-            className="demo-v10-inp"
+            className="inp"
             type="text"
             inputMode="decimal"
             value={rateInput}
@@ -299,14 +300,14 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           />
         </div>
         {band > 0 ? (
-          <p className="demo-v10-sh-note" style={{ margin: 0 }}>
+          <p className="sh-note" style={{ margin: 0 }}>
             khoảng {bandPctLabel}
           </p>
         ) : null}
       </section>
 
-      <section className="demo-v10-gl demo-v10-yr-table">
-        <div className="demo-v10-yr-head">
+      <section className="gl yr-table">
+        <div className="yr-table-head">
           <span>Năm</span>
           <span>NAV dự báo</span>
           <span>Đã góp</span>
@@ -318,7 +319,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           return (
             <div
               key={yi}
-              className="demo-v10-yr-row"
+              className="yr-row-item"
               style={{ fontWeight: isLast ? 700 : undefined }}
             >
               <span>
@@ -342,75 +343,75 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
 
       <button
         type="button"
-        className="demo-v10-show-all"
+        className="show-all-btn"
         onClick={() => setShowAllYears((v) => !v)}
       >
         {showAllYears ? "Thu gọn" : "Hiện tất cả các năm"}
       </button>
 
-      <div className="demo-v10-sim-note">ⓘ Ước tính — không phải tư vấn đầu tư</div>
+      <div className="sim-note">ⓘ Ước tính — không phải tư vấn đầu tư</div>
 
-      <details className="demo-v10-gl" style={{ padding: 14 }}>
+      <details className="gl" style={{ padding: 14 }}>
         <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--demo-dim)" }}>
           {advSummary}
         </summary>
         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-          <div className="demo-v10-inp-row">
-            <span className="demo-v10-inp-lbl">Biên độ ± (%)</span>
-            <input className="demo-v10-inp" value={bandInput} onChange={(e) => setBandInput(e.target.value)} disabled={readOnly} />
+          <div className="inp-row">
+            <span className="inp-lbl">Biên độ ± (%)</span>
+            <input className="inp" value={bandInput} onChange={(e) => setBandInput(e.target.value)} disabled={readOnly} />
           </div>
-          <label className="demo-v10-inp-row">
-            <span className="demo-v10-inp-lbl">Góp thay đổi theo năm</span>
+          <label className="inp-row">
+            <span className="inp-lbl">Góp thay đổi theo năm</span>
             <input type="checkbox" checked={growthOn} onChange={(e) => setGrowthOn(e.target.checked)} disabled={readOnly} />
           </label>
           {growthOn ? (
-            <div className="demo-v10-inp-row">
-              <span className="demo-v10-inp-lbl">% / năm</span>
-              <input className="demo-v10-inp" value={growthPct} onChange={(e) => setGrowthPct(e.target.value)} disabled={readOnly} />
+            <div className="inp-row">
+              <span className="inp-lbl">% / năm</span>
+              <input className="inp" value={growthPct} onChange={(e) => setGrowthPct(e.target.value)} disabled={readOnly} />
             </div>
           ) : null}
-          <div className="demo-v10-inp-row">
-            <span className="demo-v10-inp-lbl">Khoản lớn ban đầu</span>
-            <input className="demo-v10-inp" value={lumpSum} onChange={(e) => setLumpSum(e.target.value)} disabled={readOnly} />
+          <div className="inp-row">
+            <span className="inp-lbl">Khoản lớn ban đầu</span>
+            <input className="inp" value={lumpSum} onChange={(e) => setLumpSum(e.target.value)} disabled={readOnly} />
           </div>
-          <div className="demo-v10-inp-row">
-            <span className="demo-v10-inp-lbl">Số dư xuất phát</span>
+          <div className="inp-row">
+            <span className="inp-lbl">Số dư xuất phát</span>
             <input
-              className="demo-v10-inp"
+              className="inp"
               placeholder={String(Math.max(0, realBalance))}
               value={balanceOverride}
               onChange={(e) => setBalanceOverride(e.target.value)}
               disabled={readOnly}
             />
           </div>
-          <label className="demo-v10-inp-row">
-            <span className="demo-v10-inp-lbl">Sức mua hôm nay</span>
+          <label className="inp-row">
+            <span className="inp-lbl">Sức mua hôm nay</span>
             <input type="checkbox" checked={inflationOn} onChange={(e) => setInflationOn(e.target.checked)} disabled={readOnly} />
           </label>
           {inflationOn ? (
-            <div className="demo-v10-inp-row">
-              <span className="demo-v10-inp-lbl">Lạm phát %/năm</span>
-              <input className="demo-v10-inp" value={inflationPct} onChange={(e) => setInflationPct(e.target.value)} disabled={readOnly} />
+            <div className="inp-row">
+              <span className="inp-lbl">Lạm phát %/năm</span>
+              <input className="inp" value={inflationPct} onChange={(e) => setInflationPct(e.target.value)} disabled={readOnly} />
             </div>
           ) : null}
-          <label className="demo-v10-inp-row">
-            <span className="demo-v10-inp-lbl">Thuế DE + TER</span>
+          <label className="inp-row">
+            <span className="inp-lbl">Thuế DE + TER</span>
             <input type="checkbox" checked={taxOn} onChange={(e) => setTaxOn(e.target.checked)} disabled={readOnly} />
           </label>
           {taxOn ? (
-            <button type="button" className="demo-v10-show-all" onClick={() => setShowAfterTax((v) => !v)}>
+            <button type="button" className="show-all-btn" onClick={() => setShowAfterTax((v) => !v)}>
               {showAfterTax ? "Đang: sau thuế" : "Đang: trước thuế"}
             </button>
           ) : null}
           {inflationOn ? (
-            <button type="button" className="demo-v10-show-all" onClick={() => setShowPP((v) => !v)}>
+            <button type="button" className="show-all-btn" onClick={() => setShowPP((v) => !v)}>
               {showPP ? "Đang: giá hôm nay" : "Đang: danh nghĩa"}
             </button>
           ) : null}
           {goals.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {goals.map((g) => (
-                <button key={g.id} type="button" className="demo-v10-show-all" onClick={() => applyYearsFromGoal(g)}>
+                <button key={g.id} type="button" className="show-all-btn" onClick={() => applyYearsFromGoal(g)}>
                   Mục tiêu: {g.name}
                 </button>
               ))}
@@ -418,7 +419,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           ) : null}
           <button
             type="button"
-            className="demo-v10-show-all"
+            className="show-all-btn"
             style={{ opacity: planUnreachable ? 0.45 : 1 }}
             disabled={planUnreachable || readOnly}
             onClick={openSaveConfirm}
@@ -429,15 +430,15 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
       </details>
 
       {matchMsg && !undoVisible ? (
-        <div className="demo-v10-gl" style={{ padding: 12, fontSize: 13 }}>
+        <div className="gl" style={{ padding: 12, fontSize: 13 }}>
           Kế hoạch đã khớp — không có gì để lưu.
         </div>
       ) : null}
 
       {undoVisible && undoSnap ? (
-        <div className="demo-v10-gl" style={{ padding: 12, display: "flex", gap: 10, alignItems: "center" }}>
+        <div className="gl" style={{ padding: 12, display: "flex", gap: 10, alignItems: "center" }}>
           <span style={{ fontSize: 13 }}>{undoSnap.message}</span>
-          <button type="button" className="demo-v10-show-all" onClick={() => void undoPersist()}>
+          <button type="button" className="show-all-btn" onClick={() => void undoPersist()}>
             Hoàn tác
           </button>
         </div>
@@ -450,17 +451,17 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             <h2>Lưu vào kế hoạch</h2>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0" }}>
               {y1Diff ? (
-                <button type="button" aria-pressed={writeY1} onClick={() => setWriteY1((v) => !v)} className="demo-v10-show-all">
+                <button type="button" aria-pressed={writeY1} onClick={() => setWriteY1((v) => !v)} className="show-all-btn">
                   Năm 1 · {formatMoney(monthlyForProjectRounded)}
                 </button>
               ) : null}
               {y2Diff ? (
-                <button type="button" aria-pressed={writeY2} onClick={() => setWriteY2((v) => !v)} className="demo-v10-show-all">
+                <button type="button" aria-pressed={writeY2} onClick={() => setWriteY2((v) => !v)} className="show-all-btn">
                   Từ năm 2 · {formatMoney(monthlyForProjectRounded)}
                 </button>
               ) : null}
               {retDiff ? (
-                <button type="button" aria-pressed={writeReturn} onClick={() => setWriteReturn((v) => !v)} className="demo-v10-show-all">
+                <button type="button" aria-pressed={writeReturn} onClick={() => setWriteReturn((v) => !v)} className="show-all-btn">
                   Lợi nhuận · {(baseRateNew * 100).toFixed(2)}%
                 </button>
               ) : null}
@@ -474,6 +475,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           </div>
         </div>
       ) : null}
+      </div>
     </main>
   );
 }

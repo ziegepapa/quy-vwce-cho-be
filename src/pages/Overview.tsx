@@ -37,12 +37,12 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
 
   const view = useMemo(() => {
     if (!settings) return null;
-    const snapshot = buildTodayCenterPortfolioSnapshot(
+    const snapshot = buildTodayCenterPortfolioSnapshot({
       transactions,
       quotes,
-      settings.latestVwcePrice ?? 0,
-      settings.latestPriceDate ?? "",
-    );
+      legacyVwcePrice: settings.latestVwcePrice ?? 0,
+      legacyVwcePriceAsOf: settings.latestPriceDate ?? "",
+    });
     const { portfolio, market, totalQuantity, vwcePrice } = snapshot;
     const vwceValue = vwcePrice > 0 ? portfolio.vwceQty * vwcePrice : null;
     const hero = buildOverviewHero({

@@ -272,9 +272,9 @@ export default function Transactions() {
     return (
       <main className="demo-v10-screen">
         <section className="demo-v10-gl" style={{ padding: 18 }} role="alert">
-          <h1 className="demo-v10-section-title">Không tải được Giao dịch</h1>
+          <h1 className="s-title">Không tải được Giao dịch</h1>
           <p style={{ color: "var(--demo-dim)", fontSize: 13 }}>Dữ liệu trên thiết bị vẫn được giữ nguyên.</p>
-          <button type="button" className="demo-v10-tx-add" onClick={() => setLoadAttempt((a) => a + 1)}>
+          <button type="button" className="add-btn" onClick={() => setLoadAttempt((a) => a + 1)}>
             Thử lại
           </button>
         </section>
@@ -283,30 +283,31 @@ export default function Transactions() {
   }
 
   return (
-    <main className="demo-v10-screen demo-v10-tx" aria-label="Giao dịch">
-      <div className="demo-v10-tx-head">
-        <h1 className="demo-v10-section-title">Giao dịch</h1>
-        <button type="button" className="demo-v10-tx-add" onClick={openCreate}>
+    <main className="demo-v10-screen" aria-label="Giao dịch">
+      <div className="tx-wrap">
+      <div className="s-head">
+        <h1 className="s-title">Giao dịch</h1>
+        <button type="button" className="add-btn" onClick={openCreate}>
           + Thêm
         </button>
       </div>
 
-      <div className="demo-v10-sum3">
-        <div className="demo-v10-gl demo-v10-sum-c">
-          <div className="demo-v10-sum-lbl">Tổng góp</div>
-          <div className="demo-v10-sum-val">{formatMoney(summary.contributed)}</div>
+      <div className="sum3">
+        <div className="gl sum-c">
+          <div className="sum-lbl">Tổng góp</div>
+          <div className="sum-val">{formatMoney(summary.contributed)}</div>
         </div>
-        <div className="demo-v10-gl demo-v10-sum-c">
-          <div className="demo-v10-sum-lbl">Lợi nhuận</div>
-          <div className="demo-v10-sum-val">—</div>
+        <div className="gl sum-c">
+          <div className="sum-lbl">Lợi nhuận</div>
+          <div className="sum-val">—</div>
         </div>
-        <div className="demo-v10-gl demo-v10-sum-c">
-          <div className="demo-v10-sum-lbl">Số lần mua</div>
-          <div className="demo-v10-sum-val">{summary.buys}</div>
+        <div className="gl sum-c">
+          <div className="sum-lbl">Số lần mua</div>
+          <div className="sum-val">{summary.buys}</div>
         </div>
       </div>
 
-      <div className="demo-v10-tx-tools">
+      <div className="tx-tools">
         <button type="button" onClick={() => setToolsOpen((v) => !v)}>
           {toolsOpen ? "Ẩn công cụ" : "Lọc / PDF"}
         </button>
@@ -352,7 +353,7 @@ export default function Transactions() {
             {txs.length === 0 ? "Chưa có giao dịch." : "Không có giao dịch khớp bộ lọc."}
           </p>
           {txs.length === 0 ? (
-            <button type="button" className="demo-v10-tx-add" style={{ marginTop: 12 }} onClick={openCreate}>
+            <button type="button" className="add-btn" style={{ marginTop: 12 }} onClick={openCreate}>
               Thêm giao dịch đầu tiên
             </button>
           ) : null}
@@ -360,8 +361,8 @@ export default function Transactions() {
       ) : (
         groups.map(([key, list]) => (
           <div key={key}>
-            <div className="demo-v10-mo-lbl">{monthLabel(key)}</div>
-            <section className="demo-v10-gl demo-v10-tx-card">
+            <div className="mo-lbl">{monthLabel(key)}</div>
+            <section className="gl tx-card">
               {list.map((tx) => {
                 const meta = TYPES.find((t) => t.value === tx.type);
                 const sign = meta?.sign ?? "~";
@@ -370,7 +371,7 @@ export default function Transactions() {
                   <button
                     type="button"
                     key={tx.id}
-                    className="demo-v10-tx-item"
+                    className="tx-item"
                     onClick={() => openEdit(tx)}
                     onContextMenu={(e) => {
                       e.preventDefault();
@@ -385,21 +386,21 @@ export default function Transactions() {
                       })();
                     }}
                   >
-                    <span className={`demo-v10-tx-ico ${iconClass(tx.type)}`} aria-hidden>
+                    <span className={`tx-ico ${iconClass(tx.type)}`} aria-hidden>
                       {iconGlyph(tx.type)}
                     </span>
-                    <span className="demo-v10-tx-b">
-                      <span className="demo-v10-tx-name">{meta?.label ?? tx.type}</span>
-                      <span className="demo-v10-tx-meta">
+                    <span className="tx-b">
+                      <span className="tx-name">{meta?.label ?? tx.type}</span>
+                      <span className="tx-meta">
                         {formatDateVN(tx.date)}
                         {isin ? ` · ${isin}` : ""}
                         {tx.notes ? ` · ${tx.notes}` : ""}
                       </span>
                     </span>
-                    <span className="demo-v10-tx-r">
+                    <span className="tx-r">
                       <span
                         className={
-                          "demo-v10-tx-amt" +
+                          "tx-amt" +
                           (sign === "+" ? " pos" : sign === "-" ? " neg" : "")
                         }
                       >
@@ -407,7 +408,7 @@ export default function Transactions() {
                         {formatMoney(tx.amount)}
                       </span>
                       {tx.quantity != null ? (
-                        <span className="demo-v10-tx-sec">SL {tx.quantity.toFixed(4)}</span>
+                        <span className="tx-sec">SL {tx.quantity.toFixed(4)}</span>
                       ) : null}
                     </span>
                   </button>
@@ -528,6 +529,7 @@ export default function Transactions() {
           </div>
         </div>
       ) : null}
+      </div>
     </main>
   );
 }
