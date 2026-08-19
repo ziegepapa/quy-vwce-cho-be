@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { AppSettings } from "../lib/types";
+import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
 
 const dbMocks = vi.hoisted(() => ({
   clearAllData: vi.fn(),
@@ -67,6 +68,17 @@ function renderSettings(path = "/settings") {
   );
 }
 
+function renderGermanSettings(path = "/settings?tab=advanced") {
+  window.localStorage.setItem(LOCALE_KEY, "de");
+  return render(
+    createElement(
+      MemoryRouter,
+      { initialEntries: [path] },
+      createElement(LocaleProvider, null, createElement(SettingsPage, { onReload: vi.fn() })),
+    ),
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   dbMocks.getSettings.mockResolvedValue(loadedSettings());
@@ -93,7 +105,38 @@ beforeEach(() => {
   window.alert = vi.fn();
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  window.localStorage.removeItem(LOCALE_KEY);
+});
+
+describe("German Settings and mobile Advanced hierarchy", () => {
+  it("uses German copy and keeps all Advanced groups collapsed until explicitly opened", async () => {
+    dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
+    const { container } = renderGermanSettings();
+
+    await screen.findByText("Erscheinungsbild");
+    expect(screen.getByRole("button", { name: "Vietnamesisch Verfügbar" })).toBeTruthy();
+    expect(screen.getByText("Kurse & Marktdaten")).toBeTruthy();
+    expect(screen.getByText("Synchronisierung & Datenkonflikte")).toBeTruthy();
+    expect(screen.getByText("Verwendungsplan")).toBeTruthy();
+    expect(screen.getByText("Sicherung & lokale Daten")).toBeTruthy();
+    const groups = [...container.querySelectorAll("details.advanced-group")] as HTMLDetailsElement[];
+    expect(groups).toHaveLength(4);
+    expect(groups.every((group) => group.open === false)).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: /JSON exportieren/ }));
+    expect(await screen.findByText("JSON-Sicherung konnte nicht exportiert werden. Ihre Daten wurden nicht verändert.")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/Không|Dữ liệu|Cài đặt|Đồng bộ|Giá/);
+  });
+
+  it("opens Advanced for the legacy tab=data deep link used by Sync conflict navigation", async () => {
+    const { container } = renderGermanSettings("/settings?tab=data");
+    await screen.findByText("Erweitert");
+    const advanced = container.querySelector("details.set-advanced") as HTMLDetailsElement;
+    expect(advanced.open).toBe(true);
+  });
+});
 
 describe("Settings operation errors", () => {
   it("keeps the draft and retries a failed autosave without exposing the exception", async () => {

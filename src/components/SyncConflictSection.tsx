@@ -207,6 +207,7 @@ export default function SyncConflictSection({
   const [conflicts, setConflicts] = useState<ConflictDisplayItem[] | null>(null);
   const [conflictReadFailed, setConflictReadFailed] = useState(false);
   const [retryingRead, setRetryingRead] = useState(false);
+  const [syncingNow, setSyncingNow] = useState(false);
   const [pendingChoice, setPendingChoice] = useState<PendingChoice | null>(null);
   const [inFlight, setInFlight] = useState<Set<string>>(() => new Set());
   const [cardFeedback, setCardFeedback] = useState<Record<string, string>>({});
@@ -246,6 +247,17 @@ export default function SyncConflictSection({
       if (mounted.current) setRetryingRead(false);
     }
   }, [refreshConflicts]);
+
+  const syncCleanState = useCallback(async () => {
+    if (!onSyncNow || syncingNow || conflictReadFailed || !conflicts || conflicts.length > 0) return;
+    setSyncingNow(true);
+    try {
+      await onSyncNow();
+      await refreshConflicts();
+    } finally {
+      if (mounted.current) setSyncingNow(false);
+    }
+  }, [conflictReadFailed, conflicts, onSyncNow, refreshConflicts, syncingNow]);
 
   useEffect(() => {
     mounted.current = true;
@@ -406,7 +418,11 @@ export default function SyncConflictSection({
           <p className="settings-card-eyebrow">{text.eyebrow}</p>
           <h3 id="sync-conflicts-heading">{heading}</h3>
           {!conflictReadFailed ? <p>{conflicts && conflicts.length > 0 ? text.paused : text.noConflictsBody}</p> : null}
-          {!conflictReadFailed && onSyncNow ? <button type="button" className="settings-secondary-action" onClick={() => void onSyncNow()}>{text.syncNow}</button> : null}
+          {!conflictReadFailed && conflicts?.length === 0 && onSyncNow ? (
+            <button type="button" className="settings-secondary-action" disabled={syncingNow} onClick={() => void syncCleanState()}>
+              {syncingNow ? text.processing : text.syncNow}
+            </button>
+          ) : null}
         </div>
       </div>
 
