@@ -297,11 +297,11 @@ export default function Transactions() {
           <div className="demo-v10-sum-val">{formatMoney(summary.contributed)}</div>
         </div>
         <div className="demo-v10-gl demo-v10-sum-c">
-          <div className="demo-v10-sum-lbl">Số GD</div>
-          <div className="demo-v10-sum-val">{summary.count}</div>
+          <div className="demo-v10-sum-lbl">Lợi nhuận</div>
+          <div className="demo-v10-sum-val">—</div>
         </div>
         <div className="demo-v10-gl demo-v10-sum-c">
-          <div className="demo-v10-sum-lbl">Lần mua</div>
+          <div className="demo-v10-sum-lbl">Số lần mua</div>
           <div className="demo-v10-sum-val">{summary.buys}</div>
         </div>
       </div>
