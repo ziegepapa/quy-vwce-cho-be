@@ -12,6 +12,7 @@ const engineMocks = vi.hoisted(() => ({
 vi.mock("../lib/sync/engine", () => engineMocks);
 
 import SyncConflictSection from "./SyncConflictSection";
+import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
 
 const CANARY = "NOTFALLMAPPE_CONTACT_DOCUMENT_LOCATION_SECRET";
 const CONFIRMED_COPY = "Đã giữ dữ liệu trên thiết bị và đồng bộ thành công.";
@@ -57,7 +58,10 @@ async function confirmLocal() {
   );
 }
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  window.localStorage.removeItem(LOCALE_KEY);
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -71,9 +75,8 @@ describe("fail-closed conflict reads", () => {
     engineMocks.listConflicts.mockRejectedValueOnce(new Error(`read failed: ${CANARY}`));
     renderSection();
 
-    expect(
-      await screen.findByText("Không thể đọc trạng thái xung đột. Dữ liệu chưa bị thay đổi."),
-    ).toBeTruthy();
+    const readFailure = await screen.findByRole("alert");
+    expect(within(readFailure).getByText("Dữ liệu chưa bị thay đổi.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Giữ dữ liệu trên thiết bị này" })).toBeNull();
     expect(document.body.textContent).not.toContain(CANARY);
     expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
@@ -242,5 +245,44 @@ describe("explicit choices and confidentiality", () => {
     await waitFor(() => expect(engineMocks.resolveConflict).toHaveBeenCalledTimes(1));
     settle?.({ status: "resolved-local" });
     expect(await screen.findByText(CONFIRMED_COPY)).toBeTruthy();
+  });
+});
+
+
+describe("German locale", () => {
+  it("renders conflict labels and actions entirely in German", async () => {
+    window.localStorage.setItem(LOCALE_KEY, "de");
+    render(
+      createElement(
+        LocaleProvider,
+        null,
+        createElement(SyncConflictSection, { userId: "owner-1", onResolved: vi.fn() }),
+      ),
+    );
+
+    expect(await screen.findByRole("heading", { name: "1 Datenkonflikt erfordert eine Entscheidung" })).toBeTruthy();
+    expect(screen.getByRole("article", { name: "Datenkonflikt Einstellungen" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Daten auf diesem Gerät behalten" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Synchronisierte Daten verwenden" })).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/Đồng bộ|xung đột|Thiết bị|Dùng dữ liệu/);
+  });
+});
+
+describe("healthy sync state", () => {
+  it("keeps a visible clean state and exposes an explicit resync action", async () => {
+    engineMocks.listConflicts.mockResolvedValue([]);
+    const onSyncNow = vi.fn().mockResolvedValue(undefined);
+    render(
+      createElement(SyncConflictSection, {
+        userId: "owner-1",
+        onResolved: vi.fn(),
+        onSyncNow,
+      }),
+    );
+
+    expect(await screen.findByRole("heading", { name: "Không có xung đột dữ liệu đang mở" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Đồng bộ ngay" }));
+    await waitFor(() => expect(onSyncNow).toHaveBeenCalledTimes(1));
+    expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
   });
 });
