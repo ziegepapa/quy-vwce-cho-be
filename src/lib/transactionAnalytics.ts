@@ -1,11 +1,14 @@
 import type { Quote, Transaction } from "./types";
 import { calcQuantity } from "./calc";
 import { isSecuritySell, isSecurityTx, resolveInstrumentIsin } from "./instrument";
+import { computeHeroLifetimeContribution, type HeroLifetimeMode } from "./heroLifetime";
 
 type Position = { quantity: number; costBasis: number };
 
 export type TransactionAnalytics = {
+  /** User money put into the fund under the active ledger mode. */
   contributed: number;
+  contributionMode: HeroLifetimeMode;
   withdrawn: number;
   buyCount: number;
   buyVolume: number;
@@ -30,9 +33,13 @@ function latestQuotes(quotes: Quote[]): Map<string, Quote> {
   return selected;
 }
 
-export function analyzeTransactions(transactions: Transaction[], quotes: Quote[]): TransactionAnalytics {
+export function analyzeTransactions(
+  transactions: Transaction[],
+  quotes: Quote[],
+  trackInAppCash?: boolean | null,
+): TransactionAnalytics {
+  const lifetimeContribution = computeHeroLifetimeContribution({ transactions, trackInAppCash });
   const positions = new Map<string, Position>();
-  let contributed = 0;
   let withdrawn = 0;
   let buyCount = 0;
   let buyVolume = 0;
@@ -46,7 +53,6 @@ export function analyzeTransactions(transactions: Transaction[], quotes: Quote[]
 
   for (const tx of sorted) {
     const feeTax = Math.max(0, tx.fee ?? 0) + Math.max(0, tx.tax ?? 0);
-    if (tx.type === "cash_in") contributed += tx.amount;
     if (tx.type === "cash_out") withdrawn += tx.amount;
     if (tx.type === "fee" || tx.type === "tax") feesAndTax += Math.max(0, tx.amount);
     feesAndTax += feeTax;
@@ -106,7 +112,8 @@ export function analyzeTransactions(transactions: Transaction[], quotes: Quote[]
   const valuationComplete = missingQuotes.size === 0 && incompleteLots.size === 0;
   const unrealizedPnl = valuationComplete ? holdingsValue - remainingCost : null;
   return {
-    contributed,
+    contributed: lifetimeContribution.amount,
+    contributionMode: lifetimeContribution.mode,
     withdrawn,
     buyCount,
     buyVolume,

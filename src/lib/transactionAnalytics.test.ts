@@ -38,11 +38,22 @@ describe("analyzeTransactions", () => {
       tx({ id: "buy", type: "buy_vwce", amount: 900, unitPrice: 90, quantity: 10, instrumentIsin: isin }),
     ], [quote(100)]);
 
-    expect(result.contributed).toBe(1_000);
+    // Default securities-first: the direct broker purchase is the authoritative contribution.
+    expect(result.contributed).toBe(900);
     expect(result.buyCount).toBe(1);
     expect(result.holdingsValue).toBe(1_000);
     expect(result.unrealizedPnl).toBe(100);
     expect(result.totalPnl).toBe(100);
+  });
+
+  it("counts cash_in only in explicit cash-first mode and never double-counts the paired buy", () => {
+    const result = analyzeTransactions([
+      tx({ id: "cash", type: "cash_in", amount: 1_000 }),
+      tx({ id: "buy", type: "buy_vwce", amount: 900, unitPrice: 90, quantity: 10, instrumentIsin: isin }),
+    ], [quote(100)], true);
+
+    expect(result.contributionMode).toBe("cash_first");
+    expect(result.contributed).toBe(1_000);
   });
 
   it("does not invent a portfolio return when an open position has no quote", () => {

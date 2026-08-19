@@ -17,14 +17,14 @@ function readBerlinClock(): BerlinClock {
   };
 }
 
-function TimeDate() {
+function TimeDate({ locale }: { locale: "vi" | "de" }) {
   const [clock, setClock] = useState<BerlinClock>(() => readBerlinClock());
   useEffect(() => {
     const id = window.setInterval(() => setClock(readBerlinClock()), 1_000);
     return () => window.clearInterval(id);
   }, []);
   return (
-    <time className="bar-clock" dateTime={clock.iso} aria-label={`Giờ Berlin ${clock.time}`}>
+    <time className="bar-clock" dateTime={clock.iso} aria-label={`${locale === "de" ? "Berliner Zeit" : "Giờ Berlin"} ${clock.time}`}>
       {clock.time}
     </time>
   );
@@ -54,9 +54,13 @@ export default function CollapsingNavBar({
   onChangeScenario?: () => void;
 }) {
   void displayName;
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const syncing = syncStatus === "syncing";
-  const syncText = syncing ? t("syncing") : pending > 0 ? `${pending} ${t("sync").toLowerCase()} chờ` : t("sync");
+  const syncText = syncing
+    ? t("syncing")
+    : pending > 0
+      ? locale === "de" ? `${pending} ausstehend` : `${pending} ${t("sync").toLowerCase()} chờ`
+      : t("sync");
   void onSignOut;
   void onUpdatePrice;
   void onSearch;
@@ -78,7 +82,7 @@ export default function CollapsingNavBar({
             <span>{syncText}</span>
           </button>
         ) : null}
-        <TimeDate />
+        <TimeDate locale={locale} />
       </div>
     </header>
   );

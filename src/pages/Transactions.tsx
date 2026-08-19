@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   deleteTransaction,
+  getSettings,
   listTransactions,
   listQuotes,
   uid,
@@ -19,22 +20,23 @@ import {
   resolveInstrumentIsin,
 } from "../lib/instrument";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
+import { useLocale } from "../lib/locale";
 import { analyzeTransactions } from "../lib/transactionAnalytics";
 import TradeRepublicPdfImport from "../components/TradeRepublicPdfImport";
 import "../styles/demo-v10-transactions.css";
 
-const TYPES: { value: TxType; label: string; sign: "+" | "-" | "~" }[] = [
-  { value: "buy_vwce", label: "Mua VWCE", sign: "~" },
-  { value: "sell_vwce", label: "Bán VWCE", sign: "~" },
-  { value: "buy_security", label: "Mua chứng khoán khác", sign: "~" },
-  { value: "sell_security", label: "Bán chứng khoán khác", sign: "~" },
-  { value: "cash_in", label: "Nạp cash", sign: "+" },
-  { value: "cash_out", label: "Rút cash", sign: "-" },
-  { value: "tax", label: "Thuế", sign: "-" },
-  { value: "fee", label: "Phí", sign: "-" },
-  { value: "safe_interest", label: "Lãi an toàn", sign: "+" },
-  { value: "adjust", label: "Điều chỉnh", sign: "~" },
-];
+function transactionTypes(locale: "vi" | "de"): { value: TxType; label: string; sign: "+" | "-" | "~" }[] {
+  const labels = locale === "de"
+    ? { buy_vwce: "VWCE kaufen", sell_vwce: "VWCE verkaufen", buy_security: "Anderes Wertpapier kaufen", sell_security: "Anderes Wertpapier verkaufen", cash_in: "Geld einzahlen", cash_out: "Geld auszahlen", tax: "Steuer", fee: "Gebühr", safe_interest: "Sicherheitszins", adjust: "Anpassung" }
+    : { buy_vwce: "Mua VWCE", sell_vwce: "Bán VWCE", buy_security: "Mua chứng khoán khác", sell_security: "Bán chứng khoán khác", cash_in: "Nạp cash", cash_out: "Rút cash", tax: "Thuế", fee: "Phí", safe_interest: "Lãi an toàn", adjust: "Điều chỉnh" };
+  return [
+    { value: "buy_vwce", label: labels.buy_vwce, sign: "~" }, { value: "sell_vwce", label: labels.sell_vwce, sign: "~" },
+    { value: "buy_security", label: labels.buy_security, sign: "~" }, { value: "sell_security", label: labels.sell_security, sign: "~" },
+    { value: "cash_in", label: labels.cash_in, sign: "+" }, { value: "cash_out", label: labels.cash_out, sign: "-" },
+    { value: "tax", label: labels.tax, sign: "-" }, { value: "fee", label: labels.fee, sign: "-" },
+    { value: "safe_interest", label: labels.safe_interest, sign: "+" }, { value: "adjust", label: labels.adjust, sign: "~" },
+  ];
+}
 
 const emptyForm = () => ({
   date: new Date().toISOString().slice(0, 10),
@@ -72,8 +74,16 @@ function iconGlyph(type: TxType): string {
 }
 
 export default function Transactions() {
+  const { locale } = useLocale();
+  const types = useMemo(() => transactionTypes(locale), [locale]);
+  const text = locale === "de" ? {
+    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Werkzeuge ausblenden", tools: "Filter / PDF", search: "Suchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen",
+  } : {
+    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Ẩn công cụ", tools: "Lọc / PDF", search: "Tìm", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa",
+  };
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [trackInAppCash, setTrackInAppCash] = useState<boolean | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -90,9 +100,14 @@ export default function Transactions() {
 
   async function reload() {
     try {
-      const [nextTransactions, nextQuotes] = await Promise.all([listTransactions(), listQuotes()]);
+      const [nextTransactions, nextQuotes, settings] = await Promise.all([
+        listTransactions(),
+        listQuotes(),
+        getSettings().catch(() => null),
+      ]);
       setTxs(nextTransactions);
       setQuotes(nextQuotes);
+      setTrackInAppCash(settings?.trackInAppCash);
       setLoadError(false);
     } catch {
       setLoadError(true);
@@ -134,7 +149,10 @@ export default function Transactions() {
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered]);
 
-  const analysis = useMemo(() => analyzeTransactions(txs, quotes), [txs, quotes]);
+  const analysis = useMemo(
+    () => analyzeTransactions(txs, quotes, trackInAppCash),
+    [txs, quotes, trackInAppCash],
+  );
   const analysisIsEmpty = analysis.openPositions === 0 && analysis.buyCount === 0;
 
   const amount = parseDecimal(form.amount);
@@ -263,17 +281,17 @@ export default function Transactions() {
   }
 
   if (loading) {
-    return <main className="demo-v10-screen" role="status" aria-label="Đang tải Giao dịch" aria-busy="true" />;
+    return <main className="demo-v10-screen" role="status" aria-label={text.loading} aria-busy="true" />;
   }
 
   if (loadError) {
     return (
       <main className="demo-v10-screen">
         <section className="demo-v10-gl" style={{ padding: 18 }} role="alert">
-          <h1 className="s-title">Không tải được Giao dịch</h1>
-          <p style={{ color: "var(--demo-dim)", fontSize: 13 }}>Dữ liệu trên thiết bị vẫn được giữ nguyên.</p>
+          <h1 className="s-title">{text.loadError}</h1>
+          <p style={{ color: "var(--demo-dim)", fontSize: 13 }}>{text.safeData}</p>
           <button type="button" className="add-btn" onClick={() => setLoadAttempt((a) => a + 1)}>
-            Thử lại
+            {text.retry}
           </button>
         </section>
       </main>
@@ -281,54 +299,54 @@ export default function Transactions() {
   }
 
   return (
-    <main className="demo-v10-screen" aria-label="Giao dịch">
+    <main className="demo-v10-screen" aria-label={text.title}>
       <div className="tx-wrap">
       <div className="s-head">
-        <h1 className="s-title">Giao dịch</h1>
+        <h1 className="s-title">{text.title}</h1>
         <button type="button" className="add-btn" onClick={openCreate}>
-          + Thêm
+          + {text.add}
         </button>
       </div>
 
       <div className="sum3">
         <div className="gl sum-c">
-          <div className="sum-lbl">Tổng góp</div>
+          <div className="sum-lbl">{text.contributed}</div>
           <div className="sum-val">{formatMoney(analysis.contributed)}</div>
         </div>
         <div className="gl sum-c">
-          <div className="sum-lbl">Lãi / lỗ</div>
+          <div className="sum-lbl">{text.pnl}</div>
           <div className={`sum-val${analysis.totalPnl == null ? "" : analysis.totalPnl >= 0 ? " pos" : " neg"}`}>{analysis.totalPnl == null ? "—" : formatMoney(analysis.totalPnl)}</div>
         </div>
         <div className="gl sum-c">
-          <div className="sum-lbl">Số lần mua</div>
+          <div className="sum-lbl">{text.buys}</div>
           <div className="sum-val">{analysis.buyCount}</div>
         </div>
       </div>
 
-      <section className="gl tx-analysis" aria-label="Phân tích giao dịch">
+      <section className="gl tx-analysis" aria-label={text.analysis}>
         <div className="tx-analysis-head">
           <div>
-            <div className="sum-lbl">Phân tích từ sổ giao dịch</div>
-            <strong>{analysis.openPositions} vị thế đang mở</strong>
+            <div className="sum-lbl">{text.analysis}</div>
+            <strong>{analysis.openPositions} {text.positions}</strong>
           </div>
           <span className={analysisIsEmpty ? "analysis-state neutral" : analysis.totalPnl == null ? "analysis-state warn" : "analysis-state ok"}>
-            {analysisIsEmpty ? "Chưa có vị thế" : analysis.totalPnl == null ? "Chưa đủ dữ liệu giá" : "Đã định giá"}
+            {analysisIsEmpty ? text.noPositions : analysis.totalPnl == null ? text.missingPrices : text.valued}
           </span>
         </div>
         <div className="tx-analysis-grid">
-          <div><span>Giá trị chứng khoán</span><strong>{analysis.holdingsValue == null ? "—" : formatMoney(analysis.holdingsValue)}</strong></div>
-          <div><span>Lãi / lỗ đã chốt</span><strong className={analysis.realizedPnl >= 0 ? "pos" : "neg"}>{formatMoney(analysis.realizedPnl)}</strong></div>
-          <div><span>Lãi / lỗ tạm tính</span><strong className={analysis.unrealizedPnl == null ? "" : analysis.unrealizedPnl >= 0 ? "pos" : "neg"}>{analysis.unrealizedPnl == null ? "—" : formatMoney(analysis.unrealizedPnl)}</strong></div>
-          <div><span>Phí & thuế</span><strong>{formatMoney(analysis.feesAndTax)}</strong></div>
+          <div><span>{text.holdings}</span><strong>{analysis.holdingsValue == null ? "—" : formatMoney(analysis.holdingsValue)}</strong></div>
+          <div><span>{text.realized}</span><strong className={analysis.realizedPnl >= 0 ? "pos" : "neg"}>{formatMoney(analysis.realizedPnl)}</strong></div>
+          <div><span>{text.unrealized}</span><strong className={analysis.unrealizedPnl == null ? "" : analysis.unrealizedPnl >= 0 ? "pos" : "neg"}>{analysis.unrealizedPnl == null ? "—" : formatMoney(analysis.unrealizedPnl)}</strong></div>
+          <div><span>{text.feesTax}</span><strong>{formatMoney(analysis.feesAndTax)}</strong></div>
         </div>
         {analysis.missingQuotes.length || analysis.incompleteLots.length ? (
-          <p className="tx-analysis-note">Không suy ra lợi nhuận tổng khi {analysis.missingQuotes.length ? `thiếu giá cho ${analysis.missingQuotes.join(", ")}` : "thiếu dữ liệu số lượng mua/bán"}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.</p>
+          <p className="tx-analysis-note">{text.analysisNote.replace("{reason}", analysis.missingQuotes.length ? text.missingQuote.replace("{isins}", analysis.missingQuotes.join(", ")) : text.missingLots)}</p>
         ) : null}
       </section>
 
       <div className="tx-tools">
         <button type="button" onClick={() => setToolsOpen((v) => !v)}>
-          {toolsOpen ? "Ẩn công cụ" : "Lọc / PDF"}
+          {toolsOpen ? text.hideTools : text.tools}
         </button>
       </div>
 
@@ -336,28 +354,28 @@ export default function Transactions() {
         <section className="demo-v10-gl" style={{ padding: 12 }}>
           {!readOnly ? <TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /> : null}
           <div className="field" style={{ marginTop: 8 }}>
-            <label htmlFor="tx-search">Tìm</label>
-            <input id="tx-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ghi chú, loại, ISIN…" />
+            <label htmlFor="tx-search">{text.search}</label>
+            <input id="tx-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={text.searchPlaceholder} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <div className="field">
-              <label htmlFor="tx-year">Năm</label>
+              <label htmlFor="tx-year">{text.year}</label>
               <select id="tx-year" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
-                <option value="all">Tất cả</option>
+                <option value="all">{text.all}</option>
                 {years.map((year) => (
                   <option key={year} value={year}>{year}</option>
                 ))}
               </select>
             </div>
             <div className="field">
-              <label htmlFor="tx-type">Loại</label>
+              <label htmlFor="tx-type">{text.type}</label>
               <select
                 id="tx-type"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as "all" | TxType)}
               >
-                <option value="all">Tất cả</option>
-                {TYPES.map((type) => (
+                <option value="all">{text.all}</option>
+                {types.map((type) => (
                   <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
               </select>
@@ -369,11 +387,11 @@ export default function Transactions() {
       {!filtered.length ? (
         <section className="demo-v10-gl" style={{ padding: 18 }}>
           <p style={{ color: "var(--demo-dim)", margin: 0 }}>
-            {txs.length === 0 ? "Chưa có giao dịch." : "Không có giao dịch khớp bộ lọc."}
+            {txs.length === 0 ? text.noTransactions : text.noMatches}
           </p>
           {txs.length === 0 ? (
             <button type="button" className="add-btn" style={{ marginTop: 12 }} onClick={openCreate}>
-              Thêm giao dịch đầu tiên
+              {text.addFirst}
             </button>
           ) : null}
         </section>
@@ -383,7 +401,7 @@ export default function Transactions() {
             <div className="mo-lbl">{monthLabel(key)}</div>
             <section className="gl tx-card">
               {list.map((tx) => {
-                const meta = TYPES.find((t) => t.value === tx.type);
+                const meta = types.find((t) => t.value === tx.type);
                 const sign = meta?.sign ?? "~";
                 const isin = resolveInstrumentIsin(tx);
                 return (
@@ -427,7 +445,7 @@ export default function Transactions() {
                         {formatMoney(tx.amount)}
                       </span>
                       {tx.quantity != null ? (
-                        <span className="tx-sec">SL {tx.quantity.toFixed(4)}</span>
+                        <span className="tx-sec">{text.quantity} {tx.quantity.toFixed(4)}</span>
                       ) : null}
                     </span>
                   </button>
@@ -442,13 +460,13 @@ export default function Transactions() {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="sheet-handle" aria-hidden />
-            <h2>{editId ? "Sửa" : "Thêm"} giao dịch</h2>
+            <h2>{editId ? text.edit : text.addTransaction}</h2>
             <div className="field">
-              <label htmlFor="f-date">Ngày</label>
+              <label htmlFor="f-date">{text.date}</label>
               <input id="f-date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
             </div>
             <div className="field">
-              <label htmlFor="f-type">Loại</label>
+              <label htmlFor="f-type">{text.type}</label>
               <select
                 id="f-type"
                 value={form.type}
@@ -461,7 +479,7 @@ export default function Transactions() {
                   });
                 }}
               >
-                {TYPES.map((type) => (
+                {types.map((type) => (
                   <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
               </select>
@@ -482,17 +500,17 @@ export default function Transactions() {
               </div>
             ) : null}
             <div className="field">
-              <label htmlFor="f-amt">{security ? "Tổng tiền thanh toán" : "Số tiền"}</label>
+              <label htmlFor="f-amt">{security ? text.totalPayment : text.amount}</label>
               <input id="f-amt" inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             </div>
             {security ? (
               <>
                 <div className="field">
-                  <label htmlFor="f-price">Giá một đơn vị</label>
+                  <label htmlFor="f-price">{text.unitPrice}</label>
                   <input id="f-price" inputMode="decimal" value={form.unitPrice} onChange={(e) => setForm({ ...form, unitPrice: e.target.value })} />
                 </div>
                 <div className="field">
-                  <label htmlFor="f-qty">{isSecuritySell(form.type) ? "Số lượng (bắt buộc khi bán)" : "Số lượng (để trống = tự tính)"}</label>
+                  <label htmlFor="f-qty">{isSecuritySell(form.type) ? text.sellQuantity : text.autoQuantity}</label>
                   <input
                     id="f-qty"
                     inputMode="decimal"
@@ -507,23 +525,23 @@ export default function Transactions() {
                 </div>
                 <div className="grid2">
                   <div className="field">
-                    <label htmlFor="f-fee">Phí</label>
+                    <label htmlFor="f-fee">{text.fee}</label>
                     <input id="f-fee" inputMode="decimal" value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value })} />
                   </div>
                   <div className="field">
-                    <label htmlFor="f-tax">Thuế</label>
+                    <label htmlFor="f-tax">{text.tax}</label>
                     <input id="f-tax" inputMode="decimal" value={form.tax} onChange={(e) => setForm({ ...form, tax: e.target.value })} />
                   </div>
                 </div>
               </>
             ) : null}
             <div className="field">
-              <label htmlFor="f-notes">Ghi chú{form.type === "adjust" ? " (bắt buộc)" : ""}</label>
+              <label htmlFor="f-notes">{text.notes}{form.type === "adjust" ? text.notesRequired : ""}</label>
               <textarea id="f-notes" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
             <div className="stack">
-              <button type="button" onClick={() => void save()}>Lưu</button>
-              <button type="button" className="secondary" onClick={() => setShow(false)}>Hủy</button>
+              <button type="button" onClick={() => void save()}>{text.save}</button>
+              <button type="button" className="secondary" onClick={() => setShow(false)}>{text.cancel}</button>
               {editId ? (
                 <button
                   type="button"
@@ -541,7 +559,7 @@ export default function Transactions() {
                     })()
                   }
                 >
-                  Xóa
+                  {text.delete}
                 </button>
               ) : null}
             </div>
