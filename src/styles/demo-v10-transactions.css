@@ -95,3 +95,8 @@
 .tx-wrap .tx-analysis-grid strong.neg, .tx-wrap .sum-val.neg { color: var(--demo-re); }
 .tx-wrap .tx-analysis-note { margin: 10px 0 0; color: var(--demo-am); font-size: 11px; line-height: 1.45; }
 .tx-wrap .analysis-state.neutral { color: var(--demo-sub); background: color-mix(in srgb, var(--demo-sub) 10%, transparent); }
+
+/* TRANSACTIONS-SCALE-001: bounded, progressive rendering for large local ledgers. */
+.tx-wrap .tx-visible-count { margin: 10px 2px 7px; color: var(--demo-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+.tx-wrap .tx-load-more { display: block; width: calc(100% - 20px); min-height: 44px; margin: 12px 10px 4px; color: var(--demo-text); font: inherit; font-size: 13px; font-weight: 800; background: color-mix(in srgb, var(--demo-vi) 12%, var(--demo-g)); border: 1px solid color-mix(in srgb, var(--demo-vi) 34%, var(--demo-gb)); border-radius: 13px; cursor: pointer; }
+.tx-wrap .tx-load-more:active { transform: scale(.985); }

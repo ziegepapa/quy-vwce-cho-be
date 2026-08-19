@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   deleteTransaction,
   getSettings,
@@ -23,6 +23,7 @@ import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
 import { analyzeTransactions } from "../lib/transactionAnalytics";
 import TradeRepublicPdfImport from "../components/TradeRepublicPdfImport";
+import { buildTransactionListWindow, TRANSACTION_WINDOW_SIZE } from "./transactionsListWindow";
 import "../styles/demo-v10-transactions.css";
 
 function transactionTypes(locale: "vi" | "de"): { value: TxType; label: string; sign: "+" | "-" | "~" }[] {
@@ -50,10 +51,6 @@ const emptyForm = () => ({
   notes: "",
 });
 
-function monthKey(date: string) {
-  return date.slice(0, 7);
-}
-
 function monthLabel(key: string) {
   const [y, m] = key.split("-");
   return `${m}/${y}`;
@@ -77,9 +74,9 @@ export default function Transactions() {
   const { locale } = useLocale();
   const types = useMemo(() => transactionTypes(locale), [locale]);
   const text = locale === "de" ? {
-    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Werkzeuge ausblenden", tools: "Filter / PDF", search: "Suchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen",
+    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Werkzeuge ausblenden", tools: "Filter / PDF", search: "Suchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen",
   } : {
-    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Ẩn công cụ", tools: "Lọc / PDF", search: "Tìm", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa",
+    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Ẩn công cụ", tools: "Lọc / PDF", search: "Tìm", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa",
   };
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -94,6 +91,8 @@ export default function Transactions() {
   const [q, setQ] = useState("");
   const [yearFilter, setYearFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState<"all" | TxType>("all");
+  const [visibleLimit, setVisibleLimit] = useState(TRANSACTION_WINDOW_SIZE);
+  const deferredQuery = useDeferredValue(q);
   const [qtyError, setQtyError] = useState("");
   const [isinError, setIsinError] = useState("");
   const { readOnly, showBlocked } = useRecoveryReadOnly();
@@ -106,6 +105,7 @@ export default function Transactions() {
         getSettings().catch(() => null),
       ]);
       setTxs(nextTransactions);
+      setVisibleLimit(TRANSACTION_WINDOW_SIZE);
       setQuotes(nextQuotes);
       setTrackInAppCash(settings?.trackInAppCash);
       setLoadError(false);
@@ -127,27 +127,14 @@ export default function Transactions() {
     return [...values].sort().reverse();
   }, [txs]);
 
-  const filtered = useMemo(
-    () =>
-      txs.filter((tx) => {
-        if (yearFilter !== "all" && !tx.date.startsWith(yearFilter)) return false;
-        if (typeFilter !== "all" && tx.type !== typeFilter) return false;
-        const searchable = `${tx.notes} ${tx.type} ${tx.amount} ${resolveInstrumentIsin(tx)}`.toLowerCase();
-        return !q || searchable.includes(q.toLowerCase());
-      }),
-    [txs, q, yearFilter, typeFilter],
-  );
+  useEffect(() => {
+    setVisibleLimit(TRANSACTION_WINDOW_SIZE);
+  }, [deferredQuery, typeFilter, yearFilter]);
 
-  const groups = useMemo(() => {
-    const map = new Map<string, Transaction[]>();
-    for (const tx of filtered) {
-      const key = monthKey(tx.date);
-      const list = map.get(key) ?? [];
-      list.push(tx);
-      map.set(key, list);
-    }
-    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-  }, [filtered]);
+  const listWindow = useMemo(
+    () => buildTransactionListWindow(txs, { query: deferredQuery, year: yearFilter, type: typeFilter }, visibleLimit),
+    [deferredQuery, txs, typeFilter, visibleLimit, yearFilter],
+  );
 
   const analysis = useMemo(
     () => analyzeTransactions(txs, quotes, trackInAppCash),
@@ -384,7 +371,7 @@ export default function Transactions() {
         </section>
       ) : null}
 
-      {!filtered.length ? (
+      {listWindow.total === 0 ? (
         <section className="demo-v10-gl" style={{ padding: 18 }}>
           <p style={{ color: "var(--demo-dim)", margin: 0 }}>
             {txs.length === 0 ? text.noTransactions : text.noMatches}
@@ -396,11 +383,17 @@ export default function Transactions() {
           ) : null}
         </section>
       ) : (
-        groups.map(([key, list]) => (
+        <>
+          <p className="tx-visible-count" role="status" aria-live="polite">
+            {listWindow.hasMore
+              ? text.visibleCount.replace("{visible}", String(listWindow.visible)).replace("{total}", String(listWindow.total))
+              : text.allVisible.replace("{total}", String(listWindow.total))}
+          </p>
+          {listWindow.groups.map(({ key, transactions: rows }) => (
           <div key={key}>
             <div className="mo-lbl">{monthLabel(key)}</div>
             <section className="gl tx-card">
-              {list.map((tx) => {
+              {rows.map((tx) => {
                 const meta = types.find((t) => t.value === tx.type);
                 const sign = meta?.sign ?? "~";
                 const isin = resolveInstrumentIsin(tx);
@@ -453,7 +446,17 @@ export default function Transactions() {
               })}
             </section>
           </div>
-        ))
+          ))}
+          {listWindow.hasMore ? (
+            <button
+              type="button"
+              className="tx-load-more"
+              onClick={() => setVisibleLimit((limit) => limit + TRANSACTION_WINDOW_SIZE)}
+            >
+              {text.loadMore.replace("{count}", String(Math.min(TRANSACTION_WINDOW_SIZE, listWindow.remaining)))}
+            </button>
+          ) : null}
+        </>
       )}
 
       {show ? (

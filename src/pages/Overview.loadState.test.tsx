@@ -33,6 +33,22 @@ function cashIn(id: string, date: string, amount: number) {
   return { id, date, type: "cash_in", amount, notes: "", createdAt: TX_STAMP, updatedAt: TX_STAMP };
 }
 
+function buyVwce(id: string, date: string) {
+  return {
+    id,
+    date,
+    type: "buy_vwce" as const,
+    amount: 100,
+    quantity: 1,
+    unitPrice: 100,
+    fee: 0,
+    tax: 0,
+    notes: "",
+    createdAt: TX_STAMP,
+    updatedAt: TX_STAMP,
+  };
+}
+
 function buyWithoutPrice(id: string, date: string) {
   return {
     id,
@@ -105,10 +121,10 @@ describe("Overview German locale", () => {
     expect(screen.getByText("Beitragsmonate")).toBeTruthy();
     expect(screen.getByText("Anteile")).toBeTruthy();
     expect(screen.getByText("Einzahlungsserie")).toBeTruthy();
-    expect(screen.getByText("Zuletzt")).toBeTruthy();
+    expect(screen.getByText("Nächste Rate")).toBeTruthy();
     expect(screen.getByText("Portfolio-Performance")).toBeTruthy();
-    expect(screen.getByText("Einzahlungen")).toBeTruthy();
-    expect(screen.getByText("Ertrag")).toBeTruthy();
+    expect(screen.getAllByText("Einzahlungen").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Ertrag").length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Gần nhất|Hiệu suất danh mục|Vốn góp|Lãi/);
   });
 });
@@ -130,6 +146,11 @@ describe("Overview demo v10 hierarchy", () => {
     expect(container.querySelector(".perf-card .perf-top")).toBeTruthy();
     expect(container.querySelector(".perf-card .perf-bar-track")).toBeTruthy();
     expect(container.querySelector(".perf-card .perf-legend")).toBeTruthy();
+    expect(container.querySelector(".perf-card .perf-detail")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Thu gọn/ }).getAttribute("aria-expanded")).toBe("true");
+    expect(container.querySelector(".cr-am")?.textContent).toContain("100,00");
+    expect(container.querySelector(".cr-am")?.textContent).toContain("/th");
+    expect(container.querySelector(".perf-bar-gain")?.getAttribute("style")).toContain("width: 0%");
     expect(container.querySelector(".sparkline-svg path")).toBeNull();
   });
 
@@ -144,6 +165,19 @@ describe("Overview demo v10 hierarchy", () => {
     expect(container.querySelector(".h-row .bdg")?.textContent?.trim()).toBe("—");
     expect(container.querySelector(".hr-pct")?.textContent?.trim()).toBe("1");
     expect(container.querySelectorAll(".sc-dots .dot.done")).toHaveLength(1);
+  });
+
+  it("draws the compact price comparison only when current price and average buy price are both real", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-vwce-1", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([{ id: "quote-vwce", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".price-row")).toBeTruthy());
+    expect(container.querySelector(".sparkline-svg path")).toBeTruthy();
+    expect(container.querySelector(".pr-big")?.textContent).toContain("110,00");
+    expect(container.querySelector(".perf-detail")?.textContent).toContain("Giá mua TB100,00");
   });
 
   it("preserves the valuation-incomplete label while retaining demo card geometry", async () => {

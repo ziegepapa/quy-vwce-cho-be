@@ -5,7 +5,7 @@ export const LOCALE_KEY = "vwce-locale";
 
 const copy = {
   vi: {
-    overview: "Overview",
+    overview: "Tổng quan",
     transactions: "Giao dịch",
     simulation: "Mô phỏng",
     settings: "Cài đặt",
