@@ -5,17 +5,28 @@
   background: transparent !important;
 }
 
-.ov.v10-pixel > .today-center,
-.ov.v10-pixel > .stat-strip,
-.ov.v10-pixel > .action-stack,
-.ov.v10-pixel > .ov-foot,
-.ov.v10-pixel > .pulse-goal-line {
+/* Overview: only demo fold cards stay visible */
+.ov.v10-pixel .today-center,
+.ov.v10-pixel .stat-strip,
+.ov.v10-pixel .stat-detail-btn,
+.ov.v10-pixel .stat-detail-list,
+.ov.v10-pixel .action-stack,
+.ov.v10-pixel .action-item,
+.ov.v10-pixel .action-more,
+.ov.v10-pixel .pulse-goal-line,
+.ov.v10-pixel .ov-foot,
+.ov.v10-pixel > section.card,
+.ov.v10-pixel [class*="plan-phase"],
+.ov.v10-pixel [class*="PlanPhase"] {
   display: none !important;
 }
 
+.ov.v10-pixel .v10-gl {
+  display: block !important;
+}
+
 .premium-screen .page-title,
-.premium-screen h1,
-.settings-hero h2 {
+.premium-screen h1 {
   margin: 0;
   font-size: 20px !important;
   font-weight: 900 !important;
@@ -37,23 +48,137 @@
   -webkit-backdrop-filter: blur(22px) saturate(1.7);
 }
 
-.premium-screen .muted,
-.settings-card p,
-.settings-card-eyebrow,
-.settings-hero p,
-.settings-hero-kicker {
+/* Transactions: demo list only */
+.premium-screen-transactions {
+  padding: 14px 14px 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.premium-screen-transactions > .callout-toggle,
+.premium-screen-transactions > .banner,
+.premium-screen-transactions > .field,
+.premium-screen-transactions > .grid2,
+.premium-screen-transactions > button.secondary {
+  display: none !important;
+}
+
+.premium-screen-transactions .row-between:first-child {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.premium-screen-transactions .fab {
+  width: auto !important;
+  height: auto !important;
+  min-height: 32px;
+  padding: 6px 14px !important;
+  border-radius: 100px !important;
+  background: color-mix(in srgb, var(--vi) 9%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--vi) 22%, transparent) !important;
+  color: var(--vi) !important;
+  box-shadow: none !important;
+}
+
+.premium-screen-transactions .tx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.premium-screen-transactions .tx-row:first-child {
+  border-top: none;
+}
+
+.premium-screen-transactions .tx-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--em) 13%, transparent);
+}
+
+.premium-screen-transactions .tx-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.premium-screen-transactions .muted {
   color: var(--dim) !important;
 }
 
-.premium-screen-transactions,
-.premium-screen-simulation,
-.premium-screen-settings,
+/* Settings: drop marketing hero, glass the rest */
 .settings-page {
-  padding: 14px 14px 0 !important;
+  padding: 14px !important;
+  background: transparent !important;
 }
 
-.premium-screen-simulation [role="tablist"],
+.settings-hero {
+  display: none !important;
+}
+
 .settings-tabs {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 1fr !important;
+  gap: 5px !important;
+  padding: 4px !important;
+  margin-bottom: 10px;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid var(--gb) !important;
+}
+
+.settings-tab {
+  min-height: 44px !important;
+  border: none !important;
+  border-radius: 10px !important;
+  background: none !important;
+  color: var(--dim) !important;
+  font-weight: 700 !important;
+}
+
+.settings-tab.active {
+  background: color-mix(in srgb, var(--vi) 20%, transparent) !important;
+  color: var(--text) !important;
+}
+
+.settings-card {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.settings-card-head h3,
+.setting-field span,
+.assumption-tile span,
+.setting-choice-row strong {
+  color: var(--text) !important;
+}
+
+.settings-card-eyebrow,
+.settings-card p,
+.setting-choice-row span {
+  color: var(--dim) !important;
+}
+
+.settings-page input,
+.settings-page select,
+.settings-page textarea,
+.premium-screen-transactions input,
+.premium-screen-transactions select,
+.premium-screen-transactions textarea,
+.premium-screen-simulation input {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1px solid var(--gb) !important;
+  border-radius: 10px !important;
+  color: var(--text) !important;
+}
+
+.premium-screen-simulation [role="tablist"] {
   display: grid !important;
   grid-template-columns: 1fr 1fr 1fr !important;
   gap: 5px !important;
@@ -63,19 +188,16 @@
   border: 1px solid var(--gb) !important;
 }
 
-.premium-screen-simulation [role="tab"],
-.settings-tab {
+.premium-screen-simulation [role="tab"] {
   min-height: 44px !important;
   border: none !important;
-  border-radius: 10px !important;
   background: none !important;
   color: var(--dim) !important;
-  font-size: 12px !important;
+  border-radius: 10px !important;
   font-weight: 700 !important;
 }
 
-.premium-screen-simulation [role="tab"][aria-selected="true"],
-.settings-tab.active {
+.premium-screen-simulation [role="tab"][aria-selected="true"] {
   background: color-mix(in srgb, var(--vi) 20%, transparent) !important;
   color: var(--text) !important;
 }
@@ -86,36 +208,4 @@
   border-radius: 18px !important;
   padding: 18px 20px !important;
   color: var(--text) !important;
-  backdrop-filter: blur(20px);
-}
-
-.settings-hero {
-  background: var(--g) !important;
-  border: 1px solid var(--gb) !important;
-  border-radius: 20px !important;
-  padding: 18px 20px !important;
-}
-
-.settings-page input,
-.settings-page select,
-.premium-screen-simulation input,
-.premium-screen-transactions input,
-.premium-screen-transactions select {
-  background: rgba(255, 255, 255, 0.07) !important;
-  border: 1px solid var(--gb) !important;
-  border-radius: 10px !important;
-  color: var(--text) !important;
-}
-
-.sidebar {
-  background: var(--bg) !important;
-  border-right: 1px solid var(--gb) !important;
-}
-
-.sidebar-brand {
-  font-weight: 900;
-  background: linear-gradient(120deg, #fff 0%, var(--vi) 130%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
