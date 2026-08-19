@@ -265,7 +265,7 @@ export default function Transactions() {
   }
 
   if (loading) {
-    return <main className="demo-v10-screen" aria-busy="true" />;
+    return <main className="demo-v10-screen" role="status" aria-label="Đang tải Giao dịch" aria-busy="true" />;
   }
 
   if (loadError) {

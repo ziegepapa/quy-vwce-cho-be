@@ -409,7 +409,7 @@ export default function SettingsPage({
     return "Đã đồng bộ";
   }, [online, dead.length]);
 
-  if (settingsLoading) return <main className="demo-v10-screen" aria-busy="true" />;
+  if (settingsLoading) return <main className="demo-v10-screen" role="status" aria-label="Đang tải Cài đặt" aria-busy="true" />;
   if (settingsLoadError || !settings) {
     return (
       <main className="demo-v10-screen">
@@ -702,7 +702,7 @@ export default function SettingsPage({
         {deleteOpen ? (
           <div style={{ padding: 12 }}>
             <p>Gõ XOA để xác nhận.</p>
-            <input value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
+            <input placeholder="XOA" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
             <button
               type="button"
               disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== "XOA"}

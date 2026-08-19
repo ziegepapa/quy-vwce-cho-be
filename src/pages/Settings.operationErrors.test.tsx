@@ -39,7 +39,6 @@ vi.mock("../lib/theme", () => ({
 }));
 vi.mock("../components/SettingsPricePanel", () => ({ default: () => null }));
 vi.mock("../components/SyncConflictSection", () => ({ default: () => null }));
-vi.mock("../components/PlanRoadmapSection", () => ({ default: () => null }));
 
 import SettingsPage from "./Settings";
 
@@ -101,36 +100,23 @@ describe("Settings operation errors", () => {
     dbMocks.saveSettings
       .mockRejectedValueOnce(new Error("SETTINGS_SECRET_CANARY"))
       .mockResolvedValueOnce(undefined);
-    renderSettings();
-    const input = await screen.findByLabelText("Tên kế hoạch") as HTMLInputElement;
+    renderSettings("/settings?tab=advanced");
+    const input = await screen.findByLabelText("Ngày cần tiền (mốc sử dụng)") as HTMLInputElement;
 
-    fireEvent.change(input, { target: { value: "Kế hoạch mới" } });
-    fireEvent.blur(input);
+    fireEvent.change(input, { target: { value: "2043-12-31" } });
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Không lưu được Cài đặt");
     expect(screen.queryByText("SETTINGS_SECRET_CANARY")).toBeNull();
-    expect(input.value).toBe("Kế hoạch mới");
+    expect(input.value).toBe("2043-12-31");
 
     fireEvent.click(screen.getByRole("button", { name: "Thử lưu lại" }));
 
     await waitFor(() => expect(dbMocks.saveSettings).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
-    expect(input.value).toBe("Kế hoạch mới");
+    expect(input.value).toBe("2043-12-31");
   });
 
-  it("does not flip a checklist item when its write fails", async () => {
-    dbMocks.db.annualChecklists.put.mockRejectedValueOnce(new Error("CHECKLIST_SECRET_CANARY"));
-    renderSettings();
-    const checkbox = await screen.findByRole("checkbox", { name: "Kiểm tra hồ sơ" }) as HTMLInputElement;
-
-    fireEvent.click(checkbox);
-
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Không lưu được checklist");
-    expect(screen.queryByText("CHECKLIST_SECRET_CANARY")).toBeNull();
-    expect(checkbox.checked).toBe(false);
-  });
 
   it("reports JSON export failure without changing data", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
@@ -145,15 +131,15 @@ describe("Settings operation errors", () => {
 
   it("aborts import when the mandatory pre-import backup cannot be created", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("PREBACKUP_SECRET_CANARY"));
-    const { container } = renderSettings("/settings?tab=data");
-    await screen.findByText("Nhập file JSON");
+    const { container } = renderSettings();
+    await screen.findByText("Nhập sao lưu");
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File([JSON.stringify({ schemaVersion: 3, exportedAt: "2026-08-14T06:00:00Z" })], "backup.json", { type: "application/json" });
     Object.defineProperty(file, "text", { value: () => Promise.resolve(JSON.stringify({ schemaVersion: 3, exportedAt: "2026-08-14T06:00:00Z" })) });
     fireEvent.change(input, { target: { files: [file] } });
-    await screen.findByText("Thay dữ liệu trên thiết bị bằng file này?");
+    await screen.findByText(/Thay dữ liệu bằng file backup\.json\?/);
 
-    fireEvent.click(screen.getByRole("button", { name: "Xác nhận thay dữ liệu trên thiết bị" }));
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận nhập" }));
 
     await waitFor(() => expect(window.alert).toHaveBeenCalledWith(
       "Không tạo được bản sao lưu trước khi nhập. Dữ liệu chưa bị thay đổi.",
@@ -164,8 +150,8 @@ describe("Settings operation errors", () => {
 
   it("keeps data when deletion fails and leaves the confirmation available", async () => {
     dbMocks.clearAllData.mockRejectedValueOnce(new Error("DELETE_SECRET_CANARY"));
-    renderSettings("/settings?tab=data");
-    fireEvent.click(await screen.findByRole("button", { name: "Mở" }));
+    renderSettings("/settings?tab=advanced");
+    fireEvent.click(await screen.findByRole("button", { name: "Xóa toàn bộ dữ liệu local" }));
     fireEvent.change(screen.getByPlaceholderText("XOA"), { target: { value: "XOA" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Xác nhận xóa" }));

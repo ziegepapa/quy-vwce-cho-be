@@ -89,8 +89,8 @@ describe("Settings initial load state", () => {
 
     const status = screen.getByRole("status");
     expect(status.getAttribute("aria-busy")).toBe("true");
-    expect(screen.getByText("Đang tải Cài đặt…")).toBeTruthy();
-    expect(screen.queryByText("Mọi thứ ở đúng một chỗ")).toBeNull();
+    expect(status.getAttribute("aria-label")).toBe("Đang tải Cài đặt");
+    expect(screen.queryByText("Giao diện")).toBeNull();
   });
 
   it("fails closed and retries the initial read", async () => {
@@ -103,11 +103,11 @@ describe("Settings initial load state", () => {
     expect(
       await screen.findByRole("heading", { name: "Không tải được Cài đặt" }),
     ).toBeTruthy();
-    expect(screen.queryByText("Mọi thứ ở đúng một chỗ")).toBeNull();
+    expect(screen.queryByText("Giao diện")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
 
-    expect(await screen.findByText("Mọi thứ ở đúng một chỗ")).toBeTruthy();
+    expect(await screen.findByText("Giao diện")).toBeTruthy();
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
   });
 });

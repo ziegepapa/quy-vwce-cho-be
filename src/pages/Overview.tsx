@@ -9,6 +9,7 @@ import OverviewFrame from "../components/demo-v10/OverviewFrame";
 export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [settings, setSettings] = useState<Awaited<ReturnType<typeof getSettings>> | null>(null);
   const [transactions, setTransactions] = useState<Awaited<ReturnType<typeof listTransactions>>>([]);
   const [quotes, setQuotes] = useState<Awaited<ReturnType<typeof listQuotes>>>([]);
@@ -33,7 +34,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     return () => {
       alive = false;
     };
-  }, [refreshKey]);
+  }, [refreshKey, loadAttempt]);
 
   const view = useMemo(() => {
     if (!settings) return null;
@@ -89,12 +90,14 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     };
   }, [settings, transactions, quotes]);
 
-  if (loading) return <main className="demo-v10-screen" aria-busy="true" />;
+  if (loading) return <main className="demo-v10-screen" role="status" aria-label="Đang tải Tổng quan" aria-busy="true" />;
   if (failed || !view) {
     return (
       <main className="demo-v10-screen">
-        <section className="demo-v10-gl" style={{ padding: 18 }}>
-          Không tải được Tổng quan.
+        <section className="demo-v10-gl" style={{ padding: 18 }} role="alert">
+          <h1 className="demo-v10-section-title">Không tải được Tổng quan</h1>
+          <p>Dữ liệu trên thiết bị vẫn được giữ nguyên.</p>
+          <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Thử lại</button>
         </section>
       </main>
     );
