@@ -10,7 +10,6 @@ import {
   saveSettings,
 } from "../lib/db";
 import type { AppSettings, BackupPayload } from "../lib/types";
-import { APP_VERSION } from "../lib/types";
 import { isSupportedBackupSchema } from "../lib/backupSchema";
 import { pendingSyncImportBlock } from "../lib/backupImportGate";
 import { csvEscape } from "../lib/calc";
@@ -28,6 +27,8 @@ import "../styles/settings-operation-errors.css";
 import "../styles/demo-v10-settings.css";
 
 const SETTINGS_AUTOSAVE_MS = 650;
+// Visible Settings release marker: updated with UI releases without changing data/sync contracts.
+const SETTINGS_UI_VERSION = "1.8.1";
 
 type SettingsText = {
   saveError: string;
@@ -877,7 +878,7 @@ export default function SettingsPage({
       </button>
 
       <p className="ver">
-        v{APP_VERSION} · {online ? t("online") : t("offline")}
+        v{SETTINGS_UI_VERSION} · {online ? t("online") : t("offline")}
       </p>
       </div>
     </main>

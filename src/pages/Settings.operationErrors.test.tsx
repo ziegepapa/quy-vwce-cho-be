@@ -121,6 +121,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(screen.getByText("Synchronisierung & Datenkonflikte")).toBeTruthy();
     expect(screen.getByText("Verwendungsplan")).toBeTruthy();
     expect(screen.getByText("Sicherung & lokale Daten")).toBeTruthy();
+    expect(screen.getByText("v1.8.1 · Online")).toBeTruthy();
     const groups = [...container.querySelectorAll("details.advanced-group")] as HTMLDetailsElement[];
     expect(groups).toHaveLength(4);
     expect(groups.every((group) => group.open === false)).toBe(true);
