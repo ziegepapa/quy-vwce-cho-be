@@ -125,6 +125,14 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(groups).toHaveLength(4);
     expect(groups.every((group) => group.open === false)).toBe(true);
 
+    fireEvent.click(screen.getByText("Kurse & Marktdaten"));
+    expect(groups[0]?.open).toBe(true);
+    fireEvent.click(screen.getByText("Synchronisierung & Datenkonflikte"));
+    await waitFor(() => {
+      expect(groups[0]?.open).toBe(false);
+      expect(groups[1]?.open).toBe(true);
+    });
+
     fireEvent.click(screen.getByRole("button", { name: /JSON exportieren/ }));
     expect(await screen.findByText("JSON-Sicherung konnte nicht exportiert werden. Ihre Daten wurden nicht verändert.")).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/Không|Dữ liệu|Cài đặt|Đồng bộ|Giá/);

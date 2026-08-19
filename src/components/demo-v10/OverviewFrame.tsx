@@ -1,3 +1,4 @@
+import { useLocale } from "../../lib/locale";
 import "../../styles/demo-v10-overview.css";
 
 type OverviewFrameProps = {
@@ -15,6 +16,40 @@ type OverviewFrameProps = {
   contributionWidth: number;
 };
 
+function overviewCopy(locale: "vi" | "de") {
+  return locale === "de" ? {
+    pageLabel: "Übersicht",
+    contributionMonths: "Beitragsmonate",
+    price: "VWCE-Kurs",
+    stalePrice: "ALTER KURS",
+    priceHistoryUnavailable: "Nicht genügend Kursverlauf-Daten",
+    shares: "Anteile",
+    savingsPlan: "Sparplan",
+    consecutiveMonths: "Monate in Folge",
+    contributionStreak: "Einzahlungsserie",
+    mostRecent: "Zuletzt",
+    streakAria: (months: number) => `${months} Beitragsmonate in Folge`,
+    portfolioPerformance: "Portfolio-Performance",
+    contributions: "Einzahlungen",
+    gains: "Ertrag",
+  } : {
+    pageLabel: "Tổng quan",
+    contributionMonths: "tháng góp",
+    price: "Giá VWCE",
+    stalePrice: "GIÁ CŨ",
+    priceHistoryUnavailable: "Lịch sử giá chưa đủ dữ liệu",
+    shares: "Cổ phần",
+    savingsPlan: "Sparplan",
+    consecutiveMonths: "tháng liên tiếp",
+    contributionStreak: "Chuỗi góp",
+    mostRecent: "Gần nhất",
+    streakAria: (months: number) => `${months} tháng góp liên tiếp`,
+    portfolioPerformance: "Hiệu suất danh mục",
+    contributions: "Vốn góp",
+    gains: "Lãi",
+  };
+}
+
 export default function OverviewFrame({
   assetsLabel,
   assets,
@@ -29,13 +64,15 @@ export default function OverviewFrame({
   performance,
   contributionWidth,
 }: OverviewFrameProps) {
+  const { locale } = useLocale();
+  const text = overviewCopy(locale);
   const months = Math.max(0, streakMonths);
   const circumference = 2 * Math.PI * 30;
   const dash = circumference * Math.min(1, months / 24);
   const dotCount = Math.min(12, Math.max(1, months));
 
   return (
-    <main className="demo-v10-screen" aria-label="Tổng quan">
+    <main className="demo-v10-screen" aria-label={text.pageLabel}>
       <div className="ov">
         <section className="gl hero">
           <div className="hero-flex">
@@ -73,7 +110,7 @@ export default function OverviewFrame({
                   <div className="hr-pct">{months || "—"}</div>
                 </div>
               </div>
-              <div className="hr-cap">tháng góp</div>
+              <div className="hr-cap">{text.contributionMonths}</div>
             </div>
           </div>
         </section>
@@ -81,7 +118,7 @@ export default function OverviewFrame({
         <section className="gl">
           <div className={`price-row${stale ? " stale" : ""}`}>
             <div className="pr-left">
-              <div className="pr-label">Giá VWCE</div>
+              <div className="pr-label">{text.price}</div>
               <div className="pr-num">
                 {stale ? <span className="pr-tilde show">~</span> : null}
                 <span className="pr-cur">€</span>
@@ -92,21 +129,21 @@ export default function OverviewFrame({
             <div className="pr-right">
               <span className={`pr-pill ${stale ? "old" : "live"}`}>
                 <span className={stale ? "da" : "dl"} />
-                {stale ? "GIÁ CŨ" : price ? "LIVE" : "—"}
+                {stale ? text.stalePrice : price ? "LIVE" : "—"}
               </span>
-              <svg className="sparkline-svg" viewBox="0 0 88 30" preserveAspectRatio="none" aria-label="Lịch sử giá chưa đủ dữ liệu" />
+              <svg className="sparkline-svg" viewBox="0 0 88 30" preserveAspectRatio="none" aria-label={text.priceHistoryUnavailable} />
             </div>
           </div>
         </section>
 
         <section className="gl combo-row">
           <div className="cr-item">
-            <div className="cr-lbl">Cổ phần</div>
+            <div className="cr-lbl">{text.shares}</div>
             <div className="cr-val cr-em">{shares ?? "—"}</div>
           </div>
           <div className="cr-div" aria-hidden />
           <div className="cr-item">
-            <div className="cr-lbl">Sparplan</div>
+            <div className="cr-lbl">{text.savingsPlan}</div>
             <div className="cr-val cr-am">—</div>
           </div>
         </section>
@@ -118,17 +155,17 @@ export default function OverviewFrame({
               <div>
                 <div className="sc-count-row">
                   <span className="sc-count">{months || "—"}</span>
-                  <span className="sc-unit">tháng liên tiếp</span>
+                  <span className="sc-unit">{text.consecutiveMonths}</span>
                 </div>
-                <div className="sc-title">Chuỗi góp</div>
+                <div className="sc-title">{text.contributionStreak}</div>
               </div>
             </div>
             <div className="sc-right">
-              <div className="sc-next-lbl">Gần nhất</div>
+              <div className="sc-next-lbl">{text.mostRecent}</div>
               <div className="sc-next-date">{latestContribution ?? "—"}</div>
             </div>
           </div>
-          <div className="sc-dots" aria-label={`${months} tháng góp liên tiếp`}>
+          <div className="sc-dots" aria-label={text.streakAria(months)}>
             {Array.from({ length: dotCount }, (_, index) => (
               <span key={index} className={months > 0 ? "dot done" : "dot"} />
             ))}
@@ -137,7 +174,7 @@ export default function OverviewFrame({
 
         <section className="gl perf-card">
           <div className="perf-top">
-            <span className="perf-title">Hiệu suất danh mục</span>
+            <span className="perf-title">{text.portfolioPerformance}</span>
             <span className="perf-return">{performance ?? "—"}</span>
           </div>
           <div className="perf-bar-track" aria-hidden>
@@ -145,8 +182,8 @@ export default function OverviewFrame({
             <div className="perf-bar-gain" style={{ left: `${contributionWidth}%`, width: `${Math.max(0, 100 - contributionWidth)}%` }} />
           </div>
           <div className="perf-legend">
-            <div className="pl-item"><span className="pl-dot base" /><span className="pl-txt">Vốn góp</span></div>
-            <div className="pl-item"><span className="pl-dot gain" /><span className="pl-txt">Lãi</span></div>
+            <div className="pl-item"><span className="pl-dot base" /><span className="pl-txt">{text.contributions}</span></div>
+            <div className="pl-item"><span className="pl-dot gain" /><span className="pl-txt">{text.gains}</span></div>
           </div>
         </section>
       </div>

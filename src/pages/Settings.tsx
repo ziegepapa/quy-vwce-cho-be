@@ -215,6 +215,9 @@ export default function SettingsPage({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [openAdvancedGroup, setOpenAdvancedGroup] = useState<"prices" | "sync" | "plan" | "data" | null>(() =>
+    focusConflictRequest ? "sync" : null,
+  );
   const auth = useAuth();
   const { readOnly, showBlocked } = useRecoveryReadOnly();
 
@@ -230,6 +233,14 @@ export default function SettingsPage({
   useEffect(() => {
     onSettingsChangedRef.current = onSettingsChanged;
   }, [onSettingsChanged]);
+
+  useEffect(() => {
+    if (focusConflictRequest) setOpenAdvancedGroup("sync");
+  }, [focusConflictRequest]);
+
+  const toggleAdvancedGroup = (group: "prices" | "sync" | "plan" | "data") => {
+    setOpenAdvancedGroup((current) => current === group ? null : group);
+  };
 
   useEffect(() => {
     const tick = () => setClock(berlinNow(locale));
@@ -775,13 +786,13 @@ export default function SettingsPage({
         <summary>{t("advanced")}</summary>
         <p className="advanced-intro">{t("advancedIntro")}</p>
 
-        <details className="advanced-group">
-          <summary>{t("prices")}</summary>
+        <details className="advanced-group" open={openAdvancedGroup === "prices"}>
+          <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("prices"); }}>{t("prices")}</summary>
           <SettingsPricePanel refreshKey={refreshKey} onQuotesChanged={onQuotesChanged} />
         </details>
 
-        <details className="advanced-group" open={Boolean(focusConflictRequest)}>
-          <summary>{t("syncConflicts")}</summary>
+        <details className="advanced-group" open={openAdvancedGroup === "sync"}>
+          <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("sync"); }}>{t("syncConflicts")}</summary>
           {auth.user?.id ? (
             <SyncConflictSection
               userId={auth.user.id}
@@ -799,16 +810,16 @@ export default function SettingsPage({
           ) : <p className="advanced-empty">{t("syncConflictsSignIn")}</p>}
         </details>
 
-        <details className="advanced-group">
-          <summary>{t("plan")}</summary>
+        <details className="advanced-group" open={openAdvancedGroup === "plan"}>
+          <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("plan"); }}>{t("plan")}</summary>
           <PlanRoadmapSection
             target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
             onChangeTarget={(next) => patchSettings({ planTarget: next })}
           />
         </details>
 
-        <details className="advanced-group">
-          <summary>{t("dataTools")}</summary>
+        <details className="advanced-group" open={openAdvancedGroup === "data"}>
+          <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("data"); }}>{t("dataTools")}</summary>
           <div className="advanced-actions">
             <button type="button" className="set-row" onClick={() => void exportCsv()}>
               <span className="sr-name">{t("exportTransactionsCsv")}</span>
