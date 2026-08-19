@@ -11,22 +11,12 @@ import {
 } from "../lib/db";
 import type { AppSettings, BackupPayload } from "../lib/types";
 import { APP_VERSION } from "../lib/types";
-import {
-  isSupportedBackupSchema,
-  unsupportedBackupSchemaMessage,
-} from "../lib/backupSchema";
-import {
-  PENDING_SYNC_ACCEPT_LABEL,
-  PENDING_SYNC_IMPORT_RISK,
-  PENDING_SYNC_IMPORT_TITLE,
-  PENDING_SYNC_PUSH_FIRST_LABEL,
-  pendingSyncCountLine,
-  pendingSyncImportBlock,
-} from "../lib/backupImportGate";
-import { csvEscape, formatDateVN } from "../lib/calc";
+import { isSupportedBackupSchema } from "../lib/backupSchema";
+import { pendingSyncImportBlock } from "../lib/backupImportGate";
+import { csvEscape } from "../lib/calc";
 import type { ThemeChoice } from "../lib/theme";
 import { persistTheme, readTheme } from "../lib/theme";
-import { useLocale } from "../lib/locale";
+import { useLocale, type AppLocale } from "../lib/locale";
 import { useAuth } from "../lib/auth";
 import { listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
 import type { OutboxItem, PendingSyncSummary } from "../lib/sync/types";
@@ -38,9 +28,111 @@ import "../styles/settings-operation-errors.css";
 import "../styles/demo-v10-settings.css";
 
 const SETTINGS_AUTOSAVE_MS = 650;
-const SETTINGS_SAVE_ERROR = "Không lưu được Cài đặt. Bản đang chỉnh vẫn còn trên màn hình.";
-const PENDING_SYNC_PUSH_ERROR =
-  "Không đẩy được các thay đổi đang chờ. Dữ liệu trên thiết bị vẫn được giữ nguyên.";
+
+type SettingsText = {
+  saveError: string;
+  pendingPushError: string;
+  exportError: string;
+  invalidJson: string;
+  invalidBackup: string;
+  unsupportedSchema: string;
+  preImportBackupError: string;
+  importSuccess: string;
+  importError: string;
+  csvExportError: string;
+  mfaStartError: string;
+  mfaVerifyError: string;
+  mfaVerified: string;
+  qrAlt: string;
+  jsonBackup: string;
+  emergencySub: string;
+  preImportBackupFilePrefix: string;
+  pendingImportTitle: string;
+  pendingImportRisk: string;
+  pendingPushFirst: string;
+  pendingAcceptRisk: string;
+  deleteToken: string;
+  deleteError: string;
+};
+
+function settingsStrings(locale: AppLocale): SettingsText {
+  return locale === "de" ? {
+    saveError: "Einstellungen konnten nicht gespeichert werden. Ihre Änderungen bleiben auf dem Bildschirm.",
+    pendingPushError: "Ausstehende Änderungen konnten nicht hochgeladen werden. Ihre Gerätedaten bleiben unverändert.",
+    exportError: "JSON-Sicherung konnte nicht exportiert werden. Ihre Daten wurden nicht verändert.",
+    invalidJson: "Ungültige JSON-Datei.",
+    invalidBackup: "Ungültige Struktur der Sicherung.",
+    unsupportedSchema: "Diese Sicherungsversion wird nicht unterstützt.",
+    preImportBackupError: "Sicherung vor dem Import konnte nicht erstellt werden. Ihre Daten wurden nicht verändert.",
+    importSuccess: "Sicherung erfolgreich importiert.",
+    importError: "Sicherung konnte nicht importiert werden. Ihre aktuellen Daten bleiben erhalten.",
+    csvExportError: "Transaktionen konnten nicht als CSV exportiert werden. Ihre Daten wurden nicht verändert.",
+    mfaStartError: "TOTP konnte nicht eingerichtet werden. Bitte versuchen Sie es erneut.",
+    mfaVerifyError: "TOTP konnte nicht bestätigt werden. Ihre MFA-Einstellung wurde nicht geändert.",
+    mfaVerified: "TOTP wurde bestätigt.",
+    qrAlt: "TOTP-QR-Code",
+    jsonBackup: "JSON-Sicherung",
+    emergencySub: "Notfalldaten und Hinweise für Angehörige",
+    preImportBackupFilePrefix: "vwce-sicherung-vor-import",
+    pendingImportTitle: "Ausstehende Synchronisierungen erkannt",
+    pendingImportRisk: "Der Import einer Sicherung löscht die Synchronisierungswarteschlange: noch nicht hochgeladene Änderungen gehen verloren und gelöschte Einträge können wieder erscheinen.",
+    pendingPushFirst: "Zuerst synchronisieren",
+    pendingAcceptRisk: "Trotzdem importieren (Risiko akzeptieren)",
+    deleteToken: "LOESCHEN",
+    deleteError: "Lokale Daten konnten nicht gelöscht werden.",
+  } : {
+    saveError: "Không lưu được Cài đặt. Bản đang chỉnh vẫn còn trên màn hình.",
+    pendingPushError: "Không đẩy được các thay đổi đang chờ. Dữ liệu trên thiết bị vẫn được giữ nguyên.",
+    exportError: "Không xuất được bản sao lưu JSON. Dữ liệu không bị thay đổi.",
+    invalidJson: "JSON không hợp lệ",
+    invalidBackup: "Cấu trúc backup không hợp lệ",
+    unsupportedSchema: "Phiên bản bản sao lưu này không được hỗ trợ.",
+    preImportBackupError: "Không tạo được bản sao lưu trước khi nhập. Dữ liệu chưa bị thay đổi.",
+    importSuccess: "Nhập backup thành công",
+    importError: "Không nhập được backup. Dữ liệu hiện tại vẫn được giữ nguyên.",
+    csvExportError: "Không xuất được CSV giao dịch. Dữ liệu không bị thay đổi.",
+    mfaStartError: "Không bắt đầu được TOTP. Vui lòng thử lại.",
+    mfaVerifyError: "Không thể xác minh TOTP. Thiết lập MFA chưa thay đổi.",
+    mfaVerified: "TOTP đã xác minh.",
+    qrAlt: "Mã QR TOTP",
+    jsonBackup: "Bản sao JSON",
+    emergencySub: "Thông tin khẩn cấp và hướng dẫn cho người thân",
+    preImportBackupFilePrefix: "ban-sao-luu-truoc-khi-nhap-json",
+    pendingImportTitle: "Còn thay đổi chưa đồng bộ xong",
+    pendingImportRisk: "Nhập sao lưu sẽ xoá hàng đợi đồng bộ: thay đổi chưa đẩy sẽ mất, và dòng đã xoá có thể xuất hiện lại.",
+    pendingPushFirst: "Đẩy đồng bộ trước",
+    pendingAcceptRisk: "Vẫn nhập (chấp nhận rủi ro)",
+    deleteToken: "XOA",
+    deleteError: "Không xóa được dữ liệu.",
+  };
+}
+
+function localDate(value: string, locale: AppLocale): string {
+  return new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
+    dateStyle: "medium",
+  }).format(new Date(`${value}T00:00:00`));
+}
+
+function pendingSyncDetails(summary: PendingSyncSummary, locale: AppLocale): string {
+  const conflicts = summary.conflicts ?? 0;
+  const details: string[] = [];
+  if (summary.total > 0 || conflicts === 0) {
+    details.push(locale === "de"
+      ? summary.deletes > 0
+        ? `Noch ${summary.total} Synchronisierungsvorgänge offen, davon ${summary.deletes} Löschung(en).`
+        : `Noch ${summary.total} Synchronisierungsvorgänge offen.`
+      : summary.deletes > 0
+        ? `Còn ${summary.total} việc đồng bộ chưa xong (trong đó ${summary.deletes} việc xoá).`
+        : `Còn ${summary.total} việc đồng bộ chưa xong.`);
+  }
+  if (summary.dead > 0) details.push(locale === "de"
+    ? `${summary.dead} Vorgang/Vorgänge konnten nach mehreren Versuchen nicht gesendet werden.`
+    : `${summary.dead} việc đã thử gửi nhiều lần nhưng chưa thành công.`);
+  if (conflicts > 0) details.push(locale === "de"
+    ? `${conflicts} Datenkonflikt(e) sind noch nicht gelöst. Lösen Sie diese vor dem Import.`
+    : `Có ${conflicts} xung đột chưa xử lý. Hãy xử lý xung đột trước khi nhập.`);
+  return details.join(" ");
+}
 
 const DEMO_THEME_OPTIONS: Array<{ value: ThemeChoice; label: string; dot: "vault" | "ocean" | "ember" }> = [
   { value: "premium", label: "Vault", dot: "vault" },
@@ -87,7 +179,10 @@ export default function SettingsPage({
   onSyncNow?: () => Promise<{ message: string; tone: "success" | "error" | "info" }>;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const showAdvanced = searchParams.get("tab") === "advanced";
+  const requestedTab = searchParams.get("tab");
+  // `tab=data` is the existing deep link used by conflict/recovery flows; retain it
+  // while the Settings UI stores manual toggles under the clearer `tab=advanced`.
+  const showAdvanced = requestedTab === "advanced" || requestedTab === "data";
 
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
@@ -105,6 +200,7 @@ export default function SettingsPage({
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
   const [syncingNow, setSyncingNow] = useState(false);
   const { locale, setLocale, t } = useLocale();
+  const text = useMemo(() => settingsStrings(locale), [locale]);
   const [dead, setDead] = useState<OutboxItem[]>([]);
   const [clock, setClock] = useState(() => berlinNow(locale));
   const [mfaEnrollment, setMfaEnrollment] = useState<{
@@ -199,7 +295,7 @@ export default function SettingsPage({
         failed = true;
         pendingSettings.current = { ...partial, ...pendingSettings.current };
         if (mounted.current) {
-          setSaveError(SETTINGS_SAVE_ERROR);
+          setSaveError(text.saveError);
           setSaveState("error");
         }
       } finally {
@@ -293,7 +389,7 @@ export default function SettingsPage({
       downloadJson(payload, `vwce-backup-${payload.exportedAt.slice(0, 10)}.json`);
       setMetaBackup(payload.exportedAt);
     } catch {
-      setActionError("Không xuất được bản sao lưu JSON. Dữ liệu không bị thay đổi.");
+      setActionError(text.exportError);
     }
   }
 
@@ -328,7 +424,7 @@ export default function SettingsPage({
       setDead(await listDeadOutbox());
       setPendingSync(null);
     } catch {
-      setActionError(PENDING_SYNC_PUSH_ERROR);
+      setActionError(text.pendingPushError);
     } finally {
       setPendingSyncPushing(false);
     }
@@ -348,17 +444,17 @@ export default function SettingsPage({
       try {
         data = JSON.parse(await file.text());
       } catch {
-        alert("JSON không hợp lệ");
+        alert(text.invalidJson);
         closeImport();
         return;
       }
       if (!data || typeof data !== "object") {
-        alert("Cấu trúc backup không hợp lệ");
+        alert(text.invalidBackup);
         closeImport();
         return;
       }
       if (!isSupportedBackupSchema(data.schemaVersion)) {
-        alert(unsupportedBackupSchemaMessage(data.schemaVersion));
+        alert(text.unsupportedSchema);
         closeImport();
         return;
       }
@@ -367,11 +463,11 @@ export default function SettingsPage({
           const current = await exportBackup();
           downloadJson(
             current,
-            `ban-sao-luu-truoc-khi-nhap-json-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`,
+            `${text.preImportBackupFilePrefix}-${current.exportedAt.slice(0, 19).replace(/[:T]/g, "-")}.json`,
           );
           safetyBackupDone.current = true;
         } catch {
-          alert("Không tạo được bản sao lưu trước khi nhập. Dữ liệu chưa bị thay đổi.");
+          alert(text.preImportBackupError);
           closeImport();
           return;
         }
@@ -385,11 +481,11 @@ export default function SettingsPage({
         setPendingSync(blocked);
         return;
       }
-      alert("Nhập backup thành công");
+      alert(text.importSuccess);
       closeImport();
       onReload();
     } catch {
-      alert("Không nhập được backup. Dữ liệu hiện tại vẫn được giữ nguyên.");
+      alert(text.importError);
       closeImport();
     } finally {
       setImporting(false);
@@ -423,7 +519,7 @@ export default function SettingsPage({
       anchor.download = "vwce-transactions.csv";
       anchor.click();
     } catch {
-      setActionError("Không xuất được CSV giao dịch. Dữ liệu không bị thay đổi.");
+      setActionError(text.csvExportError);
     }
   }
 
@@ -497,10 +593,10 @@ export default function SettingsPage({
       <section className="gl set-block">
         <div className="lang-options">
           <button type="button" className={`lang-opt${locale === "vi" ? " selected" : ""}`} onClick={() => setLocale("vi")}>
-            {t("vietnamese")}<small>{locale === "vi" ? t("using") : "Vietnamese"}</small>
+            {t("vietnamese")}<small>{locale === "vi" ? t("using") : t("available")}</small>
           </button>
           <button type="button" className={`lang-opt${locale === "de" ? " selected" : ""}`} onClick={() => setLocale("de")}>
-            {t("german")}<small>{locale === "de" ? t("active") : "Deutsch"}</small>
+            {t("german")}<small>{locale === "de" ? t("active") : t("available")}</small>
           </button>
         </div>
       </section>
@@ -529,7 +625,7 @@ export default function SettingsPage({
           <span className="sr-body">
             <span className="sr-name">{t("exportJson")}</span>
             <span className="sr-sub">
-              {metaBackup ? t("backupOn").replace("{date}", formatDateVN(metaBackup.slice(0, 10))) : t("noBackup")}
+              {metaBackup ? t("backupOn").replace("{date}", localDate(metaBackup.slice(0, 10), locale)) : t("noBackup")}
             </span>
           </span>
           <span className="sr-arr">›</span>
@@ -540,7 +636,7 @@ export default function SettingsPage({
           </span>
           <span className="sr-body">
             <span className="sr-name">{t("importBackup")}</span>
-            <span className="sr-sub">JSON backup</span>
+            <span className="sr-sub">{text.jsonBackup}</span>
           </span>
           <span className="sr-arr">›</span>
           <input
@@ -564,7 +660,7 @@ export default function SettingsPage({
           </span>
           <span className="sr-body">
             <span className="sr-name">{t("emergencyFile")}</span>
-            <span className="sr-sub">Notfallmappe</span>
+            <span className="sr-sub">{text.emergencySub}</span>
           </span>
           <span className="sr-arr">›</span>
         </Link>
@@ -582,7 +678,7 @@ export default function SettingsPage({
               setMfaSetupError(null);
               try {
                 const result = await auth.startMfaEnrollment();
-                if (result.error || !result.data) setMfaSetupError(result.error ?? "Không bắt đầu được TOTP.");
+                if (result.error || !result.data) setMfaSetupError(text.mfaStartError);
                 else setMfaEnrollment(result.data);
               } finally {
                 setMfaBusy(false);
@@ -605,7 +701,7 @@ export default function SettingsPage({
 
       {mfaEnrollment ? (
         <section className="gl" style={{ padding: 16 }}>
-          <img src={mfaEnrollment.qrCode} alt="QR TOTP" style={{ width: 180, borderRadius: 12 }} />
+          <img src={mfaEnrollment.qrCode} alt={text.qrAlt} style={{ width: 180, borderRadius: 12 }} />
           <code style={{ display: "block", marginTop: 8, overflowWrap: "anywhere" }}>{mfaEnrollment.secret}</code>
           <input
             value={mfaCode}
@@ -623,11 +719,11 @@ export default function SettingsPage({
                 setMfaBusy(true);
                 try {
                   const result = await auth.verifyMfaEnrollment(mfaEnrollment.factorId, mfaCode);
-                  if (result.error) setMfaSetupError(result.error);
+                  if (result.error) setMfaSetupError(text.mfaVerifyError);
                   else {
                     setMfaEnrollment(null);
                     setMfaCode("");
-                    setMfaMessage("TOTP đã xác minh.");
+                    setMfaMessage(text.mfaVerified);
                   }
                 } finally {
                   setMfaBusy(false);
@@ -647,19 +743,19 @@ export default function SettingsPage({
           <strong>{t("replaceData").replace("{file}", pendingFile.name)}</strong>
           {pendingSync ? (
             <div role="alert">
-              <p>{PENDING_SYNC_IMPORT_TITLE}</p>
-              <p>{pendingSyncCountLine(pendingSync)}</p>
-              <p>{PENDING_SYNC_IMPORT_RISK}</p>
+              <p>{text.pendingImportTitle}</p>
+              <p>{pendingSyncDetails(pendingSync, locale)}</p>
+              <p>{text.pendingImportRisk}</p>
             </div>
           ) : null}
           <div className="stack" style={{ marginTop: 12 }}>
             {pendingSync && auth.user?.id ? (
               <button type="button" disabled={importing || pendingSyncPushing} onClick={() => void pushPendingSyncBeforeImport()}>
-                {pendingSyncPushing ? t("syncing") : locale === "de" ? t("pushNow") : PENDING_SYNC_PUSH_FIRST_LABEL}
+                {pendingSyncPushing ? t("syncing") : text.pendingPushFirst}
               </button>
             ) : null}
             <button type="button" disabled={importing || pendingSyncPushing} onClick={() => void confirmImport()}>
-              {importing ? t("importing") : pendingSync ? locale === "de" ? t("confirmImport") : PENDING_SYNC_ACCEPT_LABEL : t("confirmImport")}
+              {importing ? t("importing") : pendingSync ? text.pendingAcceptRisk : t("confirmImport")}
             </button>
             <button type="button" className="secondary" disabled={importing} onClick={closeImport}>
               {t("cancel")}
@@ -679,7 +775,7 @@ export default function SettingsPage({
         <summary>{t("advanced")}</summary>
         <p className="advanced-intro">{t("advancedIntro")}</p>
 
-        <details className="advanced-group" open>
+        <details className="advanced-group">
           <summary>{t("prices")}</summary>
           <SettingsPricePanel refreshKey={refreshKey} onQuotesChanged={onQuotesChanged} />
         </details>
@@ -711,7 +807,7 @@ export default function SettingsPage({
           />
         </details>
 
-        <details className="advanced-group" open>
+        <details className="advanced-group">
           <summary>{t("dataTools")}</summary>
           <div className="advanced-actions">
             <button type="button" className="set-row" onClick={() => void exportCsv()}>
@@ -730,11 +826,11 @@ export default function SettingsPage({
             </button>
             {deleteOpen ? (
               <div className="advanced-delete">
-                <p>{t("deleteConfirmText")}</p>
-                <input placeholder={t("deletePlaceholder")} value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
+                <p>{locale === "de" ? `Geben Sie ${text.deleteToken} zur Bestätigung ein. Dieser Vorgang kann auf diesem Gerät nicht rückgängig gemacht werden.` : t("deleteConfirmText")}</p>
+                <input placeholder={text.deleteToken} value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
                 <button
                   type="button"
-                  disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== "XOA"}
+                  disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken}
                   onClick={() =>
                     void (async () => {
                       if (readOnly) {
@@ -746,7 +842,7 @@ export default function SettingsPage({
                         await clearAllData();
                         window.location.reload();
                       } catch {
-                        setActionError("Không xóa được dữ liệu.");
+                        setActionError(text.deleteError);
                       } finally {
                         setDeleteBusy(false);
                       }
