@@ -48,7 +48,7 @@ const DEMO_THEME_OPTIONS: Array<{ value: ThemeChoice; label: string; dot: "vault
   { value: "light", label: "Ember", dot: "ember" },
 ];
 
-function berlinNow() {
+function berlinNow(locale: "vi" | "de" = "vi") {
   const now = new Date();
   return {
     time: new Intl.DateTimeFormat("en-GB", {
@@ -57,7 +57,7 @@ function berlinNow() {
       minute: "2-digit",
       hour12: false,
     }).format(now),
-    date: new Intl.DateTimeFormat("vi-VN", {
+    date: new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
       timeZone: "Europe/Berlin",
       weekday: "long",
       day: "2-digit",
@@ -106,7 +106,7 @@ export default function SettingsPage({
   const [syncingNow, setSyncingNow] = useState(false);
   const { locale, setLocale, t } = useLocale();
   const [dead, setDead] = useState<OutboxItem[]>([]);
-  const [clock, setClock] = useState(berlinNow);
+  const [clock, setClock] = useState(() => berlinNow(locale));
   const [mfaEnrollment, setMfaEnrollment] = useState<{
     factorId: string;
     qrCode: string;
@@ -136,9 +136,11 @@ export default function SettingsPage({
   }, [onSettingsChanged]);
 
   useEffect(() => {
-    const id = window.setInterval(() => setClock(berlinNow()), 30_000);
+    const tick = () => setClock(berlinNow(locale));
+    tick();
+    const id = window.setInterval(tick, 30_000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     mounted.current = true;
@@ -426,19 +428,19 @@ export default function SettingsPage({
   }
 
   const syncLabel = useMemo(() => {
-    if (!online) return "Offline";
-    if (dead.length > 0) return `${dead.length} chờ đồng bộ`;
-    return "Đã đồng bộ";
-  }, [online, dead.length]);
+    if (!online) return t("offline");
+    if (dead.length > 0) return t("pendingSync").replace("{count}", String(dead.length));
+    return t("synced");
+  }, [online, dead.length, t]);
 
-  if (settingsLoading) return <main className="demo-v10-screen" role="status" aria-label="Đang tải Cài đặt" aria-busy="true" />;
+  if (settingsLoading) return <main className="demo-v10-screen" role="status" aria-label={t("settingsLoading")} aria-busy="true" />;
   if (settingsLoadError || !settings) {
     return (
       <main className="demo-v10-screen">
         <section className="gl" style={{ padding: 18 }} role="alert">
-          <h1 className="demo-v10-section-title">Không tải được Cài đặt</h1>
+          <h1 className="demo-v10-section-title">{t("settingsLoadError")}</h1>
           <button type="button" onClick={() => setSettingsLoadAttempt((a) => a + 1)}>
-            Thử lại
+            {t("retry")}
           </button>
         </section>
       </main>
@@ -446,16 +448,16 @@ export default function SettingsPage({
   }
 
   return (
-    <main className="demo-v10-screen" aria-label="Cài đặt">
+    <main className="demo-v10-screen" aria-label={t("settingsAria")}>
       <div className="set-wrap">
       <section className="gl set-dt">
-        <div className="dt-lbl">Berlin · giờ hiện tại</div>
+        <div className="dt-lbl">{t("berlinTime")}</div>
         <div className="dt-big">{clock.time}</div>
         <div className="dt-date">{clock.date}</div>
         <div className="dt-sync">
           <span className="sdot" aria-hidden />
           {syncLabel}
-          {saveState === "saving" ? " · Đang lưu…" : saveState === "dirty" ? " · Sẽ tự lưu" : ""}
+          {saveState === "saving" ? ` · ${t("syncing")}` : saveState === "dirty" ? ` · ${t("saved")}` : ""}
         </div>
       </section>
 
@@ -464,11 +466,11 @@ export default function SettingsPage({
           <span>{saveError ?? actionError}</span>
           {saveError ? (
             <button type="button" onClick={() => void flushRef.current()}>
-              Thử lưu lại
+              {t("retrySave")}
             </button>
           ) : (
             <button type="button" onClick={() => setActionError(null)}>
-              Đóng
+              {t("close")}
             </button>
           )}
         </div>
@@ -495,10 +497,10 @@ export default function SettingsPage({
       <section className="gl set-block">
         <div className="lang-options">
           <button type="button" className={`lang-opt${locale === "vi" ? " selected" : ""}`} onClick={() => setLocale("vi")}>
-            {t("vietnamese")}<small>{locale === "vi" ? "Đang dùng" : "Vietnamese"}</small>
+            {t("vietnamese")}<small>{locale === "vi" ? t("using") : "Vietnamese"}</small>
           </button>
           <button type="button" className={`lang-opt${locale === "de" ? " selected" : ""}`} onClick={() => setLocale("de")}>
-            {t("german")}<small>{locale === "de" ? "Aktiv" : "Deutsch"}</small>
+            {t("german")}<small>{locale === "de" ? t("active") : "Deutsch"}</small>
           </button>
         </div>
       </section>
@@ -525,9 +527,9 @@ export default function SettingsPage({
             ↥
           </span>
           <span className="sr-body">
-            <span className="sr-name">Xuất JSON</span>
+            <span className="sr-name">{t("exportJson")}</span>
             <span className="sr-sub">
-              {metaBackup ? `Sao lưu ${formatDateVN(metaBackup.slice(0, 10))}` : "Chưa có bản sao lưu"}
+              {metaBackup ? t("backupOn").replace("{date}", formatDateVN(metaBackup.slice(0, 10))) : t("noBackup")}
             </span>
           </span>
           <span className="sr-arr">›</span>
@@ -537,7 +539,7 @@ export default function SettingsPage({
             ↧
           </span>
           <span className="sr-body">
-            <span className="sr-name">Nhập sao lưu</span>
+            <span className="sr-name">{t("importBackup")}</span>
             <span className="sr-sub">JSON backup</span>
           </span>
           <span className="sr-arr">›</span>
@@ -561,7 +563,7 @@ export default function SettingsPage({
             🛡
           </span>
           <span className="sr-body">
-            <span className="sr-name">Hồ sơ khẩn cấp</span>
+            <span className="sr-name">{t("emergencyFile")}</span>
             <span className="sr-sub">Notfallmappe</span>
           </span>
           <span className="sr-arr">›</span>
@@ -592,9 +594,9 @@ export default function SettingsPage({
             ⍁
           </span>
           <span className="sr-body">
-            <span className="sr-name">MFA / TOTP</span>
+            <span className="sr-name">{t("mfaState")}</span>
             <span className="sr-sub">
-              {auth.mfaEnrolled ? "Đã bật" : mfaBusy ? "Đang tạo…" : "Thiết lập"}
+              {auth.mfaEnrolled ? t("mfaEnabled") : mfaBusy ? t("mfaCreating") : t("mfaSetup")}
             </span>
           </span>
           <span className="sr-arr">›</span>
@@ -610,7 +612,7 @@ export default function SettingsPage({
             onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
             maxLength={6}
             inputMode="numeric"
-            placeholder="Mã 6 số"
+            placeholder={t("totpCode")}
             style={{ marginTop: 8, width: "100%" }}
           />
           <button
@@ -633,7 +635,7 @@ export default function SettingsPage({
               })()
             }
           >
-            Xác minh TOTP
+            {t("verifyTotp")}
           </button>
           {mfaSetupError ? <p role="alert">{mfaSetupError}</p> : null}
         </section>
@@ -642,7 +644,7 @@ export default function SettingsPage({
 
       {pendingFile ? (
         <section className="gl" style={{ padding: 16 }} role="alertdialog">
-          <strong>Thay dữ liệu bằng file {pendingFile.name}?</strong>
+          <strong>{t("replaceData").replace("{file}", pendingFile.name)}</strong>
           {pendingSync ? (
             <div role="alert">
               <p>{PENDING_SYNC_IMPORT_TITLE}</p>
@@ -653,26 +655,18 @@ export default function SettingsPage({
           <div className="stack" style={{ marginTop: 12 }}>
             {pendingSync && auth.user?.id ? (
               <button type="button" disabled={importing || pendingSyncPushing} onClick={() => void pushPendingSyncBeforeImport()}>
-                {pendingSyncPushing ? "Đang đẩy…" : PENDING_SYNC_PUSH_FIRST_LABEL}
+                {pendingSyncPushing ? t("syncing") : locale === "de" ? t("pushNow") : PENDING_SYNC_PUSH_FIRST_LABEL}
               </button>
             ) : null}
             <button type="button" disabled={importing || pendingSyncPushing} onClick={() => void confirmImport()}>
-              {importing ? "Đang nhập…" : pendingSync ? PENDING_SYNC_ACCEPT_LABEL : "Xác nhận nhập"}
+              {importing ? t("importing") : pendingSync ? locale === "de" ? t("confirmImport") : PENDING_SYNC_ACCEPT_LABEL : t("confirmImport")}
             </button>
             <button type="button" className="secondary" disabled={importing} onClick={closeImport}>
-              Hủy
+              {t("cancel")}
             </button>
           </div>
         </section>
       ) : null}
-
-      <button
-        type="button"
-        className="abmeld"
-        onClick={() => void auth.signOut()}
-      >
-        🔓 Abmelden
-      </button>
 
       <details
         className="set-advanced"
@@ -682,8 +676,8 @@ export default function SettingsPage({
           setSearchParams(open ? { tab: "advanced" } : {}, { replace: true });
         }}
       >
-        <summary>{t("advanced")} · giá · kế hoạch · dữ liệu</summary>
-        <p className="advanced-intro">Mỗi nhóm dùng dữ liệu trên thiết bị và chỉ thực hiện thao tác khi bạn xác nhận.</p>
+        <summary>{t("advanced")}</summary>
+        <p className="advanced-intro">{t("advancedIntro")}</p>
 
         <details className="advanced-group" open>
           <summary>{t("prices")}</summary>
@@ -691,7 +685,7 @@ export default function SettingsPage({
         </details>
 
         <details className="advanced-group" open={Boolean(focusConflictRequest)}>
-          <summary>Đồng bộ & xung đột dữ liệu</summary>
+          <summary>{t("syncConflicts")}</summary>
           {auth.user?.id ? (
             <SyncConflictSection
               userId={auth.user.id}
@@ -700,7 +694,7 @@ export default function SettingsPage({
                 await onConflictResolved?.();
               }}
             />
-          ) : <p className="advanced-empty">Đăng nhập để xem hàng đợi, xử lý xung đột và đồng bộ dữ liệu giữa các thiết bị.</p>}
+          ) : <p className="advanced-empty">{t("syncConflictsSignIn")}</p>}
         </details>
 
         <details className="advanced-group">
@@ -715,23 +709,23 @@ export default function SettingsPage({
           <summary>{t("dataTools")}</summary>
           <div className="advanced-actions">
             <button type="button" className="set-row" onClick={() => void exportCsv()}>
-              <span className="sr-name">Xuất CSV giao dịch</span>
-              <span className="sr-sub">Bảng dữ liệu dùng cho phân tích ngoài ứng dụng</span>
+              <span className="sr-name">{t("exportTransactionsCsv")}</span>
+              <span className="sr-sub">{t("exportTransactionsCsvSub")}</span>
             </button>
             {onOpenMigrate ? (
               <button type="button" className="set-row" onClick={onOpenMigrate}>
-                <span className="sr-name">Khôi phục dữ liệu trên thiết bị</span>
-                <span className="sr-sub">Mở quy trình kiểm tra dữ liệu an toàn</span>
+                <span className="sr-name">{t("restoreDeviceData")}</span>
+                <span className="sr-sub">{t("restoreDeviceDataSub")}</span>
               </button>
             ) : null}
             <button type="button" className="set-row" onClick={() => setDeleteOpen(true)}>
-              <span className="sr-name" style={{ color: "var(--demo-re)" }}>Xóa toàn bộ dữ liệu local</span>
-              <span className="sr-sub">Chỉ dùng khi bạn đã có bản sao lưu</span>
+              <span className="sr-name" style={{ color: "var(--demo-re)" }}>{t("clearLocalData")}</span>
+              <span className="sr-sub">{t("clearLocalDataSub")}</span>
             </button>
             {deleteOpen ? (
               <div className="advanced-delete">
-                <p>Gõ XOA để xác nhận. Hành động này không thể hoàn tác trên thiết bị này.</p>
-                <input placeholder="XOA" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
+                <p>{t("deleteConfirmText")}</p>
+                <input placeholder={t("deletePlaceholder")} value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
                 <button
                   type="button"
                   disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== "XOA"}
@@ -753,7 +747,7 @@ export default function SettingsPage({
                     })()
                   }
                 >
-                  Xác nhận xóa
+                  {t("confirmDelete")}
                 </button>
               </div>
             ) : null}
@@ -761,8 +755,16 @@ export default function SettingsPage({
         </details>
       </details>
 
+      <button
+        type="button"
+        className="abmeld"
+        onClick={() => void auth.signOut()}
+      >
+        🔓 {t("logout")}
+      </button>
+
       <p className="ver">
-        v{APP_VERSION} · {online ? "Online" : "Offline"}
+        v{APP_VERSION} · {online ? t("online") : t("offline")}
       </p>
       </div>
     </main>

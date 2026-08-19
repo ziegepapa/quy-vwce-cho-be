@@ -14,6 +14,7 @@ import { formatDateVN, formatMoney } from "../lib/calc";
 import { validateManualQuoteDraft } from "../lib/manualQuoteDraft";
 import { canRemoveFromPriceList } from "../lib/priceListRemoval";
 import QuoteFeedRefresh from "./QuoteFeedRefresh";
+import { useLocale } from "../lib/locale";
 
 type RowDraft = { price: string; asOf: string };
 type BusyKind = "idle" | "saving" | "clearing" | "removing" | "switching";
@@ -41,6 +42,24 @@ export default function SettingsPricePanel({
   refreshKey?: number;
   onQuotesChanged?: () => void | Promise<void>;
 }) {
+  const { locale } = useLocale();
+  const text = locale === "de" ? {
+    aria: "Kurse und Vermögenswerte", eyebrow: "Portfolio", title: "Verwendete Kurse", description: "Tippen Sie auf einen Wert, um genau diesen Kurs anzuzeigen oder zu ändern. Jeder Wert wird an nur einer Stelle bearbeitet.",
+    empty: "Noch keine Vermögenswerte. Importieren Sie zuerst Transaktionen oder ein PDF.", missing: "Kurs fehlt", automatic: "Automatisch", manual: "Manuell", tap: "Zum Eingeben tippen", source: "Kursquelle", notAvailable: "nicht vorhanden",
+    manualPrice: "Manueller Kurs (EUR)", priceDate: "Kursdatum", save: "Speichern", saving: "Wird gespeichert…", cancel: "Abbrechen", deleting: "Wird gelöscht…", removeManual: "Manuellen Kurs löschen", removing: "Wird entfernt…", confirmRemove: "Instrument wirklich entfernen", remove: "Aus Liste entfernen",
+    manualHint: "Speichern Sie zuerst einen manuellen Kurs", autoQuote: "Automatisch", manualQuote: "Manuell",
+    savedManual: "Manueller Kurs für {name} gespeichert.", clearedManual: "Manueller Kurs gelöscht. {name} verwendet wieder den automatischen Kurs vom {date}.", clearedWithoutQuote: "Manueller Kurs gelöscht. Für {name} ist derzeit kein Kurs vorhanden.", removed: "{name} wurde aus der Kursliste entfernt.",
+    cannotSave: "Kurs konnte nicht gespeichert werden.", cannotDelete: "Manueller Kurs konnte nicht gelöscht werden.", cannotRemove: "Instrument konnte nicht entfernt werden.", cannotSwitch: "Kursquelle konnte nicht geändert werden.",
+    removableHint: "Dieses Instrument wird von keiner Transaktion mehr verwendet und kann aus der Kursliste entfernt werden. Es erscheint erst wieder nach einem neuen Import oder einer Wiederherstellung.",
+  } : {
+    aria: "Giá và tài sản", eyebrow: "Danh mục", title: "Giá đang dùng", description: "Chạm vào một mã để xem và sửa giá của đúng mã đó. Mỗi mã chỉ có một chỗ để sửa.",
+    empty: "Chưa có tài sản. Nhập giao dịch hoặc PDF trước.", missing: "Thiếu giá", automatic: "Tự động", manual: "Thủ công", tap: "Chạm để nhập", source: "Nguồn giá", notAvailable: "chưa có",
+    manualPrice: "Giá thủ công (EUR)", priceDate: "Ngày giá", save: "Lưu", saving: "Đang lưu…", cancel: "Hủy", deleting: "Đang xóa…", removeManual: "Xóa giá thủ công", removing: "Đang bỏ…", confirmRemove: "Chắc chắn bỏ mã", remove: "Bỏ khỏi danh sách",
+    manualHint: "Hãy lưu một giá thủ công trước", autoQuote: "Tự động", manualQuote: "Thủ công",
+    savedManual: "Đã lưu giá thủ công cho {name}.", clearedManual: "Đã xóa giá thủ công. {name} trở lại giá tự động ngày {date}.", clearedWithoutQuote: "Đã xóa giá thủ công. {name} hiện chưa có giá nào.", removed: "Đã bỏ {name} khỏi danh sách giá.",
+    cannotSave: "Không lưu được giá.", cannotDelete: "Không xóa được giá thủ công.", cannotRemove: "Không bỏ được mã này.", cannotSwitch: "Không đổi được nguồn giá.",
+    removableHint: "Không còn giao dịch nào dùng mã này nên có thể bỏ khỏi danh sách giá. Bỏ rồi thì mã không tự quay lại, trừ khi bạn nhập lại hoặc nạp một bản sao lưu cũ.",
+  };
   const [states, setStates] = useState<QuoteSelectionState[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -114,9 +133,9 @@ export default function SettingsPricePanel({
         venue: state.instrument?.venue,
         name: state.instrument?.name,
       });
-      await afterWrite(`Đã lưu giá thủ công cho ${displayName(state)}.`);
+      await afterWrite(text.savedManual.replace("{name}", displayName(state)));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không lưu được giá.");
+      setError(reason instanceof Error ? reason.message : text.cannotSave);
     } finally {
       setBusy("idle");
     }
@@ -131,11 +150,11 @@ export default function SettingsPricePanel({
       });
       await afterWrite(
         effective
-          ? `Đã xóa giá thủ công. ${displayName(state)} trở lại giá tự động ngày ${formatDateVN(effective.asOf)}.`
-          : `Đã xóa giá thủ công. ${displayName(state)} hiện chưa có giá nào.`,
+          ? text.clearedManual.replace("{name}", displayName(state)).replace("{date}", formatDateVN(effective.asOf))
+          : text.clearedWithoutQuote.replace("{name}", displayName(state)),
       );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không xóa được giá thủ công.");
+      setError(reason instanceof Error ? reason.message : text.cannotDelete);
     } finally {
       setBusy("idle");
     }
@@ -146,9 +165,9 @@ export default function SettingsPricePanel({
     setError(null);
     try {
       await removeInstrumentAndQuotes(state.instrumentIsin, { currency: state.currency });
-      await afterWrite(`Đã bỏ ${displayName(state)} khỏi danh sách giá.`);
+      await afterWrite(text.removed.replace("{name}", displayName(state)));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không bỏ được mã này.");
+      setError(reason instanceof Error ? reason.message : text.cannotRemove);
     } finally {
       setBusy("idle");
     }
@@ -164,7 +183,7 @@ export default function SettingsPricePanel({
       await load();
       await onQuotesChanged?.();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không đổi được nguồn giá.");
+      setError(reason instanceof Error ? reason.message : text.cannotSwitch);
     } finally {
       setBusy("idle");
     }
@@ -173,7 +192,7 @@ export default function SettingsPricePanel({
   const working = busy !== "idle";
 
   return (
-    <div className="settings-panel" role="tabpanel" aria-label="Giá và tài sản">
+    <div className="settings-panel" role="tabpanel" aria-label={text.aria}>
       <QuoteFeedRefresh
         onUpdated={async () => {
           await load();
@@ -184,9 +203,9 @@ export default function SettingsPricePanel({
       <section className="settings-card">
         <div className="settings-card-head">
           <div>
-            <p className="settings-card-eyebrow">Danh mục</p>
-            <h3>Giá đang dùng</h3>
-            <p>Chạm vào một mã để xem và sửa giá của đúng mã đó. Mỗi mã chỉ có một chỗ để sửa.</p>
+            <p className="settings-card-eyebrow">{text.eyebrow}</p>
+            <h3>{text.title}</h3>
+            <p>{text.description}</p>
           </div>
           <span className="settings-icon-bubble" aria-hidden>€</span>
         </div>
@@ -198,7 +217,7 @@ export default function SettingsPricePanel({
         ) : null}
 
         {states.length === 0 ? (
-          <p className="settings-empty-note">Chưa có tài sản. Nhập giao dịch hoặc PDF trước.</p>
+          <p className="settings-empty-note">{text.empty}</p>
         ) : (
           <div className="asset-price-list">
             {states.map((state) => {
@@ -230,12 +249,12 @@ export default function SettingsPricePanel({
                     </span>
                     <span className="asset-price-value">
                       <strong>
-                        {effective ? formatMoney(effective.price, state.currency) : "Thiếu giá"}
+                        {effective ? formatMoney(effective.price, state.currency) : text.missing}
                       </strong>
                       <small>
                         {effective
-                          ? `${effective.source === "auto" ? "Tự động" : "Thủ công"} · ${formatDateVN(effective.asOf)}`
-                          : "Chạm để nhập"}
+                          ? `${effective.source === "auto" ? text.automatic : text.manual} · ${formatDateVN(effective.asOf)}`
+                          : text.tap}
                       </small>
                     </span>
                   </button>
@@ -244,36 +263,36 @@ export default function SettingsPricePanel({
                     <div className="asset-price-editor">
                       <div className="price-source-meta">
                         <span className={state.isStale ? "source-chip warning" : "source-chip"}>
-                          Tự động: {candidateStatusLabel(state.autoStatus)}
+                          {text.automatic}: {candidateStatusLabel(state.autoStatus)}
                         </span>
                         <span className={state.manual ? "source-chip" : "source-chip muted-chip"}>
-                          Thủ công: {state.manual ? formatDateVN(state.manual.asOf) : "chưa có"}
+                          {text.manual}: {state.manual ? formatDateVN(state.manual.asOf) : text.notAvailable}
                         </span>
                       </div>
 
-                      <div className="seg-control" role="group" aria-label={`Nguồn giá ${name}`}>
+                      <div className="seg-control" role="group" aria-label={`${text.source} ${name}`}>
                         <button
                           type="button"
                           className={state.mode === "auto" ? "seg-opt active" : "seg-opt"}
                           disabled={working}
                           onClick={() => void switchMode(state, "auto")}
                         >
-                          Tự động
+                          {text.autoQuote}
                         </button>
                         <button
                           type="button"
                           className={state.mode === "manual" ? "seg-opt active" : "seg-opt"}
                           disabled={working || !state.manual}
-                          title={state.manual ? undefined : "Hãy lưu một giá thủ công trước"}
+                          title={state.manual ? undefined : text.manualHint}
                           onClick={() => void switchMode(state, "manual")}
                         >
-                          Thủ công
+                          {text.manualQuote}
                         </button>
                       </div>
 
                       <div className="settings-field-grid quote-editor-grid">
                         <label className="setting-field">
-                          <span>Giá thủ công (EUR)</span>
+                          <span>{text.manualPrice}</span>
                           <input
                             inputMode="decimal"
                             value={draft.price}
@@ -285,7 +304,7 @@ export default function SettingsPricePanel({
                           />
                         </label>
                         <label className="setting-field">
-                          <span>Ngày giá</span>
+                          <span>{text.priceDate}</span>
                           <input
                             type="date"
                             value={draft.asOf}
@@ -314,7 +333,7 @@ export default function SettingsPricePanel({
                           disabled={working || !checkedDraft.ok}
                           onClick={() => void saveManual(state)}
                         >
-                          {busy === "saving" ? "Đang lưu…" : "Lưu"}
+                          {busy === "saving" ? text.saving : text.save}
                         </button>
                         <button
                           type="button"
@@ -322,7 +341,7 @@ export default function SettingsPricePanel({
                           disabled={working}
                           onClick={closeEditor}
                         >
-                          Hủy
+                          {text.cancel}
                         </button>
                         {state.manual ? (
                           <button
@@ -331,7 +350,7 @@ export default function SettingsPricePanel({
                             disabled={working}
                             onClick={() => void clearManual(state)}
                           >
-                            {busy === "clearing" ? "Đang xóa…" : "Xóa giá thủ công"}
+                            {busy === "clearing" ? text.deleting : text.removeManual}
                           </button>
                         ) : null}
                         {removal.ok ? (
@@ -342,7 +361,7 @@ export default function SettingsPricePanel({
                               disabled={working}
                               onClick={() => void removeRow(state)}
                             >
-                              {busy === "removing" ? "Đang bỏ…" : "Chắc chắn bỏ mã"}
+                              {busy === "removing" ? text.removing : text.confirmRemove}
                             </button>
                           ) : (
                             <button
@@ -351,7 +370,7 @@ export default function SettingsPricePanel({
                               disabled={working}
                               onClick={() => setConfirmRemoveKey(state.key)}
                             >
-                              Bỏ khỏi danh sách
+                              {text.remove}
                             </button>
                           )
                         ) : null}
@@ -359,7 +378,7 @@ export default function SettingsPricePanel({
 
                       <p className="editor-hint">
                         {removal.ok
-                          ? "Không còn giao dịch nào dùng mã này nên có thể bỏ khỏi danh sách giá. Bỏ rồi thì mã không tự quay lại, trừ khi bạn nhập lại hoặc nạp một bản sao lưu cũ."
+                          ? text.removableHint
                           : removal.message}
                       </p>
                     </div>

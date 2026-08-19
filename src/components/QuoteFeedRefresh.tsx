@@ -6,6 +6,7 @@ import type {
   RetainedAutoQuoteInput,
 } from "../lib/quoteFreshness";
 import type { QuoteFeedIngestResult } from "../lib/quoteFeed";
+import { useLocale } from "../lib/locale";
 
 type RefreshStatus = {
   message: string;
@@ -45,6 +46,10 @@ export default function QuoteFeedRefresh({
 }: {
   onUpdated?: () => void | Promise<void>;
 }) {
+  const { locale } = useLocale();
+  const text = locale === "de"
+    ? { eyebrow: "Automatisch", title: "Marktpreise", description: "Es werden nur Kennungen aus dem Preis-Feed auf GitHub aktualisiert, derzeit VWCE. Andere Werte benötigen unten einen manuellen Kurs. Bei Netzwerkfehlern verwendet die App weiterhin lokale Daten.", refreshing: "Wird aktualisiert…", refresh: "Kurse jetzt aktualisieren" }
+    : { eyebrow: "Tự động", title: "Giá thị trường", description: "Chỉ làm mới những mã có trong feed giá trên GitHub, hiện tại là VWCE. Mã khác cần nhập giá thủ công ở danh sách bên dưới. Khi mạng lỗi, ứng dụng tiếp tục dùng dữ liệu local.", refreshing: "Đang cập nhật…", refresh: "Cập nhật giá bây giờ" };
   const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState<RefreshStatus | null>(null);
 
@@ -72,9 +77,9 @@ export default function QuoteFeedRefresh({
     <section className="settings-card quote-feed-card">
       <div className="settings-card-head">
         <div>
-          <p className="settings-card-eyebrow">Tự động</p>
-          <h3>Giá thị trường</h3>
-          <p>Chỉ làm mới những mã có trong feed giá trên GitHub, hiện tại là VWCE. Mã khác cần nhập giá thủ công ở danh sách bên dưới. Khi mạng lỗi, ứng dụng tiếp tục dùng dữ liệu local.</p>
+          <p className="settings-card-eyebrow">{text.eyebrow}</p>
+          <h3>{text.title}</h3>
+          <p>{text.description}</p>
         </div>
         <span className="settings-icon-bubble" aria-hidden>↻</span>
       </div>
@@ -84,7 +89,7 @@ export default function QuoteFeedRefresh({
         disabled={refreshing}
         onClick={() => void refresh()}
       >
-        {refreshing ? "Đang cập nhật…" : "Cập nhật giá bây giờ"}
+        {refreshing ? text.refreshing : text.refresh}
       </button>
       {status ? (
         <p
