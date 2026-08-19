@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter } from "react-router-dom";
 import { AuthProvider } from "./lib/auth";
+import { LocaleProvider } from "./lib/locale";
 import App from "./App";
 import AppFailureBoundary from "./components/AppFailureBoundary";
 import ModalAccessibilityManager from "./components/ModalAccessibilityManager";
@@ -20,8 +21,10 @@ createRoot(document.getElementById("root")!).render(
     <AppFailureBoundary>
       <HashRouter>
         <AuthProvider>
-          <ModalAccessibilityManager />
-          <App />
+          <LocaleProvider>
+            <ModalAccessibilityManager />
+            <App />
+          </LocaleProvider>
         </AuthProvider>
       </HashRouter>
     </AppFailureBoundary>

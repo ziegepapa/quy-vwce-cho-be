@@ -151,8 +151,14 @@ describe("Settings operation errors", () => {
   it("keeps data when deletion fails and leaves the confirmation available", async () => {
     dbMocks.clearAllData.mockRejectedValueOnce(new Error("DELETE_SECRET_CANARY"));
     renderSettings("/settings?tab=advanced");
-    fireEvent.click(await screen.findByRole("button", { name: "Xóa toàn bộ dữ liệu local" }));
-    fireEvent.change(screen.getByPlaceholderText("XOA"), { target: { value: "XOA" } });
+    await screen.findByText("Sao lưu & dữ liệu trên thiết bị");
+    const deleteButton = await waitFor(() => {
+      const button = [...document.querySelectorAll("button")].find((candidate) => candidate.textContent?.includes("Xóa toàn bộ dữ liệu local"));
+      expect(button).toBeTruthy();
+      return button as HTMLButtonElement;
+    });
+    fireEvent.click(deleteButton);
+    fireEvent.change(document.querySelector('input[placeholder="XOA"]') as HTMLInputElement, { target: { value: "XOA" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Xác nhận xóa" }));
 

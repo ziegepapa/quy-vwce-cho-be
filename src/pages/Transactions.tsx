@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   deleteTransaction,
   listTransactions,
+  listQuotes,
   uid,
   upsertInstrument,
   upsertTransaction,
 } from "../lib/db";
-import type { Transaction, TxType } from "../lib/types";
+import type { Quote, Transaction, TxType } from "../lib/types";
 import { VWCE_ISIN } from "../lib/types";
 import { calcQuantity, formatDateVN, formatMoney, parseDecimal } from "../lib/calc";
 import { nowIso } from "../lib/defaults";
@@ -18,6 +19,7 @@ import {
   resolveInstrumentIsin,
 } from "../lib/instrument";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
+import { analyzeTransactions } from "../lib/transactionAnalytics";
 import TradeRepublicPdfImport from "../components/TradeRepublicPdfImport";
 import "../styles/demo-v10-transactions.css";
 
@@ -71,6 +73,7 @@ function iconGlyph(type: TxType): string {
 
 export default function Transactions() {
   const [txs, setTxs] = useState<Transaction[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -87,7 +90,9 @@ export default function Transactions() {
 
   async function reload() {
     try {
-      setTxs(await listTransactions());
+      const [nextTransactions, nextQuotes] = await Promise.all([listTransactions(), listQuotes()]);
+      setTxs(nextTransactions);
+      setQuotes(nextQuotes);
       setLoadError(false);
     } catch {
       setLoadError(true);
@@ -129,15 +134,8 @@ export default function Transactions() {
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered]);
 
-  const summary = useMemo(() => {
-    let contributed = 0;
-    let buys = 0;
-    for (const tx of txs) {
-      if (tx.type === "cash_in") contributed += tx.amount;
-      if (tx.type === "buy_vwce" || tx.type === "buy_security") buys += 1;
-    }
-    return { contributed, buys, count: txs.length };
-  }, [txs]);
+  const analysis = useMemo(() => analyzeTransactions(txs, quotes), [txs, quotes]);
+  const analysisIsEmpty = analysis.openPositions === 0 && analysis.buyCount === 0;
 
   const amount = parseDecimal(form.amount);
   const unitPrice = parseDecimal(form.unitPrice);
@@ -295,17 +293,38 @@ export default function Transactions() {
       <div className="sum3">
         <div className="gl sum-c">
           <div className="sum-lbl">Tổng góp</div>
-          <div className="sum-val">{formatMoney(summary.contributed)}</div>
+          <div className="sum-val">{formatMoney(analysis.contributed)}</div>
         </div>
         <div className="gl sum-c">
-          <div className="sum-lbl">Lợi nhuận</div>
-          <div className="sum-val">—</div>
+          <div className="sum-lbl">Lãi / lỗ</div>
+          <div className={`sum-val${analysis.totalPnl == null ? "" : analysis.totalPnl >= 0 ? " pos" : " neg"}`}>{analysis.totalPnl == null ? "—" : formatMoney(analysis.totalPnl)}</div>
         </div>
         <div className="gl sum-c">
           <div className="sum-lbl">Số lần mua</div>
-          <div className="sum-val">{summary.buys}</div>
+          <div className="sum-val">{analysis.buyCount}</div>
         </div>
       </div>
+
+      <section className="gl tx-analysis" aria-label="Phân tích giao dịch">
+        <div className="tx-analysis-head">
+          <div>
+            <div className="sum-lbl">Phân tích từ sổ giao dịch</div>
+            <strong>{analysis.openPositions} vị thế đang mở</strong>
+          </div>
+          <span className={analysisIsEmpty ? "analysis-state neutral" : analysis.totalPnl == null ? "analysis-state warn" : "analysis-state ok"}>
+            {analysisIsEmpty ? "Chưa có vị thế" : analysis.totalPnl == null ? "Chưa đủ dữ liệu giá" : "Đã định giá"}
+          </span>
+        </div>
+        <div className="tx-analysis-grid">
+          <div><span>Giá trị chứng khoán</span><strong>{analysis.holdingsValue == null ? "—" : formatMoney(analysis.holdingsValue)}</strong></div>
+          <div><span>Lãi / lỗ đã chốt</span><strong className={analysis.realizedPnl >= 0 ? "pos" : "neg"}>{formatMoney(analysis.realizedPnl)}</strong></div>
+          <div><span>Lãi / lỗ tạm tính</span><strong className={analysis.unrealizedPnl == null ? "" : analysis.unrealizedPnl >= 0 ? "pos" : "neg"}>{analysis.unrealizedPnl == null ? "—" : formatMoney(analysis.unrealizedPnl)}</strong></div>
+          <div><span>Phí & thuế</span><strong>{formatMoney(analysis.feesAndTax)}</strong></div>
+        </div>
+        {analysis.missingQuotes.length || analysis.incompleteLots.length ? (
+          <p className="tx-analysis-note">Không suy ra lợi nhuận tổng khi {analysis.missingQuotes.length ? `thiếu giá cho ${analysis.missingQuotes.join(", ")}` : "thiếu dữ liệu số lượng mua/bán"}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.</p>
+        ) : null}
+      </section>
 
       <div className="tx-tools">
         <button type="button" onClick={() => setToolsOpen((v) => !v)}>

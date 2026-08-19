@@ -69,3 +69,17 @@
 .set-wrap .set-advanced { margin-top: 2px; }
 .set-wrap .set-advanced > summary { padding: 8px 2px; color: var(--demo-dim); font-size: 12px; font-weight: 700; cursor: pointer; }
 .set-wrap .set-advanced .set-row { margin-top: 8px; border: 1px solid rgba(255,255,255,.04); border-radius: 12px; }
+
+.set-wrap .advanced-intro { margin: 0; padding: 0 14px 12px; color: var(--demo-dim); font-size: 11px; line-height: 1.45; }
+.set-wrap .advanced-group { margin: 0 10px 10px; overflow: hidden; border: 1px solid var(--demo-gb); border-radius: 14px; background: color-mix(in srgb, var(--demo-g) 86%, transparent); }
+.set-wrap .advanced-group > summary { display: flex; align-items: center; min-height: 48px; padding: 0 13px; color: var(--demo-text); font-size: 12px; font-weight: 800; cursor: pointer; list-style: none; }
+.set-wrap .advanced-group > summary::-webkit-details-marker { display: none; }
+.set-wrap .advanced-group > summary::after { margin-left: auto; color: var(--demo-dim); content: "›"; font-size: 18px; transition: transform .2s ease; }
+.set-wrap .advanced-group[open] > summary { border-bottom: 1px solid var(--demo-gb); }
+.set-wrap .advanced-group[open] > summary::after { transform: rotate(90deg); }
+.set-wrap .advanced-empty { margin: 0; padding: 14px; color: var(--demo-dim); font-size: 12px; line-height: 1.5; }
+.set-wrap .advanced-actions { padding: 0 2px 2px; }
+.set-wrap .advanced-delete { display: grid; gap: 8px; margin: 10px; padding: 12px; border: 1px solid color-mix(in srgb, var(--demo-re) 30%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--demo-re) 6%, transparent); }
+.set-wrap .advanced-delete p { margin: 0; color: var(--demo-sub); font-size: 11px; line-height: 1.45; }
+.set-wrap .advanced-delete input { min-height: 38px; padding: 7px 10px; color: var(--demo-text); font: inherit; background: rgba(255,255,255,.05); border: 1px solid var(--demo-gb); border-radius: 9px; }
+.set-wrap .advanced-delete button { min-height: 38px; color: var(--demo-re); font: inherit; font-weight: 800; background: color-mix(in srgb, var(--demo-re) 8%, transparent); border: 1px solid color-mix(in srgb, var(--demo-re) 28%, transparent); border-radius: 9px; }

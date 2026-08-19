@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { signOutBeforeLocalClear, useAuth } from "./lib/auth";
 import { clearUserBusinessData, countLocalData, ensureInitialized, getSettings, ingestQuotesFeed, runPendingMigrations } from "./lib/db";
@@ -16,6 +16,7 @@ import { outboxCount } from "./lib/sync/outbox";
 import type { SyncMeta, SyncStatus } from "./lib/sync/types";
 import { NavActionsProvider, useNavActionRegistry } from "./lib/navActions";
 import { RecoveryReadOnlyProvider } from "./lib/recoveryReadOnly";
+import { useLocale } from "./lib/locale";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
 import { IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
@@ -81,10 +82,18 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const { pathname } = location;
+  const { t } = useLocale();
+  const primaryNav = useMemo(() => [
+    { to: "/", label: t("overview"), icon: <IconHome /> },
+    { to: "/transactions", label: t("transactions"), icon: <IconTx /> },
+    { to: "/simulation", label: t("simulation"), icon: <IconSim /> },
+    { to: "/settings", label: t("settings"), icon: <IconSettings /> },
+  ], [t]);
   const [ready, setReady] = useState(false);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
   const [pending, setPending] = useState(0);
+  const [syncFeedback, setSyncFeedback] = useState<{ message: string; tone: "success" | "error" | "info" } | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [recoveryRequired, setRecoveryRequired] = useState(false);
   const [recoveryChecked, setRecoveryChecked] = useState(false);
@@ -183,9 +192,34 @@ export default function App() {
     catch { setLogoutNotice("Cache local vẫn chưa xóa được. Dữ liệu local không được mở lại."); }
     finally { setLogoutRetrying(false); }
   }
-  async function handleSyncNow() {
-    if (!auth.user || !auth.vaultReady || recoveryRequired || logoutGate || logoutCleanupPending) return;
-    setSyncStatus("syncing"); try { await runSync(auth.user.id); } catch { /* safe */ } await refreshSyncBadge();
+  async function handleSyncNow(): Promise<{ message: string; tone: "success" | "error" | "info" }> {
+    if (!auth.user || !auth.vaultReady) {
+      return { message: "Đăng nhập để đồng bộ giữa các thiết bị.", tone: "info" };
+    }
+    if (recoveryRequired || logoutGate || logoutCleanupPending) {
+      return { message: "Hãy hoàn tất khôi phục dữ liệu trước khi đồng bộ.", tone: "info" };
+    }
+    setSyncStatus("syncing");
+    setSyncFeedback(null);
+    try {
+      const result = await runSync(auth.user.id);
+      await refreshSyncBadge();
+      setSettings(await getSettings());
+      const message = result.conflicts > 0
+        ? `${result.conflicts} xung đột cần xử lý trước khi dữ liệu được xác nhận.`
+        : result.status === "offline"
+          ? "Bạn đang ngoại tuyến; các thay đổi vẫn được giữ an toàn trên thiết bị."
+          : `Đồng bộ xong: đã đẩy ${result.pushed}, đã nhận ${result.pulled} thay đổi.`;
+      const tone: "success" | "info" = result.conflicts > 0 ? "info" : "success";
+      const feedback = { message, tone };
+      setSyncFeedback(feedback);
+      return feedback;
+    } catch {
+      await refreshSyncBadge().catch(() => undefined);
+      const feedback = { message: "Không đồng bộ được. Dữ liệu trên thiết bị vẫn được giữ nguyên.", tone: "error" as const };
+      setSyncFeedback(feedback);
+      return feedback;
+    }
   }
   async function retryLogoutBlockers() {
     if (!auth.user || !auth.vaultReady) return;
@@ -252,7 +286,7 @@ export default function App() {
   const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
   const focusConflictRequest = readSyncConflictFocusToken(location.state);
   return <div className="app-layout">
-    <aside className="sidebar" aria-label="Điều hướng"><div className="sidebar-brand">Quỹ VWCE</div><nav className="sidebar-nav">{PRIMARY_NAV.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
+    <aside className="sidebar" aria-label="Điều hướng"><div className="sidebar-brand">Quỹ VWCE</div><nav className="sidebar-nav">{primaryNav.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
     <div className="app-shell">
       {auth.user ? <CollapsingNavBar
         displayName={displayName}
@@ -280,6 +314,7 @@ export default function App() {
 
       {logoutBlockers && !recoveryActive ? <div className="banner error" role="alert"><strong>Chưa thể đăng xuất.</strong><p>{LOGOUT_BLOCKED_MESSAGE}</p>{logoutNotice === RECOVERY_SYNC_PENDING_MESSAGE ? <p>{RECOVERY_SYNC_PENDING_MESSAGE}</p> : null}<div className="stack" style={{ marginTop: 8 }}>{hasLogoutBlockers(logoutBlockers) ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutBlockers()}>{logoutRetrying ? "Đang thử lại…" : "Đồng bộ / thử lại"}</button> : <button type="button" className="secondary" onClick={() => setShowWizard(true)}>Khôi phục dữ liệu trên thiết bị</button>}{logoutBlockers.conflicts > 0 ? <button type="button" className="ghost" onClick={handleOpenSyncConflicts}>{conflictCtaLabel(logoutBlockers.conflicts)}</button> : null}</div></div> : null}
       {logoutNotice && !logoutBlockers && !recoveryActive ? <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">{logoutNotice}</div> : null}
+      {syncFeedback ? <div className={syncFeedback.tone === "error" ? "banner error" : "banner"} role="status"><span>{syncFeedback.message}</span><button type="button" className="ghost" onClick={() => setSyncFeedback(null)}>Đóng</button></div> : null}
 
       <NavActionsProvider api={navActionsApi}><main className={`premium-screen premium-screen-${screenName}`}><RecoveryReadOnlyProvider readOnly={recoveryActive}><Routes>
         <Route path="/" element={<Overview key={quoteRefreshVersion} />} />
@@ -287,9 +322,9 @@ export default function App() {
         <Route path="/goals" element={<Goals />} />
         <Route path="/simulation" element={<Simulation />} />
         <Route path="/notfallmappe" element={<Notfallmappe />} />
-        <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} />} />
+        <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} onSyncNow={auth.user ? handleSyncNow : undefined} />} />
       </Routes></RecoveryReadOnlyProvider></main></NavActionsProvider>
-    </div><BottomDock items={PRIMARY_NAV} />
+    </div><BottomDock items={primaryNav} />
 
     {showSkipConfirm ? (
       <div className="modal-backdrop" role="presentation">

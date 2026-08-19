@@ -139,3 +139,46 @@
   border-color: color-mix(in srgb, var(--demo-vi) 50%, transparent);
   box-shadow: 0 0 10px color-mix(in srgb, var(--demo-vi) 14%, transparent);
 }
+
+/* Theme choices persist through data-theme on <html>. The default block above is Vault. */
+:root[data-theme="dark"] {
+  --demo-bg: #031217;
+  --demo-g: rgba(8, 45, 54, 0.48);
+  --demo-gb: rgba(103, 232, 249, 0.18);
+  --demo-text: #e7fbff;
+  --demo-sub: rgba(205, 246, 255, 0.68);
+  --demo-dim: rgba(185, 232, 242, 0.42);
+  --demo-vi: #22d3ee;
+  --demo-vi2: #0e7490;
+  --demo-em: #2dd4bf;
+  --demo-am: #fbbf24;
+  --demo-re: #fb7185;
+  --demo-au1: rgba(8, 145, 178, 0.44);
+  --demo-au2: rgba(20, 184, 166, 0.25);
+  --demo-au3: rgba(14, 116, 144, 0.2);
+  --demo-bar-bg: rgba(3, 18, 23, 0.84);
+  --demo-pill-bg: rgba(4, 29, 37, 0.9);
+}
+
+:root[data-theme="light"] {
+  --demo-bg: #fff8ef;
+  --demo-g: rgba(255, 255, 255, 0.68);
+  --demo-gb: rgba(116, 50, 15, 0.15);
+  --demo-text: #2d1608;
+  --demo-sub: rgba(74, 34, 12, 0.7);
+  --demo-dim: rgba(86, 43, 18, 0.52);
+  --demo-vi: #e85d04;
+  --demo-vi2: #9a3412;
+  --demo-em: #047857;
+  --demo-am: #b45309;
+  --demo-re: #dc2626;
+  --demo-au1: rgba(251, 146, 60, 0.24);
+  --demo-au2: rgba(253, 186, 116, 0.28);
+  --demo-au3: rgba(234, 88, 12, 0.13);
+  --demo-bar-bg: rgba(255, 248, 239, 0.82);
+  --demo-pill-bg: rgba(255, 250, 244, 0.9);
+}
+
+:root[data-theme="light"] .demo-v10-gl::before {
+  background: linear-gradient(90deg, transparent 5%, rgba(120, 66, 20, 0.16) 50%, transparent 95%);
+}
