@@ -4,6 +4,7 @@ import { formatMoney } from "../lib/calc";
 import { buildOverviewHero } from "../lib/overviewNumbers";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import { computeContributionStreak } from "../lib/contributionStreak";
+import { computeHeroLifetimeContribution } from "../lib/heroLifetime";
 import OverviewFrame from "../components/demo-v10/OverviewFrame";
 import { useLocale } from "../lib/locale";
 
@@ -23,6 +24,23 @@ function overviewPageCopy(locale: "vi" | "de") {
     deviceDataSafe: "Dữ liệu trên thiết bị vẫn được giữ nguyên.",
     retry: "Thử lại",
   };
+}
+
+function monthsFromStart(startDate: string, now: Date): number {
+  const start = new Date(`${startDate}T12:00:00`);
+  if (!Number.isFinite(start.getTime())) return 0;
+  return (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth();
+}
+
+function nextPlanDate(startDate: string, locale: "vi" | "de", now = new Date()): string | null {
+  const day = Number(startDate.slice(8, 10));
+  if (!Number.isInteger(day) || day < 1 || day > 28) return null;
+  const next = new Date(now.getFullYear(), now.getMonth(), day, 12, 0, 0);
+  if (next.getTime() <= now.getTime()) next.setMonth(next.getMonth() + 1);
+  return new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(next);
 }
 
 export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
@@ -78,36 +96,51 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       trackInAppCash: settings.trackInAppCash ?? true,
     });
     const streak = computeContributionStreak(transactions);
-    const latest = streak.mostRecentMonth
-      ? `${streak.mostRecentMonth.slice(5, 7)}/${streak.mostRecentMonth.slice(0, 4)}`
-      : null;
+    const lifetime = computeHeroLifetimeContribution({
+      transactions,
+      trackInAppCash: settings.trackInAppCash,
+    });
     const pnl = hero.pnl;
-    const performance =
-      hero.pnlPct == null
-        ? null
-        : `${hero.pnlPct >= 0 ? "+" : ""}${hero.pnlPct.toFixed(1).replace(".", ",")}%`;
-    const total = Math.max(1, portfolio.vwceCostBasis + Math.max(0, pnl ?? 0));
+    const performance = hero.pnlPct == null
+      ? null
+      : `${hero.pnlPct >= 0 ? "+" : ""}${hero.pnlPct.toFixed(1).replace(".", ",")}%`;
+    const currentDate = new Date();
+    const plannedContribution = monthsFromStart(settings.startDate, currentDate) >= 12
+      ? settings.contributionY2
+      : settings.contributionY1;
+    const contributionTotal = lifetime.amount > 0 ? formatMoney(lifetime.amount) : null;
+    const performanceBase = Math.max(1, lifetime.amount + Math.max(0, pnl ?? 0));
+    const averageBuyPrice = portfolio.vwceQty > 0 && portfolio.vwceCostBasis > 0
+      ? portfolio.vwceCostBasis / portfolio.vwceQty
+      : null;
+
     return {
       assetsLabel: snapshot.valueComplete ? "Portfolio VWCE" : text.valuedAssets,
       assets: formatMoney(hero.assets),
       pnl: pnl == null || pnl === 0 ? null : `${pnl > 0 ? "▲ +" : "▼ −"}${formatMoney(Math.abs(pnl))}`,
       pnlPositive: (pnl ?? 0) >= 0,
       streakMonths: streak.streakMonths,
-      price:
-        vwcePrice > 0
-          ? `€${vwcePrice.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : null,
+      price: vwcePrice > 0
+        ? `€${vwcePrice.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : null,
       priceAsOf: snapshot.vwceAsOf
         ? `${text.updated} ${snapshot.vwceAsOf.slice(8, 10)}/${snapshot.vwceAsOf.slice(5, 7)}`
         : null,
       stale: snapshot.stalePriceIsins.length > 0,
-      shares:
-        portfolio.vwceQty > 0
-          ? portfolio.vwceQty.toLocaleString("vi-VN", { maximumFractionDigits: 4 })
-          : null,
-      latestContribution: latest,
+      shares: portfolio.vwceQty > 0
+        ? portfolio.vwceQty.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 4 })
+        : null,
+      savingsPlan: Number.isFinite(plannedContribution) && plannedContribution > 0 ? formatMoney(plannedContribution) : null,
+      nextContribution: nextPlanDate(settings.startDate, locale, currentDate),
       performance,
-      contributionWidth: Math.min(100, Math.max(0, (portfolio.vwceCostBasis / total) * 100)),
+      contributionWidth: lifetime.amount > 0 ? Math.min(100, Math.max(0, (lifetime.amount / performanceBase) * 100)) : 0,
+      gainWidth: lifetime.amount > 0 && pnl != null && pnl > 0
+        ? Math.min(100, Math.max(0, 100 - (lifetime.amount / performanceBase) * 100))
+        : 0,
+      contributionTotal,
+      gainTotal: pnl == null ? null : formatMoney(pnl),
+      averageBuyPrice: averageBuyPrice == null ? null : formatMoney(averageBuyPrice),
+      priceComparison: vwcePrice > 0 && averageBuyPrice != null ? { averageBuyPrice, currentPrice: vwcePrice } : null,
     };
   }, [locale, settings, text, transactions, quotes]);
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const dbMocks = vi.hoisted(() => ({
   deleteTransaction: vi.fn(),
@@ -60,6 +60,28 @@ describe("Transactions load and empty states", () => {
 
     expect(await screen.findByText("Chưa có giao dịch.")).toBeTruthy();
     expect(dbMocks.listTransactions).toHaveBeenCalledTimes(2);
+  });
+
+  it("renders a bounded 60-row window and progressively expands a 1,000-row ledger", async () => {
+    dbMocks.listTransactions.mockResolvedValue(Array.from({ length: 1000 }, (_, index) => ({
+      id: `tx-${index}`,
+      date: `2026-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 28) + 1).padStart(2, "0")}`,
+      type: index % 2 === 0 ? "buy_vwce" : "cash_in",
+      amount: 100 + index,
+      notes: `large ledger row ${index}`,
+      createdAt: "2026-08-13T00:00:00Z",
+      updatedAt: "2026-08-13T00:00:00Z",
+      source: "manual",
+    })));
+    render(createElement(Transactions));
+
+    expect(await screen.findByText("Đang hiển thị 60/1000 giao dịch")).toBeTruthy();
+    expect(document.querySelectorAll(".tx-item")).toHaveLength(60);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tải thêm 60 giao dịch" }));
+
+    await waitFor(() => expect(document.querySelectorAll(".tx-item")).toHaveLength(120));
+    expect(screen.getByText("Đang hiển thị 120/1000 giao dịch")).toBeTruthy();
   });
 
   it("distinguishes no filter matches from a genuinely empty ledger", async () => {

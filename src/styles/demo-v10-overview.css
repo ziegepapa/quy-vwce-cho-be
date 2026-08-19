@@ -140,3 +140,58 @@
   .ov .h-num { font-size: 44px; }
   .ov .hero { padding-right: 16px; padding-left: 16px; }
 }
+
+/* DEMO-OVERVIEW-COMPLETION-001: keep numeric content legible and within cards on narrow mobile viewports. */
+.ov .hero-flex,
+.ov .price-row,
+.ov .sc-top,
+.ov .perf-top { min-width: 0; }
+.ov .h-num,
+.ov .pr-big,
+.ov .cr-val,
+.ov .perf-return,
+.ov .pp-val { min-width: 0; font-variant-numeric: tabular-nums; }
+.ov .h-num { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: clamp(34px, 13vw, 52px); }
+.ov .pr-left { min-width: 0; }
+.ov .pr-big { white-space: nowrap; }
+.ov .pr-ts { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov .pr-right { min-width: 88px; }
+.ov .sparkline-svg.up { color: var(--demo-em); }
+.ov .sparkline-svg.down { color: var(--demo-re); }
+.ov .sparkline-empty { display: grid; width: 88px; height: 30px; place-items: center; color: var(--demo-dim); font-weight: 800; }
+.ov .cr-unit { margin-left: 2px; color: var(--demo-dim); font-size: 11px; font-weight: 700; letter-spacing: 0; }
+.ov .perf-return.neg { background: none; color: var(--demo-re); -webkit-text-fill-color: currentColor; }
+.ov .perf-toggle { display: flex; align-items: center; justify-content: center; width: 100%; margin: 12px 0 0; padding: 9px 0 2px; color: var(--demo-dim); font: inherit; font-size: 10px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; background: none; border: 0; border-top: 1px solid var(--demo-gb); cursor: pointer; }
+.ov .perf-toggle span { margin-left: 4px; font-size: 15px; line-height: .5; transform: rotate(90deg); }
+.ov .perf-detail { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr) 1px minmax(0, 1fr); align-items: stretch; gap: 10px; padding: 12px 0 2px; }
+.ov .pp-item { min-width: 0; text-align: center; }
+.ov .pp-lbl { overflow: hidden; color: var(--demo-dim); font-size: 8px; font-weight: 800; letter-spacing: .12em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.ov .pp-val { margin-top: 5px; overflow: hidden; font-size: clamp(13px, 4.5vw, 18px); font-weight: 900; letter-spacing: -.03em; text-overflow: ellipsis; white-space: nowrap; }
+.ov .pp-val.base { color: var(--demo-vi); }
+.ov .pp-val.gain { color: var(--demo-em); }
+.ov .pp-val.loss { color: var(--demo-re); }
+.ov .pp-val.muted { color: var(--demo-sub); }
+.ov .pp-sep { margin: 3px 0; background: var(--demo-gb); }
+
+/* Safari sometimes renders transparent gradient text almost invisible against Ember's light glass cards. */
+:root[data-theme="light"] .ov .h-num,
+:root[data-theme="light"] .ov .pr-big:not(.dim),
+:root[data-theme="light"] .ov .cr-em,
+:root[data-theme="light"] .ov .sc-count,
+:root[data-theme="light"] .ov .perf-return.pos {
+  background: none;
+  color: #7c2d12;
+  -webkit-text-fill-color: currentColor;
+  filter: none;
+}
+:root[data-theme="light"] .ov .cr-em { color: #047857; }
+:root[data-theme="light"] .ov .sc-count { color: #b45309; }
+:root[data-theme="light"] .ov .perf-return.pos { color: #047857; }
+
+@media (max-width: 360px) {
+  .ov .price-row { padding-right: 13px; padding-left: 13px; }
+  .ov .pr-right { min-width: 70px; }
+  .ov .sparkline-svg, .ov .sparkline-empty { width: 70px; }
+  .ov .cr-item { padding-right: 12px; padding-left: 12px; }
+  .ov .perf-detail { gap: 6px; }
+}
