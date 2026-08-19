@@ -85,3 +85,30 @@
 .set-wrap .advanced-delete p { margin: 0; color: var(--demo-sub); font-size: 11px; line-height: 1.45; }
 .set-wrap .advanced-delete input { min-height: 38px; padding: 7px 10px; color: var(--demo-text); font: inherit; background: rgba(255,255,255,.05); border: 1px solid var(--demo-gb); border-radius: 9px; }
 .set-wrap .advanced-delete button { min-height: 38px; color: var(--demo-re); font: inherit; font-weight: 800; background: color-mix(in srgb, var(--demo-re) 8%, transparent); border: 1px solid color-mix(in srgb, var(--demo-re) 28%, transparent); border-radius: 9px; }
+
+/* SETTINGS-ADVANCED-FIT-001: nested settings cards own their interior spacing. */
+.set-wrap .advanced-group,
+.set-wrap .advanced-group > summary,
+.set-wrap .advanced-group .settings-panel,
+.set-wrap .advanced-group .settings-card,
+.set-wrap .advanced-group .settings-card-head,
+.set-wrap .advanced-group .asset-price-row { min-width: 0; }
+.set-wrap .advanced-group .settings-card { padding: 16px !important; }
+.set-wrap .advanced-group .settings-card-head { margin-bottom: 14px; }
+.set-wrap .advanced-group .asset-price-list { margin: 0 -16px -16px; }
+.set-wrap .advanced-group .asset-price-row { min-height: 72px; padding: 12px 16px; gap: 12px; }
+.set-wrap .advanced-group .asset-price-name { min-width: 0; }
+.set-wrap .advanced-group .asset-price-value { flex: 0 1 46%; min-width: 0; }
+.set-wrap .advanced-group .asset-price-name strong,
+.set-wrap .advanced-group .asset-price-value strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-wrap .advanced-group .asset-price-name small,
+.set-wrap .advanced-group .asset-price-value small { display: block; max-width: 100%; line-height: 1.35; overflow-wrap: anywhere; word-break: break-word; }
+.set-wrap .advanced-group .settings-card-head p:last-child { overflow-wrap: anywhere; }
+
+@media (max-width: 360px) {
+  .set-wrap .advanced-group { margin-right: 6px; margin-left: 6px; }
+  .set-wrap .advanced-group .settings-card { padding: 14px !important; }
+  .set-wrap .advanced-group .asset-price-list { margin: 0 -14px -14px; }
+  .set-wrap .advanced-group .asset-price-row { min-height: 76px; padding: 12px 14px; }
+  .set-wrap .advanced-group .asset-price-value { flex-basis: 48%; }
+}
