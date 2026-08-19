@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { listConflicts, resolveConflict } from "../lib/sync/engine";
 import type { ConflictRecord, EntityTable, ResolveConflictResult } from "../lib/sync/types";
+import { useLocale } from "../lib/locale";
 
 export const SYNC_CONFLICTS_SECTION_ID = "sync-conflicts";
 export const SYNC_CONFLICT_FOCUS_STATE_KEY = "syncConflictFocusToken";
@@ -39,15 +40,38 @@ type SyncConflictSectionProps = {
   userId: string;
   focusRequest?: string | null;
   onResolved: () => void | Promise<void>;
+  onSyncNow?: () => void | Promise<unknown>;
 };
 
-const ENTITY_LABEL: Record<EntityTable, string> = {
-  settings: "Cài đặt",
-  goals: "Mục tiêu",
-  transactions: "Giao dịch",
-  annualChecklists: "Checklist hằng năm",
-  monthlySnapshots: "Tổng hợp tháng",
-};
+function syncStrings(locale: "vi" | "de") {
+  return locale === "de" ? {
+    settings: "Einstellungen", goals: "Ziele", transactions: "Transaktionen", annualChecklists: "Jahres-Checklisten", monthlySnapshots: "Monatsübersichten",
+    eyebrow: "Synchronisierung erfordert eine Entscheidung", paused: "Die Synchronisierung wurde angehalten, damit keine Daten überschrieben oder verloren gehen. Wählen Sie für jeden Eintrag die zu behaltende Version.",
+    conflictHeading: (count: number) => `${count} Datenkonflikt${count === 1 ? "" : "e"} erfordert${count === 1 ? "" : "n"} eine Entscheidung`, conflictAria: (entity: string) => `Datenkonflikt ${entity}`,
+    detected: "Erkannt", deviceUpdated: "Gerät aktualisiert", serverUpdated: "Server aktualisiert", serverDeleted: "Die Serverversion wurde gelöscht",
+    keepLocal: "Daten auf diesem Gerät behalten", useRemote: "Synchronisierte Daten verwenden", processing: "Wird verarbeitet…", confirmEyebrow: "Auswahl bestätigen", back: "Zurück, nichts ändern",
+    localConfirmText: "Die Version auf diesem Gerät wird behalten und erneut zur Synchronisierung gesendet.", remoteDeletedConfirmText: "Die Serverversion wurde gelöscht. Beim Fortfahren wird der Löschstatus auf dieses Gerät angewendet.", remoteConfirmText: "Die Version auf diesem Gerät wird durch die aktuelle Serverversion ersetzt.",
+    localConfirm: "Lokale Daten behalten bestätigen", remoteDeletedConfirm: "Löschung übernehmen bestätigen", remoteConfirm: "Synchronisierte Daten übernehmen bestätigen",
+    noConflicts: "Keine offenen Datenkonflikte", noConflictsBody: "Die Konfliktprüfung ist abgeschlossen. Sie können die Synchronisierung bei Bedarf erneut ausführen.", syncNow: "Jetzt synchronisieren", retrying: "Wird erneut geladen…", retry: "Erneut laden", readFailed: "Konfliktstatus konnte nicht gelesen werden", readFailedBody: "Ihre Daten wurden nicht verändert.",
+    resolvedLocal: "Die Daten auf diesem Gerät wurden behalten und erfolgreich synchronisiert.", resolvedLocalPending: "Die Daten auf diesem Gerät wurden behalten. Die Änderung wartet noch auf die Synchronisierung; Serverdaten wurden nicht überschrieben.", resolvedLocalConflict: "Die Auswahl wurde lokal gespeichert, aber der Serverstatus hat sich geändert oder konnte nicht sicher aktualisiert werden. Es wurden keine Daten überschrieben. Prüfen Sie den neuen Konflikt.", resolvedDeleted: "Der Löschstatus des Servers wurde übernommen.", resolvedRemote: "Die aktuelle Serverversion wurde übernommen.", needsNetwork: "Der Serverstatus konnte nicht geprüft werden. Daten wurden nicht verändert.", failed: "Die Auswahl konnte nicht übernommen werden. Daten bleiben unverändert.", unexpected: "Der Konflikt konnte nicht verarbeitet werden. Daten bleiben unverändert.",
+  } : {
+    settings: "Cài đặt", goals: "Mục tiêu", transactions: "Giao dịch", annualChecklists: "Checklist hằng năm", monthlySnapshots: "Tổng hợp tháng",
+    eyebrow: "Đồng bộ cần quyết định", paused: "Đồng bộ đã dừng để tránh ghi đè hoặc làm mất dữ liệu. Hãy chọn rõ bản dữ liệu cần giữ cho từng mục.",
+    conflictHeading: (count: number) => `${count} xung đột cần xử lý`, conflictAria: (entity: string) => `Xung đột ${entity}`,
+    detected: "Phát hiện", deviceUpdated: "Thiết bị cập nhật", serverUpdated: "Server cập nhật", serverDeleted: "Bản trên server đã bị xóa",
+    keepLocal: "Giữ dữ liệu trên thiết bị này", useRemote: "Dùng dữ liệu đã đồng bộ", processing: "Đang xử lý…", confirmEyebrow: "Xác nhận lựa chọn", back: "Quay lại, chưa thay đổi",
+    localConfirmText: "Bản trên thiết bị sẽ được giữ và gửi lại để đồng bộ.", remoteDeletedConfirmText: "Bản trên server đang bị xóa. Nếu tiếp tục, trạng thái xóa trên server sẽ được áp dụng trên thiết bị này.", remoteConfirmText: "Bản trên thiết bị sẽ bị thay bằng bản server hiện tại.",
+    localConfirm: "Xác nhận giữ dữ liệu trên thiết bị này", remoteDeletedConfirm: "Xác nhận áp dụng bản đã xóa", remoteConfirm: "Xác nhận dùng dữ liệu đã đồng bộ",
+    noConflicts: "Không có xung đột dữ liệu đang mở", noConflictsBody: "Đã kiểm tra xung đột. Bạn có thể đồng bộ lại khi cần.", syncNow: "Đồng bộ ngay", retrying: "Đang tải lại…", retry: "Thử tải lại", readFailed: "Không thể đọc trạng thái xung đột", readFailedBody: "Dữ liệu chưa bị thay đổi.",
+    resolvedLocal: "Đã giữ dữ liệu trên thiết bị và đồng bộ thành công.", resolvedLocalPending: "Đã giữ dữ liệu trên thiết bị. Thay đổi đang chờ đồng bộ; dữ liệu server chưa bị ghi đè.", resolvedLocalConflict: "Đã lưu lựa chọn trên thiết bị, nhưng trạng thái server đã thay đổi hoặc chưa thể cập nhật an toàn. Không có dữ liệu bị ghi đè. Vui lòng xem xung đột mới.", resolvedDeleted: "Đã áp dụng trạng thái bản trên server đã bị xóa.", resolvedRemote: "Đã dùng bản dữ liệu hiện tại trên server.", needsNetwork: "Chưa thể xác minh trạng thái server. Dữ liệu chưa bị thay đổi.", failed: "Không thể áp dụng lựa chọn. Dữ liệu được giữ nguyên.", unexpected: "Không thể xử lý xung đột. Dữ liệu vẫn được giữ nguyên.",
+  };
+}
+
+type SyncStrings = ReturnType<typeof syncStrings>;
+
+function entityLabel(table: EntityTable, text: SyncStrings): string {
+  return text[table];
+}
 
 let focusTokenSequence = 0;
 
@@ -56,67 +80,38 @@ function newFocusToken(): string {
   return `${Date.now()}-${focusTokenSequence}`;
 }
 
-function validDateLabel(value: unknown): string | null {
+function validDateLabel(value: unknown, locale: "vi" | "de"): string | null {
   if (typeof value !== "string" || value.trim() === "") return null;
   const timestamp = Date.parse(value);
   if (!Number.isFinite(timestamp)) return null;
-  return new Intl.DateTimeFormat("vi-VN", {
+  return new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(timestamp));
 }
 
-function toDisplayItem(conflict: ConflictRecord): ConflictDisplayItem {
+function toDisplayItem(conflict: ConflictRecord, locale: "vi" | "de", text: SyncStrings): ConflictDisplayItem {
   return {
     id: conflict.id,
-    entityLabel: ENTITY_LABEL[conflict.table],
-    detectedAt: validDateLabel(conflict.detectedAt),
-    localUpdatedAt: validDateLabel(conflict.localUpdatedAt),
-    remoteUpdatedAt: validDateLabel(conflict.remoteUpdatedAt),
-    remoteDeleted: validDateLabel(conflict.remoteDeletedAt) !== null,
+    entityLabel: entityLabel(conflict.table, text),
+    detectedAt: validDateLabel(conflict.detectedAt, locale),
+    localUpdatedAt: validDateLabel(conflict.localUpdatedAt, locale),
+    remoteUpdatedAt: validDateLabel(conflict.remoteUpdatedAt, locale),
+    remoteDeleted: validDateLabel(conflict.remoteDeletedAt, locale) !== null,
   };
 }
 
-function completedFeedback(result: ResolveConflictResult): ResolutionFeedback | null {
-  if (result.status === "resolved-local") {
-    return {
-      tone: "success",
-      message: "Đã giữ dữ liệu trên thiết bị và đồng bộ thành công.",
-    };
-  }
-  if (result.status === "resolved-local-sync-pending") {
-    return {
-      tone: "pending",
-      message:
-        "Đã giữ dữ liệu trên thiết bị. Thay đổi đang chờ đồng bộ; dữ liệu server chưa bị ghi đè.",
-    };
-  }
-  if (result.status === "resolved-local-pending-conflict") {
-    return {
-      tone: "warning",
-      message:
-        "Đã lưu lựa chọn trên thiết bị, nhưng trạng thái server đã thay đổi hoặc chưa thể cập nhật an toàn. Không có dữ liệu bị ghi đè. Vui lòng xem xung đột mới.",
-    };
-  }
-  if (result.status === "remote-deleted") {
-    return {
-      tone: "success",
-      message: "Đã áp dụng trạng thái bản trên server đã bị xóa.",
-    };
-  }
-  if (result.status === "resolved-remote") {
-    return {
-      tone: "success",
-      message: "Đã dùng bản dữ liệu hiện tại trên server.",
-    };
-  }
+function completedFeedback(result: ResolveConflictResult, text: SyncStrings): ResolutionFeedback | null {
+  if (result.status === "resolved-local") return { tone: "success", message: text.resolvedLocal };
+  if (result.status === "resolved-local-sync-pending") return { tone: "pending", message: text.resolvedLocalPending };
+  if (result.status === "resolved-local-pending-conflict") return { tone: "warning", message: text.resolvedLocalConflict };
+  if (result.status === "remote-deleted") return { tone: "success", message: text.resolvedDeleted };
+  if (result.status === "resolved-remote") return { tone: "success", message: text.resolvedRemote };
   return null;
 }
 
-function safeFailureMessage(result: ResolveConflictResult): string {
-  return result.status === "needs-network-verification"
-    ? "Chưa thể xác minh trạng thái server. Dữ liệu chưa bị thay đổi."
-    : "Không thể áp dụng lựa chọn. Dữ liệu được giữ nguyên.";
+function safeFailureMessage(result: ResolveConflictResult, text: SyncStrings): string {
+  return result.status === "needs-network-verification" ? text.needsNetwork : text.failed;
 }
 
 export function hasLogoutBlockers(value: LogoutBlockerCounts): boolean {
@@ -131,7 +126,8 @@ export function reconcileVisibleLogoutBlockers(
   return hasLogoutBlockers(refreshed) ? refreshed : null;
 }
 
-export function conflictCtaLabel(count: number): string {
+export function conflictCtaLabel(count: number, locale: "vi" | "de" = "vi"): string {
+  if (locale === "de") return count === 1 ? "1 Konflikt behandeln" : `${count} Konflikte behandeln`;
   return count === 1 ? "Xử lý 1 xung đột" : `Xử lý ${count} xung đột`;
 }
 
@@ -204,7 +200,10 @@ export default function SyncConflictSection({
   userId,
   focusRequest = null,
   onResolved,
+  onSyncNow,
 }: SyncConflictSectionProps) {
+  const { locale } = useLocale();
+  const text = useMemo(() => syncStrings(locale), [locale]);
   const [conflicts, setConflicts] = useState<ConflictDisplayItem[] | null>(null);
   const [conflictReadFailed, setConflictReadFailed] = useState(false);
   const [retryingRead, setRetryingRead] = useState(false);
@@ -223,13 +222,13 @@ export default function SyncConflictSection({
     try {
       const unresolved = await listConflicts();
       if (mounted.current) {
-        setConflicts(unresolved.map(toDisplayItem));
+        setConflicts(unresolved.map((conflict) => toDisplayItem(conflict, locale, text)));
         setConflictReadFailed(false);
       }
     } catch {
       if (mounted.current) setConflictReadFailed(true);
     }
-  }, []);
+  }, [locale, text]);
 
   const refreshBlockers = useCallback(async () => {
     try {
@@ -335,14 +334,14 @@ export default function SyncConflictSection({
 
     try {
       const result = await resolveConflict(choice.conflictId, choice.choice, userId);
-      const feedback = completedFeedback(result);
+      const feedback = completedFeedback(result, text);
       setPendingChoice(null);
       if (feedback) {
         setResolutionFeedback(feedback);
       } else {
         setCardFeedback((current) => ({
           ...current,
-          [choice.conflictId]: safeFailureMessage(result),
+          [choice.conflictId]: safeFailureMessage(result, text),
         }));
         returnFocusToTrigger();
       }
@@ -350,7 +349,7 @@ export default function SyncConflictSection({
       setPendingChoice(null);
       setCardFeedback((current) => ({
         ...current,
-        [choice.conflictId]: "Không thể xử lý xung đột. Dữ liệu vẫn được giữ nguyên.",
+        [choice.conflictId]: text.unexpected,
       }));
       returnFocusToTrigger();
     } finally {
@@ -366,29 +365,28 @@ export default function SyncConflictSection({
   }
 
   if (conflicts === null && !conflictReadFailed) return null;
-  if (conflicts?.length === 0 && !conflictReadFailed && !resolutionFeedback) return null;
 
   const confirmationText = pendingChoice
     ? pendingChoice.choice === "local"
-      ? "Bản trên thiết bị sẽ được giữ và gửi lại để đồng bộ."
+      ? text.localConfirmText
       : pendingChoice.remoteDeleted
-        ? "Bản trên server đang bị xóa. Nếu tiếp tục, trạng thái xóa trên server sẽ được áp dụng trên thiết bị này."
-        : "Bản trên thiết bị sẽ bị thay bằng bản server hiện tại."
+        ? text.remoteDeletedConfirmText
+        : text.remoteConfirmText
     : "";
 
   const confirmationLabel = pendingChoice
     ? pendingChoice.choice === "local"
-      ? "Xác nhận giữ dữ liệu trên thiết bị này"
+      ? text.localConfirm
       : pendingChoice.remoteDeleted
-        ? "Xác nhận áp dụng bản đã xóa"
-        : "Xác nhận dùng dữ liệu đã đồng bộ"
+        ? text.remoteDeletedConfirm
+        : text.remoteConfirm
     : "";
 
   const heading = conflicts && conflicts.length > 0
-    ? `${conflicts.length} xung đột cần xử lý`
+    ? text.conflictHeading(conflicts.length)
     : conflictReadFailed
-      ? "Không thể đọc trạng thái xung đột"
-      : "Trạng thái xử lý xung đột";
+      ? text.readFailed
+      : text.noConflicts;
 
   const feedbackClass = resolutionFeedback?.tone === "success"
     ? "sync-conflict-live"
@@ -405,27 +403,23 @@ export default function SyncConflictSection({
     >
       <div className="settings-card-head">
         <div>
-          <p className="settings-card-eyebrow">Đồng bộ cần quyết định</p>
+          <p className="settings-card-eyebrow">{text.eyebrow}</p>
           <h3 id="sync-conflicts-heading">{heading}</h3>
-          {conflicts && conflicts.length > 0 ? (
-            <p>
-              Đồng bộ đã dừng để tránh ghi đè hoặc làm mất dữ liệu. Hãy chọn rõ bản dữ liệu cần giữ
-              cho từng mục.
-            </p>
-          ) : null}
+          {!conflictReadFailed ? <p>{conflicts && conflicts.length > 0 ? text.paused : text.noConflictsBody}</p> : null}
+          {!conflictReadFailed && onSyncNow ? <button type="button" className="settings-secondary-action" onClick={() => void onSyncNow()}>{text.syncNow}</button> : null}
         </div>
       </div>
 
       {conflictReadFailed ? (
         <div className="settings-error sync-conflict-result" role="alert">
-          <p>Không thể đọc trạng thái xung đột. Dữ liệu chưa bị thay đổi.</p>
+          <p>{text.readFailedBody}</p>
           <button
             type="button"
             className="settings-secondary-action"
             disabled={retryingRead}
             onClick={() => void retryConflictRead()}
           >
-            {retryingRead ? "Đang tải lại…" : "Thử tải lại"}
+            {retryingRead ? text.retrying : text.retry}
           </button>
         </div>
       ) : null}
@@ -446,23 +440,23 @@ export default function SyncConflictSection({
             const busy = inFlight.has(conflict.id);
             const resolutionDisabled = conflictReadFailed || busy;
             return (
-              <article key={conflict.id} className="sync-conflict-card" aria-label={`Xung đột ${conflict.entityLabel}`}>
+              <article key={conflict.id} className="sync-conflict-card" aria-label={text.conflictAria(conflict.entityLabel)}>
                 <div className="sync-conflict-card-head">
                   <strong>{conflict.entityLabel}</strong>
                   {conflict.remoteDeleted ? (
-                    <span className="sync-conflict-deleted">Bản trên server đã bị xóa</span>
+                    <span className="sync-conflict-deleted">{text.serverDeleted}</span>
                   ) : null}
                 </div>
 
                 <dl className="sync-conflict-meta">
                   {conflict.detectedAt ? (
-                    <div><dt>Phát hiện</dt><dd>{conflict.detectedAt}</dd></div>
+                    <div><dt>{text.detected}</dt><dd>{conflict.detectedAt}</dd></div>
                   ) : null}
                   {conflict.localUpdatedAt ? (
-                    <div><dt>Thiết bị cập nhật</dt><dd>{conflict.localUpdatedAt}</dd></div>
+                    <div><dt>{text.deviceUpdated}</dt><dd>{conflict.localUpdatedAt}</dd></div>
                   ) : null}
                   {conflict.remoteUpdatedAt ? (
-                    <div><dt>Server cập nhật</dt><dd>{conflict.remoteUpdatedAt}</dd></div>
+                    <div><dt>{text.serverUpdated}</dt><dd>{conflict.remoteUpdatedAt}</dd></div>
                   ) : null}
                 </dl>
 
@@ -479,7 +473,7 @@ export default function SyncConflictSection({
                     disabled={resolutionDisabled}
                     onClick={(event) => beginChoice(event, conflict, "local")}
                   >
-                    {busy ? "Đang xử lý…" : "Giữ dữ liệu trên thiết bị này"}
+                    {busy ? text.processing : text.keepLocal}
                   </button>
                   <button
                     type="button"
@@ -487,7 +481,7 @@ export default function SyncConflictSection({
                     disabled={resolutionDisabled}
                     onClick={(event) => beginChoice(event, conflict, "remote")}
                   >
-                    Dùng dữ liệu đã đồng bộ
+                    {text.useRemote}
                   </button>
                 </div>
               </article>
@@ -506,7 +500,7 @@ export default function SyncConflictSection({
             aria-describedby="sync-conflict-dialog-description"
             onKeyDown={handleDialogKeyDown}
           >
-            <p className="settings-card-eyebrow">Xác nhận lựa chọn</p>
+            <p className="settings-card-eyebrow">{text.confirmEyebrow}</p>
             <h4 id="sync-conflict-dialog-title">{pendingChoice.entityLabel}</h4>
             <p id="sync-conflict-dialog-description">{confirmationText}</p>
             <div className="sync-conflict-dialog-actions">
@@ -517,7 +511,7 @@ export default function SyncConflictSection({
                 disabled={inFlight.has(pendingChoice.conflictId)}
                 onClick={() => closeConfirmation()}
               >
-                Quay lại, chưa thay đổi
+                {text.back}
               </button>
               <button
                 ref={confirmRef}
@@ -526,7 +520,7 @@ export default function SyncConflictSection({
                 disabled={inFlight.has(pendingChoice.conflictId)}
                 onClick={() => void confirmChoice()}
               >
-                {inFlight.has(pendingChoice.conflictId) ? "Đang xử lý…" : confirmationLabel}
+                {inFlight.has(pendingChoice.conflictId) ? text.processing : confirmationLabel}
               </button>
             </div>
           </div>

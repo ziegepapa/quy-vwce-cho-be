@@ -693,6 +693,12 @@ export default function SettingsPage({
               onResolved={async () => {
                 await onConflictResolved?.();
               }}
+              onSyncNow={onSyncNow ? async () => {
+                const result = await onSyncNow();
+                if (result.tone === "error") setActionError(result.message);
+                else setMfaMessage(result.message);
+                await onConflictResolved?.();
+              } : undefined}
             />
           ) : <p className="advanced-empty">{t("syncConflictsSignIn")}</p>}
         </details>

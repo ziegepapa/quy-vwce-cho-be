@@ -42,13 +42,21 @@ async function renderLoaded() {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  // resetAllMocks also clears queued mockResolvedValueOnce/mockRejectedValueOnce
+  // left by a prior test. clearAllMocks only clears calls and is insufficient here.
+  vi.resetAllMocks();
   dbMocks.getSettings.mockResolvedValue(settings());
   dbMocks.listGoals.mockResolvedValue([]);
   dbMocks.listTransactions.mockResolvedValue([]);
+  dbMocks.saveSettings.mockResolvedValue(undefined);
 });
 
-afterEach(() => cleanup());
+afterEach(async () => {
+  // Let React settle state updates before the next test reconfigures shared mocks.
+  await Promise.resolve();
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("Notfallmappe save state", () => {
   it("keeps the local draft visible and retries a failed save", async () => {
@@ -59,6 +67,7 @@ describe("Notfallmappe save state", () => {
 
     fireEvent.change(purpose, { target: { value: "Bản nháp vẫn ở trên màn hình" } });
 
+    await waitFor(() => expect(dbMocks.saveSettings).toHaveBeenCalledTimes(1));
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Không lưu được Hồ sơ khẩn cấp");
     expect(screen.queryByText("NOTFALLMAPPE_SECRET_CANARY")).toBeNull();
@@ -73,9 +82,10 @@ describe("Notfallmappe save state", () => {
 
   it("serializes rapid edits so an older write cannot finish last", async () => {
     const first = deferred<void>();
+    const second = deferred<void>();
     dbMocks.saveSettings
       .mockReturnValueOnce(first.promise)
-      .mockResolvedValueOnce(undefined);
+      .mockReturnValueOnce(second.promise);
     const purpose = await renderLoaded();
 
     fireEvent.change(purpose, { target: { value: "A" } });
@@ -85,9 +95,11 @@ describe("Notfallmappe save state", () => {
     expect(dbMocks.saveSettings.mock.calls[0][0].notfallmappe.purpose).toBe("A");
 
     first.resolve(undefined);
-
     await waitFor(() => expect(dbMocks.saveSettings).toHaveBeenCalledTimes(2));
     expect(dbMocks.saveSettings.mock.calls[1][0].notfallmappe.purpose).toBe("AB");
+
+    second.resolve(undefined);
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("Đã lưu"));
   });
 
   it("does not print when saving the print timestamp fails", async () => {
@@ -96,6 +108,7 @@ describe("Notfallmappe save state", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "In / Lưu PDF" }));
 
+    await waitFor(() => expect(dbMocks.saveSettings).toHaveBeenCalledTimes(1));
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Không lưu được Hồ sơ khẩn cấp");
     expect(printMock).not.toHaveBeenCalled();
