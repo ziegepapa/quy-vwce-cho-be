@@ -661,6 +661,14 @@ export default function SettingsPage({
         </section>
       ) : null}
 
+      <button
+        type="button"
+        className="demo-v10-abmeld"
+        onClick={() => void auth.signOut()}
+      >
+        🔓 Abmelden
+      </button>
+
       <details
         className="demo-v10-set-advanced"
         open={showAdvanced}
