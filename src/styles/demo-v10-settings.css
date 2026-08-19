@@ -30,6 +30,8 @@
 .demo-v10-lang button{flex:1;padding:9px 6px;border-radius:12px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--demo-gb);color:var(--demo-dim)}
 .demo-v10-lang button.selected{background:color-mix(in srgb,var(--demo-vi) 16%,transparent);border-color:color-mix(in srgb,var(--demo-vi) 35%,transparent);color:var(--demo-text)}
 .demo-v10-lang small{display:block;font-size:10px;margin-top:2px;opacity:.7}
+.demo-v10-abmeld{width:100%;padding:13px;border-radius:14px;cursor:pointer;font-size:14px;font-weight:700;color:var(--demo-re);background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.18)}
+.demo-v10-abmeld:active{background:rgba(248,113,113,.14)}
 .demo-v10-ver{text-align:center;padding:18px;font-size:11px;color:var(--demo-dim);opacity:.6}
 .demo-v10-set-advanced{margin-top:8px}
 .demo-v10-set-advanced>summary{cursor:pointer;color:var(--demo-dim);font-size:12px;font-weight:700;padding:8px 2px}
