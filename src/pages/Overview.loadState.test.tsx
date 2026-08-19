@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { defaultSettings } from "../lib/defaults";
+import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
 
 const dbMocks = vi.hoisted(() => ({
   getSettings: vi.fn(),
@@ -18,6 +19,11 @@ import Overview from "./Overview";
 
 function renderOverview() {
   return render(createElement(MemoryRouter, null, createElement(Overview)));
+}
+
+function renderGermanOverview() {
+  window.localStorage.setItem(LOCALE_KEY, "de");
+  return render(createElement(MemoryRouter, null, createElement(LocaleProvider, null, createElement(Overview))));
 }
 
 const TX_STAMP = "2026-08-01T00:00:00.000Z";
@@ -50,7 +56,10 @@ beforeEach(() => {
   dbMocks.listTransactions.mockResolvedValue([]);
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  window.localStorage.removeItem(LOCALE_KEY);
+});
 
 describe("Overview load state", () => {
   it("announces loading without rendering a partial overview", async () => {
@@ -82,6 +91,25 @@ describe("Overview load state", () => {
     await waitFor(() => expect(document.querySelector(".ov")).toBeTruthy());
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
     expect(dbMocks.listTransactions).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("Overview German locale", () => {
+  it("does not leak Vietnamese overview labels when Deutsch is active", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([cashIn("tx-cash-1", "2026-08-01", 1000)]);
+
+    renderGermanOverview();
+
+    expect(await screen.findByText("VWCE-Kurs")).toBeTruthy();
+    expect(screen.getByText("Beitragsmonate")).toBeTruthy();
+    expect(screen.getByText("Anteile")).toBeTruthy();
+    expect(screen.getByText("Einzahlungsserie")).toBeTruthy();
+    expect(screen.getByText("Zuletzt")).toBeTruthy();
+    expect(screen.getByText("Portfolio-Performance")).toBeTruthy();
+    expect(screen.getByText("Einzahlungen")).toBeTruthy();
+    expect(screen.getByText("Ertrag")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Gần nhất|Hiệu suất danh mục|Vốn góp|Lãi/);
   });
 });
 
