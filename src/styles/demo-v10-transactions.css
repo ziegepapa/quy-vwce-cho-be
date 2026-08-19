@@ -1,0 +1,25 @@
+.demo-v10-tx{display:flex;flex-direction:column;gap:10px}
+.demo-v10-tx-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.demo-v10-tx-add{font-size:11px;font-weight:700;color:var(--demo-vi);background:color-mix(in srgb,var(--demo-vi) 9%,transparent);border:1px solid color-mix(in srgb,var(--demo-vi) 22%,transparent);border-radius:100px;padding:6px 14px;cursor:pointer}
+.demo-v10-sum3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.demo-v10-sum-c{padding:11px 10px;text-align:center}
+.demo-v10-sum-lbl{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--demo-dim);margin-bottom:5px}
+.demo-v10-sum-val{font-size:17px;font-weight:800}
+.demo-v10-mo-lbl{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--demo-dim);padding:0 2px;margin:4px 0 0}
+.demo-v10-tx-card{padding:0;overflow:hidden}
+.demo-v10-tx-item{display:flex;align-items:center;gap:12px;padding:13px 16px;width:100%;border:0;background:none;color:inherit;text-align:left;cursor:pointer;font:inherit}
+.demo-v10-tx-item+.demo-v10-tx-item{border-top:1px solid rgba(255,255,255,.04)}
+.demo-v10-tx-ico{width:34px;height:34px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px}
+.demo-v10-tx-ico.buy{background:color-mix(in srgb,var(--demo-em) 13%,transparent);box-shadow:0 0 12px color-mix(in srgb,var(--demo-em) 16%,transparent)}
+.demo-v10-tx-ico.out{background:color-mix(in srgb,var(--demo-re) 13%,transparent)}
+.demo-v10-tx-ico.div{background:color-mix(in srgb,var(--demo-vi) 13%,transparent);box-shadow:0 0 12px color-mix(in srgb,var(--demo-vi) 16%,transparent)}
+.demo-v10-tx-b{flex:1;min-width:0}
+.demo-v10-tx-name{font-size:14px;font-weight:700}
+.demo-v10-tx-meta{font-size:10px;color:var(--demo-dim);margin-top:2px}
+.demo-v10-tx-r{text-align:right;flex-shrink:0}
+.demo-v10-tx-amt{font-size:16px;font-weight:800}
+.demo-v10-tx-amt.pos{color:var(--demo-em)}
+.demo-v10-tx-amt.neg{color:var(--demo-re)}
+.demo-v10-tx-sec{font-size:10px;color:var(--demo-dim);margin-top:2px}
+.demo-v10-tx-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.demo-v10-tx-tools button{min-height:36px;padding:6px 12px;border-radius:10px;border:1px solid var(--demo-gb);background:rgba(255,255,255,.04);color:var(--demo-sub);font-size:11px;font-weight:700;cursor:pointer}

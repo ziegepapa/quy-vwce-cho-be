@@ -18,9 +18,8 @@ import {
   resolveInstrumentIsin,
 } from "../lib/instrument";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
-import ActionMenu from "../components/ActionMenu";
-import { IconPlus } from "../components/Icons";
 import TradeRepublicPdfImport from "../components/TradeRepublicPdfImport";
+import "../styles/demo-v10-transactions.css";
 
 const TYPES: { value: TxType; label: string; sign: "+" | "-" | "~" }[] = [
   { value: "buy_vwce", label: "Mua VWCE", sign: "~" },
@@ -47,6 +46,29 @@ const emptyForm = () => ({
   notes: "",
 });
 
+function monthKey(date: string) {
+  return date.slice(0, 7);
+}
+
+function monthLabel(key: string) {
+  const [y, m] = key.split("-");
+  return `${m}/${y}`;
+}
+
+function iconClass(type: TxType): string {
+  if (type === "buy_vwce" || type === "buy_security" || type === "cash_in" || type === "safe_interest") return "buy";
+  if (type === "sell_vwce" || type === "sell_security" || type === "cash_out" || type === "tax" || type === "fee") return "out";
+  return "div";
+}
+
+function iconGlyph(type: TxType): string {
+  if (type === "buy_vwce" || type === "buy_security") return "↗";
+  if (type === "sell_vwce" || type === "sell_security") return "↘";
+  if (type === "cash_in" || type === "safe_interest") return "↑";
+  if (type === "cash_out" || type === "tax" || type === "fee") return "↓";
+  return "⇄";
+}
+
 export default function Transactions() {
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,10 +77,10 @@ export default function Transactions() {
   const [show, setShow] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [editId, setEditId] = useState<string | null>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [q, setQ] = useState("");
   const [yearFilter, setYearFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState<"all" | TxType>("all");
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [qtyError, setQtyError] = useState("");
   const [isinError, setIsinError] = useState("");
   const { readOnly, showBlocked } = useRecoveryReadOnly();
@@ -95,7 +117,27 @@ export default function Transactions() {
       }),
     [txs, q, yearFilter, typeFilter],
   );
-  const filtersActive = yearFilter !== "all" || typeFilter !== "all" || Boolean(q);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, Transaction[]>();
+    for (const tx of filtered) {
+      const key = monthKey(tx.date);
+      const list = map.get(key) ?? [];
+      list.push(tx);
+      map.set(key, list);
+    }
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [filtered]);
+
+  const summary = useMemo(() => {
+    let contributed = 0;
+    let buys = 0;
+    for (const tx of txs) {
+      if (tx.type === "cash_in") contributed += tx.amount;
+      if (tx.type === "buy_vwce" || tx.type === "buy_security") buys += 1;
+    }
+    return { contributed, buys, count: txs.length };
+  }, [txs]);
 
   const amount = parseDecimal(form.amount);
   const unitPrice = parseDecimal(form.unitPrice);
@@ -111,7 +153,10 @@ export default function Transactions() {
     : 0;
 
   async function save() {
-    if (readOnly) { showBlocked(); return; }
+    if (readOnly) {
+      showBlocked();
+      return;
+    }
     setQtyError("");
     setIsinError("");
     if (!form.date || !form.amount.trim()) {
@@ -190,7 +235,10 @@ export default function Transactions() {
   }
 
   function openEdit(tx: Transaction) {
-    if (readOnly) { showBlocked(); return; }
+    if (readOnly) {
+      showBlocked();
+      return;
+    }
     setEditId(tx.id);
     setForm({
       date: tx.date,
@@ -206,158 +254,171 @@ export default function Transactions() {
     setShow(true);
   }
 
+  function openCreate() {
+    if (readOnly) {
+      showBlocked();
+      return;
+    }
+    setEditId(null);
+    setForm(emptyForm());
+    setShow(true);
+  }
+
   if (loading) {
-    return (
-      <div className="empty card" role="status" aria-live="polite" aria-busy="true">
-        <p>Đang tải giao dịch…</p>
-      </div>
-    );
+    return <main className="demo-v10-screen" aria-busy="true" />;
   }
 
   if (loadError) {
     return (
-      <section className="empty card" role="alert">
-        <h1 className="page-title">Không tải được Giao dịch</h1>
-        <p>Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy thử tải lại.</p>
-        <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
-          Thử lại
-        </button>
-      </section>
+      <main className="demo-v10-screen">
+        <section className="demo-v10-gl" style={{ padding: 18 }} role="alert">
+          <h1 className="demo-v10-section-title">Không tải được Giao dịch</h1>
+          <p style={{ color: "var(--demo-dim)", fontSize: 13 }}>Dữ liệu trên thiết bị vẫn được giữ nguyên.</p>
+          <button type="button" className="demo-v10-tx-add" onClick={() => setLoadAttempt((a) => a + 1)}>
+            Thử lại
+          </button>
+        </section>
+      </main>
     );
   }
 
   return (
-    <div>
-      <div className="row-between">
-        <h1 className="page-title">Giao dịch</h1>
-        <button
-          type="button"
-          className="fab"
-          aria-label="Thêm giao dịch"
-          onClick={() => {
-            if (readOnly) { showBlocked(); return; }
-            setEditId(null);
-            setForm(emptyForm());
-            setShow(true);
-          }}
-        >
-          <IconPlus />
+    <main className="demo-v10-screen demo-v10-tx" aria-label="Giao dịch">
+      <div className="demo-v10-tx-head">
+        <h1 className="demo-v10-section-title">Giao dịch</h1>
+        <button type="button" className="demo-v10-tx-add" onClick={openCreate}>
+          + Thêm
         </button>
       </div>
 
-      {readOnly ? null : (
-        <TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} />
-      )}
-
-      <button
-        type="button"
-        className="callout-toggle"
-        onClick={() => setRulesOpen((value) => !value)}
-        aria-expanded={rulesOpen}
-      >
-        Quy ước dòng tiền {rulesOpen ? "▴" : "▾"}
-      </button>
-      {rulesOpen && (
-        <div className="banner info">
-          <strong>Nạp cash</strong> mới tăng vốn đóng. <strong>Mua chứng khoán</strong> chỉ chuyển cash → chứng khoán, không đếm vốn lần hai. Sao kê Depot chỉ đối chiếu và không tạo giao dịch.
+      <div className="demo-v10-sum3">
+        <div className="demo-v10-gl demo-v10-sum-c">
+          <div className="demo-v10-sum-lbl">Tổng góp</div>
+          <div className="demo-v10-sum-val">{formatMoney(summary.contributed)}</div>
         </div>
-      )}
-
-      <div className="field">
-        <label htmlFor="tx-search">Tìm</label>
-        <input id="tx-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ghi chú, loại, ISIN…" />
-      </div>
-      <div className="grid2">
-        <div className="field">
-          <label htmlFor="tx-year">Năm</label>
-          <select id="tx-year" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
-            <option value="all">Tất cả</option>
-            {years.map((year) => <option key={year} value={year}>{year}</option>)}
-          </select>
+        <div className="demo-v10-gl demo-v10-sum-c">
+          <div className="demo-v10-sum-lbl">Số GD</div>
+          <div className="demo-v10-sum-val">{summary.count}</div>
         </div>
-        <div className="field">
-          <label htmlFor="tx-type">Loại</label>
-          <select id="tx-type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as "all" | TxType)}>
-            <option value="all">Tất cả</option>
-            {TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
-          </select>
+        <div className="demo-v10-gl demo-v10-sum-c">
+          <div className="demo-v10-sum-lbl">Lần mua</div>
+          <div className="demo-v10-sum-val">{summary.buys}</div>
         </div>
       </div>
-      {filtersActive && (
-        <button type="button" className="secondary" style={{ marginBottom: 12, width: "100%" }} onClick={() => {
-          setYearFilter("all");
-          setTypeFilter("all");
-          setQ("");
-        }}>
-          Xóa bộ lọc
+
+      <div className="demo-v10-tx-tools">
+        <button type="button" onClick={() => setToolsOpen((v) => !v)}>
+          {toolsOpen ? "Ẩn công cụ" : "Lọc / PDF"}
         </button>
-      )}
+      </div>
+
+      {toolsOpen ? (
+        <section className="demo-v10-gl" style={{ padding: 12 }}>
+          {!readOnly ? <TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /> : null}
+          <div className="field" style={{ marginTop: 8 }}>
+            <label htmlFor="tx-search">Tìm</label>
+            <input id="tx-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ghi chú, loại, ISIN…" />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div className="field">
+              <label htmlFor="tx-year">Năm</label>
+              <select id="tx-year" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+                <option value="all">Tất cả</option>
+                {years.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="tx-type">Loại</label>
+              <select
+                id="tx-type"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as "all" | TxType)}
+              >
+                <option value="all">Tất cả</option>
+                {TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {!filtered.length ? (
-        <div className="empty card">
+        <section className="demo-v10-gl" style={{ padding: 18 }}>
+          <p style={{ color: "var(--demo-dim)", margin: 0 }}>
+            {txs.length === 0 ? "Chưa có giao dịch." : "Không có giao dịch khớp bộ lọc."}
+          </p>
           {txs.length === 0 ? (
-            <>
-              <p>Chưa có giao dịch.</p>
-              <button type="button" onClick={() => {
-                if (readOnly) { showBlocked(); return; }
-                setEditId(null);
-                setForm(emptyForm());
-                setShow(true);
-              }}>
-                Thêm giao dịch đầu tiên
-              </button>
-            </>
-          ) : (
-            <p>Không có giao dịch khớp bộ lọc.</p>
-          )}
-        </div>
+            <button type="button" className="demo-v10-tx-add" style={{ marginTop: 12 }} onClick={openCreate}>
+              Thêm giao dịch đầu tiên
+            </button>
+          ) : null}
+        </section>
       ) : (
-        <div className="card" style={{ padding: "0.25rem 0.75rem" }}>
-          {filtered.map((tx) => {
-            const meta = TYPES.find((type) => type.value === tx.type);
-            const sign = meta?.sign ?? "~";
-            const amountClass = sign === "+" ? "positive" : sign === "-" ? "negative" : "";
-            const isin = resolveInstrumentIsin(tx);
-            return (
-              <div className="tx-row" key={tx.id}>
-                <div className="tx-icon" aria-hidden>{sign === "+" ? "↑" : sign === "-" ? "↓" : "⇄"}</div>
-                <div className="tx-body">
-                  <div className="row-between">
-                    <strong>{meta?.label ?? tx.type}</strong>
-                    <span className={`metric-value ${amountClass}`} style={{ fontSize: "1rem" }}>
-                      {sign === "-" ? "−" : sign === "+" ? "+" : ""}{formatMoney(tx.amount)}
+        groups.map(([key, list]) => (
+          <div key={key}>
+            <div className="demo-v10-mo-lbl">{monthLabel(key)}</div>
+            <section className="demo-v10-gl demo-v10-tx-card">
+              {list.map((tx) => {
+                const meta = TYPES.find((t) => t.value === tx.type);
+                const sign = meta?.sign ?? "~";
+                const isin = resolveInstrumentIsin(tx);
+                return (
+                  <button
+                    type="button"
+                    key={tx.id}
+                    className="demo-v10-tx-item"
+                    onClick={() => openEdit(tx)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      void (async () => {
+                        if (readOnly) {
+                          showBlocked();
+                          return;
+                        }
+                        if (!confirm("Xóa giao dịch này?")) return;
+                        await deleteTransaction(tx.id);
+                        await reload();
+                      })();
+                    }}
+                  >
+                    <span className={`demo-v10-tx-ico ${iconClass(tx.type)}`} aria-hidden>
+                      {iconGlyph(tx.type)}
                     </span>
-                  </div>
-                  <div className="row-between">
-                    <span className="muted">
-                      {formatDateVN(tx.date)}
-                      {isin ? ` · ${isin}` : ""}
-                      {tx.source === "trade_republic_pdf" ? " · TR PDF" : ""}
-                      {tx.notes ? ` · ${tx.notes}` : ""}
-                      {tx.quantity != null ? ` · SL ${tx.quantity.toFixed(4)}` : ""}
+                    <span className="demo-v10-tx-b">
+                      <span className="demo-v10-tx-name">{meta?.label ?? tx.type}</span>
+                      <span className="demo-v10-tx-meta">
+                        {formatDateVN(tx.date)}
+                        {isin ? ` · ${isin}` : ""}
+                        {tx.notes ? ` · ${tx.notes}` : ""}
+                      </span>
                     </span>
-                    <ActionMenu actions={[
-                      { label: "Sửa", onClick: () => openEdit(tx) },
-                      {
-                        label: "Xóa",
-                        danger: true,
-                        onClick: async () => {
-                          if (readOnly) { showBlocked(); return; }
-                          if (!confirm("Xóa giao dịch này?")) return;
-                          await deleteTransaction(tx.id);
-                          await reload();
-                        },
-                      },
-                    ]} />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                    <span className="demo-v10-tx-r">
+                      <span
+                        className={
+                          "demo-v10-tx-amt" +
+                          (sign === "+" ? " pos" : sign === "-" ? " neg" : "")
+                        }
+                      >
+                        {sign === "-" ? "−" : sign === "+" ? "+" : ""}
+                        {formatMoney(tx.amount)}
+                      </span>
+                      {tx.quantity != null ? (
+                        <span className="demo-v10-tx-sec">SL {tx.quantity.toFixed(4)}</span>
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })}
+            </section>
+          </div>
+        ))
       )}
 
-      {show && (
+      {show ? (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="sheet-handle" aria-hidden />
@@ -368,18 +429,24 @@ export default function Transactions() {
             </div>
             <div className="field">
               <label htmlFor="f-type">Loại</label>
-              <select id="f-type" value={form.type} onChange={(e) => {
-                const type = e.target.value as TxType;
-                setForm({
-                  ...form,
-                  type,
-                  instrumentIsin: type === "buy_vwce" || type === "sell_vwce" ? VWCE_ISIN : form.instrumentIsin,
-                });
-              }}>
-                {TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
+              <select
+                id="f-type"
+                value={form.type}
+                onChange={(e) => {
+                  const type = e.target.value as TxType;
+                  setForm({
+                    ...form,
+                    type,
+                    instrumentIsin: type === "buy_vwce" || type === "sell_vwce" ? VWCE_ISIN : form.instrumentIsin,
+                  });
+                }}
+              >
+                {TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
               </select>
             </div>
-            {security && (
+            {security ? (
               <div className="field">
                 <label htmlFor="f-isin">ISIN</label>
                 <input
@@ -391,14 +458,14 @@ export default function Transactions() {
                     setForm({ ...form, instrumentIsin: e.target.value.toUpperCase() });
                   }}
                 />
-                {isinError && <p style={{ color: "var(--color-danger)", fontSize: 13 }}>{isinError}</p>}
+                {isinError ? <p style={{ color: "var(--color-danger)", fontSize: 13 }}>{isinError}</p> : null}
               </div>
-            )}
+            ) : null}
             <div className="field">
               <label htmlFor="f-amt">{security ? "Tổng tiền thanh toán" : "Số tiền"}</label>
               <input id="f-amt" inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             </div>
-            {security && (
+            {security ? (
               <>
                 <div className="field">
                   <label htmlFor="f-price">Giá một đơn vị</label>
@@ -406,11 +473,17 @@ export default function Transactions() {
                 </div>
                 <div className="field">
                   <label htmlFor="f-qty">{isSecuritySell(form.type) ? "Số lượng (bắt buộc khi bán)" : "Số lượng (để trống = tự tính)"}</label>
-                  <input id="f-qty" inputMode="decimal" value={form.quantity} onChange={(e) => {
-                    setQtyError("");
-                    setForm({ ...form, quantity: e.target.value });
-                  }} placeholder={!isSecuritySell(form.type) && autoQty ? autoQty.toFixed(4) : ""} />
-                  {qtyError && <p style={{ color: "var(--color-danger)", fontSize: 13 }}>{qtyError}</p>}
+                  <input
+                    id="f-qty"
+                    inputMode="decimal"
+                    value={form.quantity}
+                    onChange={(e) => {
+                      setQtyError("");
+                      setForm({ ...form, quantity: e.target.value });
+                    }}
+                    placeholder={!isSecuritySell(form.type) && autoQty ? autoQty.toFixed(4) : ""}
+                  />
+                  {qtyError ? <p style={{ color: "var(--color-danger)", fontSize: 13 }}>{qtyError}</p> : null}
                 </div>
                 <div className="grid2">
                   <div className="field">
@@ -422,11 +495,8 @@ export default function Transactions() {
                     <input id="f-tax" inputMode="decimal" value={form.tax} onChange={(e) => setForm({ ...form, tax: e.target.value })} />
                   </div>
                 </div>
-                {unitPrice > 0 && amount > 0 && (
-                  <div className="banner info">Preview: SL ≈ {autoQty.toFixed(4)} · CK ≈ {formatMoney(Math.max(0, amount - fee - tax))}</div>
-                )}
               </>
-            )}
+            ) : null}
             <div className="field">
               <label htmlFor="f-notes">Ghi chú{form.type === "adjust" ? " (bắt buộc)" : ""}</label>
               <textarea id="f-notes" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
@@ -434,10 +504,30 @@ export default function Transactions() {
             <div className="stack">
               <button type="button" onClick={() => void save()}>Lưu</button>
               <button type="button" className="secondary" onClick={() => setShow(false)}>Hủy</button>
+              {editId ? (
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={() =>
+                    void (async () => {
+                      if (readOnly) {
+                        showBlocked();
+                        return;
+                      }
+                      if (!confirm("Xóa giao dịch này?")) return;
+                      await deleteTransaction(editId);
+                      setShow(false);
+                      await reload();
+                    })()
+                  }
+                >
+                  Xóa
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
-      )}
-    </div>
+      ) : null}
+    </main>
   );
 }
