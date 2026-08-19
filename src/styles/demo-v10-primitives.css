@@ -1,0 +1,141 @@
+/* Literal visual primitives from demo-visual.html. Page rebuilds use only these classes. */
+:root,
+.theme-vault {
+  --demo-bg: #06060a;
+  --demo-g: rgba(255, 255, 255, 0.042);
+  --demo-gb: rgba(255, 255, 255, 0.09);
+  --demo-text: #f0eeff;
+  --demo-sub: rgba(240, 238, 255, 0.55);
+  --demo-dim: rgba(240, 238, 255, 0.28);
+  --demo-vi: #8b5cf6;
+  --demo-vi2: #5b21b6;
+  --demo-em: #10b981;
+  --demo-am: #f59e0b;
+  --demo-re: #f87171;
+  --demo-au1: rgba(91, 33, 182, 0.5);
+  --demo-au2: rgba(16, 185, 129, 0.2);
+  --demo-au3: rgba(139, 92, 246, 0.16);
+  --demo-bar-bg: rgba(6, 6, 10, 0.8);
+  --demo-pill-bg: rgba(8, 5, 20, 0.86);
+}
+
+.demo-v10-screen {
+  position: relative;
+  min-height: 100%;
+  padding: 14px 14px 100px;
+  color: var(--demo-text);
+  background: var(--demo-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+}
+
+.demo-v10-screen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 55% at 15% -10%, var(--demo-au1) 0%, transparent 58%),
+    radial-gradient(ellipse 55% 38% at 92% 10%, var(--demo-au2) 0%, transparent 52%),
+    radial-gradient(ellipse 45% 45% at 5% 90%, var(--demo-au3) 0%, transparent 52%);
+}
+
+.demo-v10-gl {
+  position: relative;
+  overflow: hidden;
+  background: var(--demo-g);
+  border: 1px solid var(--demo-gb);
+  border-radius: 20px;
+  backdrop-filter: blur(22px) saturate(1.7);
+  -webkit-backdrop-filter: blur(22px) saturate(1.7);
+}
+
+.demo-v10-gl::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 5%, rgba(255, 255, 255, 0.13) 50%, transparent 95%);
+}
+
+.demo-v10-section-title {
+  margin: 0;
+  color: var(--demo-text);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.demo-v10-eyebrow {
+  margin: 0;
+  color: var(--demo-dim);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.demo-v10-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid var(--demo-gb);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.demo-v10-tab {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--demo-dim);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.demo-v10-tab.is-active {
+  color: var(--demo-text);
+  background: color-mix(in srgb, var(--demo-vi) 20%, transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--demo-vi) 20%, transparent);
+}
+
+.demo-v10-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 13px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.demo-v10-row:first-child { border-top: 0; }
+.demo-v10-row-body { min-width: 0; flex: 1; }
+.demo-v10-row-name { color: var(--demo-text); font-size: 14px; font-weight: 700; }
+.demo-v10-row-meta { margin-top: 2px; color: var(--demo-dim); font-size: 10px; }
+.demo-v10-row-right { text-align: right; }
+.demo-v10-row-amount { color: var(--demo-em); font-size: 16px; font-weight: 800; }
+.demo-v10-row-secondary { margin-top: 2px; color: var(--demo-dim); font-size: 10px; }
+
+.demo-v10-input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  color: var(--demo-text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: right;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--demo-gb);
+  border-radius: 10px;
+}
+
+.demo-v10-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--demo-vi) 50%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--demo-vi) 14%, transparent);
+}

@@ -13,6 +13,7 @@ import "./styles/accessibility-foundations.css";
 import "./styles/overview-v10.css";
 import "./styles/visual-abc-shell.css";
 import "./styles/visual-abc-screens.css";
+import "./styles/demo-v10-primitives.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
