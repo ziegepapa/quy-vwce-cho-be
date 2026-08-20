@@ -67,3 +67,13 @@ A fresh production preview was initialized on port 4180 with isolated browser st
 The Smart time lens rail renders beneath the immediate actions as a labeled `Thời gian` control with **Toàn bộ, Tháng này, 90 ngày, Năm nay, Năm trước**. Selecting **Tháng này** visibly activates that chip and changes the tools trigger to `Lọc / PDF · 1 bộ lọc`, so the active context remains explicit without opening the advanced panel.
 
 A controlled 360px check passed for Smart time lens: no page-level horizontal overflow, all five ranges are present, the rail handles excess width internally through horizontal scrolling, and the smallest chip remains 31px high.
+
+## Data quality inbox preview (2026-08-20)
+
+A fresh production preview was initialized on port 4181 with isolated local storage before checking the Data quality inbox states and action path.
+
+The preview confirms that a valid VWCE purchase can legitimately contain a positive amount and quantity while leaving unit price and note blank. This is the intended review scenario for the Data quality inbox; form validation remains intact and no unsupported direct database manipulation is needed.
+
+With a saved local VWCE purchase containing a positive amount and quantity but no unit price or note, the inbox produced exactly two distinct items: **Thiếu giá đơn vị** at review priority and **Thiếu ghi chú** as a tip. Tapping the first item opened the existing **Sửa giao dịch** bottom sheet with the unit-price field still blank and all original transaction fields preserved. This confirms the inbox explains and routes review work without inventing or changing financial data.
+
+A controlled 360px Data quality inbox check passed in both states: the clean status appears before data exists; after a review item is created through the normal UI, the inbox remains within the viewport with no page-level horizontal overflow and each action row is 54px high.
