@@ -26,13 +26,16 @@ describe("buildHouseholdHandoff", () => {
       childName: "An",
       targetUseDate: "2042-06-30",
       emergency: { completeSections: 4, totalSections: 4, contactCount: 1, documentLocationCount: 1, lastPrintedAt: "2026-08-01T12:00:00.000Z" },
+      readiness: { complete: 3, total: 3, planReady: true, emergencyReady: true, printedReady: true },
     });
     expect(JSON.stringify(handoff)).not.toMatch(/Mai|Home safe|Education fund|school|example/);
   });
 
-  it("treats incomplete emergency data as an incomplete summary rather than inventing it", () => {
-    expect(buildHouseholdHandoff({ ...base, notfallmappe: { purpose: "", custodyNote: "", contacts: [], documents: [], wishes: "" } }).emergency)
+  it("treats incomplete emergency data as incomplete readiness rather than inventing it", () => {
+    const handoff = buildHouseholdHandoff({ ...base, notfallmappe: { purpose: "", custodyNote: "", contacts: [], documents: [], wishes: "" } });
+    expect(handoff.emergency)
       .toEqual({ completeSections: 0, totalSections: 4, contactCount: 0, documentLocationCount: 0, lastPrintedAt: null });
+    expect(handoff.readiness).toEqual({ complete: 1, total: 3, planReady: true, emergencyReady: false, printedReady: false });
   });
 
   it("uses a safe fallback plan name and leaves the use-date state unconfigured when optional settings are absent", () => {
@@ -42,5 +45,21 @@ describe("buildHouseholdHandoff", () => {
     expect(handoff.targetUseDate).toBeNull();
     expect(handoff.planStatus).toBeNull();
     expect(handoff.yearsLeft).toBeNull();
+    expect(handoff.readiness).toEqual({ complete: 0, total: 3, planReady: false, emergencyReady: false, printedReady: false });
+  });
+
+  it("keeps readiness aggregate free of emergency content even when the source has sensitive-looking values", () => {
+    const handoff = buildHouseholdHandoff({
+      ...base,
+      notfallmappe: {
+        purpose: "Do not expose account details",
+        custodyNote: "Drawer 7",
+        contacts: [{ name: "Sensitive Name", phone: "+49 999", email: "sensitive@example.test" }],
+        documents: [{ location: "Private storage" }],
+        wishes: "Private family instruction",
+      },
+    });
+    expect(handoff.readiness).toEqual({ complete: 2, total: 3, planReady: true, emergencyReady: true, printedReady: false });
+    expect(JSON.stringify(handoff)).not.toMatch(/Sensitive|Drawer|Private|example|999/);
   });
 });
