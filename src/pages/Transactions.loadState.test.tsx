@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
+import { TRANSACTION_SAVED_VIEWS_KEY } from "./transactionsSavedViews";
 
 const dbMocks = vi.hoisted(() => ({
   deleteTransaction: vi.fn(),
@@ -37,6 +38,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   window.localStorage.removeItem(LOCALE_KEY);
+  window.localStorage.removeItem(TRANSACTION_SAVED_VIEWS_KEY);
 });
 
 describe("Transactions load and empty states", () => {
@@ -48,6 +50,7 @@ describe("Transactions load and empty states", () => {
     expect(await screen.findByText("Transaktionsjournal")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Schnellfilter" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Zeitraum" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Gespeicherte Ansichten" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Dieser Monat" })).toBeTruthy();
     expect(screen.getByText("Alle Transaktionen sind vollständig.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Wertpapiere" })).toBeTruthy();
@@ -120,6 +123,32 @@ describe("Transactions load and empty states", () => {
     expect(document.querySelector(".tx-item")?.textContent).toContain("Mua VWCE");
     expect(document.querySelector(".tx-item")?.textContent).not.toContain("Góp");
     expect(screen.getByRole("button", { name: "Đầu tư" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("saves, reapplies and removes a local Saved view without changing the ledger", async () => {
+    dbMocks.listTransactions.mockResolvedValue([
+      { id: "tx-buy", date: "2026-08-20", type: "buy_vwce", amount: 100, notes: "VWCE", createdAt: "2026-08-20T00:00:00Z", updatedAt: "2026-08-20T00:00:00Z", source: "manual" },
+    ]);
+    render(createElement(Transactions));
+
+    await screen.findByText("Nhật ký giao dịch");
+    fireEvent.click(screen.getByRole("button", { name: "Tháng này" }));
+    fireEvent.click(screen.getByRole("button", { name: "+ Lưu view" }));
+    fireEvent.change(screen.getByLabelText("Tên góc xem"), { target: { value: "Mua gần đây" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu góc xem hiện tại" }));
+
+    const saved = screen.getByRole("button", { name: "Mua gần đây" });
+    expect(saved.getAttribute("aria-pressed")).toBe("true");
+    expect(JSON.parse(window.localStorage.getItem(TRANSACTION_SAVED_VIEWS_KEY) ?? "[]")).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Toàn bộ" }));
+    expect(saved.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(saved);
+    expect(screen.getByRole("button", { name: "Tháng này" }).getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Xóa góc xem Mua gần đây" }));
+    expect(screen.queryByRole("button", { name: "Mua gần đây" })).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem(TRANSACTION_SAVED_VIEWS_KEY) ?? "[]")).toHaveLength(0);
   });
 
   it("bounds the Data quality inbox for a large ledger and reveals issues progressively", async () => {
