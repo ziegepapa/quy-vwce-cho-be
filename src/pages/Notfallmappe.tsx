@@ -84,8 +84,13 @@ export default function NotfallmappePage() {
           listTransactions(),
         ]);
         if (cancelled) return;
+        // Make the edit handlers ready in the same commit as the loaded UI.
+        // Waiting for the data→ref effect leaves a one-render window where the
+        // first user edit is ignored because dataRef is still null.
+        const nextData = nextSettings.notfallmappe ?? defaultNotfallmappe();
+        dataRef.current = nextData;
         setSettings(nextSettings);
-        setData(nextSettings.notfallmappe ?? defaultNotfallmappe());
+        setData(nextData);
         setGoals(nextGoals);
         setTxs(nextTransactions);
       } catch {
