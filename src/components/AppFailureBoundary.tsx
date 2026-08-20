@@ -1,5 +1,6 @@
 import { Component, Fragment, type ReactNode } from "react";
 import { useLocale } from "../lib/locale";
+import { recordLocalDiagnostic } from "./localDiagnostics";
 
 type Props = {
   children: ReactNode;
@@ -59,6 +60,10 @@ export default class AppFailureBoundary extends Component<Props, State> {
     window.addEventListener("unhandledrejection", this.handleUnhandledRejection);
   }
 
+  componentDidCatch() {
+    recordLocalDiagnostic({ category: "app-failure", code: "render-error" });
+  }
+
   componentWillUnmount() {
     window.removeEventListener("unhandledrejection", this.handleUnhandledRejection);
   }
@@ -66,6 +71,7 @@ export default class AppFailureBoundary extends Component<Props, State> {
   private handleUnhandledRejection = (event: PromiseRejectionEvent) => {
     if (isExpectedAbort(event.reason)) return;
     event.preventDefault();
+    recordLocalDiagnostic({ category: "app-failure", code: "unhandled-rejection" });
     this.setState({ failed: true });
   };
 

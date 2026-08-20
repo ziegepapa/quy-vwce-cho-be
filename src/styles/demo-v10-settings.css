@@ -81,6 +81,16 @@
 .set-wrap .advanced-group[open] > summary::after { transform: rotate(90deg); }
 .set-wrap .advanced-empty { margin: 0; padding: 14px; color: var(--demo-dim); font-size: 12px; line-height: 1.5; }
 .set-wrap .advanced-actions { padding: 0 2px 2px; }
+.set-wrap .local-diagnostics-list { display: grid; gap: 8px; margin: 0; padding: 10px 14px; list-style: none; }
+.set-wrap .local-diagnostics-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; min-width: 0; padding: 10px; border: 1px solid var(--demo-gb); border-radius: 10px; background: rgba(255,255,255,.025); }
+.set-wrap .local-diagnostics-list strong,
+.set-wrap .local-diagnostics-list span { min-width: 0; overflow-wrap: anywhere; }
+.set-wrap .local-diagnostics-list strong { color: var(--demo-text); font-size: 12px; }
+.set-wrap .local-diagnostics-list span,
+.set-wrap .local-diagnostics-list time { color: var(--demo-dim); font-size: 11px; line-height: 1.35; }
+.set-wrap .local-diagnostics-list time { grid-column: 2; grid-row: 1 / span 2; align-self: center; text-align: right; white-space: nowrap; }
+.set-wrap .advanced-actions > .stack { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 14px; }
+.set-wrap .advanced-actions > .stack button { min-height: 36px; }
 .set-wrap .advanced-delete { display: grid; gap: 8px; margin: 10px; padding: 12px; border: 1px solid color-mix(in srgb, var(--demo-re) 30%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--demo-re) 6%, transparent); }
 .set-wrap .advanced-delete p { margin: 0; color: var(--demo-sub); font-size: 11px; line-height: 1.45; }
 .set-wrap .advanced-delete input { min-height: 38px; padding: 7px 10px; color: var(--demo-text); font: inherit; background: rgba(255,255,255,.05); border: 1px solid var(--demo-gb); border-radius: 9px; }
@@ -111,4 +121,6 @@
   .set-wrap .advanced-group .asset-price-list { margin: 0 -14px -14px; }
   .set-wrap .advanced-group .asset-price-row { min-height: 76px; padding: 12px 14px; }
   .set-wrap .advanced-group .asset-price-value { flex-basis: 48%; }
+  .set-wrap .local-diagnostics-list li { grid-template-columns: minmax(0, 1fr); }
+  .set-wrap .local-diagnostics-list time { grid-column: 1; grid-row: auto; text-align: left; white-space: normal; }
 }

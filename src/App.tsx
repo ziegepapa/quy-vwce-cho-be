@@ -22,6 +22,7 @@ import BottomDock from "./components/BottomDock";
 import { IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import { conflictCtaLabel, hasLogoutBlockers, openSyncConflictSection, readSyncConflictFocusToken, reconcileVisibleLogoutBlockers, type LogoutBlockerCounts } from "./components/SyncConflictSection";
 import { buildSyncHealth } from "./components/syncHealth";
+import { recordLocalDiagnostic } from "./components/localDiagnostics";
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
 import Goals from "./pages/Goals";
@@ -273,6 +274,10 @@ export default function App() {
     conflicts: syncHealthBlockers.conflicts,
     recoveryPending: recoveryActive,
   }), [auth.user, auth.vaultReady, syncRunning, syncHealthBlockers, recoveryActive]);
+
+  useEffect(() => {
+    recordLocalDiagnostic({ category: "sync-health", code: syncHealth.state });
+  }, [syncHealth.state]);
 
   async function handleSyncHealthAction() {
     if (syncHealth.action === "recover") { setShowWizard(true); return; }

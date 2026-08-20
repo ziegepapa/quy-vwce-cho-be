@@ -25,6 +25,7 @@ import SyncConflictSection from "../components/SyncConflictSection";
 import { SyncHealthSummary } from "../components/SyncHealthSummary";
 import { syncHealthCopy, type SyncHealth } from "../components/syncHealth";
 import PlanRoadmapSection from "../components/PlanRoadmapSection";
+import LocalDiagnosticsPanel from "../components/LocalDiagnosticsPanel";
 import "../styles/settings-operation-errors.css";
 import "../styles/demo-v10-settings.css";
 
@@ -820,6 +821,8 @@ export default function SettingsPage({
             />
           ) : <p className="advanced-empty">{t("syncConflictsSignIn")}</p>}
         </details>
+
+        <LocalDiagnosticsPanel />
 
         <details className="advanced-group" open={openAdvancedGroup === "plan"}>
           <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("plan"); }}>{t("plan")}</summary>

@@ -63,7 +63,10 @@ export default defineConfig({
       // P5.0: dialog keyboard contract — the suite explicitly focuses the trigger
       // before click in jsdom, so it can assert Escape and focus restoration.
       "src/components/ModalAccessibilityManager.test.tsx",
-      // PR0.3: test tai/loi/loc cua Giao dich. Da doc tron Transactions.tsx
+      // P6.1: local-only diagnostics surface — verifies German/Vietnamese copy
+      // and that untrusted stored payload fields cannot be rendered.
+      "src/components/LocalDiagnosticsPanel.test.tsx",
+      // PR0.3: test ranh gioi loi toan app.Giao dich. Da doc tron Transactions.tsx
       // va Transactions.loadState.test.tsx tren main truoc khi bat.
       "src/pages/Transactions.loadState.test.tsx",
       // PR0.5 (lo lon 7 file): da doc TOAN VAN tren main 39b4ec66 truoc khi bat
