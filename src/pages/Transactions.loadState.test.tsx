@@ -60,6 +60,24 @@ describe("Transactions load and empty states", () => {
     expect(document.body.textContent).not.toContain("Tháng này");
   });
 
+  it("uses German validation, date and number presentation for a critical ledger action", async () => {
+    window.localStorage.setItem(LOCALE_KEY, "de");
+    const alertMock = vi.spyOn(window, "alert").mockImplementation(() => undefined);
+    dbMocks.listTransactions.mockResolvedValue([
+      { id: "tx-de", date: "2026-08-20", type: "cash_in", amount: 1234.5, notes: "Eigene Notiz", createdAt: "2026-08-20T00:00:00Z", updatedAt: "2026-08-20T00:00:00Z", source: "manual" },
+    ]);
+    render(createElement(MemoryRouter, null, createElement(LocaleProvider, null, createElement(Transactions))));
+
+    expect(await screen.findByText("20.08.2026")).toBeTruthy();
+    expect(screen.getByText(/1\.234,50/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "+ Hinzufügen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(alertMock).toHaveBeenCalledWith("Datum und Betrag sind erforderlich.");
+    expect(document.body.textContent).not.toContain("Ngày và số tiền bắt buộc");
+    alertMock.mockRestore();
+  });
+
   it("does not claim the ledger is empty while it is still loading", () => {
     dbMocks.listTransactions.mockReturnValue(new Promise(() => undefined));
     render(createElement(Transactions));
