@@ -80,6 +80,8 @@ Build tự tạo icon PNG 180/192/512, gồm icon maskable cho Android và Apple
 - **Nhập JSON**: xem trước số record → tự tải backup hiện tại → ghi đè trong transaction
 - **CSV giao dịch**: UTF-8 BOM và escaping chuẩn cho Excel
 
+Backup là file do owner chủ động lưu tại nơi mình kiểm soát; ứng dụng không upload, không kiểm tra vị trí lưu bên ngoài và không thể khẳng định file còn có thể khôi phục. Trước đổi thiết bị/chuyển người vận hành hoặc định kỳ hằng năm, hãy thực hiện recovery drill trên browser profile/vault thử nghiệm với fixture tổng hợp theo [`runbook`](./docs/OPERATIONS_RUNBOOK.md), không dùng file backup gia đình để thử lỗi.
+
 ## Quy ước dòng tiền
 
 | Loại | Cash | Vốn đóng |
@@ -92,13 +94,17 @@ Build tự tạo icon PNG 180/192/512, gồm icon maskable cho Android và Apple
 | safe_interest | + | không |
 | adjust | ±, bắt buộc ghi chú | không |
 
-Giá vốn bình quân chỉ để theo dõi nội bộ — thuế Đức có thể dùng FIFO và khác kết quả app.
+Giá vốn bình quân chỉ để theo dõi nội bộ — thuế Đức có thể dùng FIFO và khác kết quả app. Ứng dụng hiện **không** tính Vorabpauschale, không tạo tax lot/FIFO reconciliation và không tạo kết quả để khai thuế. Những hạng mục này được tách thành discovery P11, chỉ bắt đầu sau khi có nguồn dữ liệu, fiscal-year contract và chuyên gia thuế Đức kiểm tra.
 
 ## Trạng thái AI Trace legacy
 
-**Không có phần AI nào đang hiển thị trong giao diện production.** Repository còn giữ client module `src/lib/aiTraceExplanation.ts` và Edge Function `supabase/functions/explain-trace` từ một thử nghiệm Trace legacy, nhưng không có page/component runtime nào import chúng để tạo nút hoặc panel AI. Vì vậy owner sẽ không thấy phần AI trong app hiện tại.
+**Không có phần AI nào đang hiển thị trong giao diện production.** P9 AI được owner tạm hoãn. Repository hiện còn client module `src/lib/aiTraceExplanation.ts` và Edge Function `supabase/functions/explain-trace` từ một thử nghiệm Trace legacy, nhưng không có page/component runtime nào import chúng để tạo nút hoặc panel AI. Vì vậy owner sẽ không thấy phần AI trong app hiện tại.
 
-Trace deterministic là phần diễn giải cục bộ từ dữ liệu/công thức có sẵn, không gọi mạng và không phải AI. P8 không bật, không mở rộng và không gọi Edge Function/provider AI. Mọi thay đổi về việc giữ hoặc retire hạ tầng legacy này phải đi qua ADR/PR riêng theo [`docs/p8-baseline-and-ai-inventory.md`](./docs/p8-baseline-and-ai-inventory.md).
+Trace deterministic là phần diễn giải cục bộ từ dữ liệu/công thức có sẵn, không gọi mạng và không phải AI. P10.0 đề xuất retire toàn bộ hạ tầng Trace legacy trong P10.4, thay vì giữ provider/env surface dormant; việc retire vẫn cần ADR/PR riêng và regression đầy đủ theo [`P10 risk register`](./docs/p10-baseline-and-long-term-risk-register.md).
+
+## Cấu hình public và quyền riêng tư
+
+`VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY` là cấu hình public cần có trong static build để client kết nối Supabase; chúng không được dùng như server secret. Bất kỳ service-role key, provider key hoặc credential riêng nào đều bị cấm trong PWA, bundle, backup, diagnostics và repository. Source migration định nghĩa Row Level Security theo user, nhưng owner vẫn cần xác minh policy của **đúng production project** theo runbook; source không thay thế bằng chứng cấu hình production.
 
 ## Miễn trừ
 
