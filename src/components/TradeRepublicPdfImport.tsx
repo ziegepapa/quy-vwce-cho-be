@@ -17,8 +17,8 @@ import { normalizeIsin } from "../lib/instrument";
 import { parseTrDocumentPdf } from "../lib/tr/readPdf";
 import {
   reconcileDepotStatement,
-  reconciliationStatusLabel,
   type ParsedDepotStatement,
+  type ReconciliationStatus,
 } from "../lib/tr/depotStatement";
 import {
   draftToTransaction,
@@ -27,11 +27,30 @@ import {
   type TrImportDraft,
 } from "../lib/tr/toTransaction";
 import ActionMenu from "./ActionMenu";
+import { useLocale } from "../lib/locale";
+import { buildImportReviewWorkspace, type ImportDuplicateStatus } from "./importReviewWorkspace";
+import "../styles/import-review-workspace.css";
 
 type Props = {
   transactions: Transaction[];
   onTransactionImported: () => Promise<void>;
 };
+
+type ImportCopy = ReturnType<typeof importCopy>;
+
+function importCopy(locale: "vi" | "de") {
+  return locale === "de" ? {
+    section: "Trade Republic PDF-Import", pickFile: "Abrechnung oder Depotauszug importieren", reading: "PDF wird gelesen und klassifiziert…", readError: "Die PDF konnte nicht gelesen oder sicher geprüft werden.", importError: "Die Abrechnung konnte nicht gespeichert werden.", duplicate: "Diese Abrechnung wurde bereits importiert.", imported: "Trade-Republic-Abrechnung importiert.", saveStatementError: "Der Depotauszug konnte nicht gespeichert werden.", savedStatement: "Depot-Snapshot zur Abstimmung gespeichert; es wurden keine Transaktionen erstellt.", reviewInvoice: "Abrechnung prüfen", reviewDepot: "Depotauszug prüfen", stageRead: "Gelesen", stageReview: "Prüfen", stageConfirm: "Bestätigen", parsedFields: "Erkannte Daten", warnings: (count: number) => `${count} Hinweis${count === 1 ? "" : "e"} im Dokument`, documentReference: "Dokumentnummer", dedupe: "Duplikatprüfung", checking: "Wird geprüft…", duplicateFound: "Bereits importiert", clear: "Kein Duplikat gefunden", validation: "Validierung", ready: "Bereit zur Bestätigung", needsCorrection: "Eingaben prüfen", type: "Typ", buy: "Wertpapier kaufen", sell: "Wertpapier verkaufen", date: "Datum", isin: "ISIN", quantity: "Menge", unitPrice: "Preis je Einheit", total: "Gesamtbetrag", fee: "Gebühr", tax: "Steuer", notes: "Notiz", saveTransaction: "Transaktion speichern", saving: "Wird gespeichert…", cancel: "Abbrechen", outsideVwce: "Dies ist ein Wertpapier außerhalb von VWCE. ISIN und Mehrwertpapier-Typ bleiben erhalten.", depotReconciliation: "Depotabstimmung", completeMatch: "Vollständig abgeglichen", needsReview: "Prüfung erforderlich", deleteStatement: "Depotauszug löschen", deleteStatementConfirm: "Diesen Depotauszug aus der Abstimmung löschen?", viewResults: (count: number) => `${count} ISIN-Ergebnis${count === 1 ? "" : "se"} anzeigen`, app: "App", depot: "Depot", statementOnly: "Ein Depotauszug ist ausschließlich ein Abstimmungs-Snapshot und erzeugt keine Kauf- oder Verkaufstransaktion.", statementDate: "Auszugsdatum", statementId: "Auszugs-ID", positions: (count: number) => `Positionen (${count})`, reconciliationResult: "Abstimmungsergebnis", saveSnapshot: "Abstimmungs-Snapshot speichern", positionUnits: "Anteile", statusMatch: "Abgeglichen", statusDifference: "Abweichung", statusMissing: "Fehlt", documentWarning: "Im Dokument wurde ein Hinweis gefunden.",
+  } : {
+    section: "Nhập PDF Trade Republic", pickFile: "Nhập hóa đơn hoặc sao kê Depot", reading: "Đang đọc và phân loại PDF…", readError: "Không đọc hoặc kiểm tra an toàn được tệp PDF.", importError: "Không lưu được hóa đơn.", duplicate: "Hóa đơn này đã được nhập trước đó.", imported: "Đã nhập hóa đơn Trade Republic.", saveStatementError: "Không lưu được sao kê.", savedStatement: "Đã lưu sao kê để đối chiếu; không tạo giao dịch.", reviewInvoice: "Rà soát hóa đơn", reviewDepot: "Rà soát sao kê Depot", stageRead: "Đã đọc", stageReview: "Rà soát", stageConfirm: "Xác nhận", parsedFields: "Dữ liệu đã nhận diện", warnings: (count: number) => `${count} lưu ý trong tài liệu`, documentReference: "Số hóa đơn", dedupe: "Kiểm tra trùng", checking: "Đang kiểm tra…", duplicateFound: "Đã nhập trước đó", clear: "Không có bản trùng", validation: "Kiểm tra dữ liệu", ready: "Sẵn sàng xác nhận", needsCorrection: "Cần kiểm tra dữ liệu", type: "Loại", buy: "Mua chứng khoán", sell: "Bán chứng khoán", date: "Ngày", isin: "ISIN", quantity: "Số lượng", unitPrice: "Giá một đơn vị", total: "Tổng tiền", fee: "Phí", tax: "Thuế", notes: "Ghi chú", saveTransaction: "Lưu giao dịch", saving: "Đang lưu…", cancel: "Hủy", outsideVwce: "Đây là tài sản ngoài VWCE. Ứng dụng sẽ giữ nguyên ISIN và lưu dưới loại giao dịch đa tài sản.", depotReconciliation: "Đối chiếu Depot", completeMatch: "Khớp hoàn toàn", needsReview: "Cần kiểm tra", deleteStatement: "Xóa sao kê", deleteStatementConfirm: "Xóa sao kê này khỏi danh sách đối chiếu?", viewResults: (count: number) => `Xem ${count} kết quả theo ISIN`, app: "App", depot: "Depot", statementOnly: "Sao kê chỉ dùng làm snapshot đối chiếu. Thao tác này không tạo giao dịch mua hoặc bán.", statementDate: "Ngày sao kê", statementId: "Statement ID", positions: (count: number) => `Vị thế (${count})`, reconciliationResult: "Kết quả đối chiếu", saveSnapshot: "Lưu snapshot đối chiếu", positionUnits: "đơn vị", statusMatch: "Khớp", statusDifference: "Chênh lệch", statusMissing: "Thiếu", documentWarning: "Tài liệu có một lưu ý cần xem lại.",
+  };
+}
+
+function localizedReconciliationLabel(status: ReconciliationStatus, text: ImportCopy) {
+  if (status === "match") return text.statusMatch;
+  if (status === "difference") return text.statusDifference;
+  return text.statusMissing;
+}
 
 function fmtDec(value: number): string {
   if (!Number.isFinite(value)) return "";
@@ -58,6 +77,8 @@ function statusClass(status: string): "green" | "yellow" | "red" {
 }
 
 export default function TradeRepublicPdfImport({ transactions, onTransactionImported }: Props) {
+  const { locale } = useLocale();
+  const text = importCopy(locale);
   const inputRef = useRef<HTMLInputElement>(null);
   const [reading, setReading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -66,6 +87,7 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
   const [warnings, setWarnings] = useState<string[]>([]);
   const [invoiceDraft, setInvoiceDraft] = useState<TrImportDraft | null>(null);
   const [depotDraft, setDepotDraft] = useState<ParsedDepotStatement | null>(null);
+  const [duplicateStatus, setDuplicateStatus] = useState<ImportDuplicateStatus>("idle");
   const [depots, setDepots] = useState<DepotStatement[]>([]);
   const [invoiceForm, setInvoiceForm] = useState({
     date: "",
@@ -88,6 +110,7 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
   function resetDrafts() {
     setInvoiceDraft(null);
     setDepotDraft(null);
+    setDuplicateStatus("idle");
     setWarnings([]);
     setError("");
   }
@@ -104,7 +127,7 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
     try {
       const result = await parseTrDocumentPdf(file);
       if (!result.ok) {
-        setError(result.error);
+        setError(locale === "de" ? text.readError : result.error);
         return;
       }
       setWarnings(result.warnings);
@@ -120,11 +143,14 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
           tax: fmtDec(draft.tax),
           notes: draft.notes,
         });
+        setDuplicateStatus("checking");
+        const duplicate = draft.externalRef ? await findTransactionByExternalRef(draft.externalRef) : true;
+        setDuplicateStatus(duplicate ? "duplicate" : "clear");
       } else {
         setDepotDraft(result.value);
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không đọc được tệp PDF.");
+      setError(locale === "de" ? text.readError : reason instanceof Error ? reason.message : text.readError);
     } finally {
       setReading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -150,11 +176,12 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
     if (!draft) return;
     const validation = validateTrImportDraft(draft);
     if (!validation.ok) {
-      setError(validation.error);
+      setError(locale === "de" ? text.needsCorrection : validation.error);
       return;
     }
-    if (await findTransactionByExternalRef(draft.externalRef!)) {
-      setError("Hóa đơn này đã được nhập trước đó.");
+    if (duplicateStatus !== "clear" || await findTransactionByExternalRef(draft.externalRef!)) {
+      setDuplicateStatus("duplicate");
+      setError(text.duplicate);
       return;
     }
     setSaving(true);
@@ -172,16 +199,16 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
         });
       }
       if (await findTransactionByExternalRef(draft.externalRef!)) {
-        throw new Error("Hóa đơn này đã được nhập trước đó.");
+        throw new Error(text.duplicate);
       }
       await upsertTransaction(
         draftToTransaction(draft, { id: uid("tx"), createdAt: t, updatedAt: t }),
       );
       resetDrafts();
-      flash("Đã nhập hóa đơn Trade Republic.");
+      flash(text.imported);
       await onTransactionImported();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không lưu được hóa đơn.");
+      setError(locale === "de" ? text.importError : reason instanceof Error ? reason.message : text.importError);
     } finally {
       setSaving(false);
     }
@@ -190,7 +217,7 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
   async function confirmDepotImport() {
     if (!depotDraft) return;
     if (await findDepotStatementByStatementId(depotDraft.statementId)) {
-      setError("Sao kê này đã được nhập trước đó.");
+      setError(text.duplicate);
       return;
     }
     setSaving(true);
@@ -207,10 +234,10 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
         updatedAt: t,
       });
       resetDrafts();
-      flash("Đã lưu sao kê để đối chiếu; không tạo giao dịch.");
+      flash(text.savedStatement);
       await reloadDepots();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không lưu được sao kê.");
+      setError(locale === "de" ? text.saveStatementError : reason instanceof Error ? reason.message : text.saveStatementError);
     } finally {
       setSaving(false);
     }
@@ -220,9 +247,17 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
     () => (depotDraft ? reconcileDepotStatement(depotDraft, transactions) : []),
     [depotDraft, transactions],
   );
+  const reviewedInvoiceDraft = currentInvoiceDraft();
+  const invoiceValidation = reviewedInvoiceDraft ? validateTrImportDraft(reviewedInvoiceDraft) : null;
+  const invoiceReview = buildImportReviewWorkspace({
+    draft: reviewedInvoiceDraft,
+    validation: invoiceValidation,
+    duplicateStatus,
+    warningCount: warnings.length,
+  });
 
   return (
-    <section style={{ marginBottom: 12 }} aria-label="Nhập PDF Trade Republic">
+    <section className="import-review" style={{ marginBottom: 12 }} aria-label={text.section}>
       <button
         type="button"
         className="secondary"
@@ -230,7 +265,7 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
         disabled={reading}
         onClick={() => inputRef.current?.click()}
       >
-        {reading ? "Đang đọc và phân loại PDF…" : "Nhập hóa đơn hoặc sao kê Depot"}
+        {reading ? text.reading : text.pickFile}
       </button>
       <input
         ref={inputRef}
@@ -253,7 +288,7 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
 
       {depots.length > 0 && (
         <div style={{ marginTop: 16 }}>
-          <h2 className="section-title">Đối chiếu Depot</h2>
+          <h2 className="section-title">{text.depotReconciliation}</h2>
           {depots.map((statement) => {
             const rows = reconcileDepotStatement(statement, transactions);
             const allMatch = rows.length > 0 && rows.every((row) => row.status === "match");
@@ -266,15 +301,15 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
                   </div>
                   <div className="row-between">
                     <span className={`pill ${allMatch ? "green" : "yellow"}`}>
-                      {allMatch ? "Khớp hoàn toàn" : "Cần kiểm tra"}
+                      {allMatch ? text.completeMatch : text.needsReview}
                     </span>
                     <ActionMenu
                       actions={[
                         {
-                          label: "Xóa sao kê",
+                          label: text.deleteStatement,
                           danger: true,
                           onClick: async () => {
-                            if (!confirm("Xóa sao kê này khỏi danh sách đối chiếu?")) return;
+                            if (!confirm(text.deleteStatementConfirm)) return;
                             await deleteDepotStatement(statement.id);
                             await reloadDepots();
                           },
@@ -284,18 +319,18 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
                   </div>
                 </div>
                 <details style={{ marginTop: 10 }}>
-                  <summary>Xem {rows.length} kết quả theo ISIN</summary>
+                  <summary>{text.viewResults(rows.length)}</summary>
                   <div className="stack" style={{ marginTop: 10 }}>
                     {rows.map((row) => (
                       <div key={row.instrumentIsin} className="row-between">
                         <div>
                           <code>{row.instrumentIsin}</code>
                           <div className="muted">
-                            App {fmtQuantity(row.bookQuantity)} · Depot {fmtQuantity(row.statementQuantity)}
+                            {text.app} {fmtQuantity(row.bookQuantity)} · {text.depot} {fmtQuantity(row.statementQuantity)}
                           </div>
                         </div>
                         <span className={`pill ${statusClass(row.status)}`}>
-                          {reconciliationStatusLabel(row.status)}
+                          {localizedReconciliationLabel(row.status, text)}
                         </span>
                       </div>
                     ))}
@@ -308,132 +343,51 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
       )}
 
       {invoiceDraft && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Xem trước hóa đơn Trade Republic">
-          <div className="modal">
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={text.reviewInvoice}>
+          <div className="modal import-review-modal">
             <div className="sheet-handle" aria-hidden />
-            <h2>Nhập hóa đơn giao dịch</h2>
-            {warnings.map((warning) => (
-              <div className="banner info" key={warning}>{warning}</div>
-            ))}
+            <header className="import-review-head"><div><p>{text.parsedFields}</p><h2>{text.reviewInvoice}</h2></div><span>{invoiceReview.documentRef ?? "—"}</span></header>
+            <ol className="import-review-steps" aria-label={text.reviewInvoice}>
+              <li className="done">{text.stageRead}</li><li className="current">{text.stageReview}</li><li className={invoiceReview.canConfirm ? "done" : ""}>{text.stageConfirm}</li>
+            </ol>
+            {invoiceReview.warningCount > 0 ? <div className="banner info">{text.warnings(invoiceReview.warningCount)}</div> : null}
+            {warnings.map((warning, index) => <div className="banner info" key={`${warning}-${index}`}>{locale === "de" ? text.documentWarning : warning}</div>)}
             {error && <div className="banner error" role="alert">{error}</div>}
-            {invoiceDraft.isin !== VWCE_ISIN && (
-              <div className="banner info">
-                Đây là tài sản ngoài VWCE. Ứng dụng sẽ giữ nguyên ISIN và lưu dưới loại giao dịch đa tài sản.
-              </div>
-            )}
-            <div className="field">
-              <label>Loại</label>
-              <input
-                readOnly
-                value={invoiceDraft.type.startsWith("sell") ? "Bán chứng khoán" : "Mua chứng khoán"}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="pdf-date">Ngày</label>
-              <input id="pdf-date" type="date" value={invoiceForm.date} onChange={(e) => setInvoiceForm({ ...invoiceForm, date: e.target.value })} />
-            </div>
-            <div className="field">
-              <label>ISIN</label>
-              <input readOnly value={invoiceDraft.isin} />
-            </div>
-            <div className="grid2">
-              <div className="field">
-                <label htmlFor="pdf-qty">Số lượng</label>
-                <input id="pdf-qty" inputMode="decimal" value={invoiceForm.quantity} onChange={(e) => setInvoiceForm({ ...invoiceForm, quantity: e.target.value })} />
-              </div>
-              <div className="field">
-                <label htmlFor="pdf-price">Giá một đơn vị</label>
-                <input id="pdf-price" inputMode="decimal" value={invoiceForm.unitPrice} onChange={(e) => setInvoiceForm({ ...invoiceForm, unitPrice: e.target.value })} />
-              </div>
-            </div>
-            <div className="field">
-              <label htmlFor="pdf-amount">Tổng tiền</label>
-              <input id="pdf-amount" inputMode="decimal" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} />
-            </div>
-            <div className="grid2">
-              <div className="field">
-                <label htmlFor="pdf-fee">Phí</label>
-                <input id="pdf-fee" inputMode="decimal" value={invoiceForm.fee} onChange={(e) => setInvoiceForm({ ...invoiceForm, fee: e.target.value })} />
-              </div>
-              <div className="field">
-                <label htmlFor="pdf-tax">Thuế</label>
-                <input id="pdf-tax" inputMode="decimal" value={invoiceForm.tax} onChange={(e) => setInvoiceForm({ ...invoiceForm, tax: e.target.value })} />
-              </div>
-            </div>
-            <div className="field">
-              <label>Số hóa đơn</label>
-              <input readOnly value={invoiceDraft.docNumber || "—"} />
-            </div>
-            <div className="field">
-              <label htmlFor="pdf-notes">Ghi chú</label>
-              <textarea id="pdf-notes" rows={2} value={invoiceForm.notes} onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })} />
-            </div>
-            <div className="stack">
-              <button type="button" disabled={saving || !invoiceDraft.docNumber.trim()} onClick={() => void confirmInvoiceImport()}>
-                {saving ? "Đang lưu…" : "Xác nhận lưu giao dịch"}
-              </button>
-              <button type="button" className="secondary" disabled={saving} onClick={resetDrafts}>Hủy</button>
-            </div>
+            {invoiceDraft.isin !== VWCE_ISIN && <div className="banner info">{text.outsideVwce}</div>}
+            <section className="import-review-signals" aria-label={text.stageReview}>
+              <div data-state={invoiceReview.duplicateStatus}><span>{text.dedupe}</span><strong>{invoiceReview.duplicateStatus === "checking" ? text.checking : invoiceReview.duplicateStatus === "duplicate" ? text.duplicateFound : invoiceReview.duplicateStatus === "clear" ? text.clear : "—"}</strong></div>
+              <div data-state={invoiceReview.isValidationReady ? "ready" : "invalid"}><span>{text.validation}</span><strong>{invoiceReview.isValidationReady ? text.ready : text.needsCorrection}</strong></div>
+            </section>
+            <section className="import-review-fields" aria-label={text.parsedFields}>
+              <div className="field"><label>{text.type}</label><input readOnly value={invoiceDraft.type.startsWith("sell") ? text.sell : text.buy} /></div>
+              <div className="field"><label htmlFor="pdf-date">{text.date}</label><input id="pdf-date" type="date" value={invoiceForm.date} onChange={(e) => setInvoiceForm({ ...invoiceForm, date: e.target.value })} /></div>
+              <div className="field"><label>{text.isin}</label><input readOnly value={invoiceDraft.isin} /></div>
+              <div className="grid2"><div className="field"><label htmlFor="pdf-qty">{text.quantity}</label><input id="pdf-qty" inputMode="decimal" value={invoiceForm.quantity} onChange={(e) => setInvoiceForm({ ...invoiceForm, quantity: e.target.value })} /></div><div className="field"><label htmlFor="pdf-price">{text.unitPrice}</label><input id="pdf-price" inputMode="decimal" value={invoiceForm.unitPrice} onChange={(e) => setInvoiceForm({ ...invoiceForm, unitPrice: e.target.value })} /></div></div>
+              <div className="field"><label htmlFor="pdf-amount">{text.total}</label><input id="pdf-amount" inputMode="decimal" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} /></div>
+              <div className="grid2"><div className="field"><label htmlFor="pdf-fee">{text.fee}</label><input id="pdf-fee" inputMode="decimal" value={invoiceForm.fee} onChange={(e) => setInvoiceForm({ ...invoiceForm, fee: e.target.value })} /></div><div className="field"><label htmlFor="pdf-tax">{text.tax}</label><input id="pdf-tax" inputMode="decimal" value={invoiceForm.tax} onChange={(e) => setInvoiceForm({ ...invoiceForm, tax: e.target.value })} /></div></div>
+              <div className="field"><label>{text.documentReference}</label><input readOnly value={invoiceReview.documentRef ?? "—"} /></div>
+              <div className="field"><label htmlFor="pdf-notes">{text.notes}</label><textarea id="pdf-notes" rows={2} value={invoiceForm.notes} onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })} /></div>
+            </section>
+            <div className="stack import-review-actions"><button type="button" disabled={saving || !invoiceReview.canConfirm} onClick={() => void confirmInvoiceImport()}>{saving ? text.saving : text.saveTransaction}</button><button type="button" className="secondary" disabled={saving} onClick={resetDrafts}>{text.cancel}</button></div>
           </div>
         </div>
       )}
 
       {depotDraft && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Xem trước sao kê Depot">
-          <div className="modal">
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={text.reviewDepot}>
+          <div className="modal import-review-modal">
             <div className="sheet-handle" aria-hidden />
-            <h2>Đối chiếu sao kê Depot</h2>
-            <div className="banner info">
-              Sao kê chỉ dùng làm snapshot đối chiếu. Thao tác này không tạo giao dịch mua hoặc bán.
-            </div>
-            {warnings.map((warning) => (
-              <div className="banner info" key={warning}>{warning}</div>
-            ))}
+            <header className="import-review-head"><div><p>{text.parsedFields}</p><h2>{text.reviewDepot}</h2></div><span>{depotDraft.statementId}</span></header>
+            <ol className="import-review-steps" aria-label={text.reviewDepot}><li className="done">{text.stageRead}</li><li className="current">{text.stageReview}</li><li>{text.stageConfirm}</li></ol>
+            <div className="banner info">{text.statementOnly}</div>
+            {warnings.map((warning, index) => <div className="banner info" key={`${warning}-${index}`}>{locale === "de" ? text.documentWarning : warning}</div>)}
             {error && <div className="banner error" role="alert">{error}</div>}
-            <div className="grid2">
-              <div className="field">
-                <label>Ngày sao kê</label>
-                <input readOnly value={depotDraft.date} />
-              </div>
-              <div className="field">
-                <label>Statement ID</label>
-                <input readOnly value={depotDraft.statementId} />
-              </div>
-            </div>
-            <h3>Positions ({depotDraft.positions.length})</h3>
-            <div className="stack">
-              {depotDraft.positions.map((position) => (
-                <div className="card" key={`${position.instrumentIsin}-${position.currency}`}>
-                  <strong>{position.name || position.instrumentIsin}</strong>
-                  <div><code>{position.instrumentIsin}</code></div>
-                  <div className="muted">
-                    {fmtQuantity(position.quantity)} đơn vị · {fmtMoney(position.marketValue, position.currency)}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <h3>Kết quả đối chiếu</h3>
-            <div className="stack">
-              {previewRows.map((row) => (
-                <div className="row-between" key={row.instrumentIsin}>
-                  <div>
-                    <code>{row.instrumentIsin}</code>
-                    <div className="muted">
-                      App {fmtQuantity(row.bookQuantity)} · Depot {fmtQuantity(row.statementQuantity)} · Δ {fmtQuantity(row.difference)}
-                    </div>
-                  </div>
-                  <span className={`pill ${statusClass(row.status)}`}>
-                    {reconciliationStatusLabel(row.status)}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="stack" style={{ marginTop: 18 }}>
-              <button type="button" disabled={saving} onClick={() => void confirmDepotImport()}>
-                {saving ? "Đang lưu…" : "Lưu snapshot đối chiếu"}
-              </button>
-              <button type="button" className="secondary" disabled={saving} onClick={resetDrafts}>Hủy</button>
-            </div>
+            <div className="grid2"><div className="field"><label>{text.statementDate}</label><input readOnly value={depotDraft.date} /></div><div className="field"><label>{text.statementId}</label><input readOnly value={depotDraft.statementId} /></div></div>
+            <h3>{text.positions(depotDraft.positions.length)}</h3>
+            <div className="stack">{depotDraft.positions.map((position) => <div className="card" key={`${position.instrumentIsin}-${position.currency}`}><strong>{position.name || position.instrumentIsin}</strong><div><code>{position.instrumentIsin}</code></div><div className="muted">{fmtQuantity(position.quantity)} {text.positionUnits} · {fmtMoney(position.marketValue, position.currency)}</div></div>)}</div>
+            <h3>{text.reconciliationResult}</h3>
+            <div className="stack">{previewRows.map((row) => <div className="row-between" key={row.instrumentIsin}><div><code>{row.instrumentIsin}</code><div className="muted">{text.app} {fmtQuantity(row.bookQuantity)} · {text.depot} {fmtQuantity(row.statementQuantity)} · Δ {fmtQuantity(row.difference)}</div></div><span className={`pill ${statusClass(row.status)}`}>{localizedReconciliationLabel(row.status, text)}</span></div>)}</div>
+            <div className="stack import-review-actions" style={{ marginTop: 18 }}><button type="button" disabled={saving} onClick={() => void confirmDepotImport()}>{saving ? text.saving : text.saveSnapshot}</button><button type="button" className="secondary" disabled={saving} onClick={resetDrafts}>{text.cancel}</button></div>
           </div>
         </div>
       )}
