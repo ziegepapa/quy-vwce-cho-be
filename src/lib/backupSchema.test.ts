@@ -90,6 +90,40 @@ describe("validateBackupPayload", () => {
     });
   });
 
+  it("rejects non-finite and negative transaction numbers before import", () => {
+    const nonFinite = validateBackupPayload({
+      ...VALID,
+      transactions: [{ id: "tx-non-finite", amount: Number.NaN }],
+    });
+    expect(nonFinite.ok).toBe(false);
+    if (!nonFinite.ok) expect(nonFinite.error).toMatch(/transactions\[0\].*amount/);
+
+    const negativeQuantity = validateBackupPayload({
+      ...VALID,
+      transactions: [{ id: "tx-negative-quantity", amount: 10, quantity: -1 }],
+    });
+    expect(negativeQuantity.ok).toBe(false);
+    if (!negativeQuantity.ok) expect(negativeQuantity.error).toMatch(/transactions\[0\].*quantity/);
+  });
+
+  it("rejects duplicate live/deleted IDs before any import can begin", () => {
+    const duplicateGoal = validateBackupPayload({
+      ...VALID,
+      goals: [{ id: "goal-duplicate" } as unknown as import("./types").Goal],
+      deletedGoals: [{ id: "goal-duplicate", deletedAt: "2026-08-13T12:00:00.000Z" } as unknown as import("./types").Goal],
+    });
+    expect(duplicateGoal.ok).toBe(false);
+    if (!duplicateGoal.ok) expect(duplicateGoal.error).toMatch(/goals: id trùng/);
+
+    const duplicateTransaction = validateBackupPayload({
+      ...VALID,
+      transactions: [{ id: "tx-duplicate", amount: 10 } as unknown as import("./types").Transaction],
+      deletedTransactions: [{ id: "tx-duplicate", deletedAt: "2026-08-13T12:00:00.000Z" } as unknown as import("./types").Transaction],
+    });
+    expect(duplicateTransaction.ok).toBe(false);
+    if (!duplicateTransaction.ok) expect(duplicateTransaction.error).toMatch(/transactions: id trùng/);
+  });
+
   it("rejects deletedGoals entry missing deletedAt", () => {
     const result = validateBackupPayload({
       ...VALID,

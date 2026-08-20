@@ -140,6 +140,47 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(document.body.textContent).not.toMatch(/Không|Dữ liệu|Cài đặt|Đồng bộ|Giá/);
   });
 
+  it("keeps malformed and unsupported German backup imports fail-closed", async () => {
+    const { container } = renderGermanSettings("/settings?tab=data");
+    await screen.findByText("Sicherung importieren");
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+    const malformed = new File(["not-json"], "kaputt.json", { type: "application/json" });
+    Object.defineProperty(malformed, "text", { value: () => Promise.resolve("not-json") });
+    fireEvent.change(input, { target: { files: [malformed] } });
+    fireEvent.click(await screen.findByRole("button", { name: "Import bestätigen" }));
+    await waitFor(() => expect(window.alert).toHaveBeenCalledWith("Ungültige JSON-Datei."));
+    expect(dbMocks.importBackup).not.toHaveBeenCalled();
+
+    const unsupportedJson = JSON.stringify({ schemaVersion: 999, exportedAt: "2026-08-14T06:00:00Z" });
+    const unsupported = new File([unsupportedJson], "alt.json", { type: "application/json" });
+    Object.defineProperty(unsupported, "text", { value: () => Promise.resolve(unsupportedJson) });
+    fireEvent.change(input, { target: { files: [unsupported] } });
+    fireEvent.click(await screen.findByRole("button", { name: "Import bestätigen" }));
+    await waitFor(() => expect(window.alert).toHaveBeenCalledWith("Diese Sicherungsversion wird nicht unterstützt."));
+    expect(dbMocks.exportBackup).not.toHaveBeenCalled();
+    expect(dbMocks.importBackup).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toMatch(/Không|Dữ liệu|Cài đặt|Đồng bộ|Giá/);
+  });
+
+  it("aborts German import when the mandatory pre-import backup cannot be created", async () => {
+    dbMocks.exportBackup.mockRejectedValueOnce(new Error("PREBACKUP_SECRET_CANARY"));
+    const { container } = renderGermanSettings("/settings?tab=data");
+    await screen.findByText("Sicherung importieren");
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const validJson = JSON.stringify({ schemaVersion: 3, exportedAt: "2026-08-14T06:00:00Z" });
+    const backup = new File([validJson], "backup.json", { type: "application/json" });
+    Object.defineProperty(backup, "text", { value: () => Promise.resolve(validJson) });
+    fireEvent.change(input, { target: { files: [backup] } });
+    fireEvent.click(await screen.findByRole("button", { name: "Import bestätigen" }));
+
+    await waitFor(() => expect(window.alert).toHaveBeenCalledWith(
+      "Sicherung vor dem Import konnte nicht erstellt werden. Ihre Daten wurden nicht verändert.",
+    ));
+    expect(dbMocks.importBackup).not.toHaveBeenCalled();
+    expect(document.body.innerHTML).not.toContain("PREBACKUP_SECRET_CANARY");
+  });
+
   it("opens Advanced for the legacy tab=data deep link used by Sync conflict navigation", async () => {
     const { container } = renderGermanSettings("/settings?tab=data");
     await screen.findByText("Erweitert");
