@@ -24,6 +24,7 @@ import { useLocale } from "../lib/locale";
 import { analyzeTransactions } from "../lib/transactionAnalytics";
 import TradeRepublicPdfImport from "../components/TradeRepublicPdfImport";
 import ActionMenu from "../components/ActionMenu";
+import { findTransactionQualityIssues, type TransactionQualityCode, type TransactionQualitySeverity } from "./transactionQualityInbox";
 import {
   buildTransactionListWindow,
   TRANSACTION_WINDOW_SIZE,
@@ -81,9 +82,9 @@ export default function Transactions() {
   const { locale } = useLocale();
   const types = useMemo(() => transactionTypes(locale), [locale]);
   const text = locale === "de" ? {
-    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Werkzeuge ausblenden", tools: "Filter / PDF", search: "Suchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", journal: "Transaktionsjournal", quickFilter: "Schnellfilter", buysQuick: "VWCE-Käufe", contributionsQuick: "Einzahlungen", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen", deleteConfirm: "Diese Transaktion löschen?", activity: "Aktivität", tradeActivity: "Wertpapiere", fundingActivity: "Einzahlungen", outflowActivity: "Ausgaben", newest: "Neueste zuerst", oldest: "Älteste zuerst", amountDesc: "Höchster Betrag", sort: "Sortierung", activeFilters: "{count} aktiv", clearFilters: "Zurücksetzen", quickBuy: "VWCE kaufen", quickFunding: "Geld einzahlen", rowMenu: "Aktionen für Transaktion", timeLens: "Zeitraum", timeAll: "Gesamt", thisMonth: "Dieser Monat", last90Days: "90 Tage", thisYear: "Dieses Jahr", lastYear: "Letztes Jahr",
+    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Werkzeuge ausblenden", tools: "Filter / PDF", search: "Suchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", journal: "Transaktionsjournal", quickFilter: "Schnellfilter", buysQuick: "VWCE-Käufe", contributionsQuick: "Einzahlungen", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", editTransaction: "Transaktion bearbeiten", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen", deleteConfirm: "Diese Transaktion löschen?", activity: "Aktivität", tradeActivity: "Wertpapiere", fundingActivity: "Einzahlungen", outflowActivity: "Ausgaben", newest: "Neueste zuerst", oldest: "Älteste zuerst", amountDesc: "Höchster Betrag", sort: "Sortierung", activeFilters: "{count} aktiv", clearFilters: "Zurücksetzen", quickBuy: "VWCE kaufen", quickFunding: "Geld einzahlen", rowMenu: "Aktionen für Transaktion", timeLens: "Zeitraum", timeAll: "Gesamt", thisMonth: "Dieser Monat", last90Days: "90 Tage", thisYear: "Dieses Jahr", lastYear: "Letztes Jahr", qualityInbox: "Datenqualität", qualityClean: "Alle Transaktionen sind vollständig.", qualityCount: "{count} prüfen", qualityMore: "{count} weitere zeigen", qualityOpen: "Öffnen und prüfen", qualityAction: "Aktion erforderlich", qualityReview: "Prüfen", qualityTip: "Hinweis", qualityMissingIsin: "ISIN fehlt", qualityInvalidIsin: "ISIN ist ungültig", qualityInvalidAmount: "Betrag fehlt oder ist ungültig", qualityMissingQuantity: "Menge oder Stückpreis fehlt", qualityMissingUnitPrice: "Stückpreis fehlt", qualityMissingNote: "Notiz fehlt",
   } : {
-    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Ẩn công cụ", tools: "Lọc / PDF", search: "Tìm", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước",
+    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Ẩn công cụ", tools: "Lọc / PDF", search: "Tìm", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", editTransaction: "Sửa giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước", qualityInbox: "Dữ liệu cần rà soát", qualityClean: "Tất cả giao dịch đang có đủ thông tin.", qualityCount: "{count} cần rà soát", qualityMore: "Xem thêm {count}", qualityOpen: "Mở để rà soát", qualityAction: "Cần xử lý", qualityReview: "Cần kiểm tra", qualityTip: "Gợi ý", qualityMissingIsin: "Thiếu ISIN", qualityInvalidIsin: "ISIN không hợp lệ", qualityInvalidAmount: "Số tiền thiếu hoặc không hợp lệ", qualityMissingQuantity: "Thiếu số lượng hoặc giá đơn vị", qualityMissingUnitPrice: "Thiếu giá đơn vị", qualityMissingNote: "Thiếu ghi chú",
   };
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -101,6 +102,7 @@ export default function Transactions() {
   const [activityFilter, setActivityFilter] = useState<TransactionActivity>("all");
   const [timeLens, setTimeLens] = useState<TransactionTimeLens>("all");
   const [sort, setSort] = useState<TransactionSort>("newest");
+  const [qualityVisibleLimit, setQualityVisibleLimit] = useState(3);
   const [visibleLimit, setVisibleLimit] = useState(TRANSACTION_WINDOW_SIZE);
   const deferredQuery = useDeferredValue(q);
   const [qtyError, setQtyError] = useState("");
@@ -117,8 +119,9 @@ export default function Transactions() {
       setTxs(nextTransactions);
       setVisibleLimit(TRANSACTION_WINDOW_SIZE);
       setQuotes(nextQuotes);
-      setTrackInAppCash(settings?.trackInAppCash);
-      setLoadError(false);
+    setTrackInAppCash(settings?.trackInAppCash);
+    setQualityVisibleLimit(3);
+    setLoadError(false);
     } catch {
       setLoadError(true);
     } finally {
@@ -162,6 +165,10 @@ export default function Transactions() {
   );
 
   const activeFilterCount = Number(Boolean(q.trim())) + Number(yearFilter !== "all") + Number(typeFilter !== "all") + Number(activityFilter !== "all") + Number(timeLens !== "all") + Number(sort !== "newest");
+
+  const qualityIssues = useMemo(() => findTransactionQualityIssues(txs), [txs]);
+  const transactionsById = useMemo(() => new Map(txs.map((tx) => [tx.id, tx])), [txs]);
+  const visibleQualityIssues = qualityIssues.slice(0, qualityVisibleLimit);
 
   const analysis = useMemo(
     () => analyzeTransactions(txs, quotes, trackInAppCash),
@@ -273,7 +280,7 @@ export default function Transactions() {
     setForm({
       date: tx.date,
       type: tx.type,
-      instrumentIsin: resolveInstrumentIsin(tx) || VWCE_ISIN,
+      instrumentIsin: resolveInstrumentIsin(tx) || (tx.type === "buy_vwce" || tx.type === "sell_vwce" ? VWCE_ISIN : ""),
       amount: String(tx.amount),
       unitPrice: String(tx.unitPrice ?? ""),
       quantity: String(tx.quantity ?? ""),
@@ -310,6 +317,23 @@ export default function Transactions() {
   function selectTimeLens(lens: TransactionTimeLens) {
     setTimeLens(lens);
     if (lens !== "all") setYearFilter("all");
+  }
+
+  function qualityIssueLabel(code: TransactionQualityCode) {
+    switch (code) {
+      case "missing_isin": return text.qualityMissingIsin;
+      case "invalid_isin": return text.qualityInvalidIsin;
+      case "invalid_amount": return text.qualityInvalidAmount;
+      case "missing_quantity": return text.qualityMissingQuantity;
+      case "missing_unit_price": return text.qualityMissingUnitPrice;
+      case "missing_note": return text.qualityMissingNote;
+    }
+  }
+
+  function qualitySeverityLabel(severity: TransactionQualitySeverity) {
+    if (severity === "action") return text.qualityAction;
+    if (severity === "review") return text.qualityReview;
+    return text.qualityTip;
   }
 
   async function removeTransaction(id: string) {
@@ -384,6 +408,49 @@ export default function Transactions() {
         {analysis.missingQuotes.length || analysis.incompleteLots.length ? (
           <p className="tx-analysis-note">{text.analysisNote.replace("{reason}", analysis.missingQuotes.length ? text.missingQuote.replace("{isins}", analysis.missingQuotes.join(", ")) : text.missingLots)}</p>
         ) : null}
+      </section>
+
+      <section className="demo-v10-gl tx-quality-inbox" aria-label={text.qualityInbox}>
+        <div className="tx-quality-head">
+          <div>
+            <div className="sum-lbl">{text.qualityInbox}</div>
+            <strong>{qualityIssues.length ? text.qualityCount.replace("{count}", String(qualityIssues.length)) : text.qualityClean}</strong>
+          </div>
+          <span className={qualityIssues.length ? "tx-quality-state needs-review" : "tx-quality-state clean"}>
+            {qualityIssues.length ? qualityIssues.length : "✓"}
+          </span>
+        </div>
+        {qualityIssues.length === 0 ? null : (
+          <div className="tx-quality-list">
+            {visibleQualityIssues.map((issue) => {
+              const tx = transactionsById.get(issue.transactionId);
+              if (!tx) return null;
+              const meta = types.find((type) => type.value === tx.type);
+              const isin = resolveInstrumentIsin(tx);
+              return (
+                <button
+                  type="button"
+                  key={`${issue.transactionId}-${issue.code}`}
+                  className="tx-quality-item"
+                  onClick={() => openEdit(tx)}
+                  aria-label={`${qualityIssueLabel(issue.code)} · ${formatDateVN(tx.date)} · ${text.qualityOpen}`}
+                >
+                  <span className={`tx-quality-dot ${issue.severity}`} aria-hidden />
+                  <span className="tx-quality-copy">
+                    <strong>{qualityIssueLabel(issue.code)}</strong>
+                    <span>{meta?.label ?? tx.type} · {formatDateVN(tx.date)}{isin ? ` · ${isin}` : ""}</span>
+                  </span>
+                  <span className={`tx-quality-severity ${issue.severity}`}>{qualitySeverityLabel(issue.severity)}</span>
+                </button>
+              );
+            })}
+            {qualityIssues.length > visibleQualityIssues.length ? (
+              <button type="button" className="tx-quality-more" onClick={() => setQualityVisibleLimit((limit) => limit + 3)}>
+                {text.qualityMore.replace("{count}", String(qualityIssues.length - visibleQualityIssues.length))}
+              </button>
+            ) : null}
+          </div>
+        )}
       </section>
 
       <section className="tx-journal" aria-label={text.journal}>
@@ -551,7 +618,7 @@ export default function Transactions() {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="sheet-handle" aria-hidden />
-            <h2>{editId ? text.edit : text.addTransaction}</h2>
+            <h2>{editId ? text.editTransaction : text.addTransaction}</h2>
             <div className="field">
               <label htmlFor="f-date">{text.date}</label>
               <input id="f-date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />

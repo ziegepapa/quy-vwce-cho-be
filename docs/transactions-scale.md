@@ -14,6 +14,7 @@ The application must remain usable with **100–1,000+ active transactions** on 
 | Rendering | The initial screen renders at most 60 transaction rows; **Show more** adds another 60. |
 | Grouping | Month headers render only when that month contains at least one visible transaction. |
 | Summaries | Portfolio analysis continues to use the full filtered-independent ledger, so list paging cannot change balances or P&L. |
+| Data quality inbox | The audit is display-only and begins with at most three actionable issue rows; **Show more** adds three. It opens the existing edit sheet and never fills or changes a transaction automatically. |
 | Mutations | Create, edit and delete reload the source ledger, reset the visible limit and preserve existing recovery/read-only gates. |
 | Accessibility | The visible/total result count is announced politely; the expansion control states how many rows are added. |
 
@@ -23,7 +24,7 @@ For a vertically grouped, variable-height, editable mobile ledger, a fixed-heigh
 
 ## Regression requirements
 
-The pure list view model must be tested with a ledger of at least 1,000 entries. Tests must prove that activity/type/year/text filtering is deterministic, localized labels can be searched, sort modes preserve a stable tie-break, no more than the requested row limit is rendered, groups are not empty, and expanding the default chronological window reveals the next rows without duplicating or losing a transaction.
+The pure list view model must be tested with a ledger of at least 1,000 entries. Tests must prove that activity/type/year/text filtering is deterministic, localized labels can be searched, sort modes preserve a stable tie-break, no more than the requested row limit is rendered, groups are not empty, and expanding the default chronological window reveals the next rows without duplicating or losing a transaction. The Data quality inbox must independently test its field-completeness rules, exclude tombstones, and remain display-only.
 
 ## Data integrity boundary
 

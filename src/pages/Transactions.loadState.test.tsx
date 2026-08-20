@@ -49,6 +49,7 @@ describe("Transactions load and empty states", () => {
     expect(screen.getByRole("group", { name: "Schnellfilter" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Zeitraum" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Dieser Monat" })).toBeTruthy();
+    expect(screen.getByText("Alle Transaktionen sind vollständig.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Wertpapiere" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Einzahlungen" })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "+ VWCE kaufen" })[0]).toBeTruthy();
@@ -119,6 +120,38 @@ describe("Transactions load and empty states", () => {
     expect(document.querySelector(".tx-item")?.textContent).toContain("Mua VWCE");
     expect(document.querySelector(".tx-item")?.textContent).not.toContain("Góp");
     expect(screen.getByRole("button", { name: "Đầu tư" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("bounds the Data quality inbox for a large ledger and reveals issues progressively", async () => {
+    dbMocks.listTransactions.mockResolvedValue(Array.from({ length: 1000 }, (_, index) => ({
+      id: `quality-${index}`,
+      date: "2026-08-20",
+      type: "cash_in" as const,
+      amount: 100,
+      notes: "",
+      createdAt: "2026-08-20T00:00:00Z",
+      updatedAt: "2026-08-20T00:00:00Z",
+      source: "manual" as const,
+    })));
+    render(createElement(Transactions));
+
+    expect(await screen.findByText("1000 cần rà soát")).toBeTruthy();
+    expect(document.querySelectorAll(".tx-quality-item")).toHaveLength(3);
+    fireEvent.click(screen.getByRole("button", { name: "Xem thêm 997" }));
+    expect(document.querySelectorAll(".tx-quality-item")).toHaveLength(6);
+  });
+
+  it("opens the affected transaction from the Data quality inbox without inventing missing data", async () => {
+    dbMocks.listTransactions.mockResolvedValue([
+      { id: "tx-missing-isin", date: "2026-08-20", type: "buy_security", amount: 100, unitPrice: 100, quantity: 1, instrumentIsin: "", notes: "Imported ETF", createdAt: "2026-08-20T00:00:00Z", updatedAt: "2026-08-20T00:00:00Z", source: "manual" },
+      { id: "tx-note", date: "2026-08-19", type: "cash_in", amount: 50, notes: "", createdAt: "2026-08-19T00:00:00Z", updatedAt: "2026-08-19T00:00:00Z", source: "manual" },
+    ]);
+    render(createElement(Transactions));
+
+    expect(await screen.findByText("2 cần rà soát")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Thiếu ISIN/ }));
+    expect(screen.getByRole("heading", { name: "Sửa giao dịch" })).toBeTruthy();
+    expect((screen.getByLabelText("ISIN") as HTMLInputElement).value).toBe("");
   });
 
   it("offers Smart time lenses and resets them together with the journal filters", async () => {
