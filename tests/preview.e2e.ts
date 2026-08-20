@@ -4,19 +4,37 @@ const localOrigin = "http://127.0.0.1:4173";
 const appPath = "/quy-vwce-cho-be/";
 const iphone13Viewport = { width: 390, height: 844 };
 
-async function openPrivateVaultEntry(page: Page) {
+type PreviewLocale = "vi" | "de";
+
+function entryCopy(locale: PreviewLocale) {
+  return locale === "de" ? {
+    start: "Starten",
+    login: "Anmelden",
+    missingConfig: "Anmeldung nicht konfiguriert",
+    overview: "Übersicht",
+  } : {
+    start: "Bắt đầu",
+    login: "Đăng nhập",
+    missingConfig: "Chưa cấu hình đăng nhập",
+    overview: "Tổng quan",
+  };
+}
+
+async function openPrivateVaultEntry(page: Page, locale: PreviewLocale = "vi") {
+  const copy = entryCopy(locale);
+  await page.addInitScript((nextLocale) => window.localStorage.setItem("vwce-locale", nextLocale), locale);
   const response = await page.goto("./", { waitUntil: "domcontentloaded" });
   expect(response?.ok()).toBe(true);
   await expect(page.locator("#root > *").first()).toBeVisible();
 
-  const startButton = page.getByRole("button", { name: "Bắt đầu", exact: true });
-  const loginHeading = page.getByRole("heading", { name: "Đăng nhập", exact: true });
+  const startButton = page.getByRole("button", { name: copy.start, exact: true });
+  const loginHeading = page.getByRole("heading", { name: copy.login, exact: true });
   const missingConfigHeading = page.getByRole("heading", {
-    name: "Chưa cấu hình đăng nhập",
+    name: copy.missingConfig,
     exact: true,
   });
   const authEntryHeading = loginHeading.or(missingConfigHeading);
-  const localVaultEntry = page.getByRole("link", { name: "Tổng quan", exact: true }).first();
+  const localVaultEntry = page.getByRole("link", { name: copy.overview, exact: true }).first();
   const supportedEntry = authEntryHeading.or(localVaultEntry);
 
   await expect(startButton.or(supportedEntry)).toBeVisible();
@@ -81,6 +99,28 @@ test("private-vault entry point remains usable", async ({ page }) => {
   } else {
     await expect(localVaultEntry).toBeVisible();
     await expect(page.getByRole("link", { name: "Giao dịch", exact: true }).first()).toBeVisible();
+  }
+});
+
+test("German private-vault entry remains locale-pure and keyboard reachable", async ({ page }) => {
+  const { loginHeading, missingConfigHeading, localVaultEntry } = await openPrivateVaultEntry(page, "de");
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "de");
+  if (await loginHeading.isVisible()) {
+    await expect(page.getByText("Privater Familien-Vault. Neue Konten werden ausschließlich vom Owner angelegt und bestätigt.")).toBeVisible();
+    await expect(page.locator("#email")).toBeVisible();
+    await page.locator("#email").focus();
+    await page.keyboard.press("Tab");
+    await expect(page.locator("#password")).toBeFocused();
+    await expect(page.getByRole("button", { name: "Passwort vergessen?", exact: true })).toBeVisible();
+    await expect(page.getByText("Kho gia đình riêng tư")).toHaveCount(0);
+    await expect(page.getByText("Đăng nhập", { exact: true })).toHaveCount(0);
+  } else if (await missingConfigHeading.isVisible()) {
+    await expect(missingConfigHeading).toBeVisible();
+    await expect(page.getByText("Chưa cấu hình đăng nhập", { exact: true })).toHaveCount(0);
+  } else {
+    await expect(localVaultEntry).toBeVisible();
+    await expect(page.getByRole("link", { name: "Transaktionen", exact: true }).first()).toBeVisible();
   }
 });
 
