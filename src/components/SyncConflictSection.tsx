@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { listConflicts, resolveConflict } from "../lib/sync/engine";
 import type { ConflictRecord, EntityTable, ResolveConflictResult } from "../lib/sync/types";
 import { useLocale } from "../lib/locale";
+import "../styles/sync-conflict-clarity.css";
 
 export const SYNC_CONFLICTS_SECTION_ID = "sync-conflicts";
 export const SYNC_CONFLICT_FOCUS_STATE_KEY = "syncConflictFocusToken";
@@ -46,7 +47,7 @@ type SyncConflictSectionProps = {
 function syncStrings(locale: "vi" | "de") {
   return locale === "de" ? {
     settings: "Einstellungen", goals: "Ziele", transactions: "Transaktionen", annualChecklists: "Jahres-Checklisten", monthlySnapshots: "Monatsübersichten",
-    eyebrow: "Synchronisierung erfordert eine Entscheidung", syncStatusEyebrow: "Synchronisierungsstatus", paused: "Die Synchronisierung wurde angehalten, damit keine Daten überschrieben oder verloren gehen. Wählen Sie für jeden Eintrag die zu behaltende Version.",
+    eyebrow: "Synchronisierung erfordert eine Entscheidung", syncStatusEyebrow: "Synchronisierungsstatus", paused: "Die Synchronisierung wurde angehalten, damit keine Daten überschrieben oder verloren gehen. Wählen Sie für jeden Eintrag die zu behaltende Version.", reviewRuleTitle: "Vor der Entscheidung", reviewRuleBody: "Jeder Konflikt wird einzeln behandelt. Die App führt Versionen nicht zusammen und wählt nie automatisch eine Seite.", metadataOnly: "Zum Schutz Ihrer Privatsphäre zeigt diese Übersicht nur Datensatztyp und Zeitangaben, nicht die Inhalte beider Versionen.", choiceImpact: "Auswirkung Ihrer Auswahl", localImpact: "Die aktuelle Version auf diesem Gerät bleibt erhalten und wird erneut zur Synchronisierung vorgemerkt.", remoteImpact: "Die aktuelle Serverversion ersetzt die Version auf diesem Gerät.", remoteDeletedImpact: "Der Löschstatus des Servers wird auf dieses Gerät angewendet.",
     conflictHeading: (count: number) => `${count} Datenkonflikt${count === 1 ? "" : "e"} erfordert${count === 1 ? "" : "n"} eine Entscheidung`, conflictAria: (entity: string) => `Datenkonflikt ${entity}`,
     detected: "Erkannt", deviceUpdated: "Gerät aktualisiert", serverUpdated: "Server aktualisiert", serverDeleted: "Die Serverversion wurde gelöscht",
     keepLocal: "Daten auf diesem Gerät behalten", useRemote: "Synchronisierte Daten verwenden", processing: "Wird verarbeitet…", confirmEyebrow: "Auswahl bestätigen", back: "Zurück, nichts ändern",
@@ -56,7 +57,7 @@ function syncStrings(locale: "vi" | "de") {
     resolvedLocal: "Die Daten auf diesem Gerät wurden behalten und erfolgreich synchronisiert.", resolvedLocalPending: "Die Daten auf diesem Gerät wurden behalten. Die Änderung wartet noch auf die Synchronisierung; Serverdaten wurden nicht überschrieben.", resolvedLocalConflict: "Die Auswahl wurde lokal gespeichert, aber der Serverstatus hat sich geändert oder konnte nicht sicher aktualisiert werden. Es wurden keine Daten überschrieben. Prüfen Sie den neuen Konflikt.", resolvedDeleted: "Der Löschstatus des Servers wurde übernommen.", resolvedRemote: "Die aktuelle Serverversion wurde übernommen.", needsNetwork: "Der Serverstatus konnte nicht geprüft werden. Daten wurden nicht verändert.", failed: "Die Auswahl konnte nicht übernommen werden. Daten bleiben unverändert.", unexpected: "Der Konflikt konnte nicht verarbeitet werden. Daten bleiben unverändert.",
   } : {
     settings: "Cài đặt", goals: "Mục tiêu", transactions: "Giao dịch", annualChecklists: "Checklist hằng năm", monthlySnapshots: "Tổng hợp tháng",
-    eyebrow: "Đồng bộ cần quyết định", syncStatusEyebrow: "Trạng thái đồng bộ", paused: "Đồng bộ đã dừng để tránh ghi đè hoặc làm mất dữ liệu. Hãy chọn rõ bản dữ liệu cần giữ cho từng mục.",
+    eyebrow: "Đồng bộ cần quyết định", syncStatusEyebrow: "Trạng thái đồng bộ", paused: "Đồng bộ đã dừng để tránh ghi đè hoặc làm mất dữ liệu. Hãy chọn rõ bản dữ liệu cần giữ cho từng mục.", reviewRuleTitle: "Trước khi chọn", reviewRuleBody: "Mỗi xung đột được xử lý riêng. Ứng dụng không gộp hai phiên bản và không tự chọn bên nào.", metadataOnly: "Để bảo vệ riêng tư, phần này chỉ hiển thị loại dữ liệu và thời điểm, không hiển thị nội dung của hai phiên bản.", choiceImpact: "Tác động của lựa chọn", localImpact: "Bản hiện có trên thiết bị được giữ lại và sẽ được đưa vào hàng đợi đồng bộ lại.", remoteImpact: "Bản hiện tại trên server sẽ thay thế bản trên thiết bị này.", remoteDeletedImpact: "Trạng thái đã xóa trên server sẽ được áp dụng trên thiết bị này.",
     conflictHeading: (count: number) => `${count} xung đột cần xử lý`, conflictAria: (entity: string) => `Xung đột ${entity}`,
     detected: "Phát hiện", deviceUpdated: "Thiết bị cập nhật", serverUpdated: "Server cập nhật", serverDeleted: "Bản trên server đã bị xóa",
     keepLocal: "Giữ dữ liệu trên thiết bị này", useRemote: "Dùng dữ liệu đã đồng bộ", processing: "Đang xử lý…", confirmEyebrow: "Xác nhận lựa chọn", back: "Quay lại, chưa thay đổi",
@@ -420,6 +421,13 @@ export default function SyncConflictSection({
           <p className="settings-card-eyebrow">{eyebrow}</p>
           <h3 id="sync-conflicts-heading">{heading}</h3>
           {!conflictReadFailed ? <p>{conflicts && conflicts.length > 0 ? text.paused : text.noConflictsBody}</p> : null}
+          {!conflictReadFailed && conflicts && conflicts.length > 0 ? (
+            <div className="sync-conflict-safety-note">
+              <strong>{text.reviewRuleTitle}</strong>
+              <p>{text.reviewRuleBody}</p>
+              <p>{text.metadataOnly}</p>
+            </div>
+          ) : null}
           {!conflictReadFailed && conflicts?.length === 0 && onSyncNow ? (
             <button type="button" className="settings-secondary-action" disabled={syncingNow} onClick={() => void syncCleanState()}>
               {syncingNow ? text.processing : text.syncNow}
@@ -477,6 +485,14 @@ export default function SyncConflictSection({
                     <div><dt>{text.serverUpdated}</dt><dd>{conflict.remoteUpdatedAt}</dd></div>
                   ) : null}
                 </dl>
+
+                <div className="sync-conflict-choice-note">
+                  <strong>{text.choiceImpact}</strong>
+                  <ul>
+                    <li><b>{text.keepLocal}:</b> {text.localImpact}</li>
+                    <li><b>{conflict.remoteDeleted ? text.remoteDeletedConfirm : text.useRemote}:</b> {conflict.remoteDeleted ? text.remoteDeletedImpact : text.remoteImpact}</li>
+                  </ul>
+                </div>
 
                 {cardFeedback[conflict.id] ? (
                   <p className="settings-error sync-conflict-result" role="status" aria-live="assertive">

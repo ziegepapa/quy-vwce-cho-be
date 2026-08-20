@@ -226,6 +226,18 @@ describe("explicit choices and confidentiality", () => {
     expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
   });
 
+  it("explains each choice through metadata-only context without exposing payload", async () => {
+    renderSection();
+
+    expect(await screen.findByText("Trước khi chọn")).toBeTruthy();
+    expect(screen.getByText(/Ứng dụng không gộp hai phiên bản/)).toBeTruthy();
+    expect(screen.getByText("Tác động của lựa chọn")).toBeTruthy();
+    expect(screen.getByText(/Bản hiện có trên thiết bị được giữ lại/)).toBeTruthy();
+    expect(screen.getByText(/Bản hiện tại trên server sẽ thay thế/)).toBeTruthy();
+    expect(document.body.textContent).not.toContain(CANARY);
+    expect(engineMocks.resolveConflict).not.toHaveBeenCalled();
+  });
+
   it("guards double confirmation while a resolution is in flight", async () => {
     let settle: ((result: ResolveConflictResult) => void) | undefined;
     const pendingResult = new Promise<ResolveConflictResult>((resolve) => {
@@ -264,6 +276,9 @@ describe("German locale", () => {
     expect(screen.getByRole("article", { name: "Datenkonflikt Einstellungen" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Daten auf diesem Gerät behalten" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Synchronisierte Daten verwenden" })).toBeTruthy();
+    expect(screen.getByText("Vor der Entscheidung")).toBeTruthy();
+    expect(screen.getByText("Auswirkung Ihrer Auswahl")).toBeTruthy();
+    expect(screen.getByText(/Die App führt Versionen nicht zusammen/)).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/Đồng bộ|xung đột|Thiết bị|Dùng dữ liệu/);
   });
 });
