@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "../lib/locale";
+import { syncHealthCopy, type SyncHealth } from "./syncHealth";
 import "../styles/visual-abc-shell.css";
 
 type BerlinClock = { iso: string; time: string };
@@ -41,10 +42,12 @@ export default function CollapsingNavBar({
   displayName,
   syncStatus,
   pending,
+  syncHealth,
 }: {
   displayName: string;
   syncStatus: string;
   pending: number;
+  syncHealth: SyncHealth;
   onSignOut: () => void;
   onSyncNow?: () => void | Promise<unknown>;
   onUpdatePrice?: () => void;
@@ -55,12 +58,9 @@ export default function CollapsingNavBar({
 }) {
   void displayName;
   const { locale, t } = useLocale();
-  const syncing = syncStatus === "syncing";
-  const syncText = syncing
-    ? t("syncing")
-    : pending > 0
-      ? locale === "de" ? `${pending} ausstehend` : `${pending} ${t("sync").toLowerCase()} chờ`
-      : t("sync");
+  const syncing = syncHealth.state === "syncing";
+  const healthCopy = syncHealthCopy(syncHealth, locale);
+  const syncText = healthCopy.menuMeta;
   void onSignOut;
   void onUpdatePrice;
   void onSearch;
@@ -77,8 +77,8 @@ export default function CollapsingNavBar({
       <span className="bar-logo">VWCE Vault</span>
       <div className="bar-r">
         {onSyncNow ? (
-          <button type="button" className={`sync-pill ${syncStatus}`} onClick={() => void onSyncNow()} disabled={syncing} aria-live="polite">
-            <span className={syncing ? "sync-spin" : ""} aria-hidden>↻</span>
+          <button type="button" className={`sync-pill ${syncHealth.tone}`} onClick={() => void onSyncNow()} disabled={syncing || syncHealth.action === "none"} aria-live="polite">
+            <span className={syncing ? "sync-spin" : ""} aria-hidden>{syncHealth.state === "synced" ? "✓" : syncHealth.state === "conflict" ? "!" : "↻"}</span>
             <span>{syncText}</span>
           </button>
         ) : null}

@@ -22,6 +22,8 @@ import type { OutboxItem, PendingSyncSummary } from "../lib/sync/types";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import SettingsPricePanel from "../components/SettingsPricePanel";
 import SyncConflictSection from "../components/SyncConflictSection";
+import { SyncHealthSummary } from "../components/SyncHealthSummary";
+import { syncHealthCopy, type SyncHealth } from "../components/syncHealth";
 import PlanRoadmapSection from "../components/PlanRoadmapSection";
 import "../styles/settings-operation-errors.css";
 import "../styles/demo-v10-settings.css";
@@ -169,6 +171,9 @@ export default function SettingsPage({
   onConflictResolved,
   focusConflictRequest,
   onSyncNow,
+  syncHealth,
+  onSyncHealthAction,
+  onRequestSignOut,
 }: {
   onReload: () => void;
   onOpenMigrate?: () => void;
@@ -178,6 +183,9 @@ export default function SettingsPage({
   onConflictResolved?: () => void | Promise<void>;
   focusConflictRequest?: string | null;
   onSyncNow?: () => Promise<{ message: string; tone: "success" | "error" | "info" }>;
+  syncHealth?: SyncHealth;
+  onSyncHealthAction?: () => void | Promise<void>;
+  onRequestSignOut?: () => void | Promise<void>;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab");
@@ -536,10 +544,11 @@ export default function SettingsPage({
   }
 
   const syncLabel = useMemo(() => {
+    if (syncHealth) return syncHealthCopy(syncHealth, locale).title;
     if (!online) return t("offline");
     if (dead.length > 0) return t("pendingSync").replace("{count}", String(dead.length));
     return t("synced");
-  }, [online, dead.length, t]);
+  }, [syncHealth, locale, online, dead.length, t]);
 
   if (settingsLoading) return <main className="demo-v10-screen" role="status" aria-label={t("settingsLoading")} aria-busy="true" />;
   if (settingsLoadError || !settings) {
@@ -615,6 +624,7 @@ export default function SettingsPage({
 
       <div className="set-sec">{t("sync")}</div>
       <section className="gl set-block">
+        {syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} /> : null}
         <button
           type="button"
           className="set-row"
@@ -869,13 +879,15 @@ export default function SettingsPage({
         </details>
       </details>
 
-      <button
-        type="button"
-        className="abmeld"
-        onClick={() => void auth.signOut()}
-      >
-        🔓 {t("logout")}
-      </button>
+      {onRequestSignOut ? (
+        <button
+          type="button"
+          className="abmeld"
+          onClick={() => void onRequestSignOut()}
+        >
+          🔓 {t("logout")}
+        </button>
+      ) : null}
 
       <p className="ver">
         v{SETTINGS_UI_VERSION} · {online ? t("online") : t("offline")}
