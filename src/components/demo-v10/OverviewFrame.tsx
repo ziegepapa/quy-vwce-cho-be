@@ -15,8 +15,10 @@ type OverviewFrameProps = {
   savingsPlan: string | null;
   nextContribution: string | null;
   performance: string | null;
+  performanceState: "gain" | "loss" | "flat" | "unavailable";
   contributionWidth: number;
   gainWidth: number;
+  lossWidth: number;
   contributionTotal: string | null;
   gainTotal: string | null;
   averageBuyPrice: string | null;
@@ -41,6 +43,9 @@ function overviewCopy(locale: "vi" | "de") {
     portfolioPerformance: "Portfolio-Performance",
     contributions: "Einzahlungen",
     gains: "Ertrag",
+    loss: "Verlust",
+    breakEven: "Unverändert",
+    unvalued: "Noch nicht bewertbar",
     averageBuyPrice: "Ø Kaufpreis",
     details: "Details",
     collapse: "Einklappen",
@@ -61,6 +66,9 @@ function overviewCopy(locale: "vi" | "de") {
     portfolioPerformance: "Hiệu suất danh mục",
     contributions: "Vốn góp",
     gains: "Lãi",
+    loss: "Lỗ",
+    breakEven: "Hòa vốn",
+    unvalued: "Chưa định giá",
     averageBuyPrice: "Giá mua TB",
     details: "Chi tiết",
     collapse: "Thu gọn",
@@ -97,8 +105,10 @@ export default function OverviewFrame({
   savingsPlan,
   nextContribution,
   performance,
+  performanceState,
   contributionWidth,
   gainWidth,
+  lossWidth,
   contributionTotal,
   gainTotal,
   averageBuyPrice,
@@ -112,6 +122,13 @@ export default function OverviewFrame({
   const dash = circumference * Math.min(1, months / 24);
   const dotCount = Math.min(12, Math.max(1, months));
   const comparison = comparisonPath(priceComparison);
+  const performanceDeltaLabel = performanceState === "gain"
+    ? text.gains
+    : performanceState === "loss"
+      ? text.loss
+      : performanceState === "flat"
+        ? text.breakEven
+        : text.unvalued;
 
   return (
     <main className="demo-v10-screen" aria-label={text.pageLabel}>
@@ -202,16 +219,20 @@ export default function OverviewFrame({
           <div className="sc-dots" aria-label={text.streakAria(months)}>{Array.from({ length: dotCount }, (_, index) => <span key={index} className={months > 0 ? "dot done" : "dot"} />)}</div>
         </section>
 
-        <section className="gl perf-card">
-          <div className="perf-top"><span className="perf-title">{text.portfolioPerformance}</span><span className={`perf-return ${pnlPositive ? "pos" : "neg"}`}>{performance ?? "—"}</span></div>
-          <div className="perf-bar-track" aria-hidden><div className="perf-bar-base" style={{ width: `${contributionWidth}%` }} /><div className="perf-bar-gain" style={{ left: `${contributionWidth}%`, width: `${gainWidth}%` }} /></div>
-          <div className="perf-legend"><div className="pl-item"><span className="pl-dot base" /><span className="pl-txt">{text.contributions}</span></div><div className="pl-item"><span className="pl-dot gain" /><span className="pl-txt">{text.gains}</span></div></div>
+        <section className={`gl perf-card perf-card-${performanceState}`} data-performance-state={performanceState}>
+          <div className="perf-top"><span className="perf-title">{text.portfolioPerformance}</span><span className={`perf-return ${performanceState}`}>{performance ?? "—"}</span></div>
+          <div className="perf-bar-track" aria-label={`${text.portfolioPerformance}: ${performanceDeltaLabel}`}>
+            {performanceState !== "unavailable" ? <div className="perf-bar-base" style={{ width: `${contributionWidth}%` }} /> : null}
+            {performanceState === "gain" ? <div className="perf-bar-gain" style={{ left: `${contributionWidth}%`, width: `${gainWidth}%` }} /> : null}
+            {performanceState === "loss" ? <div className="perf-bar-loss" style={{ width: `${lossWidth}%` }} /> : null}
+          </div>
+          <div className="perf-legend"><div className="pl-item"><span className="pl-dot base" /><span className="pl-txt">{text.contributions}</span></div><div className="pl-item"><span className={`pl-dot ${performanceState}`} /><span className="pl-txt">{performanceDeltaLabel}</span></div></div>
           <button type="button" className="perf-toggle" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((open) => !open)}>{detailsOpen ? text.collapse : text.details} <span aria-hidden>›</span></button>
           {detailsOpen ? (
             <div className="perf-detail" aria-label={text.details}>
               <div className="pp-item"><div className="pp-lbl">{text.contributions}</div><div className="pp-val base">{contributionTotal ?? "—"}</div></div>
               <div className="pp-sep" aria-hidden />
-              <div className="pp-item"><div className="pp-lbl">{text.gains}</div><div className={`pp-val ${pnlPositive ? "gain" : "loss"}`}>{gainTotal ?? "—"}</div></div>
+              <div className="pp-item"><div className="pp-lbl">{performanceDeltaLabel}</div><div className={`pp-val ${performanceState}`}>{gainTotal ?? "—"}</div></div>
               <div className="pp-sep" aria-hidden />
               <div className="pp-item"><div className="pp-lbl">{text.averageBuyPrice}</div><div className="pp-val muted">{averageBuyPrice ?? "—"}</div></div>
             </div>

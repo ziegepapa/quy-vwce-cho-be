@@ -5,17 +5,20 @@ const overviewCss = readFileSync(new URL("./demo-v10-overview.css", import.meta.
 const settingsCss = readFileSync(new URL("./demo-v10-settings.css", import.meta.url), "utf8");
 
 describe("demo v10 visual regression contracts", () => {
-  it("keeps the demo's orange contributions and yellow gains linked across the performance card", () => {
-    expect(overviewCss).toContain("--perf-contribution: #f97316");
-    expect(overviewCss).toContain("--perf-gain: #facc15");
-    expect(overviewCss).toContain(".ov .perf-return { color: var(--perf-gain)");
-    expect(overviewCss).toContain(".ov .perf-bar-base { left: 0;");
-    expect(overviewCss).toContain("var(--perf-contribution)");
-    expect(overviewCss).toContain(".ov .perf-bar-gain { border-radius: 0 5px 5px 0; background: linear-gradient(90deg, var(--perf-gain)");
+  it("inherits the demo theme palette and changes every performance visual by data state", () => {
+    expect(overviewCss).toContain("--perf-contribution: var(--demo-vi)");
+    expect(overviewCss).toContain("--perf-gain: var(--demo-em)");
+    expect(overviewCss).toContain("--perf-loss: var(--demo-re)");
+    expect(overviewCss).toContain(".ov .perf-return.gain { color: var(--perf-gain); }");
+    expect(overviewCss).toContain(".ov .perf-return.loss { color: var(--perf-loss); }");
+    expect(overviewCss).toContain(".ov .perf-bar-base, .ov .perf-bar-gain, .ov .perf-bar-loss");
+    expect(overviewCss).toContain(".ov .perf-bar-loss { right: 0;");
     expect(overviewCss).toContain(".ov .pl-dot.base { background: var(--perf-contribution); }");
     expect(overviewCss).toContain(".ov .pl-dot.gain { background: var(--perf-gain); }");
+    expect(overviewCss).toContain(".ov .pl-dot.loss { background: var(--perf-loss); }");
     expect(overviewCss).toContain(".ov .pp-val.base { color: var(--perf-contribution); }");
     expect(overviewCss).toContain(".ov .pp-val.gain { color: var(--perf-gain); }");
+    expect(overviewCss).toContain(".ov .pp-val.loss { color: var(--perf-loss); }");
   });
 
   it("keeps nested advanced price metadata within the card at narrow widths", () => {
