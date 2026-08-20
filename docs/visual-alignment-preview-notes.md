@@ -45,3 +45,17 @@ The isolated preview's manual form persisted the test amount as `Nạp cash`, no
 The fresh preview accepted the Ocean theme selection; the full application shell switched from Vault violet/emerald to Ocean cyan/teal. The next Overview check verifies that the Performance marker inherits that same theme transition.
 
 On Ocean, the computed contribution marker color is `rgb(34, 211, 238)`, exactly the active `--demo-vi` cyan token. Together with the fresh Vault check, this confirms the Performance card now changes palette with the selected theme rather than retaining the prior fixed orange/yellow treatment.
+
+## Transactions journal 2026 preview (2026-08-20)
+
+A fresh production preview was opened on port 4179 and initialized with isolated local data. This avoids prior PWA caches while checking the redesigned Transactions command deck and mobile journal.
+
+The fresh Transactions preview shows the new journal command deck as a distinct glass surface: two immediate one-tap actions (`+ Mua VWCE`, `+ Góp tiền`), four horizontal activity chips, and a single advanced-tools entry. When opened, the tool panel keeps import, localized search, year, exact type, sort mode, and reset in a compact two-column grid. The hierarchy remains legible in the mobile-width application shell.
+
+The `+ Mua VWCE` quick action was verified in the fresh preview: it opens the mobile bottom sheet with **Mua VWCE** already selected and the VWCE ISIN prefilled. This makes the primary investment flow explicit and avoids the prior ambiguity where a generic add flow could result in a cash transaction.
+
+The `+ Góp tiền` action was also checked in the fresh preview: its form is explicitly preselected to **Nạp cash** and accepts the test amount. This complements the VWCE quick-create check and confirms that the two primary actions have intentional, distinct defaults.
+
+With a local test contribution saved, the journal renders a compact month group and a row with the transaction icon, type, date, prominent amount, and a visible `…` trigger. Opening that trigger shows the portal action menu with **Sửa** and **Xóa**; the action is now discoverable on touch devices rather than hidden behind a long-press/context gesture.
+
+A controlled 360px viewport check passed: the command deck has no horizontal overflow (`deckWidth: 280`, `viewportWidth: 360`), quick actions are 40px high, and activity chips are 34px high. This confirms the compact mobile contract without relying only on a desktop browser screenshot.

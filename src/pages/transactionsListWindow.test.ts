@@ -59,4 +59,33 @@ describe("transactionsListWindow", () => {
     expect(found.total).toBe(1);
     expect(visibleIds(found)).toEqual(["tx-0777"]);
   });
+
+  it("filters transaction activity before windowing without changing the progressive 60-row contract", () => {
+    const transactions = ledger(1000);
+    const trades = buildTransactionListWindow(transactions, { query: "", year: "all", type: "all", activity: "trade" }, 60);
+    const funding = buildTransactionListWindow(transactions, { query: "", year: "all", type: "all", activity: "funding" }, 60);
+
+    expect(trades.total).toBe(500);
+    expect(trades.visible).toBe(60);
+    expect(visibleIds(trades).every((id) => Number(id.slice(3)) % 2 === 0)).toBe(true);
+    expect(funding.total).toBe(500);
+    expect(funding.visible).toBe(60);
+    expect(visibleIds(funding).every((id) => Number(id.slice(3)) % 2 === 1)).toBe(true);
+  });
+
+  it("supports amount sorting and localized type-label search with deterministic ties", () => {
+    const transactions = ledger(1000);
+    const byAmount = buildTransactionListWindow(transactions, { query: "", year: "all", type: "all", sort: "amount_desc" }, 60);
+    const localizedSearch = buildTransactionListWindow(transactions, {
+      query: "mua",
+      year: "all",
+      type: "all",
+      typeSearchTerms: { buy_vwce: "Mua VWCE", cash_in: "Góp tiền" },
+    }, 60);
+
+    expect(visibleIds(byAmount)[0]).toBe("tx-0999");
+    expect(byAmount.visible).toBe(60);
+    expect(localizedSearch.total).toBe(500);
+    expect(visibleIds(localizedSearch).every((id) => Number(id.slice(3)) % 2 === 0)).toBe(true);
+  });
 });

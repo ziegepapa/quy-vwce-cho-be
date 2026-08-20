@@ -47,8 +47,9 @@ describe("Transactions load and empty states", () => {
 
     expect(await screen.findByText("Transaktionsjournal")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Schnellfilter" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "VWCE-Käufe" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Wertpapiere" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Einzahlungen" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "+ VWCE kaufen" })[0]).toBeTruthy();
     expect(document.body.textContent).not.toContain("Nhật ký giao dịch");
   });
 
@@ -101,7 +102,7 @@ describe("Transactions load and empty states", () => {
     expect(screen.getByText("Đang hiển thị 120/1000 giao dịch")).toBeTruthy();
   });
 
-  it("offers touch-friendly quick filters before opening advanced search tools", async () => {
+  it("offers touch-friendly activity filters before opening advanced search tools", async () => {
     dbMocks.listTransactions.mockResolvedValue([
       { id: "tx-buy", date: "2026-08-13", type: "buy_vwce", amount: 100, notes: "VWCE", createdAt: "2026-08-13T00:00:00Z", updatedAt: "2026-08-13T00:00:00Z", source: "manual" },
       { id: "tx-cash", date: "2026-08-12", type: "cash_in", amount: 100, notes: "Góp", createdAt: "2026-08-12T00:00:00Z", updatedAt: "2026-08-12T00:00:00Z", source: "manual" },
@@ -109,12 +110,25 @@ describe("Transactions load and empty states", () => {
     render(createElement(Transactions));
 
     expect(await screen.findByText("Nhật ký giao dịch")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Mua VWCE" }));
+    fireEvent.click(screen.getByRole("button", { name: "Đầu tư" }));
 
     expect(document.querySelectorAll(".tx-item")).toHaveLength(1);
     expect(document.querySelector(".tx-item")?.textContent).toContain("Mua VWCE");
-    expect(document.querySelector(".tx-item")?.textContent).not.toContain(" · Góp");
-    expect(screen.getByRole("button", { name: "Mua VWCE" }).getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelector(".tx-item")?.textContent).not.toContain("Góp");
+    expect(screen.getByRole("button", { name: "Đầu tư" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("opens intentional quick-create flows with the matching transaction type preselected", async () => {
+    dbMocks.listTransactions.mockResolvedValue([]);
+    render(createElement(Transactions));
+
+    await screen.findByText("Chưa có giao dịch.");
+    fireEvent.click(screen.getAllByRole("button", { name: "+ Mua VWCE" })[0]);
+    expect((screen.getByLabelText("Loại") as HTMLSelectElement).value).toBe("buy_vwce");
+
+    fireEvent.click(screen.getByRole("button", { name: "Hủy" }));
+    fireEvent.click(screen.getByRole("button", { name: "+ Góp tiền" }));
+    expect((screen.getByLabelText("Loại") as HTMLSelectElement).value).toBe("cash_in");
   });
 
   it("distinguishes no filter matches from a genuinely empty ledger", async () => {
