@@ -36,6 +36,7 @@
 .sync-health-copy small { overflow-wrap: anywhere; }
 .sync-health-copy strong { color: var(--demo-tx, #f4f1ff); font-size: .88rem; }
 .sync-health-copy small { color: var(--demo-sub, #b5aec7); font-size: .76rem; line-height: 1.35; }
+.sync-health-copy .sync-health-next-step { padding-top: 3px; color: color-mix(in srgb, var(--demo-sub, #b5aec7) 86%, var(--demo-tx, #f4f1ff)); }
 .sync-health-action { white-space: normal; min-height: 34px; padding: 7px 9px; font-size: .76rem; }
 
 .sync-health-compact { padding: 8px 10px; border-radius: 12px; }

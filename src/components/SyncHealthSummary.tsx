@@ -36,6 +36,7 @@ export function SyncHealthSummary({
       <span className="sync-health-copy">
         <strong>{copy.title}</strong>
         {!compact ? <small>{copy.detail}</small> : null}
+        {!compact ? <small className="sync-health-next-step">{copy.nextStep}</small> : null}
       </span>
       {actionable ? (
         <button type="button" className="sync-health-action" onClick={onAction}>

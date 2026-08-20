@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ConflictRecord } from "./lib/sync/types";
+import { LOCAL_DIAGNOSTICS_STORAGE_KEY } from "./components/localDiagnostics";
 
 const engineMocks = vi.hoisted(() => ({
   clearRecoveryItems: vi.fn(),
@@ -106,11 +107,12 @@ vi.mock("./pages/MigrateWizard", async () => {
 vi.mock("./pages/Settings", async () => {
   const React = await import("react");
   return {
-    default: () =>
+    default: ({ onSyncNow }: { onSyncNow?: () => Promise<unknown> }) =>
       React.createElement(
         "div",
         { "data-testid": "settings-data" },
         "C\u00e0i \u0111\u1eb7t \u2192 D\u1eef li\u1ec7u",
+        onSyncNow ? React.createElement("button", { onClick: () => { void onSyncNow(); } }, "\u0110\u1ed3ng b\u1ed9 trong C\u00e0i \u0111\u1eb7t") : null,
       ),
   };
 });
@@ -160,6 +162,22 @@ beforeEach(() => {
   engineMocks.saveSyncMeta.mockResolvedValue(COMPLETE);
   outboxMocks.outboxCount.mockResolvedValue(0);
   authMocks.signOutBeforeLocalClear.mockResolvedValue({ status: "success" });
+});
+
+describe("sync failure safety", () => {
+  it("keeps the app usable and records only a safe local code when manual sync fails", async () => {
+    renderApp("/settings");
+    await screen.findByRole("button", { name: "Đồng bộ trong Cài đặt" });
+    engineMocks.runSync.mockRejectedValueOnce(new Error("SYNC_SECRET_CANARY"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Đồng bộ trong Cài đặt" }));
+
+    expect(await screen.findByText("Không đồng bộ được. Dữ liệu trên thiết bị vẫn được giữ nguyên.")).toBeTruthy();
+    expect(document.body.textContent ?? "").not.toContain("SYNC_SECRET_CANARY");
+    const journal = window.localStorage.getItem(LOCAL_DIAGNOSTICS_STORAGE_KEY) ?? "";
+    expect(journal).toContain("sync-failed");
+    expect(journal).not.toContain("SYNC_SECRET_CANARY");
+  });
 });
 
 describe("fresh fail-closed logout", () => {
