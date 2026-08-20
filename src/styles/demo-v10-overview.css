@@ -282,6 +282,9 @@
 .ov .year-review-head > div { display: grid; min-width: 0; gap: 2px; }
 .ov .year-review-head span { color: var(--demo-text); font-size: 12px; font-weight: 820; }
 .ov .year-review-head strong { overflow: hidden; color: var(--demo-dim); font-size: 9px; font-weight: 720; text-overflow: ellipsis; white-space: nowrap; }
+.ov .year-review-year-label { display: inline-flex; align-items: center; gap: 5px; min-width: 0; color: var(--demo-dim); font-size: 9px; font-weight: 760; white-space: nowrap; }
+.ov .year-review-year-label select { min-height: 28px; padding: 4px 22px 4px 7px; color: var(--demo-text); font: inherit; font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--demo-g) 72%, transparent); border: 1px solid color-mix(in srgb, var(--demo-em) 32%, var(--demo-gb)); border-radius: 8px; }
+.ov .year-review-year-label select:focus-visible { outline: 2px solid var(--demo-vi); outline-offset: 2px; }
 .ov .year-review-export { min-height: 32px; padding: 6px 9px; color: var(--demo-em); font-size: 10px; font-weight: 800; white-space: nowrap; background: color-mix(in srgb, var(--demo-em) 10%, transparent); border: 1px solid color-mix(in srgb, var(--demo-em) 32%, transparent); border-radius: 9px; }
 .ov .year-review-export:focus-visible { outline: 2px solid var(--demo-vi); outline-offset: 2px; }
 .ov .year-review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
@@ -297,6 +300,8 @@
 @media (max-width: 360px) {
   .ov .year-review-card { padding: 12px; }
   .ov .year-review-head { align-items: flex-start; }
+  .ov .year-review-head > div { gap: 4px; }
+  .ov .year-review-year-label { flex-wrap: wrap; }
   .ov .year-review-export { min-height: 31px; padding-inline: 8px; }
   .ov .year-review-grid { gap: 6px; }
   .ov .year-review-grid > div { padding: 7px; }
