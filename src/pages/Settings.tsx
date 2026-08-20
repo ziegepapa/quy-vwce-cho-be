@@ -26,6 +26,7 @@ import { SyncHealthSummary } from "../components/SyncHealthSummary";
 import { syncHealthCopy, type SyncHealth } from "../components/syncHealth";
 import PlanRoadmapSection from "../components/PlanRoadmapSection";
 import LocalDiagnosticsPanel from "../components/LocalDiagnosticsPanel";
+import LocalDataInventoryPanel from "../components/LocalDataInventoryPanel";
 import "../styles/settings-operation-errors.css";
 import "../styles/demo-v10-settings.css";
 
@@ -834,6 +835,7 @@ export default function SettingsPage({
 
         <details className="advanced-group" open={openAdvancedGroup === "data"}>
           <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("data"); }}>{t("dataTools")}</summary>
+          <LocalDataInventoryPanel />
           <div className="advanced-actions">
             <button type="button" className="set-row" onClick={() => void exportCsv()}>
               <span className="sr-name">{t("exportTransactionsCsv")}</span>

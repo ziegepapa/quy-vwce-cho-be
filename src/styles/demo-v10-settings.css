@@ -124,3 +124,24 @@
   .set-wrap .local-diagnostics-list li { grid-template-columns: minmax(0, 1fr); }
   .set-wrap .local-diagnostics-list time { grid-column: 1; grid-row: auto; text-align: left; white-space: normal; }
 }
+
+/* P7.3: local-only inventory; count metadata never renders record content. */
+.set-wrap .local-data-inventory { display: grid; gap: 10px; padding: 12px 14px 14px; border-bottom: 1px solid var(--demo-gb); }
+.set-wrap .local-data-inventory-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+.set-wrap .local-data-inventory-head > div { min-width: 0; }
+.set-wrap .local-data-inventory-head h3 { margin: 0; color: var(--demo-text); font-size: 12px; font-weight: 800; }
+.set-wrap .local-data-inventory-head p,
+.set-wrap .local-data-inventory-notes p,
+.set-wrap .local-data-inventory-state { margin: 4px 0 0; color: var(--demo-dim); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
+.set-wrap .local-data-inventory-head button { flex: 0 0 auto; min-height: 34px; }
+.set-wrap .local-data-inventory-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.set-wrap .local-data-inventory-list > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; padding: 9px 10px; border: 1px solid var(--demo-gb); border-radius: 10px; background: rgba(255,255,255,.025); }
+.set-wrap .local-data-inventory-list dt { min-width: 0; color: var(--demo-sub); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+.set-wrap .local-data-inventory-list dd { flex: 0 0 auto; margin: 0; color: var(--demo-text); font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.set-wrap .local-data-inventory-notes { display: grid; gap: 6px; }
+.set-wrap .local-data-inventory-notes p { margin: 0; }
+@media (max-width: 360px) {
+  .set-wrap .local-data-inventory-head { display: grid; }
+  .set-wrap .local-data-inventory-head button { justify-self: start; }
+  .set-wrap .local-data-inventory-list { grid-template-columns: minmax(0, 1fr); }
+}
