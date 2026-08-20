@@ -24,6 +24,10 @@
 .hh-sync.is-conflict .hh-card-head > span { color: var(--demo-re, #ef4444); }
 .hh-sync.is-syncing .hh-card-head > span { color: var(--demo-am, #f59e0b); }
 .hh-back { justify-content: flex-start; background: transparent; border-color: transparent; }
+.hh-snapshot { border-color: color-mix(in srgb, var(--demo-vi, #8b5cf6) 30%, var(--demo-gb, #3f3f46)); }
+.hh-snapshot-button { min-height: 38px; padding: 8px 10px; color: var(--demo-vi, #8b5cf6); font: inherit; font-size: 12px; font-weight: 820; text-align: left; background: color-mix(in srgb, var(--demo-vi, #8b5cf6) 9%, transparent); border: 1px solid color-mix(in srgb, var(--demo-vi, #8b5cf6) 25%, transparent); border-radius: 10px; cursor: pointer; }
+.hh-snapshot-button:hover { background: color-mix(in srgb, var(--demo-vi, #8b5cf6) 15%, transparent); }
+.hh-snapshot-button:focus-visible { outline: 2px solid var(--demo-vi, #8b5cf6); outline-offset: 2px; }
 @media (max-width: 360px) { .hh-shell { padding-inline: 10px; } .hh-card { padding: 12px; } .hh-grid { gap: 6px; } .hh-grid > div { padding: 8px; } .hh-main-value strong { font-size: 16px; } }
 .hh-readiness-list { display: grid; gap: 8px; margin: 2px 0 0; padding: 0; list-style: none; }
 .hh-readiness-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 9px 10px; background: color-mix(in srgb, var(--demo-g, #18181b) 54%, transparent); border: 1px solid color-mix(in srgb, var(--demo-gb, #3f3f46) 75%, transparent); border-radius: 10px; }

@@ -54,6 +54,8 @@ export default defineConfig({
       // PR0: bat dan tung file .test.tsx da doc toan bo source.
       "src/pages/Goals.loadState.test.tsx",
       "src/pages/Overview.loadState.test.tsx",
+      // P10.3: continuity snapshot must remain allowlisted and privacy-safe.
+      "src/pages/continuitySnapshot.test.ts",
       // PR0.1: test cong nhap sao luu cua PR3. Da doc tron Settings.tsx,
       // Settings.pendingSyncImport.test.tsx va backupImportGate.ts truoc khi bat.
       "src/pages/Settings.pendingSyncImport.test.tsx",
