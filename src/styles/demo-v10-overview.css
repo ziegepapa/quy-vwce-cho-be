@@ -210,3 +210,39 @@
   .ov .cr-item { padding-right: 12px; padding-left: 12px; }
   .ov .perf-detail { gap: 6px; }
 }
+
+/* PORTFOLIO-HEARTBEAT-2026: display-only next-action summary from existing Overview state. */
+.ov .heartbeat-card {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border-color: color-mix(in srgb, var(--demo-vi) 24%, var(--demo-gb));
+}
+.ov .heartbeat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--demo-text); font-size: 12px; font-weight: 820; }
+.ov .heartbeat-status { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; font-size: 9px; font-weight: 820; letter-spacing: .03em; }
+.ov .heartbeat-status.calm { color: var(--demo-em); background: color-mix(in srgb, var(--demo-em) 12%, transparent); }
+.ov .heartbeat-status.needs-review { color: var(--demo-am); background: color-mix(in srgb, var(--demo-am) 13%, transparent); }
+.ov .heartbeat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ov .heartbeat-item { display: grid; min-width: 0; gap: 4px; padding: 8px; background: color-mix(in srgb, var(--demo-g) 56%, transparent); border: 1px solid color-mix(in srgb, var(--demo-gb) 74%, transparent); border-radius: 10px; }
+.ov .heartbeat-label { overflow: hidden; color: var(--demo-dim); font-size: 9px; font-weight: 760; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.ov .heartbeat-value { overflow: hidden; color: var(--demo-text); font-size: 12px; font-weight: 830; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.ov .heartbeat-value.next { color: var(--demo-vi); }
+.ov .heartbeat-value.performance.gain { color: var(--demo-em); }
+.ov .heartbeat-value.performance.loss { color: var(--demo-re); }
+.ov .heartbeat-value.performance.flat,
+.ov .heartbeat-value.performance.unavailable { color: var(--demo-sub); }
+.ov .heartbeat-value.calm { color: var(--demo-em); font-size: 10px; white-space: normal; }
+.ov .heartbeat-item small { overflow: hidden; color: var(--demo-dim); font-size: 9px; font-weight: 700; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.ov .heartbeat-action { display: grid; min-width: 0; gap: 4px; color: var(--demo-am); font-size: 10px; font-weight: 800; line-height: 1.25; text-decoration: none; }
+.ov .heartbeat-action span { color: var(--demo-vi); font-size: 9px; font-weight: 830; }
+.ov .heartbeat-action:focus-visible { outline: 2px solid var(--demo-vi); outline-offset: 2px; border-radius: 4px; }
+.ov .heartbeat-action:active { transform: scale(.98); }
+@media (max-width: 420px) {
+  .ov .heartbeat-grid { gap: 6px; }
+  .ov .heartbeat-item { padding: 7px; }
+  .ov .heartbeat-value { font-size: 11px; }
+  .ov .heartbeat-action { font-size: 9px; }
+}
+@media (max-width: 330px) {
+  .ov .heartbeat-grid { grid-template-columns: 1fr; }
+}

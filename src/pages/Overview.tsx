@@ -7,6 +7,8 @@ import { computeContributionStreak } from "../lib/contributionStreak";
 import { computeHeroLifetimeContribution } from "../lib/heroLifetime";
 import OverviewFrame from "../components/demo-v10/OverviewFrame";
 import { useLocale } from "../lib/locale";
+import { findTransactionQualityIssues } from "./transactionQualityInbox";
+import { buildPortfolioHeartbeat } from "./portfolioHeartbeat";
 
 function overviewPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
@@ -123,6 +125,14 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     const averageBuyPrice = portfolio.vwceQty > 0 && portfolio.vwceCostBasis > 0
       ? portfolio.vwceCostBasis / portfolio.vwceQty
       : null;
+    const heartbeat = buildPortfolioHeartbeat({
+      nextContribution: nextPlanDate(settings.startDate, locale, currentDate),
+      performanceState,
+      performance,
+      qualityIssueCount: findTransactionQualityIssues(transactions).length,
+      missingPriceCount: market.missingIsins.length,
+      stalePriceCount: snapshot.stalePriceIsins.length,
+    });
 
     return {
       assetsLabel: snapshot.valueComplete ? "Portfolio VWCE" : text.valuedAssets,
@@ -141,8 +151,9 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
         ? portfolio.vwceQty.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 4 })
         : null,
       savingsPlan: Number.isFinite(plannedContribution) && plannedContribution > 0 ? formatMoney(plannedContribution) : null,
-      nextContribution: nextPlanDate(settings.startDate, locale, currentDate),
+      nextContribution: heartbeat.nextContribution,
       performance,
+      heartbeat,
       performanceState,
       contributionWidth: performanceState === "unavailable"
         ? 0
