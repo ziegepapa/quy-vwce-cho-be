@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import AppFailureBoundary from "./AppFailureBoundary";
+import { LOCAL_DIAGNOSTICS_STORAGE_KEY } from "./localDiagnostics";
 
 function dispatchUnhandledRejection(reason: unknown): PromiseRejectionEvent {
   const event = new Event("unhandledrejection", { cancelable: true }) as PromiseRejectionEvent;
@@ -11,7 +12,10 @@ function dispatchUnhandledRejection(reason: unknown): PromiseRejectionEvent {
   return event;
 }
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  window.localStorage.removeItem(LOCAL_DIAGNOSTICS_STORAGE_KEY);
+});
 
 describe("AppFailureBoundary", () => {
   it("fails closed on an unhandled promise rejection and can remount the app", () => {
@@ -33,6 +37,9 @@ describe("AppFailureBoundary", () => {
       screen.getByRole("heading", { name: "Không tải được dữ liệu ứng dụng" }),
     ).toBeTruthy();
     expect(screen.queryByText("Nội dung ứng dụng")).toBeNull();
+    const journal = window.localStorage.getItem(LOCAL_DIAGNOSTICS_STORAGE_KEY) ?? "";
+    expect(journal).toContain("unhandled-rejection");
+    expect(journal).not.toContain("IndexedDB unavailable");
 
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
 

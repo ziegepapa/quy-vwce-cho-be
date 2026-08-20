@@ -119,11 +119,12 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(screen.getByRole("button", { name: "Vietnamesisch Verfügbar" })).toBeTruthy();
     expect(screen.getByText("Kurse & Marktdaten")).toBeTruthy();
     expect(screen.getByText("Synchronisierung & Datenkonflikte")).toBeTruthy();
+    expect(screen.getByText("Gerätediagnose")).toBeTruthy();
     expect(screen.getByText("Verwendungsplan")).toBeTruthy();
     expect(screen.getByText("Sicherung & lokale Daten")).toBeTruthy();
     expect(screen.getByText("v1.8.1 · Online")).toBeTruthy();
     const groups = [...container.querySelectorAll("details.advanced-group")] as HTMLDetailsElement[];
-    expect(groups).toHaveLength(4);
+    expect(groups).toHaveLength(5);
     expect(groups.every((group) => group.open === false)).toBe(true);
 
     fireEvent.click(screen.getByText("Kurse & Marktdaten"));

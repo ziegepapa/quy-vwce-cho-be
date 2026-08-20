@@ -1,5 +1,6 @@
 import { Component, Fragment, type ReactNode } from "react";
 import { isRecoverableOperationError } from "../lib/operationErrors";
+import { recordLocalDiagnostic } from "./localDiagnostics";
 
 type Props = {
   children: ReactNode;
@@ -37,6 +38,10 @@ export default class PageFailureBoundary extends Component<Props, State> {
     window.addEventListener("unhandledrejection", this.handleUnhandledRejection, true);
   }
 
+  componentDidCatch() {
+    recordLocalDiagnostic({ category: "page-failure", code: "render-error" });
+  }
+
   componentWillUnmount() {
     window.removeEventListener("unhandledrejection", this.handleUnhandledRejection, true);
   }
@@ -45,6 +50,7 @@ export default class PageFailureBoundary extends Component<Props, State> {
     if (isExpectedAbort(event.reason) || isRecoverableOperationError(event.reason)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    recordLocalDiagnostic({ category: "page-failure", code: "unhandled-rejection" });
     this.setState({ failed: true });
   };
 
