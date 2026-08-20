@@ -1,6 +1,6 @@
 # Runbook vận hành và bàn giao VWCE Vault
 
-**Phiên bản:** P7.5
+**Phiên bản:** P8.4
 **Đối tượng:** Owner gia đình, người vận hành dự án, hoặc người bảo trì tiếp theo.  
 **Phạm vi:** Hướng dẫn sử dụng và kiểm tra vận hành. Tài liệu này không phải tư vấn đầu tư, thuế hoặc dự báo lợi nhuận.
 
@@ -84,7 +84,7 @@ Danh sách giao dịch dùng cửa sổ hiển thị lũy tiến: ban đầu t�
 
 Data Quality Inbox chỉ đánh dấu giao dịch có thể thiếu thông tin và mở đúng màn hình chỉnh sửa hiện có. Nó không tự điền, tự sửa hoặc tự quyết định dữ liệu. Khi dữ liệu tăng lớn, dùng lọc theo năm/loại/hoạt động, tìm kiếm, và “Xem thêm” thay vì cố tải lại hoặc xuất/nhập nhiều lần liên tục.
 
-Công cụ nhập PDF Trade Republic chỉ được tải khi owner mở phần công cụ giao dịch. Tách tải này giữ PDF worker và UI importer ngoài critical path ban đầu; nó không làm thay đổi ledger, backup hoặc luồng đồng bộ. Owner vẫn phải tự xem, xác nhận và lưu các giao dịch theo các control hiện có.
+Công cụ nhập PDF Trade Republic chỉ được tải khi owner mở phần công cụ giao dịch. Tách tải này giữ PDF worker và UI importer ngoài critical path ban đầu; nó không làm thay đổi ledger, backup hoặc luồng đồng bộ. Workspace rà soát PDF luôn hiển thị dữ liệu đã nhận diện, cảnh báo, trạng thái kiểm tra trùng và validation trước bước lưu. Nút lưu bị khóa cho đến khi document reference hợp lệ, validation đạt và dedupe xác nhận `clear`; cancel/Escape chỉ đóng review an toàn. Không có auto-dedupe, auto-create hoặc auto-sync.
 
 ## 7. Sao lưu, nhập dữ liệu và đăng xuất
 
@@ -102,6 +102,19 @@ JSON hỏng, payload không đúng cấu trúc, schema không hỗ trợ, giá t
 | Xóa dữ liệu local | Có backup hoặc chắc chắn không cần phục hồi; không còn blocker. | Yêu cầu xác nhận; không dùng để “sửa” lỗi sync. |
 | Đăng xuất | Sync Health không có blocker. | Không tự xóa dữ liệu khi tồn tại rủi ro chưa xử lý. |
 
+### 7.1 Recovery drill không phá vault chính
+
+Recovery drill xác nhận hợp đồng **fail-closed**, không phải là thao tác phục hồi dữ liệu owner trên vault đang dùng. Thực hiện trước khi đổi thiết bị, chuyển người bảo trì, hoặc sau thay đổi lớn ở backup/import; luôn dùng browser profile/vault thử nghiệm và fixture tổng hợp, không dùng file backup thật của gia đình để thử lỗi.
+
+| Bước drill | Kết quả cần ghi nhận | Không được làm |
+|---|---|---|
+| Tạo **Xuất JSON** trong vault thử nghiệm | File được owner chủ động lưu; inventory count không đổi. | Cho rằng export đã sao lưu cloud hoặc tự chia sẻ file. |
+| Thử JSON hỏng hoặc schema không hỗ trợ | Import bị từ chối, không reload, không lộ payload/lỗi gốc và count không đổi. | Cố sửa payload trong UI hoặc import từng phần. |
+| Thử fixture hợp lệ đã được xác nhận | Safety backup hoàn tất trước import; dữ liệu chỉ đổi sau xác nhận rõ ràng. | Chạy drill trên vault chính hay bỏ qua safety backup. |
+| Mô phỏng pending/recovery blocker | Sync/đăng xuất vẫn bị chặn hoặc đưa về recovery flow an toàn. | Xóa transaction/clear storage để ép trạng thái qua. |
+
+Chỉ ghi nhận ngày drill, phiên bản app, trạng thái pass/fail và người kiểm tra trong ghi chú vận hành riêng. Không đính kèm giao dịch, số tiền, file backup, credential hoặc snapshot chứa thông tin gia đình vào issue/PR.
+
 ## 8. PWA, offline và cập nhật
 
 Sau khi ứng dụng đã được mở/cài và service worker hoạt động, app shell được precache để có thể mở giao diện khi mất mạng. Dữ liệu mới nhập khi offline vẫn chỉ ở thiết bị cho đến khi có kết nối và một lượt đồng bộ hoàn tất.
@@ -118,6 +131,7 @@ Mọi thay đổi phải đi qua PR vào `main`. Chỉ merge khi các gate bắt
 npm test
 npm run benchmark:ledger:check
 npm run audit:locale
+npm run check:external-boundary
 npm run build
 npm run check:bundle
 npm run test:release
@@ -129,6 +143,7 @@ npm run test:preview
 | `npm test` | Unit/UI regression, price scripts và regression locale audit. |
 | `benchmark:ledger:check` | Cửa sổ giao dịch 60/120 dòng cho 100–10.000 giao dịch, qua scenario lọc/sắp xếp xác định. |
 | `audit:locale` | Không có hard-coded locale candidate production-reachable; legacy được báo riêng. |
+| `check:external-boundary` | Không có UI caller/AI SDK/Edge invocation production cho Trace legacy; isolated edge smoke chỉ dùng mock loopback. |
 | `build` + `check:bundle` | Typecheck/artifact và budget initial JS/CSS gzip; largest asset chỉ được báo cáo để review. |
 | `test:release` | PWA, manifest/icon, app shell và quote feed precache. |
 | `test:preview` | App boot, entry Việt/Đức, keyboard journey Đức, visual evidence, PWA registration/cache và offline app shell. |
@@ -144,9 +159,10 @@ Khi một gate lỗi, **không merge**. Xác định PR/commit gây lỗi, sửa
 | Diagnostics | `src/components/localDiagnostics.ts`, `LocalDiagnosticsPanel.tsx` | Local-only, allowlist, tối đa 30 dòng, không thêm payload lỗi. |
 | Kiểm kê local | `src/components/LocalDataInventoryPanel.tsx` | Chỉ count allowlist; không đọc/render nội dung giao dịch hay ID; load failure không mutation. |
 | Backup/import | `src/lib/backupSchema.test.ts`, `src/pages/Settings.operationErrors.test.tsx` | Regression fail-closed cho JSON/schema/payload và safety-backup trước import. |
-| PDF importer | `src/pages/Transactions.tsx`, `TradeRepublicPdfImport` | Lazy-load chỉ sau khi mở tools; không đưa importer/worker trở lại entry ban đầu. |
+| PDF importer/workspace | `src/pages/Transactions.tsx`, `TradeRepublicPdfImport`, `importReviewWorkspace.ts` | Lazy-load chỉ sau khi mở tools; confirmation chỉ mở sau validation + dedupe clear; không đưa importer/worker trở lại entry ban đầu. |
+| Review theo năm | `src/pages/planVsReality.ts`, `src/pages/yearInReview.ts`, `OverviewFrame.tsx` | Selector chỉ là state UI local; chỉ dùng aggregate live record, không suy diễn giá lịch sử hoặc sửa plan/giao dịch. |
 | Bundle budget | `scripts/analyze-bundle.mjs` | CI enforce 400 KiB gzip JS entry và 40 KiB gzip CSS entry; báo cáo largest asset. |
-| AI/API boundary | `docs/ADR-007-optional-ai-api-boundary.md` | Không tích hợp P7; mọi đề xuất mới cần scope/consent/data contract/PR riêng. |
+| AI/API boundary | `docs/ADR-007-optional-ai-api-boundary.md`, `docs/p8-baseline-and-ai-inventory.md`, `scripts/check-external-boundary.mjs` | Không có UI AI production; guard CI cấm caller runtime và chỉ cho smoke legacy chạy với mock loopback. Mọi đề xuất mới cần scope/consent/data contract/PR riêng. |
 | Dữ liệu/giao dịch | `src/lib/**` | Không sửa khi chưa có đặc tả riêng, regression và review phạm vi. |
 | Benchmark giao dịch | `src/pages/ledgerBenchmark.ts`, `scripts/benchmark-ledger.ts` | Fixture xác định, không dùng dữ liệu owner. |
 | Locale | `src/lib/locale.tsx`, `scripts/audit-ui-localization.mjs` | Mọi UI reachable phải thuần Việt hoặc Đức; audit active candidate fail CI. |
@@ -154,10 +170,12 @@ Khi một gate lỗi, **không merge**. Xác định PR/commit gây lỗi, sửa
 
 ## 11. Ranh giới AI/API
 
-P7.4 quyết định **không tích hợp AI hay API bên ngoài**. App phải dùng được đầy đủ khi offline, không có account dịch vụ bổ sung và không có yêu cầu nền. Không có API key, SDK, connector, endpoint, prompt, telemetry ngoài, webhook hoặc background job được thêm cho P7.
+P7.4 quyết định **không tích hợp AI hay API bên ngoài**; P8.0 xác nhận rõ hơn rằng **không có phần AI nào đang hiển thị trong UI production**. `src/lib/aiTraceExplanation.ts` và `supabase/functions/explain-trace` là hạ tầng Trace legacy không có route/page/component runtime gọi tới. Vì vậy owner sẽ không thấy nút AI, và P8 không bật, deploy hay mở rộng nó.
 
-Bất kỳ đề xuất tương lai nào phải bắt đầu bằng use case owner-approved, data manifest, đồng ý rõ ràng theo từng scope, allowlist tối thiểu, chi phí/giới hạn minh bạch, fallback local và kiểm thử việc từ chối/thu hồi/offline. AI/API không được thay thế quyết định của owner về giao dịch, backup, conflict, đầu tư hoặc thuế. Xem hợp đồng đầy đủ tại [`ADR-007-optional-ai-api-boundary.md`](./ADR-007-optional-ai-api-boundary.md).
+P8.4 thêm `npm run check:external-boundary` vào test tổng thể. Guard chỉ đọc source/configuration: nó từ chối caller AI/Edge/SDK trong runtime production và xác nhận smoke legacy dùng endpoint mock `127.0.0.1`, không phải provider thật. Đây không phải bằng chứng rằng một provider chưa từng được cấu hình ngoài repository; nó là contract release ngăn UI PWA tạo egress mới.
+
+Bất kỳ đề xuất tương lai nào phải bắt đầu bằng use case owner-approved, data manifest, đồng ý rõ ràng theo từng scope, allowlist tối thiểu, chi phí/giới hạn minh bạch, fallback local và kiểm thử việc từ chối/thu hồi/offline. AI/API không được thay thế quyết định của owner về giao dịch, backup, conflict, đầu tư hoặc thuế. Xem hợp đồng đầy đủ tại [`ADR-007-optional-ai-api-boundary.md`](./ADR-007-optional-ai-api-boundary.md) và inventory tại [`p8-baseline-and-ai-inventory.md`](./p8-baseline-and-ai-inventory.md).
 
 ---
 
-**Checklist bàn giao P7:** Owner biết vị trí Sync Health và Tổng quan dữ liệu trên thiết bị, biết export backup và import fail-closed, biết xung đột không được tự xử lý, biết diagnostics local-only, hiểu PDF importer chỉ tải khi cần, và biết AI/API không được bật trong P7. Người bảo trì chỉ merge sau khi toàn bộ CI xanh và deploy main hoàn tất.
+**Checklist bàn giao P8:** Owner biết vị trí Sync Health và Tổng quan dữ liệu trên thiết bị, biết export backup/import fail-closed và recovery drill không phá vault chính, biết review theo năm chỉ là aggregate chỉ đọc, biết import PDF cần validation + dedupe + xác nhận, biết diagnostics local-only, và biết AI legacy không có UI production. Người bảo trì chỉ merge sau khi toàn bộ CI xanh, external-boundary guard đạt và deploy main hoàn tất.
