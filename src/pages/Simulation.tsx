@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   applyTransaction,
   emptyPortfolio,
-  formatMoney,
   parseDate,
   parseDecimal,
   round2,
@@ -21,6 +20,8 @@ import {
 import type { Mode, ProjectOutput, Scenario, YearPoint } from "../lib/simulation/engine";
 import type { AppSettings, Goal, Transaction } from "../lib/types";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
+import { useLocale } from "../lib/locale";
+import { formatDisplayMoney } from "../ui/localeFormatting";
 import SimulationDemoShell from "../components/demo-v10/SimulationDemoShell";
 import "../styles/demo-v10-simulation.css";
 
@@ -31,7 +32,17 @@ type UndoSnap = {
 
 const UNDO_MS = 12_000;
 
+function simulationPageCopy(locale: "vi" | "de") {
+  return locale === "de" ? {
+    cautious: "Vorsichtig", base: "Basis", bull: "Günstig", setYearOne: (value: string) => `Jahr 1 wurde auf ${value} gesetzt`, setFromYearTwo: (value: string) => `Beitrag ab Jahr 2 wurde auf ${value} gesetzt`, setReturn: (value: string) => `VWCE-Rendite wurde auf ${value} gesetzt`, yearOne: (value: string) => `Jahr 1 = ${value}`, fromYearTwo: (value: string) => `Beitrag ab Jahr 2 = ${value}`, return: (value: string) => `VWCE-Rendite = ${value}`, savedChanges: (count: number) => `${count} Änderungen wurden gespeichert`, noSelection: "Keine Auswahl", saveOne: "1 Änderung speichern", saveMany: (count: number) => `${count} Änderungen speichern`, afterTax: "nach Steuern", presentValue: "heutige Kaufkraft", beforeTaxNominal: "vor Steuern · nominal", range: "Bandbreite", inflation: (value: string) => `Inflation ${value}%`, tax: "mit Steuern", noTax: "ohne Steuern", contributionGrowth: (value: string) => `Beitrag ${value}% / Jahr`, advanced: (parts: string) => `Erweiterte Optionen · ${parts}`,
+  } : {
+    cautious: "Thận trọng", base: "Cơ sở", bull: "Thuận lợi", setYearOne: (value: string) => `Đã đặt Góp năm 1 = ${value}`, setFromYearTwo: (value: string) => `Đã đặt Góp từ năm 2 = ${value}`, setReturn: (value: string) => `Đã đặt Lợi nhuận VWCE = ${value}`, yearOne: (value: string) => `Góp năm 1 = ${value}`, fromYearTwo: (value: string) => `Góp từ năm 2 = ${value}`, return: (value: string) => `Lợi nhuận VWCE = ${value}`, savedChanges: (count: number) => `Đã lưu ${count} thay đổi`, noSelection: "Chưa chọn gì", saveOne: "Lưu 1 thay đổi", saveMany: (count: number) => `Lưu ${count} thay đổi`, afterTax: "sau thuế", presentValue: "giá hôm nay", beforeTaxNominal: "trước thuế · danh nghĩa", range: "biên độ", inflation: (value: string) => `lạm phát ${value}%`, tax: "có thuế", noTax: "không thuế", contributionGrowth: (value: string) => `góp ${value}%/năm`, advanced: (parts: string) => `Tùy chọn nâng cao · ${parts}`,
+  };
+}
+
 export default function Simulation() {
+  const { locale } = useLocale();
+  const text = useMemo(() => simulationPageCopy(locale), [locale]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [txs, setTxs] = useState<Transaction[]>([]);
@@ -129,11 +140,11 @@ export default function Simulation() {
   const band = clamp(parseDecimal(bandInput) / 100, 0, 0.1);
   const scenarios = useMemo(
     () => [
-      { id: "cautious", label: "Thận trọng", rate: Math.max(0, baseRate - band) },
-      { id: "base", label: "Cơ sở", rate: baseRate },
-      { id: "bull", label: "Thuận lợi", rate: baseRate + band },
+      { id: "cautious", label: text.cautious, rate: Math.max(0, baseRate - band) },
+      { id: "base", label: text.base, rate: baseRate },
+      { id: "bull", label: text.bull, rate: baseRate + band },
     ],
-    [baseRate, band],
+    [baseRate, band, text],
   );
 
   const yearsB = useMemo(() => {
@@ -300,11 +311,11 @@ export default function Simulation() {
 
     if (diffCount === 1) {
       if (y1Diff) {
-        void applyPersist({ contributionY1: monthlyR }, `Đã đặt Góp năm 1 = ${formatMoney(monthlyR)}`);
+        void applyPersist({ contributionY1: monthlyR }, text.setYearOne(formatDisplayMoney(monthlyR, locale)));
       } else if (y2Diff) {
-        void applyPersist({ contributionY2: monthlyR }, `Đã đặt Góp từ năm 2 = ${formatMoney(monthlyR)}`);
+        void applyPersist({ contributionY2: monthlyR }, text.setFromYearTwo(formatDisplayMoney(monthlyR, locale)));
       } else {
-        void applyPersist({ vwceReturn: nR }, `Đã đặt Lợi nhuận VWCE = ${(nR * 100).toFixed(2)}%`);
+        void applyPersist({ vwceReturn: nR }, text.setReturn(`${(nR * 100).toFixed(2)}%`));
       }
       return;
     }
@@ -331,15 +342,15 @@ export default function Simulation() {
     const parts: string[] = [];
     if (writeY1 && y1D) {
       partial.contributionY1 = monthlyR;
-      parts.push(`Góp năm 1 = ${formatMoney(monthlyR)}`);
+      parts.push(text.yearOne(formatDisplayMoney(monthlyR, locale)));
     }
     if (writeY2 && y2D) {
       partial.contributionY2 = monthlyR;
-      parts.push(`Góp từ năm 2 = ${formatMoney(monthlyR)}`);
+      parts.push(text.fromYearTwo(formatDisplayMoney(monthlyR, locale)));
     }
     if (writeReturn && retD) {
       partial.vwceReturn = nR;
-      parts.push(`Lợi nhuận VWCE = ${(nR * 100).toFixed(2)}%`);
+      parts.push(text.return(`${(nR * 100).toFixed(2)}%`));
     }
 
     if (parts.length === 0) {
@@ -348,7 +359,7 @@ export default function Simulation() {
     }
 
     const message =
-      parts.length === 1 ? `Đã đặt ${parts[0]}` : `Đã lưu ${parts.length} thay đổi`;
+      parts.length === 1 ? parts[0] : text.savedChanges(parts.length);
     await applyPersist(partial, message);
   }
 
@@ -424,10 +435,10 @@ export default function Simulation() {
     (writeY1 && y1Diff ? 1 : 0) + (writeY2 && y2Diff ? 1 : 0) + (writeReturn && retDiff ? 1 : 0);
   const saveLabel =
     selectedCount === 0
-      ? "Chưa chọn gì"
+      ? text.noSelection
       : selectedCount === 1
-        ? "Lưu 1 thay đổi"
-        : `Lưu ${selectedCount} thay đổi`;
+        ? text.saveOne
+        : text.saveMany(selectedCount);
 
   const useTax = taxOn && showAfterTax;
   const usePP = inflationOn && showPP;
@@ -439,10 +450,10 @@ export default function Simulation() {
     else headlineValue = primary.out.terminal;
   }
   const headlineNoteParts: string[] = [];
-  if (useTax) headlineNoteParts.push("sau thuế");
-  if (usePP) headlineNoteParts.push("giá hôm nay");
+  if (useTax) headlineNoteParts.push(text.afterTax);
+  if (usePP) headlineNoteParts.push(text.presentValue);
   const headlineNote =
-    headlineNoteParts.length > 0 ? headlineNoteParts.join(" · ") : "trước thuế · danh nghĩa";
+    headlineNoteParts.length > 0 ? headlineNoteParts.join(" · ") : text.beforeTaxNominal;
 
   const shownInterest = primary
     ? Math.max(0, headlineValue - primary.out.contributed - initialBalance)
@@ -450,18 +461,19 @@ export default function Simulation() {
 
   const cautiousRate = scenarios.find((s) => s.id === "cautious")?.rate ?? baseRate;
   const bullRate = scenarios.find((s) => s.id === "bull")?.rate ?? baseRate;
-  const bandPctLabel = `${round2(cautiousRate * 100).toLocaleString("de-DE")} % – ${round2(bullRate * 100).toLocaleString("de-DE")} %`;
+  const bandPctLabel = `${round2(cautiousRate * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN")} % – ${round2(bullRate * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN")} %`;
 
   const advParts: string[] = [];
-  advParts.push(`biên độ ±${round2(band * 100).toLocaleString("de-DE")}`);
-  if (inflationOn) advParts.push(`lạm phát ${inflationPct}%`);
-  if (taxOn) advParts.push("có thuế");
-  else advParts.push("không thuế");
-  if (growthOn) advParts.push(`góp ${growthPct}%/năm`);
-  const advSummary = `Tùy chọn nâng cao · ${advParts.join(" · ")}`;
+  advParts.push(`${text.range} ±${round2(band * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN")}`);
+  if (inflationOn) advParts.push(text.inflation(inflationPct));
+  if (taxOn) advParts.push(text.tax);
+  else advParts.push(text.noTax);
+  if (growthOn) advParts.push(text.contributionGrowth(growthPct));
+  const advSummary = text.advanced(advParts.join(" · "));
 
   return (
     <SimulationDemoShell
+      locale={locale}
       mode={mode}
       setMode={setMode}
       planUnreachable={planUnreachable}
@@ -548,7 +560,6 @@ export default function Simulation() {
       selectedCount={selectedCount}
       saveLabel={saveLabel}
       confirmPersist={() => void confirmPersist()}
-      formatMoney={formatMoney}
       round2={round2}
     />
   );

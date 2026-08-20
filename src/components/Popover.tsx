@@ -6,6 +6,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
+import { useLocale } from "../lib/locale";
 
 type PopoverProps = {
   open: boolean;
@@ -22,6 +23,7 @@ export default function Popover({
   panelClassName,
   children,
 }: PopoverProps) {
+  const { locale } = useLocale();
   const panelRef = useRef<HTMLDivElement>(null);
 
   // onClose là hàm mới mỗi lần render của navbar (navbar re-render theo
@@ -166,7 +168,7 @@ export default function Popover({
         ref={panelRef}
         className={panelClassName}
         role="menu"
-        aria-label="Menu tài khoản"
+        aria-label={locale === "de" ? "Kontomenü" : "Menu tài khoản"}
         tabIndex={-1}
       >
         {children}

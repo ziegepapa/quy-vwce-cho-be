@@ -9,9 +9,11 @@ import type {
   Transaction,
 } from "../lib/types";
 import { defaultNotfallmappe, nowIso, uid } from "../lib/defaults";
-import { buildEquitySeries, formatDateVN, formatMoney } from "../lib/calc";
+import { buildEquitySeries } from "../lib/calc";
 import { printNotfallmappe } from "../lib/printNotfallmappe";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
+import { useLocale } from "../lib/locale";
+import { formatDisplayDate, formatDisplayMoney, formatDisplayQuantity } from "../ui/localeFormatting";
 import "../styles/notfallmappe.css";
 import "../styles/notfallmappe-save-state.css";
 
@@ -41,6 +43,8 @@ const IBAN_RE = /\b[A-Z]{2}\s?\d{2}(?:\s?[A-Z0-9]{4}){3,7}\b/;
 type SaveState = "saved" | "saving" | "error";
 
 export default function NotfallmappePage() {
+  const { locale } = useLocale();
+  const copy = (vi: string, de: string) => (locale === "de" ? de : vi);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [data, setData] = useState<NotfallmappeData | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -125,37 +129,37 @@ export default function NotfallmappePage() {
   const risks = useMemo(() => {
     if (!data) return [] as string[];
     const parts: { label: string; text: string }[] = [
-      { label: "Mục 1", text: `${data.purpose} ${data.custodyNote}` },
+      { label: copy("Mục 1", "Abschnitt 1"), text: `${data.purpose} ${data.custodyNote}` },
       {
-        label: "Mục 2",
+        label: copy("Mục 2", "Abschnitt 2"),
         text: `${data.brokerName} ${data.brokerAccountType} ${data.cashBankName} ${data.cashAccountNote}`,
       },
       {
-        label: "Mục 3",
+        label: copy("Mục 3", "Abschnitt 3"),
         text: data.contacts.map((c) => `${c.name} ${c.relation} ${c.email}`).join(" "),
       },
       {
-        label: "Mục 4",
+        label: copy("Mục 4", "Abschnitt 4"),
         text: data.documents.map((d) => `${d.label} ${d.location}`).join(" "),
       },
-      { label: "Mục 5", text: data.wishes },
+      { label: copy("Mục 5", "Abschnitt 5"), text: data.wishes },
     ];
     const out: string[] = [];
     for (const p of parts) {
       if (SECRET_RE.test(p.text)) {
-        out.push(`${p.label} có vẻ chứa mật khẩu, PIN hoặc TAN. Hãy xóa khỏi đây.`);
+        out.push(locale === "de" ? `${p.label} enthält möglicherweise ein Passwort, eine PIN oder TAN. Bitte entfernen Sie diese Angabe.` : `${p.label} có vẻ chứa mật khẩu, PIN hoặc TAN. Hãy xóa khỏi đây.`);
       }
       if (IBAN_RE.test(p.text)) {
-        out.push(`${p.label} có vẻ chứa số IBAN đầy đủ. Chỉ nên ghi 4 số cuối.`);
+        out.push(locale === "de" ? `${p.label} enthält möglicherweise eine vollständige IBAN. Notieren Sie nur die letzten vier Ziffern.` : `${p.label} có vẻ chứa số IBAN đầy đủ. Chỉ nên ghi 4 số cuối.`);
       }
     }
     return out;
-  }, [data]);
+  }, [data, locale]);
 
   if (initialLoading) {
     return (
       <div className="empty card" role="status" aria-live="polite" aria-busy="true">
-        <p>Đang tải Hồ sơ khẩn cấp…</p>
+        <p>{copy("Đang tải Hồ sơ khẩn cấp…", "Notfallmappe wird geladen…")}</p>
       </div>
     );
   }
@@ -163,10 +167,10 @@ export default function NotfallmappePage() {
   if (initialLoadError || !data) {
     return (
       <section className="empty card" role="alert">
-        <h1 className="page-title">Không tải được Hồ sơ khẩn cấp</h1>
-        <p>Hồ sơ trên thiết bị không bị thay đổi. Không có nội dung nhạy cảm nào được hiển thị.</p>
+        <h1 className="page-title">{copy("Không tải được Hồ sơ khẩn cấp", "Notfallmappe konnte nicht geladen werden")}</h1>
+        <p>{copy("Hồ sơ trên thiết bị không bị thay đổi. Không có nội dung nhạy cảm nào được hiển thị.", "Die Daten auf diesem Gerät wurden nicht verändert. Es werden keine sensiblen Inhalte angezeigt.")}</p>
         <button type="button" onClick={() => setInitialLoadAttempt((attempt) => attempt + 1)}>
-          Thử lại
+          {copy("Thử lại", "Erneut versuchen")}
         </button>
       </section>
     );
@@ -189,7 +193,7 @@ export default function NotfallmappePage() {
       } catch {
         if (mounted.current && sequence === saveSequence.current) {
           setSaveState("error");
-          setSaveError("Không lưu được Hồ sơ khẩn cấp. Bản đang chỉnh vẫn còn trên màn hình.");
+          setSaveError(copy("Không lưu được Hồ sơ khẩn cấp. Bản đang chỉnh vẫn còn trên màn hình.", "Die Notfallmappe konnte nicht gespeichert werden. Ihre aktuelle Bearbeitung bleibt auf dem Bildschirm."));
         }
         return false;
       }
@@ -301,15 +305,15 @@ export default function NotfallmappePage() {
     if (latest) void enqueueSave(latest);
   }
 
-  const childLabel = settings?.childName?.trim() || "bé";
+  const childLabel = settings?.childName?.trim() || copy("bé", "dem Kind");
 
   const statusText = saveState === "saving"
-    ? "Đang lưu…"
+    ? copy("Đang lưu…", "Wird gespeichert…")
     : saveState === "error"
-      ? "Chưa lưu được"
+      ? copy("Chưa lưu được", "Noch nicht gespeichert")
       : data.updatedAt
-        ? `Đã lưu · cập nhật ${formatDateVN(data.updatedAt.slice(0, 10))}`
-        : "Đã lưu";
+        ? `${copy("Đã lưu · cập nhật", "Gespeichert · aktualisiert")} ${formatDisplayDate(data.updatedAt.slice(0, 10), locale)}`
+        : copy("Đã lưu", "Gespeichert");
 
   const statusClass = saveState === "saving"
     ? "nfm-status is-saving"
@@ -320,10 +324,9 @@ export default function NotfallmappePage() {
   return (
     <div className="nfm" ref={rootRef}>
       <p className="nfm-warn">
-        <strong>Lưu ý</strong>
+        <strong>{copy("Lưu ý", "Hinweis")}</strong>
         <span>
-          Không bao giờ ghi mật khẩu, mã PIN hay mã TAN vào đây. Chỉ ghi nơi cất
-          giấy tờ gốc. Nội dung này được đồng bộ lên tài khoản của bạn.
+          {copy("Không bao giờ ghi mật khẩu, mã PIN hay mã TAN vào đây. Chỉ ghi nơi cất giấy tờ gốc. Nội dung này được đồng bộ lên tài khoản của bạn.", "Tragen Sie hier niemals Passwörter, PINs oder TANs ein. Notieren Sie nur den Aufbewahrungsort von Originaldokumenten. Diese Inhalte werden mit Ihrem Konto synchronisiert.")}
         </span>
       </p>
 
@@ -342,46 +345,44 @@ export default function NotfallmappePage() {
             style={{ width: `${(filledCount / 5) * 100}%` }}
           />
         </div>
-        <span className="nfm-progress-text">{filledCount}/5 mục đã điền</span>
+        <span className="nfm-progress-text">{locale === "de" ? `${filledCount}/5 Abschnitte ausgefüllt` : `${filledCount}/5 mục đã điền`}</span>
       </div>
 
       <div className="nfm-print-note">
         <p>
-          <strong>Bản in giấy mới là bản dùng được.</strong> Trang này nằm sau màn
-          hình đăng nhập của riêng bạn, nên nếu có chuyện xảy ra, người thân sẽ
-          không mở được. Hãy in ra và cất cùng chỗ với giấy tờ gốc.
+          <strong>{copy("Bản in giấy mới là bản dùng được.", "Nur ein Ausdruck auf Papier ist im Ernstfall nutzbar.")}</strong> {copy("Trang này nằm sau màn hình đăng nhập của riêng bạn, nên nếu có chuyện xảy ra, người thân sẽ không mở được. Hãy in ra và cất cùng chỗ với giấy tờ gốc.", "Diese Seite liegt hinter Ihrer persönlichen Anmeldung. Angehörige können sie im Notfall nicht öffnen. Drucken Sie sie aus und bewahren Sie sie bei den Originaldokumenten auf.")}
         </p>
         <p className="nfm-print-when">
           {data.lastPrintedAt
-            ? `In gần nhất ${formatDateVN(data.lastPrintedAt.slice(0, 10))}`
-            : "Chưa in lần nào"}
+            ? `${copy("In gần nhất", "Zuletzt gedruckt")} ${formatDisplayDate(data.lastPrintedAt.slice(0, 10), locale)}`
+            : copy("Chưa in lần nào", "Noch nie gedruckt")}
         </p>
       </div>
 
       <details className="nfm-sec">
         <summary>
           <span className="nfm-sec-num">1</span>
-          <span className="nfm-sec-title">Quỹ này là gì</span>
+          <span className="nfm-sec-title">{copy("Quỹ này là gì", "Worum geht es bei diesem Fonds?")}</span>
           <span className={filled[0] ? "nfm-sec-state ok" : "nfm-sec-state"}>
-            {filled[0] ? "Đã điền" : "Chưa điền"}
+            {filled[0] ? copy("Đã điền", "Ausgefüllt") : copy("Chưa điền", "Nicht ausgefüllt")}
           </span>
           <span className="nfm-chev" aria-hidden>›</span>
         </summary>
         <div className="nfm-box">
           <label className="nfm-field">
-            <span>Số tiền này dành cho ai và để làm gì</span>
+            <span>{copy("Số tiền này dành cho ai và để làm gì", "Für wen ist dieses Geld bestimmt und wofür?")}</span>
             <textarea
               value={data.purpose}
               onChange={(e) => patch({ purpose: e.target.value })}
-              placeholder={`Viết cho người không biết gì về quỹ. Ví dụ: đây là tiền dành cho ${childLabel}, dự kiến dùng từ 06/2038.`}
+              placeholder={locale === "de" ? `Schreiben Sie für jemanden ohne Kenntnisse über den Fonds. Beispiel: Dieses Geld ist für ${childLabel} und soll ab 06/2038 verwendet werden.` : `Viết cho người không biết gì về quỹ. Ví dụ: đây là tiền dành cho ${childLabel}, dự kiến dùng từ 06/2038.`}
             />
           </label>
           <label className="nfm-field">
-            <span>Tiền đứng tên ai, và thực sự thuộc về ai</span>
+            <span>{copy("Tiền đứng tên ai, và thực sự thuộc về ai", "Auf wessen Namen läuft das Geld und wem gehört es tatsächlich?")}</span>
             <textarea
               value={data.custodyNote}
               onChange={(e) => patch({ custodyNote: e.target.value })}
-              placeholder="Ví dụ: tài khoản đứng tên cha/mẹ nhưng toàn bộ số tiền là của bé."
+              placeholder={copy("Ví dụ: tài khoản đứng tên cha/mẹ nhưng toàn bộ số tiền là của bé.", "Beispiel: Das Konto läuft auf ein Elternteil, aber das gesamte Geld gehört dem Kind.")}
             />
           </label>
         </div>
@@ -390,9 +391,9 @@ export default function NotfallmappePage() {
       <details className="nfm-sec">
         <summary>
           <span className="nfm-sec-num">2</span>
-          <span className="nfm-sec-title">Tài sản đang ở đâu</span>
+          <span className="nfm-sec-title">{copy("Tài sản đang ở đâu", "Wo befinden sich die Vermögenswerte?")}</span>
           <span className={filled[1] ? "nfm-sec-state ok" : "nfm-sec-state"}>
-            {filled[1] ? "Đã điền" : "Chưa điền"}
+            {filled[1] ? copy("Đã điền", "Ausgefüllt") : copy("Chưa điền", "Nicht ausgefüllt")}
           </span>
           <span className="nfm-chev" aria-hidden>›</span>
         </summary>
@@ -403,22 +404,22 @@ export default function NotfallmappePage() {
               <input value={data.brokerName} onChange={(e) => patch({ brokerName: e.target.value })} placeholder="Trade Republic" />
             </label>
             <label className="nfm-field">
-              <span>Loại tài khoản</span>
-              <input value={data.brokerAccountType} onChange={(e) => patch({ brokerAccountType: e.target.value })} placeholder="Depot cá nhân" />
+              <span>{copy("Loại tài khoản", "Kontotyp")}</span>
+              <input value={data.brokerAccountType} onChange={(e) => patch({ brokerAccountType: e.target.value })} placeholder={copy("Depot cá nhân", "Persönliches Depot")} />
             </label>
           </div>
           <label className="nfm-field">
-            <span>ISIN của quỹ đang nắm</span>
+            <span>{copy("ISIN của quỹ đang nắm", "ISIN des gehaltenen Fonds")}</span>
             <input value={data.isin} onChange={(e) => patch({ isin: e.target.value })} />
           </label>
           <div className="nfm-row-grid">
             <label className="nfm-field">
-              <span>Ngân hàng giữ tiền mặt</span>
-              <input value={data.cashBankName} onChange={(e) => patch({ cashBankName: e.target.value })} placeholder="Tên ngân hàng" />
+              <span>{copy("Ngân hàng giữ tiền mặt", "Bank für das Guthaben")}</span>
+              <input value={data.cashBankName} onChange={(e) => patch({ cashBankName: e.target.value })} placeholder={copy("Tên ngân hàng", "Name der Bank")} />
             </label>
             <label className="nfm-field">
-              <span>Ghi chú nhận biết</span>
-              <input value={data.cashAccountNote} onChange={(e) => patch({ cashAccountNote: e.target.value })} placeholder="4 số cuối, không ghi đầy đủ" />
+              <span>{copy("Ghi chú nhận biết", "Hinweis zur Zuordnung")}</span>
+              <input value={data.cashAccountNote} onChange={(e) => patch({ cashAccountNote: e.target.value })} placeholder={copy("4 số cuối, không ghi đầy đủ", "Nur die letzten 4 Ziffern, nicht vollständig")} />
             </label>
           </div>
         </div>
@@ -427,9 +428,9 @@ export default function NotfallmappePage() {
       <details className="nfm-sec">
         <summary>
           <span className="nfm-sec-num">3</span>
-          <span className="nfm-sec-title">Người cần được báo tin</span>
+          <span className="nfm-sec-title">{copy("Người cần được báo tin", "Zu informierende Personen")}</span>
           <span className={filled[2] ? "nfm-sec-state ok" : "nfm-sec-state"}>
-            {filled[2] ? "Đã điền" : "Chưa điền"}
+            {filled[2] ? copy("Đã điền", "Ausgefüllt") : copy("Chưa điền", "Nicht ausgefüllt")}
           </span>
           <span className="nfm-chev" aria-hidden>›</span>
         </summary>
@@ -437,24 +438,24 @@ export default function NotfallmappePage() {
           {data.contacts.map((c) => (
             <div className="nfm-item" key={c.id}>
               <div className="nfm-item-top">
-                <input value={c.name} onChange={(e) => patchContact(c.id, { name: e.target.value })} placeholder="Họ và tên" />
-                <button type="button" className="nfm-del" aria-label={`Xóa ${c.name || "liên hệ"}`} onClick={() => removeContact(c.id)}>✕</button>
+                <input value={c.name} onChange={(e) => patchContact(c.id, { name: e.target.value })} placeholder={copy("Họ và tên", "Vollständiger Name")} />
+                <button type="button" className="nfm-del" aria-label={locale === "de" ? `Kontakt ${c.name || "löschen"} entfernen` : `Xóa ${c.name || "liên hệ"}`} onClick={() => removeContact(c.id)}>✕</button>
               </div>
-              <input value={c.relation} onChange={(e) => patchContact(c.id, { relation: e.target.value })} placeholder="Quan hệ — ví dụ: mẹ của bé, người giám hộ" />
-              <input value={c.phone} onChange={(e) => patchContact(c.id, { phone: e.target.value })} placeholder="Điện thoại" inputMode="tel" />
+              <input value={c.relation} onChange={(e) => patchContact(c.id, { relation: e.target.value })} placeholder={copy("Quan hệ — ví dụ: mẹ của bé, người giám hộ", "Beziehung — z. B. Mutter des Kindes, Vormund")} />
+              <input value={c.phone} onChange={(e) => patchContact(c.id, { phone: e.target.value })} placeholder={copy("Điện thoại", "Telefon")} inputMode="tel" />
               <input value={c.email} onChange={(e) => patchContact(c.id, { email: e.target.value })} placeholder="Email" inputMode="email" />
             </div>
           ))}
-          <button type="button" className="nfm-add" onClick={addContact}>+ Thêm người liên hệ</button>
+          <button type="button" className="nfm-add" onClick={addContact}>+ {copy("Thêm người liên hệ", "Kontakt hinzufügen")}</button>
         </div>
       </details>
 
       <details className="nfm-sec">
         <summary>
           <span className="nfm-sec-num">4</span>
-          <span className="nfm-sec-title">Giấy tờ gốc cất ở đâu</span>
+          <span className="nfm-sec-title">{copy("Giấy tờ gốc cất ở đâu", "Wo werden Originaldokumente aufbewahrt?")}</span>
           <span className={filled[3] ? "nfm-sec-state ok" : "nfm-sec-state"}>
-            {filled[3] ? "Đã điền" : "Chưa điền"}
+            {filled[3] ? copy("Đã điền", "Ausgefüllt") : copy("Chưa điền", "Nicht ausgefüllt")}
           </span>
           <span className="nfm-chev" aria-hidden>›</span>
         </summary>
@@ -462,41 +463,41 @@ export default function NotfallmappePage() {
           {data.documents.map((doc) => (
             <div className="nfm-item" key={doc.id}>
               <div className="nfm-item-top">
-                <input value={doc.label} onChange={(e) => patchDoc(doc.id, { label: e.target.value })} placeholder="Tên giấy tờ" aria-label="Tên giấy tờ" />
-                <button type="button" className="nfm-del" aria-label={`Xóa ${doc.label || "giấy tờ"}`} onClick={() => removeDocument(doc.id)}>✕</button>
+                <input value={doc.label} onChange={(e) => patchDoc(doc.id, { label: e.target.value })} placeholder={copy("Tên giấy tờ", "Dokumentname")} aria-label={copy("Tên giấy tờ", "Dokumentname")} />
+                <button type="button" className="nfm-del" aria-label={locale === "de" ? `Dokument ${doc.label || "löschen"} entfernen` : `Xóa ${doc.label || "giấy tờ"}`} onClick={() => removeDocument(doc.id)}>✕</button>
               </div>
               <div className="nfm-row-grid">
                 <label className="nfm-field">
-                  <span>Bản gốc cất ở đâu</span>
-                  <input value={doc.location} onChange={(e) => patchDoc(doc.id, { location: e.target.value })} placeholder="Nơi cất bản gốc — không ghi mật khẩu" />
+                  <span>{copy("Bản gốc cất ở đâu", "Aufbewahrungsort des Originals")}</span>
+                  <input value={doc.location} onChange={(e) => patchDoc(doc.id, { location: e.target.value })} placeholder={copy("Nơi cất bản gốc — không ghi mật khẩu", "Aufbewahrungsort des Originals — keine Passwörter eintragen")} />
                 </label>
                 <label className="nfm-field">
-                  <span>Ghi chú</span>
-                  <input defaultValue="" readOnly tabIndex={-1} placeholder="Viết tay trên bản in nếu cần" aria-label="Ghi chú — dành để viết tay trên bản in" />
+                  <span>{copy("Ghi chú", "Notiz")}</span>
+                  <input defaultValue="" readOnly tabIndex={-1} placeholder={copy("Viết tay trên bản in nếu cần", "Bei Bedarf auf dem Ausdruck handschriftlich ergänzen")} aria-label={copy("Ghi chú — dành để viết tay trên bản in", "Notiz — für handschriftliche Ergänzungen auf dem Ausdruck")} />
                 </label>
               </div>
             </div>
           ))}
-          <button type="button" className="nfm-add" onClick={addDocument}>+ Thêm giấy tờ</button>
+          <button type="button" className="nfm-add" onClick={addDocument}>+ {copy("Thêm giấy tờ", "Dokument hinzufügen")}</button>
         </div>
       </details>
 
       <details className="nfm-sec">
         <summary>
           <span className="nfm-sec-num">5</span>
-          <span className="nfm-sec-title">Nguyện vọng của bạn</span>
+          <span className="nfm-sec-title">{copy("Nguyện vọng của bạn", "Ihre Wünsche")}</span>
           <span className={filled[4] ? "nfm-sec-state ok" : "nfm-sec-state"}>
-            {filled[4] ? "Đã điền" : "Chưa điền"}
+            {filled[4] ? copy("Đã điền", "Ausgefüllt") : copy("Chưa điền", "Nicht ausgefüllt")}
           </span>
           <span className="nfm-chev" aria-hidden>›</span>
         </summary>
         <div className="nfm-box">
           <label className="nfm-field">
-            <span>Nếu bạn không còn, số tiền này nên được dùng thế nào</span>
+            <span>{copy("Nếu bạn không còn, số tiền này nên được dùng thế nào", "Wie soll dieses Geld verwendet werden, wenn Sie nicht mehr da sind?")}</span>
             <textarea
               value={data.wishes}
               onChange={(e) => patch({ wishes: e.target.value })}
-              placeholder="Đây không phải di chúc và không có giá trị pháp lý, nhưng giúp người ở lại hiểu ý bạn."
+              placeholder={copy("Đây không phải di chúc và không có giá trị pháp lý, nhưng giúp người ở lại hiểu ý bạn.", "Dies ist kein Testament und hat keine rechtliche Wirkung, hilft Angehörigen aber, Ihre Wünsche zu verstehen.")}
             />
           </label>
         </div>
@@ -505,20 +506,20 @@ export default function NotfallmappePage() {
       <section className="nfm-sec-static">
         <h2>
           <span className="nfm-sec-num">6</span>
-          <span className="nfm-sec-title">Tình hình tại thời điểm in</span>
+          <span className="nfm-sec-title">{copy("Tình hình tại thời điểm in", "Stand zum Zeitpunkt des Ausdrucks")}</span>
         </h2>
         <div className="nfm-box">
           <div className="nfm-snap">
-            <div className="nfm-snap-cell"><span className="nfm-snap-k">Tổng tài sản</span><span className="nfm-snap-v">{formatMoney(snap.total)}</span></div>
-            <div className="nfm-snap-cell"><span className="nfm-snap-k">Số lượng VWCE</span><span className="nfm-snap-v">{snap.qty.toFixed(4)}</span></div>
-            <div className="nfm-snap-cell"><span className="nfm-snap-k">Giá VWCE dùng để tính</span><span className="nfm-snap-v">{formatMoney(snap.price)}</span></div>
-            <div className="nfm-snap-cell"><span className="nfm-snap-k">Số giao dịch đã ghi</span><span className="nfm-snap-v">{txs.length}</span></div>
+            <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Tổng tài sản", "Gesamtvermögen")}</span><span className="nfm-snap-v">{formatDisplayMoney(snap.total, locale)}</span></div>
+            <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Số lượng VWCE", "VWCE-Anteile")}</span><span className="nfm-snap-v">{formatDisplayQuantity(snap.qty, locale, 4)}</span></div>
+            <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Giá VWCE dùng để tính", "Verwendeter VWCE-Preis")}</span><span className="nfm-snap-v">{formatDisplayMoney(snap.price, locale)}</span></div>
+            <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Số giao dịch đã ghi", "Erfasste Transaktionen")}</span><span className="nfm-snap-v">{txs.length}</span></div>
           </div>
           <ul className="nfm-goals">
             {goals.map((g) => (
-              <li key={g.id}>{g.name}<span>{formatDateVN(g.dueDate)} · {formatMoney(g.amount)}</span></li>
+              <li key={g.id}>{g.name}<span>{formatDisplayDate(g.dueDate, locale)} · {formatDisplayMoney(g.amount, locale)}</span></li>
             ))}
-            {goals.length === 0 && <li>Chưa có mục tiêu nào<span /></li>}
+            {goals.length === 0 && <li>{copy("Chưa có mục tiêu nào", "Noch keine Ziele")}<span /></li>}
           </ul>
         </div>
       </section>
@@ -528,12 +529,12 @@ export default function NotfallmappePage() {
       {saveError ? (
         <div className="nfm-save-error" role="alert">
           <span>{saveError}</span>
-          <button type="button" className="secondary" onClick={retrySave}>Thử lưu lại</button>
+          <button type="button" className="secondary" onClick={retrySave}>{copy("Thử lưu lại", "Speichern erneut versuchen")}</button>
         </div>
       ) : null}
 
       <div className="nfm-actions">
-        <button type="button" className="secondary" onClick={handlePrint}>In / Lưu PDF</button>
+        <button type="button" className="secondary" onClick={handlePrint}>{copy("In / Lưu PDF", "Drucken / PDF speichern")}</button>
       </div>
     </div>
   );

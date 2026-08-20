@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import SyncConflictSection from "../components/SyncConflictSection";
+import { useLocale } from "../lib/locale";
 import { countLocalData, db, exportBackup } from "../lib/db";
 import { uid } from "../lib/defaults";
 import {
@@ -134,6 +135,8 @@ async function verifyOrdinaryItemAgainstRemote(
 }
 
 export default function MigrateWizard({ userId, onDone, onBack }: Props) {
+  const { locale } = useLocale();
+  const copy = (vi: string, de: string) => (locale === "de" ? de : vi);
   const [counts, setCounts] = useState<Counts>(EMPTY_COUNTS);
   const [phase, setPhase] = useState<Phase>("review");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -151,7 +154,7 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
       })
       .catch(() => {
         setPhase("unverified");
-        setMessage(UNVERIFIED_COPY);
+        setMessage(copy(UNVERIFIED_COPY, "Die Daten auf dem iPhone bleiben erhalten. Stellen Sie eine Internetverbindung her und prüfen Sie erneut. Sie können noch nicht fortfahren oder sich abmelden."));
       });
   }, [userId]);
 
@@ -165,8 +168,8 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
     const objectUrl = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
     const anchor = document.createElement("a");
     anchor.href = objectUrl;
-    anchor.download = "ban-sao-luu-truoc-khi-khoi-phuc.json";
-    anchor.setAttribute("aria-label", "Bản sao lưu trước khi khôi phục");
+    anchor.download = locale === "de" ? "sicherung-vor-wiederherstellung.json" : "ban-sao-luu-truoc-khi-khoi-phuc.json";
+    anchor.setAttribute("aria-label", copy("Bản sao lưu trước khi khôi phục", "Sicherung vor der Wiederherstellung"));
     anchor.click();
     // The backup handoff is considered successfully initiated once anchor.click()
     // returns. On iPhone Safari the native download prompt can overlay or navigate
@@ -189,7 +192,7 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
       await initiateBackupDownload();
       setPhase("confirm");
     } catch {
-      setBackupFailed(true); setMessage(BACKUP_FAILURE_MESSAGE); setPhase("review");
+      setBackupFailed(true); setMessage(copy(BACKUP_FAILURE_MESSAGE, "Die Sicherung konnte nicht erstellt werden. Die Daten auf diesem Gerät bleiben unverändert.")); setPhase("review");
     } finally { setBusy(false); }
   }
 
@@ -251,7 +254,7 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
         // explicit account check backed by real read-only verification.
         setPhase("account-check");
       } else {
-        setMessage(RECOVERY_FAILURE_MESSAGE);
+        setMessage(copy(RECOVERY_FAILURE_MESSAGE, "Die Daten für die Wiederherstellung konnten nicht vorbereitet werden. Die Daten auf diesem Gerät bleiben unverändert."));
         setPhase("prepare-failed");
       }
     } finally { setBusy(false); }
@@ -280,7 +283,7 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
       const ordinary = pending.filter((item) => item.op === "upsert" || item.op === "delete");
       if (ordinary.length === 0) {
         // Nothing to verify safely; stay on account-check and offer retry only.
-        setMessage(ACCOUNT_CHECK_RETRY_MESSAGE);
+        setMessage(copy(ACCOUNT_CHECK_RETRY_MESSAGE, "Die Daten im Konto können momentan nicht geprüft werden. Die Daten auf dem iPhone bleiben unverändert. Bitte versuchen Sie es erneut."));
         return;
       }
       let sawConflict = false;
@@ -296,12 +299,12 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
       // could not verify everything, retry; only claim a safe no-op when every
       // pending item was verified as an exact match.
       if (sawConflict) { setPhase("conflict"); return; }
-      if (sawRetry) { setMessage(ACCOUNT_CHECK_RETRY_MESSAGE); return; }
+      if (sawRetry) { setMessage(copy(ACCOUNT_CHECK_RETRY_MESSAGE, "Die Daten im Konto können momentan nicht geprüft werden. Die Daten auf dem iPhone bleiben unverändert. Bitte versuchen Sie es erneut.")); return; }
       if (sawExact) { setPhase("account-verified"); return; }
-      setMessage(ACCOUNT_CHECK_RETRY_MESSAGE);
+      setMessage(copy(ACCOUNT_CHECK_RETRY_MESSAGE, "Die Daten im Konto können momentan nicht geprüft werden. Die Daten auf dem iPhone bleiben unverändert. Bitte versuchen Sie es erneut."));
     } catch {
       // Unavailable/offline/auth/RLS: keep everything intact and offer retry.
-      setMessage(ACCOUNT_CHECK_RETRY_MESSAGE);
+      setMessage(copy(ACCOUNT_CHECK_RETRY_MESSAGE, "Die Daten im Konto können momentan nicht geprüft werden. Die Daten auf dem iPhone bleiben unverändert. Bitte versuchen Sie es erneut."));
     } finally { setBusy(false); }
   }
 
@@ -343,30 +346,30 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
     if (busy || phase !== "complete") return;
     setBusy(true); setMessage("");
     try { await onDone(); }
-    catch { setMessage("Chưa thể mở Cài đặt → Dữ liệu. Dữ liệu trên thiết bị vẫn được giữ nguyên."); }
+    catch { setMessage(copy("Chưa thể mở Cài đặt → Dữ liệu. Dữ liệu trên thiết bị vẫn được giữ nguyên.", "Einstellungen → Daten konnten nicht geöffnet werden. Die Daten auf diesem Gerät bleiben unverändert.")); }
     finally { setBusy(false); }
   }
 
   function handleBack() {
     setPhase("review");
-    setMessage("Dữ liệu trên thiết bị vẫn được giữ nguyên và sẽ chờ bạn khôi phục.");
+    setMessage(copy("Dữ liệu trên thiết bị vẫn được giữ nguyên và sẽ chờ bạn khôi phục.", "Die Daten auf diesem Gerät bleiben erhalten und warten auf Ihre Wiederherstellung."));
     onBack();
   }
 
-  const heading = phase === "complete" ? "Đã khôi phục dữ liệu"
-    : phase === "conflict" ? "Cần chọn phiên bản dữ liệu"
-      : phase === "unverified" ? "Chưa thể kiểm tra dữ liệu trong tài khoản"
-        : phase === "queued" ? "Dữ liệu đang chờ được kiểm tra"
-          : phase === "account-check" ? ACCOUNT_CHECK_TITLE
-            : phase === "account-verified" ? ACCOUNT_VERIFIED_TITLE
-              : "Khôi phục dữ liệu trên thiết bị";
-  const copy = phase === "complete"
-    ? "Dữ liệu trên thiết bị đã được đưa vào tài khoản. Hãy kiểm tra Cài đặt → Dữ liệu trước khi đăng xuất."
-    : phase === "conflict" ? CONFLICT_COPY
-      : phase === "unverified" ? UNVERIFIED_COPY
-        : phase === "queued" ? QUEUED_COPY
-          : phase === "account-verified" ? ACCOUNT_VERIFIED_COPY
-            : "Đã tìm thấy dữ liệu cũ trên iPhone này. Khôi phục để dùng lại với tài khoản của bạn.";
+  const heading = phase === "complete" ? copy("Đã khôi phục dữ liệu", "Daten wurden wiederhergestellt")
+    : phase === "conflict" ? copy("Cần chọn phiên bản dữ liệu", "Eine Datenversion muss ausgewählt werden")
+      : phase === "unverified" ? copy("Chưa thể kiểm tra dữ liệu trong tài khoản", "Die Daten im Konto können noch nicht geprüft werden")
+        : phase === "queued" ? copy("Dữ liệu đang chờ được kiểm tra", "Daten warten auf die Prüfung")
+          : phase === "account-check" ? copy(ACCOUNT_CHECK_TITLE, "Kontodaten müssen geprüft werden")
+            : phase === "account-verified" ? copy(ACCOUNT_VERIFIED_TITLE, "Daten stimmen mit dem Konto überein")
+              : copy("Khôi phục dữ liệu trên thiết bị", "Daten auf diesem Gerät wiederherstellen");
+  const bodyCopy = phase === "complete"
+    ? copy("Dữ liệu trên thiết bị đã được đưa vào tài khoản. Hãy kiểm tra Cài đặt → Dữ liệu trước khi đăng xuất.", "Die Daten auf diesem Gerät wurden in Ihr Konto übernommen. Prüfen Sie Einstellungen → Daten, bevor Sie sich abmelden.")
+    : phase === "conflict" ? copy(CONFLICT_COPY, "Die Daten auf dem iPhone und im Konto unterscheiden sich. Die App hat nichts überschrieben. Prüfen Sie beide Versionen und wählen Sie, welche Sie behalten möchten.")
+      : phase === "unverified" ? copy(UNVERIFIED_COPY, "Die Daten auf dem iPhone bleiben erhalten. Stellen Sie eine Internetverbindung her und prüfen Sie erneut. Sie können noch nicht fortfahren oder sich abmelden.")
+        : phase === "queued" ? copy(QUEUED_COPY, "Die Daten auf dem iPhone bleiben erhalten und sind für die Wiederherstellung bereit. Die App hat die Daten im Konto noch nicht bestätigt; Sie können noch nicht fortfahren oder sich abmelden.")
+          : phase === "account-verified" ? copy(ACCOUNT_VERIFIED_COPY, "Die ausstehende Änderung auf dem iPhone stimmt bereits mit den Kontodaten überein. Es wurde nichts überschrieben und keine weitere Wiederherstellung ist nötig.")
+            : copy("Đã tìm thấy dữ liệu cũ trên iPhone này. Khôi phục để dùng lại với tài khoản của bạn.", "Auf diesem iPhone wurden vorhandene Daten gefunden. Stellen Sie sie wieder her, um sie mit Ihrem Konto weiterzuverwenden.");
 
   return (
     <div className="app-shell">
@@ -374,20 +377,20 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
         <h1 className="page-title">{heading}</h1>
         {phase === "account-check" ? (
           <p className="muted">
-            {ACCOUNT_CHECK_BODY_LINE_1}<br />{ACCOUNT_CHECK_BODY_LINE_2}
+            {copy(ACCOUNT_CHECK_BODY_LINE_1, "Die App hat eine frühere Änderung erkannt, die noch geprüft werden muss.")}<br />{copy(ACCOUNT_CHECK_BODY_LINE_2, "Die Daten auf dem iPhone bleiben erhalten und es wurde nichts überschrieben.")}
           </p>
         ) : (
-          <p className="muted">{copy}</p>
+          <p className="muted">{bodyCopy}</p>
         )}
         {(phase === "review" || phase === "confirm") ? (
-          <p className="muted">Để an toàn, ứng dụng sẽ tạo một bản sao lưu trên iPhone trước khi khôi phục. Safari có thể hỏi nơi lưu file. Hãy chọn ‘Tải về’.</p>
+          <p className="muted">{copy("Để an toàn, ứng dụng sẽ tạo một bản sao lưu trên iPhone trước khi khôi phục. Safari có thể hỏi nơi lưu file. Hãy chọn ‘Tải về’.", "Zur Sicherheit erstellt die App vor der Wiederherstellung eine Sicherung auf dem iPhone. Safari fragt möglicherweise nach dem Speicherort. Wählen Sie ‚Laden‘.")}</p>
         ) : null}
 
-        <table aria-label="Tóm tắt dữ liệu trên thiết bị" style={{ width: "100%", fontSize: ".9rem" }}>
+        <table aria-label={copy("Tóm tắt dữ liệu trên thiết bị", "Zusammenfassung der Gerätedaten")} style={{ width: "100%", fontSize: ".9rem" }}>
           <tbody>
-            <tr><td>Cài đặt</td><td>{counts.settings}</td></tr>
-            <tr><td>Mục tiêu</td><td>{counts.goals}</td></tr>
-            <tr><td>Giao dịch</td><td>{counts.transactions}</td></tr>
+            <tr><td>{copy("Cài đặt", "Einstellungen")}</td><td>{counts.settings}</td></tr>
+            <tr><td>{copy("Mục tiêu", "Ziele")}</td><td>{counts.goals}</td></tr>
+            <tr><td>{copy("Giao dịch", "Transaktionen")}</td><td>{counts.transactions}</td></tr>
             <tr><td>Checklist</td><td>{counts.annualChecklists}</td></tr>
             <tr><td>Snapshots</td><td>{counts.monthlySnapshots}</td></tr>
           </tbody>
@@ -398,37 +401,37 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
           {phase === "review" ? (
             <>
               <button type="button" disabled={busy || total === 0} onClick={() => void beginRestore()}>
-                {busy ? "Đang tạo bản sao lưu…" : backupFailed ? "Thử tạo bản sao lưu lại" : "Khôi phục dữ liệu trên thiết bị"}
+                {busy ? copy("Đang tạo bản sao lưu…", "Sicherung wird erstellt…") : backupFailed ? copy("Thử tạo bản sao lưu lại", "Sicherung erneut erstellen") : copy("Khôi phục dữ liệu trên thiết bị", "Daten auf diesem Gerät wiederherstellen")}
               </button>
-              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{BACK_LABEL}</button>
+              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{copy(BACK_LABEL, "Zurück — Daten nicht wiederherstellen")}</button>
             </>
           ) : null}
           {phase === "account-check" ? (
             <>
-              <button type="button" disabled={busy} onClick={() => void checkAccountData()}>{busy ? "Đang kiểm tra…" : ACCOUNT_CHECK_PRIMARY}</button>
-              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{BACK_LABEL}</button>
+              <button type="button" disabled={busy} onClick={() => void checkAccountData()}>{busy ? copy("Đang kiểm tra…", "Wird geprüft…") : copy(ACCOUNT_CHECK_PRIMARY, "Kontodaten prüfen")}</button>
+              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{copy(BACK_LABEL, "Zurück — Daten nicht wiederherstellen")}</button>
             </>
           ) : null}
           {phase === "account-verified" ? (
-            <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{BACK_LABEL}</button>
+            <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{copy(BACK_LABEL, "Zurück — Daten nicht wiederherstellen")}</button>
           ) : null}
           {phase === "prepare-failed" ? (
             <>
-              <button type="button" disabled={busy || total === 0} onClick={() => void retryPrepare()}>{busy ? "Đang chuẩn bị…" : PREPARE_RETRY_LABEL}</button>
-              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{BACK_LABEL}</button>
+              <button type="button" disabled={busy || total === 0} onClick={() => void retryPrepare()}>{busy ? copy("Đang chuẩn bị…", "Wird vorbereitet…") : copy(PREPARE_RETRY_LABEL, "Vorbereitung erneut versuchen")}</button>
+              <button type="button" className="secondary" disabled={busy} onClick={handleBack}>{copy(BACK_LABEL, "Zurück — Daten nicht wiederherstellen")}</button>
             </>
           ) : null}
           {phase === "queued" ? (
-            <button type="button" disabled={busy} onClick={() => void verifyWithAccount()}>{busy ? "Đang kiểm tra…" : "Kiểm tra dữ liệu trong tài khoản"}</button>
+            <button type="button" disabled={busy} onClick={() => void verifyWithAccount()}>{busy ? copy("Đang kiểm tra…", "Wird geprüft…") : copy("Kiểm tra dữ liệu trong tài khoản", "Kontodaten prüfen")}</button>
           ) : null}
           {phase === "unverified" ? (
-            <button type="button" disabled={busy} onClick={() => void verifyWithAccount()}>{busy ? "Đang kiểm tra…" : "Thử kiểm tra lại"}</button>
+            <button type="button" disabled={busy} onClick={() => void verifyWithAccount()}>{busy ? copy("Đang kiểm tra…", "Wird geprüft…") : copy("Thử kiểm tra lại", "Erneut prüfen")}</button>
           ) : null}
           {phase === "conflict" ? (
-            <button type="button" disabled={busy} onClick={() => setShowConflicts(true)}>Xem xung đột</button>
+            <button type="button" disabled={busy} onClick={() => setShowConflicts(true)}>{copy("Xem xung đột", "Konflikte ansehen")}</button>
           ) : null}
           {phase === "complete" ? (
-            <button type="button" disabled={busy} onClick={() => void finishRecovery()}>{busy ? "Đang mở dữ liệu…" : "Kiểm tra dữ liệu"}</button>
+            <button type="button" disabled={busy} onClick={() => void finishRecovery()}>{busy ? copy("Đang mở dữ liệu…", "Daten werden geöffnet…") : copy("Kiểm tra dữ liệu", "Daten prüfen")}</button>
           ) : null}
         </div>
       </div>
@@ -440,11 +443,11 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
       {phase === "confirm" ? (
         <div className="modal-backdrop" role="presentation">
           <div className="card modal-card" role="dialog" aria-modal="true" aria-labelledby="recovery-confirm-title">
-            <h2 id="recovery-confirm-title">Khôi phục dữ liệu vào tài khoản?</h2>
-            <p>Dữ liệu tìm thấy trên iPhone sẽ được đưa vào tài khoản này. Nếu bản trên server khác, ứng dụng sẽ dừng để hỏi bạn; không tự ghi đè dữ liệu.</p>
+            <h2 id="recovery-confirm-title">{copy("Khôi phục dữ liệu vào tài khoản?", "Daten in diesem Konto wiederherstellen?")}</h2>
+            <p>{copy("Dữ liệu tìm thấy trên iPhone sẽ được đưa vào tài khoản này. Nếu bản trên server khác, ứng dụng sẽ dừng để hỏi bạn; không tự ghi đè dữ liệu.", "Die auf dem iPhone gefundenen Daten werden in dieses Konto übernommen. Falls die Serverversion abweicht, hält die App an und fragt Sie; sie überschreibt keine Daten automatisch.")}</p>
             <div className="stack">
-              <button type="button" className="secondary" disabled={busy} onClick={() => { setPhase("review"); setMessage(""); }}>Quay lại</button>
-              <button type="button" disabled={busy} onClick={() => void confirmRestore()}>{busy ? "Đang chuẩn bị…" : "Xác nhận khôi phục dữ liệu"}</button>
+              <button type="button" className="secondary" disabled={busy} onClick={() => { setPhase("review"); setMessage(""); }}>{copy("Quay lại", "Zurück")}</button>
+              <button type="button" disabled={busy} onClick={() => void confirmRestore()}>{busy ? copy("Đang chuẩn bị…", "Wird vorbereitet…") : copy("Xác nhận khôi phục dữ liệu", "Datenwiederherstellung bestätigen")}</button>
             </div>
           </div>
         </div>
