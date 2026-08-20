@@ -9,6 +9,7 @@ import OverviewFrame from "../components/demo-v10/OverviewFrame";
 import { useLocale } from "../lib/locale";
 import { findTransactionQualityIssues } from "./transactionQualityInbox";
 import { buildPortfolioHeartbeat } from "./portfolioHeartbeat";
+import { buildPlanVsReality } from "./planVsReality";
 
 function overviewPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
@@ -133,6 +134,14 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       missingPriceCount: market.missingIsins.length,
       stalePriceCount: snapshot.stalePriceIsins.length,
     });
+    const planVsReality = buildPlanVsReality({
+      startDate: settings.startDate,
+      contributionY1: settings.contributionY1,
+      contributionY2: settings.contributionY2,
+      trackInAppCash: settings.trackInAppCash,
+      transactions,
+      today: currentDate.toISOString().slice(0, 10),
+    });
 
     return {
       assetsLabel: snapshot.valueComplete ? "Portfolio VWCE" : text.valuedAssets,
@@ -154,6 +163,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       nextContribution: heartbeat.nextContribution,
       performance,
       heartbeat,
+      planVsReality,
       performanceState,
       contributionWidth: performanceState === "unavailable"
         ? 0
