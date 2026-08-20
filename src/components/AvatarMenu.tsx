@@ -1,8 +1,16 @@
 import type { RefObject } from "react";
 import type { SyncStatus } from "../lib/sync/types";
-import { SYNC_STATUS_LABEL } from "../lib/sync/types";
 import { THEME_LABEL, readTheme } from "../lib/theme";
 import Popover from "./Popover";
+import { useLocale } from "../lib/locale";
+
+function menuCopy(locale: "vi" | "de") {
+  return locale === "de" ? {
+    user: "Nutzer", syncNow: "Jetzt synchronisieren", emergency: "Notfallmappe", handoff: "Übergabe-Übersicht", handoffMeta: "Lokal", settings: "Einstellungen", signOut: "Abmelden", safe: "Sicher", pending: (count: number) => `${count} ausstehend`, status: { offline: "Auf diesem Gerät", syncing: "Synchronisierung", synced: "Synchronisiert", conflict: "Konflikt" } satisfies Record<SyncStatus, string>,
+  } : {
+    user: "Người dùng", syncNow: "Đồng bộ ngay", emergency: "Hồ sơ khẩn cấp", handoff: "Tóm tắt bàn giao", handoffMeta: "Cục bộ", settings: "Cài đặt", signOut: "Đăng xuất", safe: "An toàn", pending: (count: number) => `${count} chờ`, status: { offline: "Trên thiết bị", syncing: "Đang đồng bộ", synced: "Đã đồng bộ", conflict: "Xung đột" } satisfies Record<SyncStatus, string>,
+  };
+}
 
 export function avatarGradient(name: string): string {
   let hash = 0;
@@ -38,10 +46,12 @@ export default function AvatarMenu({
   onSyncNow,
   triggerRef,
 }: AvatarMenuProps) {
+  const { locale } = useLocale();
+  const text = menuCopy(locale);
   const initial = (displayName.trim()[0] || "?").toUpperCase();
   const gradient = avatarGradient(displayName);
-  const subLabel = email ?? SYNC_STATUS_LABEL[syncStatus];
-  const metaLabel = pending > 0 ? `${pending} chờ` : SYNC_STATUS_LABEL[syncStatus];
+  const subLabel = email ?? text.status[syncStatus];
+  const metaLabel = pending > 0 ? text.pending(pending) : text.status[syncStatus];
   const themeLabel = THEME_LABEL[readTheme()];
 
   return (
@@ -60,7 +70,7 @@ export default function AvatarMenu({
           {initial}
         </div>
         <div>
-          <span className="avatar-menu-name">{displayName || "Người dùng"}</span>
+          <span className="avatar-menu-name">{displayName || text.user}</span>
           <div className="avatar-menu-sub">{subLabel}</div>
         </div>
       </div>
@@ -75,7 +85,7 @@ export default function AvatarMenu({
           onClose();
         }}
       >
-        Đồng bộ ngay
+        {text.syncNow}
         <span className="avatar-menu-item-meta">{metaLabel}</span>
       </button>
       <a
@@ -84,8 +94,17 @@ export default function AvatarMenu({
         href="#/notfallmappe"
         onClick={onClose}
       >
-        Hồ sơ khẩn cấp
-        <span className="avatar-menu-item-meta">An toàn</span>
+        {text.emergency}
+        <span className="avatar-menu-item-meta">{text.safe}</span>
+      </a>
+      <a
+        className="avatar-menu-item"
+        role="menuitem"
+        href="#/handoff"
+        onClick={onClose}
+      >
+        {text.handoff}
+        <span className="avatar-menu-item-meta">{text.handoffMeta}</span>
       </a>
       <a
         className="avatar-menu-item"
@@ -93,7 +112,7 @@ export default function AvatarMenu({
         href="#/settings"
         onClick={onClose}
       >
-        Cài đặt
+        {text.settings}
         <span className="avatar-menu-item-meta">{themeLabel}</span>
       </a>
       <div className="avatar-menu-rule" role="presentation" />
@@ -106,7 +125,7 @@ export default function AvatarMenu({
           onSignOut();
         }}
       >
-        Đăng xuất
+        {text.signOut}
       </button>
     </Popover>
   );
