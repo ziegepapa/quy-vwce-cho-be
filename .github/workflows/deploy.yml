@@ -26,6 +26,8 @@ jobs:
           node-version: "22"
       - run: npm install
       - run: npm test
+      - name: Guard operational posture
+        run: npm run check:operational-posture
       - name: Guard ledger window performance
         run: npm run benchmark:ledger:check
       - name: Enforce active UI locale policy
