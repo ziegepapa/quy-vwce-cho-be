@@ -27,6 +27,7 @@ import Goals from "./pages/Goals";
 import Simulation from "./pages/SimulationRoute";
 import SettingsPage from "./pages/Settings";
 import Notfallmappe from "./pages/Notfallmappe";
+import HouseholdHandoff from "./pages/HouseholdHandoff";
 import Onboarding from "./pages/Onboarding";
 import AuthPage from "./pages/Auth";
 import MigrateWizard from "./pages/MigrateWizard";
@@ -404,6 +405,7 @@ export default function App() {
         <Route path="/goals" element={<Goals />} />
         <Route path="/simulation" element={<Simulation />} />
         <Route path="/notfallmappe" element={<Notfallmappe />} />
+        <Route path="/handoff" element={<HouseholdHandoff syncStatus={syncStatus} pending={pending} />} />
         <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} onSyncNow={auth.user ? handleSyncNow : undefined} />} />
       </Routes></RecoveryReadOnlyProvider></main></NavActionsProvider>
     </div><BottomDock items={primaryNav} />
