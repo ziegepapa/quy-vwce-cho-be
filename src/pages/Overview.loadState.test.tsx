@@ -66,6 +66,10 @@ function buyWithoutPrice(id: string, date: string) {
   };
 }
 
+function buyMissingQuoteComplete(id: string, date: string) {
+  return { ...buyWithoutPrice(id, date), notes: "Đã kiểm tra" };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   dbMocks.listQuotes.mockResolvedValue([]);
@@ -121,11 +125,13 @@ describe("Overview German locale", () => {
     expect(screen.getByText("Beitragsmonate")).toBeTruthy();
     expect(screen.getByText("Anteile")).toBeTruthy();
     expect(screen.getByText("Einzahlungsserie")).toBeTruthy();
-    expect(screen.getByText("Nächste Rate")).toBeTruthy();
+    expect(screen.getAllByText("Nächste Rate").length).toBeGreaterThan(1);
     expect(screen.getByText("Portfolio-Performance")).toBeTruthy();
+    expect(screen.getByText("Portfolio-Check")).toBeTruthy();
+    expect(screen.getAllByText("Aufmerksamkeit").length).toBeGreaterThan(1);
     expect(screen.getAllByText("Einzahlungen").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Noch nicht bewertbar").length).toBeGreaterThan(0);
-    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Gần nhất|Hiệu suất danh mục|Vốn góp|Lãi/);
+    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Gần nhất|Hiệu suất danh mục|Vốn góp|Lãi|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý/);
   });
 });
 
@@ -143,6 +149,7 @@ describe("Overview demo v10 hierarchy", () => {
     expect(container.querySelector(".combo-row .cr-item .cr-lbl")).toBeTruthy();
     expect(container.querySelector(".streak-card .sc-top .sc-left")).toBeTruthy();
     expect(container.querySelector(".streak-card .sc-dots")).toBeTruthy();
+    expect(container.querySelector(".heartbeat-card .heartbeat-grid")).toBeTruthy();
     expect(container.querySelector(".perf-card .perf-top")).toBeTruthy();
     expect(container.querySelector(".perf-card .perf-bar-track")).toBeTruthy();
     expect(container.querySelector(".perf-card .perf-legend")).toBeTruthy();
@@ -167,6 +174,27 @@ describe("Overview demo v10 hierarchy", () => {
     expect(container.querySelector(".h-row .bdg")?.textContent?.trim()).toBe("—");
     expect(container.querySelector(".hr-pct")?.textContent?.trim()).toBe("1");
     expect(container.querySelectorAll(".sc-dots .dot.done")).toHaveLength(1);
+  });
+
+  it("routes a data-quality attention signal to the existing transaction review workflow", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-quality", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([{ id: "quote-quality", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".heartbeat-card")?.getAttribute("data-heartbeat-attention")).toBe("quality"));
+    expect(screen.getByRole("link", { name: /1 giao dịch cần rà soát/ }).getAttribute("href")).toBe("#/transactions");
+  });
+
+  it("routes a missing-price attention signal to Settings when transaction data is complete", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyMissingQuoteComplete("tx-missing-price", "2026-08-01")]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".heartbeat-card")?.getAttribute("data-heartbeat-attention")).toBe("missing_prices"));
+    expect(screen.getByRole("link", { name: /1 mã thiếu giá/ }).getAttribute("href")).toBe("#/settings");
   });
 
   it("switches the performance card to a gain segment when the live quote exceeds the purchase cost", async () => {

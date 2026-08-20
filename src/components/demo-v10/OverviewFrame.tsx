@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocale } from "../../lib/locale";
+import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
 import "../../styles/demo-v10-overview.css";
 
 type OverviewFrameProps = {
@@ -23,6 +24,7 @@ type OverviewFrameProps = {
   gainTotal: string | null;
   averageBuyPrice: string | null;
   priceComparison: { averageBuyPrice: number; currentPrice: number } | null;
+  heartbeat: PortfolioHeartbeat;
 };
 
 function overviewCopy(locale: "vi" | "de") {
@@ -49,6 +51,19 @@ function overviewCopy(locale: "vi" | "de") {
     averageBuyPrice: "Ø Kaufpreis",
     details: "Details",
     collapse: "Einklappen",
+    heartbeat: "Portfolio-Check",
+    heartbeatNext: "Nächste Rate",
+    heartbeatPerformance: "Performance",
+    heartbeatAttention: "Aufmerksamkeit",
+    heartbeatGain: "Im Plus",
+    heartbeatLoss: "Im Minus",
+    heartbeatFlat: "Unverändert",
+    heartbeatUnavailable: "Noch nicht bewertbar",
+    heartbeatQuality: (count: number) => `${count} Transaktionen prüfen`,
+    heartbeatMissingPrices: (count: number) => `Preise für ${count} Wertpapiere fehlen`,
+    heartbeatStalePrices: (count: number) => `Kurse für ${count} Wertpapiere aktualisieren`,
+    heartbeatClear: "Alles im Blick",
+    heartbeatReview: "Prüfen",
   } : {
     pageLabel: "Tổng quan",
     contributionMonths: "tháng góp",
@@ -72,6 +87,19 @@ function overviewCopy(locale: "vi" | "de") {
     averageBuyPrice: "Giá mua TB",
     details: "Chi tiết",
     collapse: "Thu gọn",
+    heartbeat: "Nhịp danh mục",
+    heartbeatNext: "Kỳ góp tiếp theo",
+    heartbeatPerformance: "Hiệu suất hiện tại",
+    heartbeatAttention: "Cần chú ý",
+    heartbeatGain: "Đang lãi",
+    heartbeatLoss: "Đang lỗ",
+    heartbeatFlat: "Hòa vốn",
+    heartbeatUnavailable: "Chưa định giá",
+    heartbeatQuality: (count: number) => `${count} giao dịch cần rà soát`,
+    heartbeatMissingPrices: (count: number) => `${count} mã thiếu giá`,
+    heartbeatStalePrices: (count: number) => `Cập nhật giá cho ${count} mã`,
+    heartbeatClear: "Không có việc cần xử lý",
+    heartbeatReview: "Rà soát",
   };
 }
 
@@ -113,6 +141,7 @@ export default function OverviewFrame({
   gainTotal,
   averageBuyPrice,
   priceComparison,
+  heartbeat,
 }: OverviewFrameProps) {
   const { locale } = useLocale();
   const text = overviewCopy(locale);
@@ -129,6 +158,20 @@ export default function OverviewFrame({
       : performanceState === "flat"
         ? text.breakEven
         : text.unvalued;
+  const heartbeatPerformanceLabel = heartbeat.performanceState === "gain"
+    ? text.heartbeatGain
+    : heartbeat.performanceState === "loss"
+      ? text.heartbeatLoss
+      : heartbeat.performanceState === "flat"
+        ? text.heartbeatFlat
+        : text.heartbeatUnavailable;
+  const heartbeatAttentionLabel = heartbeat.attention.kind === "quality"
+    ? text.heartbeatQuality(heartbeat.attention.count)
+    : heartbeat.attention.kind === "missing_prices"
+      ? text.heartbeatMissingPrices(heartbeat.attention.count)
+      : heartbeat.attention.kind === "stale_prices"
+        ? text.heartbeatStalePrices(heartbeat.attention.count)
+        : text.heartbeatClear;
 
   return (
     <main className="demo-v10-screen" aria-label={text.pageLabel}>
@@ -217,6 +260,15 @@ export default function OverviewFrame({
             <div className="sc-right"><div className="sc-next-lbl">{text.nextContribution}</div><div className="sc-next-date">{nextContribution ?? "—"}</div></div>
           </div>
           <div className="sc-dots" aria-label={text.streakAria(months)}>{Array.from({ length: dotCount }, (_, index) => <span key={index} className={months > 0 ? "dot done" : "dot"} />)}</div>
+        </section>
+
+        <section className={`gl heartbeat-card heartbeat-${heartbeat.attention.kind}`} data-heartbeat-attention={heartbeat.attention.kind} aria-label={text.heartbeat}>
+          <div className="heartbeat-head"><span>{text.heartbeat}</span><span className={`heartbeat-status ${heartbeat.attention.kind === "none" ? "calm" : "needs-review"}`}>{heartbeat.attention.kind === "none" ? text.heartbeatClear : text.heartbeatAttention}</span></div>
+          <div className="heartbeat-grid">
+            <div className="heartbeat-item"><span className="heartbeat-label">{text.heartbeatNext}</span><strong className="heartbeat-value next">{heartbeat.nextContribution ?? "—"}</strong></div>
+            <div className="heartbeat-item"><span className="heartbeat-label">{text.heartbeatPerformance}</span><strong className={`heartbeat-value performance ${heartbeat.performanceState}`}>{heartbeat.performance ?? heartbeatPerformanceLabel}</strong><small>{heartbeat.performance ? heartbeatPerformanceLabel : null}</small></div>
+            <div className="heartbeat-item attention"><span className="heartbeat-label">{text.heartbeatAttention}</span>{heartbeat.attention.href ? <a className="heartbeat-action" href={heartbeat.attention.href}>{heartbeatAttentionLabel}<span>{text.heartbeatReview} ›</span></a> : <strong className="heartbeat-value calm">{heartbeatAttentionLabel}</strong>}</div>
+          </div>
         </section>
 
         <section className={`gl perf-card perf-card-${performanceState}`} data-performance-state={performanceState}>
