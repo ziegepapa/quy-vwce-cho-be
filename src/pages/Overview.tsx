@@ -10,7 +10,7 @@ import { useLocale } from "../lib/locale";
 import { findTransactionQualityIssues } from "./transactionQualityInbox";
 import { buildPortfolioHeartbeat } from "./portfolioHeartbeat";
 import { buildPlanVsReality, planRealityReviewYears } from "./planVsReality";
-import { buildYearInReview } from "./yearInReview";
+import { buildYearInReview, yearInReviewYears } from "./yearInReview";
 
 function overviewPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
@@ -57,6 +57,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
   const [transactions, setTransactions] = useState<Awaited<ReturnType<typeof listTransactions>>>([]);
   const [quotes, setQuotes] = useState<Awaited<ReturnType<typeof listQuotes>>>([]);
   const [planReviewYear, setPlanReviewYear] = useState<number | null>(null);
+  const [yearReviewYear, setYearReviewYear] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -155,13 +156,22 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       today: planToday,
       year: selectedPlanReviewYear,
     });
+    const yearReviewYears = yearInReviewYears({
+      today: planToday,
+      transactions,
+      qualityIssues,
+    });
+    const selectedYearReviewYear = yearReviewYear && yearReviewYears.includes(yearReviewYear)
+      ? yearReviewYear
+      : yearReviewYears[0] ?? currentDate.getFullYear();
     const yearInReview = buildYearInReview({
-      today: currentDate.toISOString().slice(0, 10),
+      today: planToday,
       trackInAppCash: settings.trackInAppCash,
       transactions,
       qualityIssues,
       latestPrice: vwcePrice,
       latestPriceDate: snapshot.vwceAsOf ?? "",
+      year: selectedYearReviewYear,
     });
 
     return {
@@ -188,6 +198,8 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       planReviewYears,
       onPlanReviewYearChange: setPlanReviewYear,
       yearInReview,
+      yearReviewYears,
+      onYearReviewYearChange: setYearReviewYear,
       performanceState,
       contributionWidth: performanceState === "unavailable"
         ? 0
@@ -201,7 +213,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       averageBuyPrice: averageBuyPrice == null ? null : formatMoney(averageBuyPrice),
       priceComparison: vwcePrice > 0 && averageBuyPrice != null ? { averageBuyPrice, currentPrice: vwcePrice } : null,
     };
-  }, [locale, planReviewYear, settings, text, transactions, quotes]);
+  }, [locale, planReviewYear, yearReviewYear, settings, text, transactions, quotes]);
 
   if (loading) return <main className="demo-v10-screen" role="status" aria-label={text.loading} aria-busy="true" />;
   if (failed || !view) {

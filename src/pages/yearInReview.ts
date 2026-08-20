@@ -29,6 +29,29 @@ export type YearInReview = {
   priceHistoryAvailable: false;
 };
 
+/**
+ * Lists only past/current review years represented by live local records or the
+ * current calendar year. It is a pure display helper and stores no preference.
+ */
+export function yearInReviewYears(input: {
+  today: string;
+  transactions: readonly YearReviewTransaction[];
+  qualityIssues: readonly TransactionQualityIssue[];
+}): number[] {
+  const todayYear = yearOf(input.today) ?? new Date().getFullYear();
+  const years = new Set<number>([todayYear]);
+  for (const tx of input.transactions ?? []) {
+    if (!tx || tx.deletedAt) continue;
+    const year = yearOf(tx.date);
+    if (year != null && year <= todayYear) years.add(year);
+  }
+  for (const issue of input.qualityIssues ?? []) {
+    const year = yearOf(issue.date);
+    if (year != null && year <= todayYear) years.add(year);
+  }
+  return [...years].sort((left, right) => right - left);
+}
+
 function yearOf(value: string): number | null {
   const match = /^(\d{4})-\d{2}-\d{2}$/.exec(value);
   return match ? Number(match[1]) : null;
@@ -50,8 +73,12 @@ export function buildYearInReview(input: {
   qualityIssues: readonly TransactionQualityIssue[];
   latestPrice: number;
   latestPriceDate: string;
+  year?: number;
 }): YearInReview {
-  const year = yearOf(input.today) ?? new Date().getFullYear();
+  const currentYear = yearOf(input.today) ?? new Date().getFullYear();
+  const year = Number.isInteger(input.year) && (input.year as number) <= currentYear
+    ? input.year as number
+    : currentYear;
   const contributionMode = heroLifetimeMode(input.trackInAppCash);
   const countedTypes = contributionMode === "cash_first" ? CASH_FIRST_CONTRIBUTION_TYPES : SECURITIES_FIRST_CONTRIBUTION_TYPES;
   let contributionAmount = 0;
@@ -69,7 +96,7 @@ export function buildYearInReview(input: {
 
   const issues = (input.qualityIssues ?? []).filter((issue) => yearOf(issue.date) === year);
   const price = positiveFinite(input.latestPrice);
-  const priceSnapshot = price > 0 && yearOf(input.latestPriceDate) != null
+  const priceSnapshot = price > 0 && yearOf(input.latestPriceDate) === year
     ? { price, asOf: input.latestPriceDate }
     : null;
 

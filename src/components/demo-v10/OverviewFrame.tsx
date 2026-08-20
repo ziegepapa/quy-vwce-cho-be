@@ -32,6 +32,8 @@ type OverviewFrameProps = {
   planReviewYears: number[];
   onPlanReviewYearChange: (year: number) => void;
   yearInReview: YearInReview;
+  yearReviewYears: number[];
+  onYearReviewYearChange: (year: number) => void;
 };
 
 function overviewCopy(locale: "vi" | "de") {
@@ -81,6 +83,7 @@ function overviewCopy(locale: "vi" | "de") {
     planRealityOnTrack: "Planbetrag erreicht",
     planRealityBelowPlan: "Unter dem Planbetrag",
     yearReview: "Jahresrückblick",
+    yearReviewYear: "Prüfjahr",
     yearReviewExport: "Bericht exportieren",
     yearReviewContributed: "Eingezahlt",
     yearReviewFeesTaxes: "Gebühren & Steuern",
@@ -135,6 +138,7 @@ function overviewCopy(locale: "vi" | "de") {
     planRealityOnTrack: "Đã đạt mức kế hoạch",
     planRealityBelowPlan: "Chưa đạt mức kế hoạch",
     yearReview: "Tổng kết năm",
+    yearReviewYear: "Năm rà soát",
     yearReviewExport: "Xuất báo cáo",
     yearReviewContributed: "Đã góp",
     yearReviewFeesTaxes: "Phí & thuế",
@@ -189,6 +193,8 @@ export default function OverviewFrame({
   planReviewYears,
   onPlanReviewYearChange,
   yearInReview,
+  yearReviewYears,
+  onYearReviewYearChange,
 }: OverviewFrameProps) {
   const { locale } = useLocale();
   const text = overviewCopy(locale);
@@ -364,7 +370,23 @@ export default function OverviewFrame({
         </section>
 
         <section className="gl year-review-card" aria-label={text.yearReview}>
-          <div className="year-review-head"><div><span>{text.yearReview} · {yearInReview.year}</span><strong>{text.yearReviewTransactions}: {yearInReview.transactionCount}</strong></div><button type="button" className="year-review-export" onClick={exportYearReview}>{text.yearReviewExport}</button></div>
+          <div className="year-review-head">
+            <div>
+              <span>{text.yearReview}</span>
+              <label className="year-review-year-label">
+                <span>{text.yearReviewYear}</span>
+                <select
+                  aria-label={text.yearReviewYear}
+                  value={yearInReview.year}
+                  onChange={(event) => onYearReviewYearChange(Number(event.target.value))}
+                >
+                  {yearReviewYears.map((year) => <option key={year} value={year}>{year}</option>)}
+                </select>
+              </label>
+              <strong>{text.yearReviewTransactions}: {yearInReview.transactionCount}</strong>
+            </div>
+            <button type="button" className="year-review-export" onClick={exportYearReview}>{text.yearReviewExport}</button>
+          </div>
           <div className="year-review-grid">
             <div><span>{text.yearReviewContributed}</span><strong>{formatMoney(yearInReview.contributionAmount)}</strong></div>
             <div><span>{text.yearReviewFeesTaxes}</span><strong>{formatMoney(yearInReview.fees + yearInReview.taxes)}</strong></div>
