@@ -21,6 +21,22 @@ function Harness() {
   );
 }
 
+function GermanHarness({ closeLabel }: { closeLabel: "Zurück" | "Abbrechen" | "Schließen" }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>Dialog öffnen</button>
+      {open ? (
+        <div role="dialog" aria-modal="true" aria-label="Bestätigen">
+          <button type="button">Fortfahren</button>
+          <button type="button" onClick={() => setOpen(false)}>{closeLabel}</button>
+        </div>
+      ) : null}
+      <ModalAccessibilityManager />
+    </>
+  );
+}
+
 afterEach(() => cleanup());
 
 describe("ModalAccessibilityManager", () => {
@@ -57,5 +73,19 @@ describe("ModalAccessibilityManager", () => {
     screen.getByRole("button", { name: "Ngoài hộp thoại" }).focus();
 
     await waitFor(() => expect(document.activeElement).toBe(cancel));
+  });
+
+  it.each(["Zurück", "Abbrechen", "Schließen"] as const)("uses German %s as a safe Escape control", async (closeLabel) => {
+    render(<GermanHarness closeLabel={closeLabel} />);
+    const trigger = screen.getByRole("button", { name: "Dialog öffnen" });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const close = await screen.findByRole("button", { name: closeLabel });
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(trigger);
   });
 });

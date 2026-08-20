@@ -4,7 +4,9 @@ const MODAL_SELECTOR = '[aria-modal="true"]';
 const FOCUSABLE_SELECTOR = [
   '[data-dialog-initial-focus]','button:not([disabled])','a[href]','input:not([disabled]):not([type="hidden"])','select:not([disabled])','textarea:not([disabled])','[tabindex]:not([tabindex="-1"])',
 ].join(",");
-const SAFE_CLOSE_COPY = /^(hủy|đóng|quay lại|để sau|cancel|close)\b/i;
+// `data-dialog-close` is the primary contract. Text matching remains a locale-aware
+// fallback for legacy dialogs and authoring mistakes, never for a destructive action.
+const SAFE_CLOSE_COPY = /^(hủy|đóng|quay lại|để sau|cancel|close|zurück|abbrechen|schließen|schliessen)\b/i;
 
 function topModal(): HTMLElement | null {
   const dialogs = document.querySelectorAll<HTMLElement>(MODAL_SELECTOR);

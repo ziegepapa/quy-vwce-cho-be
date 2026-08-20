@@ -782,7 +782,7 @@ export default function Transactions() {
             </div>
             <div className="stack">
               <button type="button" onClick={() => void save()}>{text.save}</button>
-              <button type="button" className="secondary" onClick={() => setShow(false)}>{text.cancel}</button>
+              <button type="button" data-dialog-close className="secondary" onClick={() => setShow(false)}>{text.cancel}</button>
               {editId ? (
                 <button
                   type="button"

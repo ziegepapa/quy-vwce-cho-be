@@ -403,7 +403,7 @@ export default function Goals() {
               <button type="button" onClick={save}>
                 {text.save}
               </button>
-              <button type="button" className="secondary" onClick={() => setShow(false)}>
+              <button type="button" data-dialog-close className="secondary" onClick={() => setShow(false)}>
                 {text.cancel}
               </button>
             </div>
