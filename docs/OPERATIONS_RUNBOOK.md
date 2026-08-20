@@ -179,3 +179,17 @@ Bất kỳ đề xuất tương lai nào phải bắt đầu bằng use case own
 ---
 
 **Checklist bàn giao P8:** Owner biết vị trí Sync Health và Tổng quan dữ liệu trên thiết bị, biết export backup/import fail-closed và recovery drill không phá vault chính, biết review theo năm chỉ là aggregate chỉ đọc, biết import PDF cần validation + dedupe + xác nhận, biết diagnostics local-only, và biết AI legacy không có UI production. Người bảo trì chỉ merge sau khi toàn bộ CI xanh, external-boundary guard đạt và deploy main hoàn tất.
+
+## 12. P10.4 — Operational posture và recovery readiness
+
+P10.4 bổ sung guard `scripts/check-operational-posture.mjs`, được gọi qua `npm run test:operational-posture` trong `npm test`. Guard chỉ đọc source và workflow; nó kiểm tra bốn hợp đồng: chế độ `RecoveryReadOnlyProvider` phải chặn thao tác ghi khi khôi phục chưa hoàn tất; `PendingSyncImportBlockedError` phải giữ ranh giới fail-closed trước khi nhập backup; workflow phải chạy test, benchmark, locale, build, bundle và release; và repository không được nối provider secret hoặc `supabase.functions.invoke` vào workflow/runtime mới.
+
+Guard này không chứng minh trạng thái RLS production hoặc trạng thái secret bên ngoài repository. Những điều đó vẫn cần được kiểm tra trực tiếp trong môi trường Supabase/GitHub khi có thay đổi hạ tầng. Guard chỉ bảo vệ phần contract có thể kiểm chứng từ source và cấu hình đã commit.
+
+Trong recovery drill, người bảo trì phải làm việc trên bản copy/vault thử nghiệm, không dùng vault chính. Nếu backup JSON, schema, số lượng, định dạng hoặc pre-import safety check không hợp lệ, luồng phải dừng và không thay đổi dữ liệu hiện có. Nếu recovery read-only đang bật, giao diện vẫn cho xem dữ liệu nhưng mọi thao tác ghi phải đi qua boundary chặn đã có; Escape hoặc hủy không được kích hoạt thao tác xác nhận hay destructive.
+
+AI/API tiếp tục ở trạng thái **deferred/legacy-retained**: không có UI production, không có provider secret wiring mới, không có endpoint mới và không có egress từ PWA. Không xóa `aiTraceExplanation` hoặc Edge Function legacy chỉ vì guard xanh; việc retire hoàn toàn cần một ADR riêng, kiểm tra dependency/import graph, xác nhận không còn nhu cầu smoke legacy và một PR độc lập.
+
+**Checklist P10.4:** chạy `npm run check:operational-posture`, `npm run test:operational-posture`, `npm run check:external-boundary`, hoàn tất recovery drill trên bản copy, xác nhận backup import fail-closed và kiểm tra runbook không chứa claim về RLS/secret production vượt quá bằng chứng source. Chỉ merge khi test-build, edge-smoke và preview-smoke của CI đều xanh.
+
+**Checklist bàn giao P10:** Owner biết Family Readiness Center chỉ là count/status local, biết Timeline có time/source lens nhưng không phải audit log, biết continuity snapshot là bản in do owner chủ động tạo và không phải backup, biết recovery read-only/fail-closed boundary, và biết AI legacy vẫn không có UI production.
