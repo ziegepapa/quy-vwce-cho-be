@@ -249,8 +249,12 @@
 
 /* PLAN-VS-REALITY-2026: calendar-year Sparplan progress, display only. */
 .ov .plan-reality-card { display: grid; gap: 10px; padding: 13px; border-color: color-mix(in srgb, var(--demo-vi) 24%, var(--demo-gb)); }
-.ov .plan-reality-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--demo-text); font-size: 12px; font-weight: 820; }
-.ov .plan-reality-head strong { color: var(--demo-sub); font-size: 10px; font-weight: 780; }
+.ov .plan-reality-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--demo-text); font-size: 12px; font-weight: 820; }
+.ov .plan-reality-head > span { min-width: 0; }
+.ov .plan-reality-head strong { color: var(--demo-sub); font-size: 10px; font-weight: 780; text-align: right; }
+.ov .plan-reality-year-label { display: inline-flex; align-items: center; gap: 5px; min-width: 0; color: var(--demo-dim); font-size: 9px; font-weight: 760; white-space: nowrap; }
+.ov .plan-reality-year-label select { min-height: 28px; padding: 4px 22px 4px 7px; color: var(--demo-text); font: inherit; font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--demo-g) 72%, transparent); border: 1px solid color-mix(in srgb, var(--demo-vi) 32%, var(--demo-gb)); border-radius: 8px; }
+.ov .plan-reality-year-label select:focus-visible { outline: 2px solid var(--demo-vi); outline-offset: 2px; }
 .ov .plan-reality-on_track .plan-reality-head strong { color: var(--demo-em); }
 .ov .plan-reality-below_plan .plan-reality-head strong { color: var(--demo-am); }
 .ov .plan-reality-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -267,6 +271,9 @@
   .ov .plan-reality-grid { gap: 6px; }
   .ov .plan-reality-grid > div { padding: 7px; }
   .ov .plan-reality-grid strong { font-size: 13px; }
+  .ov .plan-reality-head { align-items: flex-start; flex-wrap: wrap; }
+  .ov .plan-reality-head > span { flex: 1 1 100%; }
+  .ov .plan-reality-year-label { flex: 1 1 auto; }
 }
 
 /* YEAR-IN-REVIEW-2026: factual year summary, no inferred price performance. */

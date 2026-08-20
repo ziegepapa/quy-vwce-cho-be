@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPlanVsReality } from "./planVsReality";
+import { buildPlanVsReality, planRealityReviewYears } from "./planVsReality";
 
 const base = {
   startDate: "2026-01-15",
@@ -43,5 +43,45 @@ describe("buildPlanVsReality", () => {
 
   it("returns a calm not-started state when the plan starts in the future", () => {
     expect(buildPlanVsReality({ ...base, startDate: "2026-05-01" })).toMatchObject({ plannedMonths: 0, actualAmount: 0, state: "not_started" });
+  });
+
+  it("rebuilds an earlier calendar year without counting later records", () => {
+    const view = buildPlanVsReality({
+      ...base,
+      today: "2027-08-20",
+      year: 2026,
+      transactions: [
+        { date: "2026-01-15", type: "buy_vwce", amount: 100 },
+        { date: "2026-12-15", type: "buy_vwce", amount: 100 },
+        { date: "2027-01-15", type: "buy_vwce", amount: 120 },
+      ],
+    });
+    expect(view).toMatchObject({
+      year: 2026,
+      plannedMonths: 12,
+      plannedAmount: 1200,
+      actualAmount: 200,
+      recordedMonths: 2,
+      missingMonths: 10,
+      state: "below_plan",
+    });
+  });
+
+  it("offers review years from the active plan through today and excludes deleted records", () => {
+    expect(planRealityReviewYears({
+      startDate: "2026-06-15",
+      today: "2028-04-20",
+      transactions: [
+        { date: "2025-12-15", type: "buy_vwce", amount: 100 },
+        { date: "2027-03-15", type: "buy_vwce", amount: 120 },
+        { date: "2028-01-15", type: "buy_vwce", amount: 120 },
+        { date: "2029-01-15", type: "buy_vwce", amount: 120 },
+        { date: "2026-08-15", type: "buy_vwce", amount: 100, deletedAt: "2026-08-16" },
+      ],
+    })).toEqual([2028, 2027, 2026]);
+  });
+
+  it("never selects a future review year", () => {
+    expect(buildPlanVsReality({ ...base, today: "2026-03-20", year: 2030 })).toMatchObject({ year: 2026, plannedMonths: 3 });
   });
 });
