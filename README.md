@@ -94,9 +94,11 @@ Build tự tạo icon PNG 180/192/512, gồm icon maskable cho Android và Apple
 
 Giá vốn bình quân chỉ để theo dõi nội bộ — thuế Đức có thể dùng FIFO và khác kết quả app.
 
-## AI giải thích Trace (tùy chọn)
+## Trạng thái AI Trace legacy
 
-Trace deterministic luôn hoạt động kể cả khi AI tắt hoặc lỗi. Để bật AI production cần deploy `supabase/functions/explain-trace`, cấu hình provider secret phía Supabase, chạy smoke test bằng tài khoản đã xác thực, rồi mới đặt repository variable `VITE_AI_TRACE_ENABLED=true`. Xem `supabase/functions/explain-trace/README.md`.
+**Không có phần AI nào đang hiển thị trong giao diện production.** Repository còn giữ client module `src/lib/aiTraceExplanation.ts` và Edge Function `supabase/functions/explain-trace` từ một thử nghiệm Trace legacy, nhưng không có page/component runtime nào import chúng để tạo nút hoặc panel AI. Vì vậy owner sẽ không thấy phần AI trong app hiện tại.
+
+Trace deterministic là phần diễn giải cục bộ từ dữ liệu/công thức có sẵn, không gọi mạng và không phải AI. P8 không bật, không mở rộng và không gọi Edge Function/provider AI. Mọi thay đổi về việc giữ hoặc retire hạ tầng legacy này phải đi qua ADR/PR riêng theo [`docs/p8-baseline-and-ai-inventory.md`](./docs/p8-baseline-and-ai-inventory.md).
 
 ## Miễn trừ
 
@@ -104,4 +106,4 @@ Trace deterministic luôn hoạt động kể cả khi AI tắt hoặc lỗi. Đ
 
 ## Trạng thái phát hành
 
-Core web, biểu đồ Simulation, PWA, backup/restore, pipeline giá, CI và production monitoring đã có cổng kiểm tra tự động. AI provider là tiện ích tùy chọn duy nhất cần credential/hạ tầng bên ngoài; khi chưa bật, ứng dụng vẫn hoạt động đầy đủ bằng Trace deterministic.
+Core web, biểu đồ Simulation, PWA, backup/restore, pipeline giá, CI và production monitoring đã có cổng kiểm tra tự động. Hạ tầng AI Trace legacy không có UI caller, không được bật trong P8 và không nằm trên đường vận hành cốt lõi; ứng dụng hoạt động đầy đủ bằng các diễn giải deterministic cục bộ.
