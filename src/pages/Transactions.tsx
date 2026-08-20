@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   deleteTransaction,
   getSettings,
@@ -23,7 +23,6 @@ import {
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
 import { analyzeTransactions } from "../lib/transactionAnalytics";
-import TradeRepublicPdfImport from "../components/TradeRepublicPdfImport";
 import ActionMenu from "../components/ActionMenu";
 import { findTransactionQualityIssues, type TransactionQualityCode, type TransactionQualitySeverity } from "./transactionQualityInbox";
 import {
@@ -42,6 +41,8 @@ import {
   type TransactionTimeLens,
 } from "./transactionsListWindow";
 import "../styles/demo-v10-transactions.css";
+
+const TradeRepublicPdfImport = lazy(() => import("../components/TradeRepublicPdfImport"));
 
 function transactionTypes(locale: "vi" | "de"): { value: TxType; label: string; sign: "+" | "-" | "~" }[] {
   const labels = locale === "de"
@@ -566,7 +567,11 @@ export default function Transactions() {
 
       {toolsOpen ? (
         <section className="demo-v10-gl tx-tool-panel">
-          {!readOnly ? <TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /> : null}
+          {!readOnly ? (
+            <Suspense fallback={<p className="tx-tool-loading" role="status">{text.loading}</p>}>
+              <TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} />
+            </Suspense>
+          ) : null}
           <section className="tx-saved-view-editor" aria-label={text.saveView}>
             <div className="tx-saved-view-editor-head">
               <span>{text.savedViews}</span>

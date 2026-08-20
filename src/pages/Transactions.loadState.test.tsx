@@ -22,7 +22,7 @@ vi.mock("../lib/recoveryReadOnly", () => ({
 }));
 vi.mock("../components/ActionMenu", () => ({ default: () => null }));
 vi.mock("../components/Icons", () => ({ IconPlus: () => null }));
-vi.mock("../components/TradeRepublicPdfImport", () => ({ default: () => null }));
+vi.mock("../components/TradeRepublicPdfImport", () => ({ default: () => "pdf-import-loaded" }));
 
 import Transactions from "./Transactions";
 
@@ -58,6 +58,17 @@ describe("Transactions load and empty states", () => {
     expect(screen.getAllByRole("button", { name: "+ VWCE kaufen" })[0]).toBeTruthy();
     expect(document.body.textContent).not.toContain("Nhật ký giao dịch");
     expect(document.body.textContent).not.toContain("Tháng này");
+  });
+
+  it("loads the optional PDF importer only after opening tools", async () => {
+    dbMocks.listTransactions.mockResolvedValue([]);
+    render(createElement(Transactions));
+
+    await screen.findByText("Chưa có giao dịch.");
+    expect(screen.queryByText("pdf-import-loaded")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Lọc / PDF" }));
+    expect(await screen.findByText("pdf-import-loaded")).toBeTruthy();
   });
 
   it("uses German validation, date and number presentation for a critical ledger action", async () => {
