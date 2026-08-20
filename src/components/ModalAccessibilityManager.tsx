@@ -6,6 +6,7 @@ const FOCUSABLE_SELECTOR = [
 ].join(",");
 // `data-dialog-close` is the primary contract. Text matching remains a locale-aware
 // fallback for legacy dialogs and authoring mistakes, never for a destructive action.
+// locale-audit: bilingual-contract — Vietnamese and German labels are intentional fallback copy.
 const SAFE_CLOSE_COPY = /^(hủy|đóng|quay lại|để sau|cancel|close|zurück|abbrechen|schließen|schliessen)\b/i;
 
 function topModal(): HTMLElement | null {
