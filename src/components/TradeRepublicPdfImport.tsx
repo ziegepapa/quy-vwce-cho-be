@@ -11,7 +11,8 @@ import {
 } from "../lib/db";
 import type { DepotStatement, Transaction } from "../lib/types";
 import { VWCE_ISIN } from "../lib/types";
-import { formatDateVN, parseDecimal } from "../lib/calc";
+import { parseDecimal } from "../lib/calc";
+import { formatDisplayDate, formatDisplayMoney, formatDisplayQuantity } from "../ui/localeFormatting";
 import { nowIso } from "../lib/defaults";
 import { normalizeIsin } from "../lib/instrument";
 import { parseTrDocumentPdf } from "../lib/tr/readPdf";
@@ -55,19 +56,6 @@ function localizedReconciliationLabel(status: ReconciliationStatus, text: Import
 function fmtDec(value: number): string {
   if (!Number.isFinite(value)) return "";
   return String(value).replace(".", ",");
-}
-
-function fmtQuantity(value: number): string {
-  return value.toLocaleString("de-DE", { maximumFractionDigits: 6 });
-}
-
-function fmtMoney(value: number | undefined, currency: string): string {
-  if (value == null || !Number.isFinite(value)) return "—";
-  return new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function statusClass(status: string): "green" | "yellow" | "red" {
@@ -296,7 +284,7 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
               <div className="card" key={statement.id}>
                 <div className="row-between">
                   <div>
-                    <strong>{formatDateVN(statement.date)}</strong>
+                    <strong>{formatDisplayDate(statement.date, locale)}</strong>
                     <div className="muted">{statement.statementId}</div>
                   </div>
                   <div className="row-between">
@@ -326,7 +314,7 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
                         <div>
                           <code>{row.instrumentIsin}</code>
                           <div className="muted">
-                            {text.app} {fmtQuantity(row.bookQuantity)} · {text.depot} {fmtQuantity(row.statementQuantity)}
+                            {text.app} {formatDisplayQuantity(row.bookQuantity, locale, 6)} · {text.depot} {formatDisplayQuantity(row.statementQuantity, locale, 6)}
                           </div>
                         </div>
                         <span className={`pill ${statusClass(row.status)}`}>
@@ -382,11 +370,11 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
             <div className="banner info">{text.statementOnly}</div>
             {warnings.map((warning, index) => <div className="banner info" key={`${warning}-${index}`}>{locale === "de" ? text.documentWarning : warning}</div>)}
             {error && <div className="banner error" role="alert">{error}</div>}
-            <div className="grid2"><div className="field"><label>{text.statementDate}</label><input readOnly value={depotDraft.date} /></div><div className="field"><label>{text.statementId}</label><input readOnly value={depotDraft.statementId} /></div></div>
+            <div className="grid2"><div className="field"><label>{text.statementDate}</label><input readOnly value={formatDisplayDate(depotDraft.date, locale)} /></div><div className="field"><label>{text.statementId}</label><input readOnly value={depotDraft.statementId} /></div></div>
             <h3>{text.positions(depotDraft.positions.length)}</h3>
-            <div className="stack">{depotDraft.positions.map((position) => <div className="card" key={`${position.instrumentIsin}-${position.currency}`}><strong>{position.name || position.instrumentIsin}</strong><div><code>{position.instrumentIsin}</code></div><div className="muted">{fmtQuantity(position.quantity)} {text.positionUnits} · {fmtMoney(position.marketValue, position.currency)}</div></div>)}</div>
+            <div className="stack">{depotDraft.positions.map((position) => <div className="card" key={`${position.instrumentIsin}-${position.currency}`}><strong>{position.name || position.instrumentIsin}</strong><div><code>{position.instrumentIsin}</code></div><div className="muted">{formatDisplayQuantity(position.quantity, locale, 6)} {text.positionUnits} · {formatDisplayMoney(position.marketValue ?? Number.NaN, locale, position.currency)}</div></div>)}</div>
             <h3>{text.reconciliationResult}</h3>
-            <div className="stack">{previewRows.map((row) => <div className="row-between" key={row.instrumentIsin}><div><code>{row.instrumentIsin}</code><div className="muted">{text.app} {fmtQuantity(row.bookQuantity)} · {text.depot} {fmtQuantity(row.statementQuantity)} · Δ {fmtQuantity(row.difference)}</div></div><span className={`pill ${statusClass(row.status)}`}>{localizedReconciliationLabel(row.status, text)}</span></div>)}</div>
+            <div className="stack">{previewRows.map((row) => <div className="row-between" key={row.instrumentIsin}><div><code>{row.instrumentIsin}</code><div className="muted">{text.app} {formatDisplayQuantity(row.bookQuantity, locale, 6)} · {text.depot} {formatDisplayQuantity(row.statementQuantity, locale, 6)} · Δ {formatDisplayQuantity(row.difference, locale, 6)}</div></div><span className={`pill ${statusClass(row.status)}`}>{localizedReconciliationLabel(row.status, text)}</span></div>)}</div>
             <div className="stack import-review-actions" style={{ marginTop: 18 }}><button type="button" disabled={saving} onClick={() => void confirmDepotImport()}>{saving ? text.saving : text.saveSnapshot}</button><button type="button" className="secondary" disabled={saving} onClick={resetDrafts}>{text.cancel}</button></div>
           </div>
         </div>

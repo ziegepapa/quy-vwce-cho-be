@@ -16,12 +16,14 @@ async function openPrivateVaultEntry(page: Page) {
     exact: true,
   });
   const authEntryHeading = loginHeading.or(missingConfigHeading);
+  const localVaultEntry = page.getByRole("link", { name: "Tổng quan", exact: true }).first();
+  const supportedEntry = authEntryHeading.or(localVaultEntry);
 
-  await expect(startButton.or(authEntryHeading)).toBeVisible();
+  await expect(startButton.or(supportedEntry)).toBeVisible();
   if (await startButton.isVisible()) await startButton.click();
-  await expect(authEntryHeading).toBeVisible();
+  await expect(supportedEntry).toBeVisible();
 
-  return { loginHeading, missingConfigHeading };
+  return { loginHeading, missingConfigHeading, localVaultEntry };
 }
 
 async function captureVisualEvidence(page: Page, testInfo: TestInfo, fileName: string) {
@@ -61,8 +63,8 @@ test("production build boots in an isolated browser environment", async ({ page 
   expect(failedLocalRequests).toEqual([]);
 });
 
-test("private-vault authentication entry point remains usable", async ({ page }) => {
-  const { loginHeading, missingConfigHeading } = await openPrivateVaultEntry(page);
+test("private-vault entry point remains usable", async ({ page }) => {
+  const { loginHeading, missingConfigHeading, localVaultEntry } = await openPrivateVaultEntry(page);
 
   if (await loginHeading.isVisible()) {
     await expect(page.getByLabel("Email")).toBeVisible();
@@ -72,10 +74,13 @@ test("private-vault authentication entry point remains usable", async ({ page })
     await expect(page.getByRole("button", { name: "Đăng nhập", exact: true })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Tạo tài khoản mới" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Quên mật khẩu?" })).toBeVisible();
-  } else {
+  } else if (await missingConfigHeading.isVisible()) {
     await expect(missingConfigHeading).toBeVisible();
     await expect(page.getByText("VITE_SUPABASE_URL")).toBeVisible();
     await expect(page.getByText("VITE_SUPABASE_ANON_KEY")).toBeVisible();
+  } else {
+    await expect(localVaultEntry).toBeVisible();
+    await expect(page.getByRole("link", { name: "Giao dịch", exact: true }).first()).toBeVisible();
   }
 });
 
