@@ -446,7 +446,7 @@ export default function MigrateWizard({ userId, onDone, onBack }: Props) {
             <h2 id="recovery-confirm-title">{copy("Khôi phục dữ liệu vào tài khoản?", "Daten in diesem Konto wiederherstellen?")}</h2>
             <p>{copy("Dữ liệu tìm thấy trên iPhone sẽ được đưa vào tài khoản này. Nếu bản trên server khác, ứng dụng sẽ dừng để hỏi bạn; không tự ghi đè dữ liệu.", "Die auf dem iPhone gefundenen Daten werden in dieses Konto übernommen. Falls die Serverversion abweicht, hält die App an und fragt Sie; sie überschreibt keine Daten automatisch.")}</p>
             <div className="stack">
-              <button type="button" className="secondary" disabled={busy} onClick={() => { setPhase("review"); setMessage(""); }}>{copy("Quay lại", "Zurück")}</button>
+              <button type="button" data-dialog-close className="secondary" disabled={busy} onClick={() => { setPhase("review"); setMessage(""); }}>{copy("Quay lại", "Zurück")}</button>
               <button type="button" disabled={busy} onClick={() => void confirmRestore()}>{busy ? copy("Đang chuẩn bị…", "Wird vorbereitet…") : copy("Xác nhận khôi phục dữ liệu", "Datenwiederherstellung bestätigen")}</button>
             </div>
           </div>

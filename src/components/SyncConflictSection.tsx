@@ -541,6 +541,7 @@ export default function SyncConflictSection({
               <button
                 ref={cancelRef}
                 type="button"
+                data-dialog-close
                 className="settings-secondary-action"
                 disabled={inFlight.has(pendingChoice.conflictId)}
                 onClick={() => closeConfirmation()}

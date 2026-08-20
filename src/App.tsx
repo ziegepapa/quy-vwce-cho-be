@@ -451,7 +451,7 @@ export default function App() {
           <p>{text.skipBody}</p>
           {skipError ? <div className="banner error" role="alert" style={{ marginTop: 8 }}>{skipError}</div> : null}
           <div className="stack" style={{ marginTop: 16 }}>
-            <button type="button" className="secondary" disabled={skipBusy} onClick={() => { setShowSkipConfirm(false); setSkipError(null); }}>{text.back}</button>
+            <button type="button" data-dialog-close className="secondary" disabled={skipBusy} onClick={() => { setShowSkipConfirm(false); setSkipError(null); }}>{text.back}</button>
             <button type="button" disabled={skipBusy} onClick={() => void skipRecovery()}>{skipBusy ? text.saving : text.confirmSkip}</button>
           </div>
         </div>

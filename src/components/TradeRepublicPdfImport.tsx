@@ -356,7 +356,7 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
               <div className="field"><label>{text.documentReference}</label><input readOnly value={invoiceReview.documentRef ?? "—"} /></div>
               <div className="field"><label htmlFor="pdf-notes">{text.notes}</label><textarea id="pdf-notes" rows={2} value={invoiceForm.notes} onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })} /></div>
             </section>
-            <div className="stack import-review-actions"><button type="button" disabled={saving || !invoiceReview.canConfirm} onClick={() => void confirmInvoiceImport()}>{saving ? text.saving : text.saveTransaction}</button><button type="button" className="secondary" disabled={saving} onClick={resetDrafts}>{text.cancel}</button></div>
+            <div className="stack import-review-actions"><button type="button" disabled={saving || !invoiceReview.canConfirm} onClick={() => void confirmInvoiceImport()}>{saving ? text.saving : text.saveTransaction}</button><button type="button" data-dialog-close className="secondary" disabled={saving} onClick={resetDrafts}>{text.cancel}</button></div>
           </div>
         </div>
       )}
@@ -375,7 +375,7 @@ export default function TradeRepublicPdfImport({ transactions, onTransactionImpo
             <div className="stack">{depotDraft.positions.map((position) => <div className="card" key={`${position.instrumentIsin}-${position.currency}`}><strong>{position.name || position.instrumentIsin}</strong><div><code>{position.instrumentIsin}</code></div><div className="muted">{formatDisplayQuantity(position.quantity, locale, 6)} {text.positionUnits} · {formatDisplayMoney(position.marketValue ?? Number.NaN, locale, position.currency)}</div></div>)}</div>
             <h3>{text.reconciliationResult}</h3>
             <div className="stack">{previewRows.map((row) => <div className="row-between" key={row.instrumentIsin}><div><code>{row.instrumentIsin}</code><div className="muted">{text.app} {formatDisplayQuantity(row.bookQuantity, locale, 6)} · {text.depot} {formatDisplayQuantity(row.statementQuantity, locale, 6)} · Δ {formatDisplayQuantity(row.difference, locale, 6)}</div></div><span className={`pill ${statusClass(row.status)}`}>{localizedReconciliationLabel(row.status, text)}</span></div>)}</div>
-            <div className="stack import-review-actions" style={{ marginTop: 18 }}><button type="button" disabled={saving} onClick={() => void confirmDepotImport()}>{saving ? text.saving : text.saveSnapshot}</button><button type="button" className="secondary" disabled={saving} onClick={resetDrafts}>{text.cancel}</button></div>
+            <div className="stack import-review-actions" style={{ marginTop: 18 }}><button type="button" disabled={saving} onClick={() => void confirmDepotImport()}>{saving ? text.saving : text.saveSnapshot}</button><button type="button" data-dialog-close className="secondary" disabled={saving} onClick={resetDrafts}>{text.cancel}</button></div>
           </div>
         </div>
       )}

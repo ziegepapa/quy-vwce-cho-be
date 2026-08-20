@@ -60,6 +60,9 @@ export default defineConfig({
       // PR0.2: test ranh gioi loi toan app. Da doc tron AppFailureBoundary.tsx
       // va AppFailureBoundary.test.tsx tren main truoc khi bat.
       "src/components/AppFailureBoundary.test.tsx",
+      // P5.0: dialog keyboard contract — the suite explicitly focuses the trigger
+      // before click in jsdom, so it can assert Escape and focus restoration.
+      "src/components/ModalAccessibilityManager.test.tsx",
       // PR0.3: test tai/loi/loc cua Giao dich. Da doc tron Transactions.tsx
       // va Transactions.loadState.test.tsx tren main truoc khi bat.
       "src/pages/Transactions.loadState.test.tsx",
@@ -75,8 +78,6 @@ export default defineConfig({
       "src/pages/Settings.operationErrors.test.tsx",
       "src/pages/MigrateWizard.test.tsx",
       // CHUA BAT - can PR sua rieng trong file test, khong sua production:
-      // - src/components/ModalAccessibilityManager.test.tsx (FINDING_NOTION_49:
-      //   fireEvent.click khong di chuyen focus trong jsdom).
       // - src/pages/Settings.test.tsx (FINDING_NOTION_50: mock cu, thieu
       //   PlanRoadmapSection va ../lib/recoveryReadOnly).
     ],

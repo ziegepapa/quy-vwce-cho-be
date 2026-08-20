@@ -477,7 +477,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             <button type="button" disabled={selectedCount === 0} onClick={() => void confirmPersist()}>
               {saveLabel}
             </button>
-            <button type="button" className="secondary" onClick={() => setSaveOpen(false)}>
+            <button type="button" data-dialog-close className="secondary" onClick={() => setSaveOpen(false)}>
               {text.cancel}
             </button>
           </div>
