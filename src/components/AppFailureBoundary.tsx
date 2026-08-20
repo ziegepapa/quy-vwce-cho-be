@@ -1,4 +1,5 @@
 import { Component, Fragment, type ReactNode } from "react";
+import { useLocale } from "../lib/locale";
 
 type Props = {
   children: ReactNode;
@@ -15,6 +16,32 @@ function isExpectedAbort(reason: unknown): boolean {
       && typeof reason === "object"
       && "name" in reason
       && reason.name === "AbortError",
+  );
+}
+
+function AppFailureFallback({ onRetry }: { onRetry: () => void }) {
+  const { locale } = useLocale();
+  const text = locale === "de" ? {
+    title: "Anwendungsdaten konnten nicht geladen werden",
+    message: "Die Daten auf diesem Gerät bleiben unverändert. Bitte laden Sie die aktuelle Seite erneut.",
+    retry: "Erneut versuchen",
+  } : {
+    title: "Không tải được dữ liệu ứng dụng",
+    message: "Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy thử tải lại trang hiện tại.",
+    retry: "Thử lại",
+  };
+  return (
+    <main style={{ padding: 16 }}>
+      <section
+        className="empty card"
+        role="alert"
+        style={{ margin: "clamp(24px, 8vh, 72px) auto", maxWidth: 560 }}
+      >
+        <h1 className="page-title">{text.title}</h1>
+        <p>{text.message}</p>
+        <button type="button" onClick={onRetry}>{text.retry}</button>
+      </section>
+    </main>
   );
 }
 
@@ -50,21 +77,7 @@ export default class AppFailureBoundary extends Component<Props, State> {
   };
 
   render() {
-    if (this.state.failed) {
-      return (
-        <main style={{ padding: 16 }}>
-          <section
-            className="empty card"
-            role="alert"
-            style={{ margin: "clamp(24px, 8vh, 72px) auto", maxWidth: 560 }}
-          >
-            <h1 className="page-title">Không tải được dữ liệu ứng dụng</h1>
-            <p>Dữ liệu trên thiết bị vẫn được giữ nguyên. Hãy thử tải lại trang hiện tại.</p>
-            <button type="button" onClick={this.retry}>Thử lại</button>
-          </section>
-        </main>
-      );
-    }
+    if (this.state.failed) return <AppFailureFallback onRetry={this.retry} />;
 
     return <Fragment key={this.state.resetKey}>{this.props.children}</Fragment>;
   }

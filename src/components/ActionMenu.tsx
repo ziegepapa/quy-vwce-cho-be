@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useLocale } from "../lib/locale";
 
 export type MenuAction = {
   label: string;
@@ -26,11 +27,13 @@ const EDGE = 12;
  */
 export default function ActionMenu({
   actions,
-  ariaLabel = "Tùy chọn",
+  ariaLabel,
 }: {
   actions: MenuAction[];
   ariaLabel?: string;
 }) {
+  const { locale } = useLocale();
+  const resolvedAriaLabel = ariaLabel ?? (locale === "de" ? "Optionen" : "Tùy chọn");
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -96,7 +99,7 @@ export default function ActionMenu({
       <button
         ref={triggerRef}
         type="button"
-        aria-label={ariaLabel}
+        aria-label={resolvedAriaLabel}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
@@ -140,7 +143,7 @@ export default function ActionMenu({
               <div
                 ref={panelRef}
                 role="menu"
-                aria-label={ariaLabel}
+                aria-label={resolvedAriaLabel}
                 tabIndex={-1}
                 style={{
                   position: "fixed",

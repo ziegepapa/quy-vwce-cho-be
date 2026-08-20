@@ -2,15 +2,22 @@ import type { Mode, ProjectOutput, Scenario } from "../../lib/simulation/engine"
 import type { Goal } from "../../lib/types";
 import { MAX_YEARS } from "../../lib/simulation/engine";
 import { SimulationDemoChart } from "./SimulationDemoChart";
+import { formatDisplayMoney, type DisplayLocale } from "../../ui/localeFormatting";
 
-function formatMoneyRounded(n: number): string {
-  const v = Math.round(n);
-  const abs = Math.abs(v);
-  const s = abs.toLocaleString("de-DE", { maximumFractionDigits: 0 });
-  return (v < 0 ? "\u2212" : "") + s + " \u20ac";
+function formatMoneyRounded(n: number, locale: DisplayLocale): string {
+  return formatDisplayMoney(Math.round(n), locale);
+}
+
+function simulationCopy(locale: DisplayLocale) {
+  return locale === "de" ? {
+    aria: "Simulation", modeA: "Einzahlen → Erhalten", modeB: "Wunsch → Einzahlen", modeC: "Einzahlen → Wann", unavailable: "Keine umsetzbare Rate", unavailableNote: "Ziel / Rendite prüfen", afterYears: (years: number, monthly: string) => `nach ${years} Jahren · ${monthly}/Monat`, end: "Endwert", contributed: "Eingezahlt", gain: "Gewinn", chart: "Portfolioentwicklung", forecast: "Portfolio (Projektion)", monthly: "Monatlicher Beitrag (EUR)", target: "Zielbetrag (EUR)", duration: "Laufzeit", years: "Jahre", want: "Gewünschter Betrag (EUR)", inYear: "Im Jahr", aboutYears: (years: number, monthly: string) => `noch etwa ${years} Jahre · benötigt ca. ${monthly}/Monat`, annualReturn: "Rendite / Jahr (%)", around: "Spanne", year: "Jahr", forecastNav: "Prognostizierter NAV", current: "Heute", collapse: "Weniger anzeigen", showAll: "Alle Jahre anzeigen", disclaimer: "Schätzung — keine Anlageberatung", range: "Bandbreite ± (%)", contributionGrowth: "Beitrag ändert sich jährlich", perYear: "% / Jahr", initialLump: "Einmalbetrag zu Beginn", startingBalance: "Startguthaben", purchasingPower: "Kaufkraft von heute", inflation: "Inflation % / Jahr", germanTax: "DE-Steuern + TER", afterTax: "Aktuell: nach Steuern", beforeTax: "Aktuell: vor Steuern", presentValue: "Aktuell: heutige Kaufkraft", nominal: "Aktuell: nominal", goal: "Ziel", savePlan: "Beitrag und Basisrendite in den Plan übernehmen", noPlanChanges: "Der Plan stimmt bereits überein — nichts zu speichern.", undo: "Rückgängig", saveDialog: "Im Plan speichern", yearOne: "Jahr 1", fromYearTwo: "Ab Jahr 2", return: "Rendite", cancel: "Abbrechen",
+  } : {
+    aria: "Mô phỏng", modeA: "Góp → Nhận", modeB: "Muốn → Góp", modeC: "Góp → Bao giờ", unavailable: "Chưa có mức góp khả thi", unavailableNote: "kiểm tra mục tiêu / lợi nhuận", afterYears: (years: number, monthly: string) => `sau ${years} năm · ${monthly}/tháng`, end: "Cuối kỳ", contributed: "Đã góp", gain: "Lãi", chart: "Tăng trưởng danh mục", forecast: "Danh mục (dự báo)", monthly: "Góp mỗi tháng (EUR)", target: "Mục tiêu (EUR)", duration: "Thời hạn", years: "năm", want: "Muốn có (EUR)", inYear: "Vào năm", aboutYears: (years: number, monthly: string) => `Còn khoảng ${years} năm · cần ~${monthly}/tháng`, annualReturn: "Lợi nhuận / năm (%)", around: "khoảng", year: "Năm", forecastNav: "NAV dự báo", current: "Hiện tại", collapse: "Thu gọn", showAll: "Hiện tất cả các năm", disclaimer: "Ước tính — không phải tư vấn đầu tư", range: "Biên độ ± (%)", contributionGrowth: "Góp thay đổi theo năm", perYear: "% / năm", initialLump: "Khoản lớn ban đầu", startingBalance: "Số dư xuất phát", purchasingPower: "Sức mua hôm nay", inflation: "Lạm phát %/năm", germanTax: "Thuế DE + TER", afterTax: "Đang: sau thuế", beforeTax: "Đang: trước thuế", presentValue: "Đang: giá hôm nay", nominal: "Đang: danh nghĩa", goal: "Mục tiêu", savePlan: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch", noPlanChanges: "Kế hoạch đã khớp — không có gì để lưu.", undo: "Hoàn tác", saveDialog: "Lưu vào kế hoạch", yearOne: "Năm 1", fromYearTwo: "Từ năm 2", return: "Lợi nhuận", cancel: "Hủy",
+  };
 }
 
 export type SimulationDemoShellProps = {
+  locale: DisplayLocale;
   mode: Mode;
   setMode: (m: Mode) => void;
   planUnreachable: boolean;
@@ -97,13 +104,12 @@ export type SimulationDemoShellProps = {
   selectedCount: number;
   saveLabel: string;
   confirmPersist: () => void;
-  formatMoney: (n: number) => string;
   round2: (n: number) => number;
 };
 
 export default function SimulationDemoShell(p: SimulationDemoShellProps) {
   const {
-    mode, setMode, planUnreachable, headlineValue, yearsForProject, monthlyForProject,
+    locale, mode, setMode, planUnreachable, headlineValue, yearsForProject, monthlyForProject,
     headlineNote, primary, initialBalance, shownInterest, results, goalMarkers, band, baseRate,
     monthly, setMonthly, years, setYears, targetAmount, setTargetAmount, targetYear, setTargetYear,
     yearsB, requiredMonthlyBase, yearsC, rateInput, setRateInput, bandPctLabel, readOnly, goals,
@@ -114,18 +120,19 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
     nowY, showAllYears, setShowAllYears, openSaveConfirm, matchMsg, undoVisible, undoSnap, undoPersist,
     saveOpen, setSaveOpen, y1Diff, y2Diff, retDiff, writeY1, setWriteY1, writeY2, setWriteY2,
     writeReturn, setWriteReturn, monthlyForProjectRounded, baseRateNew, selectedCount, saveLabel,
-    confirmPersist, formatMoney,
+    confirmPersist,
   } = p;
+  const text = simulationCopy(locale);
 
   return (
-    <main className="demo-v10-screen" aria-label="Mô phỏng">
+    <main className="demo-v10-screen" aria-label={text.aria}>
       <div className="sim-wrap">
-      <div className="mode-tabs" role="tablist" aria-label="Chế độ mô phỏng">
+      <div className="mode-tabs" role="tablist" aria-label={text.aria}>
         {(
           [
-            ["A", "Góp → Nhận", "Mode A"],
-            ["B", "Muốn → Góp", "Mode B"],
-            ["C", "Góp → Bao giờ", "Mode C"],
+            ["A", text.modeA, "Mode A"],
+            ["B", text.modeB, "Mode B"],
+            ["C", text.modeC, "Mode C"],
           ] as const
         ).map(([id, label, sub]) => (
           <button
@@ -146,14 +153,14 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         {planUnreachable ? (
           <>
             <div className="sh-big">—</div>
-            <div className="sh-sub">Chưa có mức góp khả thi</div>
-            <div className="sh-note">kiểm tra mục tiêu / lợi nhuận</div>
+            <div className="sh-sub">{text.unavailable}</div>
+            <div className="sh-note">{text.unavailableNote}</div>
           </>
         ) : (
           <>
-            <div className="sh-big">{formatMoneyRounded(headlineValue)}</div>
+            <div className="sh-big">{formatMoneyRounded(headlineValue, locale)}</div>
             <div className="sh-sub">
-              {`sau ${yearsForProject} năm · ${formatMoneyRounded(monthlyForProject)}/tháng`}
+              {text.afterYears(yearsForProject, formatMoneyRounded(monthlyForProject, locale))}
             </div>
             <div className="sh-note">{headlineNote}</div>
           </>
@@ -162,39 +169,40 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
 
       <div className="sim-sum3">
         <div className="gl ss-c">
-          <div className="ss-lbl">Cuối kỳ</div>
+          <div className="ss-lbl">{text.end}</div>
           <div className="ss-val" style={{ color: "var(--demo-vi)" }}>
-            {primary && !planUnreachable ? formatMoneyRounded(headlineValue) : "—"}
+            {primary && !planUnreachable ? formatMoneyRounded(headlineValue, locale) : "—"}
           </div>
         </div>
         <div className="gl ss-c">
-          <div className="ss-lbl">Đã góp</div>
+          <div className="ss-lbl">{text.contributed}</div>
           <div className="ss-val" style={{ color: "var(--demo-sub)" }}>
             {primary && !planUnreachable
-              ? formatMoneyRounded(primary.out.contributed + initialBalance)
+              ? formatMoneyRounded(primary.out.contributed + initialBalance, locale)
               : "—"}
           </div>
         </div>
         <div className="gl ss-c">
-          <div className="ss-lbl">Lãi</div>
+          <div className="ss-lbl">{text.gain}</div>
           <div className="ss-val" style={{ color: "var(--demo-em)" }}>
-            {primary && !planUnreachable ? formatMoneyRounded(shownInterest) : "—"}
+            {primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}
           </div>
         </div>
       </div>
 
       <section className="gl sim-chart-card">
-        <div className="sim-chart-title">Tăng trưởng danh mục</div>
+        <div className="sim-chart-title">{text.chart}</div>
         <SimulationDemoChart
           results={results}
           markers={goalMarkers}
           years={yearsForProject}
           band={band}
           baseRate={baseRate}
+          locale={locale}
         />
         <div className="chart-legend">
-          <span><i style={{ background: "var(--demo-vi)" }} /> Đã góp</span>
-          <span><i style={{ background: "var(--demo-em)" }} /> Danh mục (dự báo)</span>
+          <span><i style={{ background: "var(--demo-vi)" }} /> {text.contributed}</span>
+          <span><i style={{ background: "var(--demo-em)" }} /> {text.forecast}</span>
         </div>
       </section>
 
@@ -202,7 +210,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         <section className="gl sim-inputs">
           {mode === "A" && (
             <div className="inp-row">
-              <span className="inp-lbl">Góp mỗi tháng (EUR)</span>
+              <span className="inp-lbl">{text.monthly}</span>
               <input
                 className="inp"
                 type="number"
@@ -216,7 +224,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           {mode === "C" && (
             <>
               <div className="inp-row">
-                <span className="inp-lbl">Mục tiêu (EUR)</span>
+                <span className="inp-lbl">{text.target}</span>
                 <input
                   className="inp"
                   type="number"
@@ -227,7 +235,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
                 />
               </div>
               <div className="inp-row">
-                <span className="inp-lbl">Góp mỗi tháng (EUR)</span>
+                <span className="inp-lbl">{text.monthly}</span>
                 <input
                   className="inp"
                   type="number"
@@ -241,8 +249,8 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           )}
           <div className="yr-row2">
             <div className="yr-top">
-              <span className="yr-lbl">Thời hạn</span>
-              <span className="yr-val">{years} năm</span>
+              <span className="yr-lbl">{text.duration}</span>
+              <span className="yr-val">{years} {text.years}</span>
             </div>
             <input
               className="yr-slider"
@@ -260,7 +268,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
       {mode === "B" && (
         <section className="gl sim-inputs">
           <div className="inp-row">
-            <span className="inp-lbl">Muốn có (EUR)</span>
+            <span className="inp-lbl">{text.want}</span>
             <input
               className="inp"
               type="number"
@@ -271,7 +279,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             />
           </div>
           <div className="inp-row">
-            <span className="inp-lbl">Vào năm</span>
+            <span className="inp-lbl">{text.inYear}</span>
             <input
               className="inp"
               type="number"
@@ -282,14 +290,14 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             />
           </div>
           <p className="sh-note" style={{ margin: 0 }}>
-            {`Còn khoảng ${yearsB} năm · cần ~${requiredMonthlyBase >= 0 ? formatMoneyRounded(requiredMonthlyBase) : "—"}/tháng`}
+            {text.aboutYears(yearsB, requiredMonthlyBase >= 0 ? formatMoneyRounded(requiredMonthlyBase, locale) : "—")}
           </p>
         </section>
       )}
 
       <section className="gl sim-inputs">
         <div className="inp-row">
-          <span className="inp-lbl">Lợi nhuận / năm (%)</span>
+          <span className="inp-lbl">{text.annualReturn}</span>
           <input
             className="inp"
             type="text"
@@ -301,16 +309,16 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         </div>
         {band > 0 ? (
           <p className="sh-note" style={{ margin: 0 }}>
-            khoảng {bandPctLabel}
+            {text.around} {bandPctLabel}
           </p>
         ) : null}
       </section>
 
       <section className="gl yr-table">
         <div className="yr-table-head">
-          <span>Năm</span>
-          <span>NAV dự báo</span>
-          <span>Đã góp</span>
+          <span>{text.year}</span>
+          <span>{text.forecastNav}</span>
+          <span>{text.contributed}</span>
         </div>
         {yearRows.map((yi) => {
           const basePt = baseMap.get(yi);
@@ -323,7 +331,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
               style={{ fontWeight: isLast ? 700 : undefined }}
             >
               <span>
-                {yi === 0 ? "Hiện tại" : String(calYear)}
+                {yi === 0 ? text.current : String(calYear)}
                 {goalYearSet.has(yi) ? (
                   <small style={{ marginLeft: 4, color: "var(--demo-vi)" }}>
                     {goalNameByYear.get(yi)}
@@ -331,10 +339,10 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
                 ) : null}
               </span>
               <span style={{ textAlign: "center" }}>
-                {basePt ? formatMoneyRounded(basePt.total) : "—"}
+                {basePt ? formatMoneyRounded(basePt.total, locale) : "—"}
               </span>
               <span style={{ textAlign: "right" }}>
-                {basePt ? formatMoneyRounded(basePt.contributed) : "—"}
+                {basePt ? formatMoneyRounded(basePt.contributed, locale) : "—"}
               </span>
             </div>
           );
@@ -346,10 +354,10 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         className="show-all-btn"
         onClick={() => setShowAllYears((v) => !v)}
       >
-        {showAllYears ? "Thu gọn" : "Hiện tất cả các năm"}
+        {showAllYears ? text.collapse : text.showAll}
       </button>
 
-      <div className="sim-note">ⓘ Ước tính — không phải tư vấn đầu tư</div>
+      <div className="sim-note">ⓘ {text.disclaimer}</div>
 
       <details className="gl" style={{ padding: 14 }}>
         <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--demo-dim)" }}>
@@ -357,25 +365,25 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         </summary>
         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
           <div className="inp-row">
-            <span className="inp-lbl">Biên độ ± (%)</span>
+            <span className="inp-lbl">{text.range}</span>
             <input className="inp" value={bandInput} onChange={(e) => setBandInput(e.target.value)} disabled={readOnly} />
           </div>
           <label className="inp-row">
-            <span className="inp-lbl">Góp thay đổi theo năm</span>
+            <span className="inp-lbl">{text.contributionGrowth}</span>
             <input type="checkbox" checked={growthOn} onChange={(e) => setGrowthOn(e.target.checked)} disabled={readOnly} />
           </label>
           {growthOn ? (
             <div className="inp-row">
-              <span className="inp-lbl">% / năm</span>
+              <span className="inp-lbl">{text.perYear}</span>
               <input className="inp" value={growthPct} onChange={(e) => setGrowthPct(e.target.value)} disabled={readOnly} />
             </div>
           ) : null}
           <div className="inp-row">
-            <span className="inp-lbl">Khoản lớn ban đầu</span>
+            <span className="inp-lbl">{text.initialLump}</span>
             <input className="inp" value={lumpSum} onChange={(e) => setLumpSum(e.target.value)} disabled={readOnly} />
           </div>
           <div className="inp-row">
-            <span className="inp-lbl">Số dư xuất phát</span>
+            <span className="inp-lbl">{text.startingBalance}</span>
             <input
               className="inp"
               placeholder={String(Math.max(0, realBalance))}
@@ -385,34 +393,34 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             />
           </div>
           <label className="inp-row">
-            <span className="inp-lbl">Sức mua hôm nay</span>
+            <span className="inp-lbl">{text.purchasingPower}</span>
             <input type="checkbox" checked={inflationOn} onChange={(e) => setInflationOn(e.target.checked)} disabled={readOnly} />
           </label>
           {inflationOn ? (
             <div className="inp-row">
-              <span className="inp-lbl">Lạm phát %/năm</span>
+              <span className="inp-lbl">{text.inflation}</span>
               <input className="inp" value={inflationPct} onChange={(e) => setInflationPct(e.target.value)} disabled={readOnly} />
             </div>
           ) : null}
           <label className="inp-row">
-            <span className="inp-lbl">Thuế DE + TER</span>
+            <span className="inp-lbl">{text.germanTax}</span>
             <input type="checkbox" checked={taxOn} onChange={(e) => setTaxOn(e.target.checked)} disabled={readOnly} />
           </label>
           {taxOn ? (
             <button type="button" className="show-all-btn" onClick={() => setShowAfterTax((v) => !v)}>
-              {showAfterTax ? "Đang: sau thuế" : "Đang: trước thuế"}
+              {showAfterTax ? text.afterTax : text.beforeTax}
             </button>
           ) : null}
           {inflationOn ? (
             <button type="button" className="show-all-btn" onClick={() => setShowPP((v) => !v)}>
-              {showPP ? "Đang: giá hôm nay" : "Đang: danh nghĩa"}
+              {showPP ? text.presentValue : text.nominal}
             </button>
           ) : null}
           {goals.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {goals.map((g) => (
                 <button key={g.id} type="button" className="show-all-btn" onClick={() => applyYearsFromGoal(g)}>
-                  Mục tiêu: {g.name}
+                  {text.goal}: {g.name}
                 </button>
               ))}
             </div>
@@ -424,14 +432,14 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             disabled={planUnreachable || readOnly}
             onClick={openSaveConfirm}
           >
-            Lưu mức góp & lợi nhuận cơ sở vào kế hoạch
+            {text.savePlan}
           </button>
         </div>
       </details>
 
       {matchMsg && !undoVisible ? (
         <div className="gl" style={{ padding: 12, fontSize: 13 }}>
-          Kế hoạch đã khớp — không có gì để lưu.
+          {text.noPlanChanges}
         </div>
       ) : null}
 
@@ -439,7 +447,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         <div className="gl" style={{ padding: 12, display: "flex", gap: 10, alignItems: "center" }}>
           <span style={{ fontSize: 13 }}>{undoSnap.message}</span>
           <button type="button" className="show-all-btn" onClick={() => void undoPersist()}>
-            Hoàn tác
+            {text.undo}
           </button>
         </div>
       ) : null}
@@ -448,21 +456,21 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="sheet-handle" aria-hidden />
-            <h2>Lưu vào kế hoạch</h2>
+            <h2>{text.saveDialog}</h2>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0" }}>
               {y1Diff ? (
                 <button type="button" aria-pressed={writeY1} onClick={() => setWriteY1((v) => !v)} className="show-all-btn">
-                  Năm 1 · {formatMoney(monthlyForProjectRounded)}
+                  {text.yearOne} · {formatDisplayMoney(monthlyForProjectRounded, locale)}
                 </button>
               ) : null}
               {y2Diff ? (
                 <button type="button" aria-pressed={writeY2} onClick={() => setWriteY2((v) => !v)} className="show-all-btn">
-                  Từ năm 2 · {formatMoney(monthlyForProjectRounded)}
+                  {text.fromYearTwo} · {formatDisplayMoney(monthlyForProjectRounded, locale)}
                 </button>
               ) : null}
               {retDiff ? (
                 <button type="button" aria-pressed={writeReturn} onClick={() => setWriteReturn((v) => !v)} className="show-all-btn">
-                  Lợi nhuận · {(baseRateNew * 100).toFixed(2)}%
+                  {text.return} · {(baseRateNew * 100).toFixed(2)}%
                 </button>
               ) : null}
             </div>
@@ -470,7 +478,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
               {saveLabel}
             </button>
             <button type="button" className="secondary" onClick={() => setSaveOpen(false)}>
-              Hủy
+              {text.cancel}
             </button>
           </div>
         </div>

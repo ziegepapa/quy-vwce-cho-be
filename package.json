@@ -11,6 +11,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run && npm run test:price",
+    "benchmark:ledger": "vite-node scripts/benchmark-ledger.ts",
+    "audit:locale": "node scripts/audit-ui-localization.mjs",
     "test:price": "node --test scripts/update-vwce-price.test.mjs scripts/update-quotes.test.mjs scripts/price-fallback.test.mjs scripts/price-history.test.mjs scripts/price-legacy-honesty.test.mjs",
     "test:preview": "playwright test",
     "test:release": "node scripts/verify-release.mjs",

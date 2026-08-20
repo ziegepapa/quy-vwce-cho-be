@@ -1,12 +1,6 @@
 import type { ProjectOutput, Scenario, YearPoint } from "../../lib/simulation/engine";
 import { round2 } from "../../lib/calc";
-
-function formatMoneyRounded(n: number): string {
-  const v = Math.round(n);
-  const abs = Math.abs(v);
-  const s = abs.toLocaleString("de-DE", { maximumFractionDigits: 0 });
-  return (v < 0 ? "−" : "") + s + " €";
-}
+import { formatDisplayMoney, type DisplayLocale } from "../../ui/localeFormatting";
 
 function scenarioColor(id: string): string {
   if (id === "cautious") return "var(--demo-sub, #a78bfa)";
@@ -25,12 +19,14 @@ export function SimulationDemoChart({
   years,
   band,
   baseRate,
+  locale,
 }: {
   results: ChartResult[];
   markers: { name: string; yearIndex: number; amount: number }[];
   years: number;
   band: number;
   baseRate: number;
+  locale: DisplayLocale;
 }) {
   const W = 320;
   const H = 168;
@@ -86,7 +82,7 @@ export function SimulationDemoChart({
   const baseEnd = base?.out.yearEnds[base.out.yearEnds.length - 1];
   const loPct = round2(Math.max(0, baseRate - band) * 100);
   const hiPct = round2((baseRate + band) * 100);
-  const bandPctText = `${loPct.toLocaleString("de-DE")}% – ${hiPct.toLocaleString("de-DE")}%`;
+  const bandPctText = `${loPct.toLocaleString(locale === "de" ? "de-DE" : "vi-VN")}% – ${hiPct.toLocaleString(locale === "de" ? "de-DE" : "vi-VN")}%`;
 
   return (
     <svg
@@ -94,7 +90,7 @@ export function SimulationDemoChart({
       width="100%"
       height={H}
       role="img"
-      aria-label="Biểu đồ vốn góp và danh mục dự báo theo năm"
+      aria-label={locale === "de" ? "Diagramm für Einzahlungen und prognostiziertes Portfolio nach Jahren" : "Biểu đồ vốn góp và danh mục dự báo theo năm"}
       className="sim-chart-svg"
       style={{ display: "block" }}
     >
@@ -127,12 +123,12 @@ export function SimulationDemoChart({
       ))}
       {baseEnd ? (
         <text x={W - 4} y={y(baseEnd.total)} fontSize={10} fill="var(--demo-em)" textAnchor="end" dominantBaseline="middle">
-          {formatMoneyRounded(baseEnd.total)}
+          {formatDisplayMoney(Math.round(baseEnd.total), locale)}
         </text>
       ) : null}
       {showBand ? <text x={W - 4} y={padT + 10} fontSize={9} fill="rgba(240,238,255,.4)" textAnchor="end">{bandPctText}</text> : null}
       <text x={padL} y={H - 6} fontSize={10} fill="rgba(240,238,255,.4)">0</text>
-      <text x={W - padR} y={H - 6} fontSize={10} fill="rgba(240,238,255,.4)" textAnchor="end">{years}n</text>
+      <text x={W - padR} y={H - 6} fontSize={10} fill="rgba(240,238,255,.4)" textAnchor="end">{years}{locale === "de" ? " J" : "n"}</text>
     </svg>
   );
 }

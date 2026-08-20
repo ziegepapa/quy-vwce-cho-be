@@ -14,3 +14,6 @@ public/icons/icon-maskable-512.png
 # See PRE-REAL-DATA-AUDIT-001 section B-5.
 *.pdf
 *.PDF
+
+# Locally generated performance evidence; upload explicitly in CI when a baseline is ratified.
+artifacts/
