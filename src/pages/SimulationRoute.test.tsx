@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import AppFailureBoundary from "../components/AppFailureBoundary";
 import { RecoverableOperationError } from "../lib/operationErrors";
+import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
 
 vi.mock("./Simulation", () => ({
   default: () => createElement("div", null, "Nội dung Mô phỏng v2"),
@@ -21,14 +22,21 @@ function dispatchUnhandledRejection(reason: unknown): PromiseRejectionEvent {
 function renderRoute() {
   return render(
     createElement(
-      AppFailureBoundary,
+      LocaleProvider,
       null,
-      createElement(SimulationRoute),
+      createElement(
+        AppFailureBoundary,
+        null,
+        createElement(SimulationRoute),
+      ),
     ),
   );
 }
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  window.localStorage.removeItem(LOCALE_KEY);
+});
 
 describe("Simulation route failure boundary", () => {
   it("keeps a Simulation rejection inside the page and retries by remounting it", () => {
@@ -49,6 +57,19 @@ describe("Simulation route failure boundary", () => {
 
     expect(screen.getByText("Nội dung Mô phỏng v2")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("uses a German retry label when the route locale is German", () => {
+    window.localStorage.setItem(LOCALE_KEY, "de");
+    renderRoute();
+
+    act(() => {
+      dispatchUnhandledRejection(new Error("SIMULATION_SECRET_CANARY"));
+    });
+
+    expect(screen.getByRole("heading", { name: "Simulation konnte nicht geladen werden" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Erneut versuchen" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Thử lại" })).toBeNull();
   });
 
   it("keeps recoverable save failures inside the loaded Simulation page", () => {
