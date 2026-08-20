@@ -36,6 +36,8 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_AI_TRACE_ENABLED: ${{ vars.VITE_AI_TRACE_ENABLED }}
         run: npm run build
+      - name: Enforce initial bundle budget
+        run: npm run check:bundle
       - name: Verify release artifact
         run: npm run test:release
       - name: Upload dist for deploy job
