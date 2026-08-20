@@ -234,7 +234,8 @@ export default function App() {
           const needsRecovery = isRecoveryPending(counts, meta);
           setRecoveryRequired(needsRecovery); setShowWizard(false); setRecoveryChecked(true);
           if (!needsRecovery) {
-            try { setSyncStatus("syncing"); setSyncRunning(true); await runSync(auth.user.id); } catch { /* network */ }
+            try { setSyncStatus("syncing"); setSyncRunning(true); await runSync(auth.user.id); }
+            catch { recordLocalDiagnostic({ category: "sync-health", code: "sync-failed" }); }
             finally { setSyncRunning(false); }
             await refreshSyncBadge();
             setSettings(await getSettings());
@@ -333,6 +334,7 @@ export default function App() {
       setSyncFeedback(feedback);
       return feedback;
     } catch {
+      recordLocalDiagnostic({ category: "sync-health", code: "sync-failed" });
       await refreshSyncBadge().catch(() => undefined);
       const feedback = { message: text.syncFailed, tone: "error" as const };
       setSyncFeedback(feedback);

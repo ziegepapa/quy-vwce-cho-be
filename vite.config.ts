@@ -66,6 +66,8 @@ export default defineConfig({
       // P6.1: local-only diagnostics surface — verifies German/Vietnamese copy
       // and that untrusted stored payload fields cannot be rendered.
       "src/components/LocalDiagnosticsPanel.test.tsx",
+      // P6.3: Sync guidance must stay accessible, localized and explicitly safe.
+      "src/components/SyncHealthSummary.test.tsx",
       // PR0.3: test ranh gioi loi toan app.Giao dich. Da doc tron Transactions.tsx
       // va Transactions.loadState.test.tsx tren main truoc khi bat.
       "src/pages/Transactions.loadState.test.tsx",

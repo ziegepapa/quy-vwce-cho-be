@@ -34,6 +34,15 @@ describe("Sync Health", () => {
     expect(conflict.title).toBe("2 Datenkonflikte");
     expect(conflict.detail).not.toContain("Không");
     expect(conflict.detail).not.toContain("xung đột");
+    expect(conflict.nextStep).toContain("trifft keine Auswahl");
     expect(pending.actionLabel).toBe("Jetzt synchronisieren");
+  });
+
+  it("explains retry safety in Vietnamese without promising an automatic conflict decision", () => {
+    const retry = syncHealthCopy(buildSyncHealth({ ...clean, dead: 2, pending: 2 }), "vi");
+
+    expect(retry.actionLabel).toBe("Đồng bộ lại");
+    expect(retry.nextStep).toContain("không tự chọn");
+    expect(retry.nextStep).toContain("không tự ghi đè");
   });
 });

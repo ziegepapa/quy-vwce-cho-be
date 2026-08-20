@@ -12,7 +12,8 @@ export type DiagnosticCode =
   | "offline"
   | "syncing"
   | "pending"
-  | "synced";
+  | "synced"
+  | "sync-failed";
 
 export type LocalDiagnosticEvent = {
   at: string;
@@ -34,6 +35,7 @@ const codes = new Set<DiagnosticCode>([
   "syncing",
   "pending",
   "synced",
+  "sync-failed",
 ]);
 
 function browserStorage(): StorageLike | null {

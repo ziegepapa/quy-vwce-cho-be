@@ -37,6 +37,7 @@ function codeLabel(code: DiagnosticCode, locale: "vi" | "de") {
     syncing: ["Đang đồng bộ", "Synchronisierung läuft"],
     pending: ["Có thay đổi đang chờ", "Änderungen ausstehend"],
     synced: ["Đã đồng bộ", "Synchronisiert"],
+    "sync-failed": ["Chưa hoàn tất đồng bộ", "Synchronisierung nicht abgeschlossen"],
   };
   return labels[code][de ? 1 : 0];
 }
