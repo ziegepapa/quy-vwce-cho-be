@@ -59,3 +59,11 @@ The `+ Góp tiền` action was also checked in the fresh preview: its form is ex
 With a local test contribution saved, the journal renders a compact month group and a row with the transaction icon, type, date, prominent amount, and a visible `…` trigger. Opening that trigger shows the portal action menu with **Sửa** and **Xóa**; the action is now discoverable on touch devices rather than hidden behind a long-press/context gesture.
 
 A controlled 360px viewport check passed: the command deck has no horizontal overflow (`deckWidth: 280`, `viewportWidth: 360`), quick actions are 40px high, and activity chips are 34px high. This confirms the compact mobile contract without relying only on a desktop browser screenshot.
+
+## Smart time lens preview (2026-08-20)
+
+A fresh production preview was initialized on port 4180 with isolated browser storage before checking the new time-range rail in Transactions.
+
+The Smart time lens rail renders beneath the immediate actions as a labeled `Thời gian` control with **Toàn bộ, Tháng này, 90 ngày, Năm nay, Năm trước**. Selecting **Tháng này** visibly activates that chip and changes the tools trigger to `Lọc / PDF · 1 bộ lọc`, so the active context remains explicit without opening the advanced panel.
+
+A controlled 360px check passed for Smart time lens: no page-level horizontal overflow, all five ranges are present, the rail handles excess width internally through horizontal scrolling, and the smallest chip remains 31px high.
