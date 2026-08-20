@@ -8,6 +8,7 @@ import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
 
 const dbMocks = vi.hoisted(() => ({
   clearAllData: vi.fn(),
+  countLocalData: vi.fn(),
   db: {
     appMetadata: { get: vi.fn() },
     annualChecklists: { put: vi.fn() },
@@ -82,6 +83,7 @@ function renderGermanSettings(path = "/settings?tab=advanced") {
 beforeEach(() => {
   vi.clearAllMocks();
   dbMocks.getSettings.mockResolvedValue(loadedSettings());
+  dbMocks.countLocalData.mockResolvedValue({ settings: 1, goals: 0, transactions: 0, annualChecklists: 0, monthlySnapshots: 0, quotes: 0 });
   dbMocks.db.appMetadata.get.mockResolvedValue({ lastBackupAt: "" });
   dbMocks.getOrCreateChecklist.mockResolvedValue({
     year: new Date().getFullYear(),
