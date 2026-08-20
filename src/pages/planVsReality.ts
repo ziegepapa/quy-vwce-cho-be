@@ -24,6 +24,29 @@ export type PlanVsReality = {
   state: "not_started" | "on_track" | "below_plan";
 };
 
+/**
+ * Returns only calendar years that can be reviewed from the existing plan/data.
+ * This is display-only: it neither persists a preference nor changes ledger data.
+ */
+export function planRealityReviewYears(input: {
+  startDate: string;
+  transactions: readonly PlanRealityTransaction[];
+  today: string;
+}): number[] {
+  const today = validDate(input.today);
+  if (!today) return [];
+  const years = new Set<number>();
+  const start = validDate(input.startDate);
+  const firstPlanYear = start && start <= today ? start.getFullYear() : today.getFullYear();
+  for (let year = firstPlanYear; year <= today.getFullYear(); year += 1) years.add(year);
+  for (const tx of input.transactions ?? []) {
+    if (!tx || tx.deletedAt) continue;
+    const date = validDate(tx.date);
+    if (date && date <= today && (!start || date >= start)) years.add(date.getFullYear());
+  }
+  return [...years].sort((left, right) => right - left);
+}
+
 function validDate(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const date = new Date(`${value}T12:00:00`);
@@ -47,16 +70,20 @@ export function buildPlanVsReality(input: {
   trackInAppCash: boolean | null | undefined;
   transactions: readonly PlanRealityTransaction[];
   today: string;
+  year?: number;
 }): PlanVsReality {
   const today = validDate(input.today) ?? new Date(0);
   const start = validDate(input.startDate);
-  const year = today.getFullYear();
+  const currentYear = today.getFullYear();
+  const year = Number.isInteger(input.year) && (input.year as number) <= currentYear
+    ? input.year as number
+    : currentYear;
   const mode = heroLifetimeMode(input.trackInAppCash);
   const countedTypes = mode === "cash_first" ? CASH_FIRST_CONTRIBUTION_TYPES : SECURITIES_FIRST_CONTRIBUTION_TYPES;
   const firstYearMonthly = Number.isFinite(input.contributionY1) && input.contributionY1 > 0 ? input.contributionY1 : 0;
   const laterMonthly = Number.isFinite(input.contributionY2) && input.contributionY2 > 0 ? input.contributionY2 : 0;
 
-  if (!start || start > today) {
+  if (!start || start > today || year < start.getFullYear()) {
     return { year, mode, plannedMonths: 0, recordedMonths: 0, missingMonths: 0, plannedAmount: 0, actualAmount: 0, progressPct: 0, state: "not_started" };
   }
 

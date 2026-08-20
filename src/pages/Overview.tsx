@@ -9,7 +9,7 @@ import OverviewFrame from "../components/demo-v10/OverviewFrame";
 import { useLocale } from "../lib/locale";
 import { findTransactionQualityIssues } from "./transactionQualityInbox";
 import { buildPortfolioHeartbeat } from "./portfolioHeartbeat";
-import { buildPlanVsReality } from "./planVsReality";
+import { buildPlanVsReality, planRealityReviewYears } from "./planVsReality";
 import { buildYearInReview } from "./yearInReview";
 
 function overviewPageCopy(locale: "vi" | "de") {
@@ -56,6 +56,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
   const [settings, setSettings] = useState<Awaited<ReturnType<typeof getSettings>> | null>(null);
   const [transactions, setTransactions] = useState<Awaited<ReturnType<typeof listTransactions>>>([]);
   const [quotes, setQuotes] = useState<Awaited<ReturnType<typeof listQuotes>>>([]);
+  const [planReviewYear, setPlanReviewYear] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -136,13 +137,23 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       missingPriceCount: market.missingIsins.length,
       stalePriceCount: snapshot.stalePriceIsins.length,
     });
+    const planToday = currentDate.toISOString().slice(0, 10);
+    const planReviewYears = planRealityReviewYears({
+      startDate: settings.startDate,
+      transactions,
+      today: planToday,
+    });
+    const selectedPlanReviewYear = planReviewYear && planReviewYears.includes(planReviewYear)
+      ? planReviewYear
+      : planReviewYears[0] ?? currentDate.getFullYear();
     const planVsReality = buildPlanVsReality({
       startDate: settings.startDate,
       contributionY1: settings.contributionY1,
       contributionY2: settings.contributionY2,
       trackInAppCash: settings.trackInAppCash,
       transactions,
-      today: currentDate.toISOString().slice(0, 10),
+      today: planToday,
+      year: selectedPlanReviewYear,
     });
     const yearInReview = buildYearInReview({
       today: currentDate.toISOString().slice(0, 10),
@@ -174,6 +185,8 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       performance,
       heartbeat,
       planVsReality,
+      planReviewYears,
+      onPlanReviewYearChange: setPlanReviewYear,
       yearInReview,
       performanceState,
       contributionWidth: performanceState === "unavailable"
@@ -188,7 +201,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       averageBuyPrice: averageBuyPrice == null ? null : formatMoney(averageBuyPrice),
       priceComparison: vwcePrice > 0 && averageBuyPrice != null ? { averageBuyPrice, currentPrice: vwcePrice } : null,
     };
-  }, [locale, settings, text, transactions, quotes]);
+  }, [locale, planReviewYear, settings, text, transactions, quotes]);
 
   if (loading) return <main className="demo-v10-screen" role="status" aria-label={text.loading} aria-busy="true" />;
   if (failed || !view) {

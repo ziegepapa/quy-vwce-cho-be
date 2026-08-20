@@ -29,6 +29,8 @@ type OverviewFrameProps = {
   priceComparison: { averageBuyPrice: number; currentPrice: number } | null;
   heartbeat: PortfolioHeartbeat;
   planVsReality: PlanVsReality;
+  planReviewYears: number[];
+  onPlanReviewYearChange: (year: number) => void;
   yearInReview: YearInReview;
 };
 
@@ -70,6 +72,7 @@ function overviewCopy(locale: "vi" | "de") {
     heartbeatClear: "Alles im Blick",
     heartbeatReview: "Prüfen",
     planReality: "Plan und Realität",
+    planRealityYear: "Prüfjahr",
     planRealityPlanned: "Sparplan bis heute",
     planRealityRecorded: "Erfasst",
     planRealityMonths: (planned: number, recorded: number) => `${recorded}/${planned} Monate erfasst`,
@@ -123,6 +126,7 @@ function overviewCopy(locale: "vi" | "de") {
     heartbeatClear: "Không có việc cần xử lý",
     heartbeatReview: "Rà soát",
     planReality: "Kế hoạch & thực tế",
+    planRealityYear: "Năm rà soát",
     planRealityPlanned: "Sparplan đến nay",
     planRealityRecorded: "Đã ghi nhận",
     planRealityMonths: (planned: number, recorded: number) => `Đã ghi nhận ${recorded}/${planned} tháng`,
@@ -182,6 +186,8 @@ export default function OverviewFrame({
   priceComparison,
   heartbeat,
   planVsReality,
+  planReviewYears,
+  onPlanReviewYearChange,
   yearInReview,
 }: OverviewFrameProps) {
   const { locale } = useLocale();
@@ -335,7 +341,20 @@ export default function OverviewFrame({
         </section>
 
         <section className={`gl plan-reality-card plan-reality-${planVsReality.state}`} data-plan-reality-state={planVsReality.state} aria-label={text.planReality}>
-          <div className="plan-reality-head"><span>{text.planReality} · {planVsReality.year}</span><strong>{planRealityStateLabel}</strong></div>
+          <div className="plan-reality-head">
+            <span>{text.planReality}</span>
+            <label className="plan-reality-year-label">
+              <span>{text.planRealityYear}</span>
+              <select
+                aria-label={text.planRealityYear}
+                value={planVsReality.year}
+                onChange={(event) => onPlanReviewYearChange(Number(event.target.value))}
+              >
+                {planReviewYears.map((year) => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </label>
+            <strong>{planRealityStateLabel}</strong>
+          </div>
           <div className="plan-reality-grid">
             <div><span>{text.planRealityPlanned}</span><strong>{formatMoney(planVsReality.plannedAmount)}</strong></div>
             <div><span>{text.planRealityRecorded}</span><strong>{formatMoney(planVsReality.actualAmount)}</strong></div>
