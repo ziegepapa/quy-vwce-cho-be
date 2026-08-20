@@ -6,9 +6,9 @@ import { useLocale } from "../lib/locale";
 
 function menuCopy(locale: "vi" | "de") {
   return locale === "de" ? {
-    user: "Nutzer", syncNow: "Jetzt synchronisieren", emergency: "Notfallmappe", handoff: "Übergabe-Übersicht", handoffMeta: "Lokal", settings: "Einstellungen", signOut: "Abmelden", safe: "Sicher", pending: (count: number) => `${count} ausstehend`, status: { offline: "Auf diesem Gerät", syncing: "Synchronisierung", synced: "Synchronisiert", conflict: "Konflikt" } satisfies Record<SyncStatus, string>,
+    user: "Nutzer", syncNow: "Jetzt synchronisieren", emergency: "Notfallmappe", handoff: "Übergabe-Übersicht", handoffMeta: "Lokal", timeline: "Status-Zeitleiste", timelineMeta: "Metadaten", settings: "Einstellungen", signOut: "Abmelden", safe: "Sicher", pending: (count: number) => `${count} ausstehend`, status: { offline: "Auf diesem Gerät", syncing: "Synchronisierung", synced: "Synchronisiert", conflict: "Konflikt" } satisfies Record<SyncStatus, string>,
   } : {
-    user: "Người dùng", syncNow: "Đồng bộ ngay", emergency: "Hồ sơ khẩn cấp", handoff: "Tóm tắt bàn giao", handoffMeta: "Cục bộ", settings: "Cài đặt", signOut: "Đăng xuất", safe: "An toàn", pending: (count: number) => `${count} chờ`, status: { offline: "Trên thiết bị", syncing: "Đang đồng bộ", synced: "Đã đồng bộ", conflict: "Xung đột" } satisfies Record<SyncStatus, string>,
+    user: "Người dùng", syncNow: "Đồng bộ ngay", emergency: "Hồ sơ khẩn cấp", handoff: "Tóm tắt bàn giao", handoffMeta: "Cục bộ", timeline: "Dòng thời gian trạng thái", timelineMeta: "Metadata", settings: "Cài đặt", signOut: "Đăng xuất", safe: "An toàn", pending: (count: number) => `${count} chờ`, status: { offline: "Trên thiết bị", syncing: "Đang đồng bộ", synced: "Đã đồng bộ", conflict: "Xung đột" } satisfies Record<SyncStatus, string>,
   };
 }
 
@@ -105,6 +105,15 @@ export default function AvatarMenu({
       >
         {text.handoff}
         <span className="avatar-menu-item-meta">{text.handoffMeta}</span>
+      </a>
+      <a
+        className="avatar-menu-item"
+        role="menuitem"
+        href="#/timeline"
+        onClick={onClose}
+      >
+        {text.timeline}
+        <span className="avatar-menu-item-meta">{text.timelineMeta}</span>
       </a>
       <a
         className="avatar-menu-item"
