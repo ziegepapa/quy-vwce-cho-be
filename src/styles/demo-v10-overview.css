@@ -246,3 +246,25 @@
 @media (max-width: 330px) {
   .ov .heartbeat-grid { grid-template-columns: 1fr; }
 }
+
+/* PLAN-VS-REALITY-2026: calendar-year Sparplan progress, display only. */
+.ov .plan-reality-card { display: grid; gap: 10px; padding: 13px; border-color: color-mix(in srgb, var(--demo-vi) 24%, var(--demo-gb)); }
+.ov .plan-reality-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--demo-text); font-size: 12px; font-weight: 820; }
+.ov .plan-reality-head strong { color: var(--demo-sub); font-size: 10px; font-weight: 780; }
+.ov .plan-reality-on_track .plan-reality-head strong { color: var(--demo-em); }
+.ov .plan-reality-below_plan .plan-reality-head strong { color: var(--demo-am); }
+.ov .plan-reality-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ov .plan-reality-grid > div { display: grid; min-width: 0; gap: 4px; padding: 8px; background: color-mix(in srgb, var(--demo-g) 56%, transparent); border: 1px solid color-mix(in srgb, var(--demo-gb) 74%, transparent); border-radius: 10px; }
+.ov .plan-reality-grid span { overflow: hidden; color: var(--demo-dim); font-size: 9px; font-weight: 760; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.ov .plan-reality-grid strong { overflow: hidden; color: var(--demo-vi); font-size: 15px; font-weight: 850; font-variant-numeric: tabular-nums; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+.ov .plan-reality-grid > div:nth-child(2) strong { color: var(--demo-em); }
+.ov .plan-reality-track { height: 8px; overflow: hidden; background: color-mix(in srgb, var(--demo-gb) 62%, transparent); border-radius: 999px; }
+.ov .plan-reality-track > span { display: block; height: 100%; background: linear-gradient(90deg, var(--demo-vi), var(--demo-em)); border-radius: inherit; transition: width 180ms cubic-bezier(.23, 1, .32, 1); }
+.ov .plan-reality-below_plan .plan-reality-track > span { background: linear-gradient(90deg, var(--demo-vi), var(--demo-am)); }
+.ov .plan-reality-card p { margin: 0; color: var(--demo-dim); font-size: 10px; font-weight: 690; line-height: 1.35; }
+@media (max-width: 360px) {
+  .ov .plan-reality-card { padding: 12px; }
+  .ov .plan-reality-grid { gap: 6px; }
+  .ov .plan-reality-grid > div { padding: 7px; }
+  .ov .plan-reality-grid strong { font-size: 13px; }
+}

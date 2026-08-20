@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useLocale } from "../../lib/locale";
+import { formatMoney } from "../../lib/calc";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
+import type { PlanVsReality } from "../../pages/planVsReality";
 import "../../styles/demo-v10-overview.css";
 
 type OverviewFrameProps = {
@@ -25,6 +27,7 @@ type OverviewFrameProps = {
   averageBuyPrice: string | null;
   priceComparison: { averageBuyPrice: number; currentPrice: number } | null;
   heartbeat: PortfolioHeartbeat;
+  planVsReality: PlanVsReality;
 };
 
 function overviewCopy(locale: "vi" | "de") {
@@ -64,6 +67,14 @@ function overviewCopy(locale: "vi" | "de") {
     heartbeatStalePrices: (count: number) => `Kurse für ${count} Wertpapiere aktualisieren`,
     heartbeatClear: "Alles im Blick",
     heartbeatReview: "Prüfen",
+    planReality: "Plan und Realität",
+    planRealityPlanned: "Sparplan bis heute",
+    planRealityRecorded: "Erfasst",
+    planRealityMonths: (planned: number, recorded: number) => `${recorded}/${planned} Monate erfasst`,
+    planRealityMissing: (count: number) => `${count} Monat${count === 1 ? "" : "e"} ohne erfassten Beitrag`,
+    planRealityNotStarted: "Der Plan startet noch nicht",
+    planRealityOnTrack: "Planbetrag erreicht",
+    planRealityBelowPlan: "Unter dem Planbetrag",
   } : {
     pageLabel: "Tổng quan",
     contributionMonths: "tháng góp",
@@ -100,6 +111,14 @@ function overviewCopy(locale: "vi" | "de") {
     heartbeatStalePrices: (count: number) => `Cập nhật giá cho ${count} mã`,
     heartbeatClear: "Không có việc cần xử lý",
     heartbeatReview: "Rà soát",
+    planReality: "Kế hoạch & thực tế",
+    planRealityPlanned: "Sparplan đến nay",
+    planRealityRecorded: "Đã ghi nhận",
+    planRealityMonths: (planned: number, recorded: number) => `Đã ghi nhận ${recorded}/${planned} tháng`,
+    planRealityMissing: (count: number) => `${count} tháng chưa có khoản góp ghi nhận`,
+    planRealityNotStarted: "Kế hoạch chưa bắt đầu",
+    planRealityOnTrack: "Đã đạt mức kế hoạch",
+    planRealityBelowPlan: "Chưa đạt mức kế hoạch",
   };
 }
 
@@ -142,6 +161,7 @@ export default function OverviewFrame({
   averageBuyPrice,
   priceComparison,
   heartbeat,
+  planVsReality,
 }: OverviewFrameProps) {
   const { locale } = useLocale();
   const text = overviewCopy(locale);
@@ -172,6 +192,11 @@ export default function OverviewFrame({
       : heartbeat.attention.kind === "stale_prices"
         ? text.heartbeatStalePrices(heartbeat.attention.count)
         : text.heartbeatClear;
+  const planRealityStateLabel = planVsReality.state === "on_track"
+    ? text.planRealityOnTrack
+    : planVsReality.state === "below_plan"
+      ? text.planRealityBelowPlan
+      : text.planRealityNotStarted;
 
   return (
     <main className="demo-v10-screen" aria-label={text.pageLabel}>
@@ -269,6 +294,16 @@ export default function OverviewFrame({
             <div className="heartbeat-item"><span className="heartbeat-label">{text.heartbeatPerformance}</span><strong className={`heartbeat-value performance ${heartbeat.performanceState}`}>{heartbeat.performance ?? heartbeatPerformanceLabel}</strong><small>{heartbeat.performance ? heartbeatPerformanceLabel : null}</small></div>
             <div className="heartbeat-item attention"><span className="heartbeat-label">{text.heartbeatAttention}</span>{heartbeat.attention.href ? <a className="heartbeat-action" href={heartbeat.attention.href}>{heartbeatAttentionLabel}<span>{text.heartbeatReview} ›</span></a> : <strong className="heartbeat-value calm">{heartbeatAttentionLabel}</strong>}</div>
           </div>
+        </section>
+
+        <section className={`gl plan-reality-card plan-reality-${planVsReality.state}`} data-plan-reality-state={planVsReality.state} aria-label={text.planReality}>
+          <div className="plan-reality-head"><span>{text.planReality} · {planVsReality.year}</span><strong>{planRealityStateLabel}</strong></div>
+          <div className="plan-reality-grid">
+            <div><span>{text.planRealityPlanned}</span><strong>{formatMoney(planVsReality.plannedAmount)}</strong></div>
+            <div><span>{text.planRealityRecorded}</span><strong>{formatMoney(planVsReality.actualAmount)}</strong></div>
+          </div>
+          <div className="plan-reality-track" aria-label={`${text.planReality}: ${planVsReality.progressPct.toFixed(0)}%`}><span style={{ width: `${planVsReality.progressPct}%` }} /></div>
+          <p>{planVsReality.plannedMonths === 0 ? text.planRealityNotStarted : `${text.planRealityMonths(planVsReality.plannedMonths, planVsReality.recordedMonths)} · ${planVsReality.missingMonths > 0 ? text.planRealityMissing(planVsReality.missingMonths) : text.planRealityOnTrack}`}</p>
         </section>
 
         <section className={`gl perf-card perf-card-${performanceState}`} data-performance-state={performanceState}>
