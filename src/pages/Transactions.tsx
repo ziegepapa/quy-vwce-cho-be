@@ -26,6 +26,14 @@ import TradeRepublicPdfImport from "../components/TradeRepublicPdfImport";
 import ActionMenu from "../components/ActionMenu";
 import { findTransactionQualityIssues, type TransactionQualityCode, type TransactionQualitySeverity } from "./transactionQualityInbox";
 import {
+  MAX_SAVED_TRANSACTION_VIEWS,
+  readTransactionSavedViews,
+  sameTransactionViewFilters,
+  type SavedTransactionView,
+  type TransactionViewFilters,
+  writeTransactionSavedViews,
+} from "./transactionsSavedViews";
+import {
   buildTransactionListWindow,
   TRANSACTION_WINDOW_SIZE,
   type TransactionActivity,
@@ -82,9 +90,9 @@ export default function Transactions() {
   const { locale } = useLocale();
   const types = useMemo(() => transactionTypes(locale), [locale]);
   const text = locale === "de" ? {
-    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Werkzeuge ausblenden", tools: "Filter / PDF", search: "Suchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", journal: "Transaktionsjournal", quickFilter: "Schnellfilter", buysQuick: "VWCE-Käufe", contributionsQuick: "Einzahlungen", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", editTransaction: "Transaktion bearbeiten", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen", deleteConfirm: "Diese Transaktion löschen?", activity: "Aktivität", tradeActivity: "Wertpapiere", fundingActivity: "Einzahlungen", outflowActivity: "Ausgaben", newest: "Neueste zuerst", oldest: "Älteste zuerst", amountDesc: "Höchster Betrag", sort: "Sortierung", activeFilters: "{count} aktiv", clearFilters: "Zurücksetzen", quickBuy: "VWCE kaufen", quickFunding: "Geld einzahlen", rowMenu: "Aktionen für Transaktion", timeLens: "Zeitraum", timeAll: "Gesamt", thisMonth: "Dieser Monat", last90Days: "90 Tage", thisYear: "Dieses Jahr", lastYear: "Letztes Jahr", qualityInbox: "Datenqualität", qualityClean: "Alle Transaktionen sind vollständig.", qualityCount: "{count} prüfen", qualityMore: "{count} weitere zeigen", qualityOpen: "Öffnen und prüfen", qualityAction: "Aktion erforderlich", qualityReview: "Prüfen", qualityTip: "Hinweis", qualityMissingIsin: "ISIN fehlt", qualityInvalidIsin: "ISIN ist ungültig", qualityInvalidAmount: "Betrag fehlt oder ist ungültig", qualityMissingQuantity: "Menge oder Stückpreis fehlt", qualityMissingUnitPrice: "Stückpreis fehlt", qualityMissingNote: "Notiz fehlt",
+    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Werkzeuge ausblenden", tools: "Filter / PDF", search: "Suchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", journal: "Transaktionsjournal", quickFilter: "Schnellfilter", buysQuick: "VWCE-Käufe", contributionsQuick: "Einzahlungen", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", editTransaction: "Transaktion bearbeiten", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen", deleteConfirm: "Diese Transaktion löschen?", activity: "Aktivität", tradeActivity: "Wertpapiere", fundingActivity: "Einzahlungen", outflowActivity: "Ausgaben", newest: "Neueste zuerst", oldest: "Älteste zuerst", amountDesc: "Höchster Betrag", sort: "Sortierung", activeFilters: "{count} aktiv", clearFilters: "Zurücksetzen", quickBuy: "VWCE kaufen", quickFunding: "Geld einzahlen", rowMenu: "Aktionen für Transaktion", timeLens: "Zeitraum", timeAll: "Gesamt", thisMonth: "Dieser Monat", last90Days: "90 Tage", thisYear: "Dieses Jahr", lastYear: "Letztes Jahr", qualityInbox: "Datenqualität", qualityClean: "Alle Transaktionen sind vollständig.", qualityCount: "{count} prüfen", qualityMore: "{count} weitere zeigen", qualityOpen: "Öffnen und prüfen", qualityAction: "Aktion erforderlich", qualityReview: "Prüfen", qualityTip: "Hinweis", qualityMissingIsin: "ISIN fehlt", qualityInvalidIsin: "ISIN ist ungültig", qualityInvalidAmount: "Betrag fehlt oder ist ungültig", qualityMissingQuantity: "Menge oder Stückpreis fehlt", qualityMissingUnitPrice: "Stückpreis fehlt", qualityMissingNote: "Notiz fehlt", savedViews: "Gespeicherte Ansichten", saveView: "Ansicht speichern", savedViewName: "Name der Ansicht", savedViewNamePlaceholder: "z. B. Käufe dieses Jahr", saveCurrentView: "Aktuelle Ansicht speichern", savedViewEmpty: "Noch keine gespeicherte Ansicht.", savedViewLimit: "Maximal {count} Ansichten. Löschen Sie eine Ansicht, um fortzufahren.", savedViewNameRequired: "Geben Sie einen Namen für die Ansicht ein.", savedViewStorageError: "Diese Ansicht konnte auf diesem Gerät nicht gespeichert werden.", savedViewNoFilters: "Wählen Sie mindestens einen Filter oder eine Sortierung aus.", removeSavedView: "Ansicht {name} löschen",
   } : {
-    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Ẩn công cụ", tools: "Lọc / PDF", search: "Tìm", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", editTransaction: "Sửa giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước", qualityInbox: "Dữ liệu cần rà soát", qualityClean: "Tất cả giao dịch đang có đủ thông tin.", qualityCount: "{count} cần rà soát", qualityMore: "Xem thêm {count}", qualityOpen: "Mở để rà soát", qualityAction: "Cần xử lý", qualityReview: "Cần kiểm tra", qualityTip: "Gợi ý", qualityMissingIsin: "Thiếu ISIN", qualityInvalidIsin: "ISIN không hợp lệ", qualityInvalidAmount: "Số tiền thiếu hoặc không hợp lệ", qualityMissingQuantity: "Thiếu số lượng hoặc giá đơn vị", qualityMissingUnitPrice: "Thiếu giá đơn vị", qualityMissingNote: "Thiếu ghi chú",
+    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Ẩn công cụ", tools: "Lọc / PDF", search: "Tìm", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", editTransaction: "Sửa giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước", qualityInbox: "Dữ liệu cần rà soát", qualityClean: "Tất cả giao dịch đang có đủ thông tin.", qualityCount: "{count} cần rà soát", qualityMore: "Xem thêm {count}", qualityOpen: "Mở để rà soát", qualityAction: "Cần xử lý", qualityReview: "Cần kiểm tra", qualityTip: "Gợi ý", qualityMissingIsin: "Thiếu ISIN", qualityInvalidIsin: "ISIN không hợp lệ", qualityInvalidAmount: "Số tiền thiếu hoặc không hợp lệ", qualityMissingQuantity: "Thiếu số lượng hoặc giá đơn vị", qualityMissingUnitPrice: "Thiếu giá đơn vị", qualityMissingNote: "Thiếu ghi chú", savedViews: "Góc xem đã lưu", saveView: "Lưu view", savedViewName: "Tên góc xem", savedViewNamePlaceholder: "Ví dụ: Mua trong năm nay", saveCurrentView: "Lưu góc xem hiện tại", savedViewEmpty: "Chưa có góc xem nào được lưu.", savedViewLimit: "Tối đa {count} góc xem. Hãy xóa một góc xem để tiếp tục.", savedViewNameRequired: "Hãy nhập tên cho góc xem.", savedViewStorageError: "Không thể lưu góc xem trên thiết bị này.", savedViewNoFilters: "Hãy chọn ít nhất một bộ lọc hoặc sắp xếp trước.", removeSavedView: "Xóa góc xem {name}",
   };
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -103,6 +111,9 @@ export default function Transactions() {
   const [timeLens, setTimeLens] = useState<TransactionTimeLens>("all");
   const [sort, setSort] = useState<TransactionSort>("newest");
   const [qualityVisibleLimit, setQualityVisibleLimit] = useState(3);
+  const [savedViews, setSavedViews] = useState<SavedTransactionView[]>(() => readTransactionSavedViews());
+  const [savedViewName, setSavedViewName] = useState("");
+  const [savedViewError, setSavedViewError] = useState("");
   const [visibleLimit, setVisibleLimit] = useState(TRANSACTION_WINDOW_SIZE);
   const deferredQuery = useDeferredValue(q);
   const [qtyError, setQtyError] = useState("");
@@ -165,6 +176,8 @@ export default function Transactions() {
   );
 
   const activeFilterCount = Number(Boolean(q.trim())) + Number(yearFilter !== "all") + Number(typeFilter !== "all") + Number(activityFilter !== "all") + Number(timeLens !== "all") + Number(sort !== "newest");
+  const currentViewFilters: TransactionViewFilters = { query: q, year: yearFilter, type: typeFilter, activity: activityFilter, timeLens, sort };
+  const activeSavedViewId = savedViews.find((view) => sameTransactionViewFilters(view.filters, currentViewFilters))?.id ?? null;
 
   const qualityIssues = useMemo(() => findTransactionQualityIssues(txs), [txs]);
   const transactionsById = useMemo(() => new Map(txs.map((tx) => [tx.id, tx])), [txs]);
@@ -312,6 +325,50 @@ export default function Transactions() {
     setActivityFilter("all");
     setTimeLens("all");
     setSort("newest");
+  }
+
+  function applySavedView(view: SavedTransactionView) {
+    setQ(view.filters.query);
+    setYearFilter(view.filters.year);
+    setTypeFilter(view.filters.type);
+    setActivityFilter(view.filters.activity);
+    setTimeLens(view.filters.timeLens);
+    setSort(view.filters.sort);
+    setSavedViewError("");
+  }
+
+  function saveCurrentView() {
+    const name = savedViewName.trim();
+    if (!name) {
+      setSavedViewError(text.savedViewNameRequired);
+      return;
+    }
+    if (!activeFilterCount) {
+      setSavedViewError(text.savedViewNoFilters);
+      return;
+    }
+    if (savedViews.length >= MAX_SAVED_TRANSACTION_VIEWS) {
+      setSavedViewError(text.savedViewLimit.replace("{count}", String(MAX_SAVED_TRANSACTION_VIEWS)));
+      return;
+    }
+    const next = [{ id: uid("view"), name: name.slice(0, 28), createdAt: nowIso(), filters: currentViewFilters }, ...savedViews];
+    if (!writeTransactionSavedViews(next)) {
+      setSavedViewError(text.savedViewStorageError);
+      return;
+    }
+    setSavedViews(next);
+    setSavedViewName("");
+    setSavedViewError("");
+  }
+
+  function removeSavedView(id: string) {
+    const next = savedViews.filter((view) => view.id !== id);
+    if (!writeTransactionSavedViews(next)) {
+      setSavedViewError(text.savedViewStorageError);
+      return;
+    }
+    setSavedViews(next);
+    setSavedViewError("");
   }
 
   function selectTimeLens(lens: TransactionTimeLens) {
@@ -485,6 +542,19 @@ export default function Transactions() {
             </div>
           </div>
 
+          <div className="tx-saved-views" role="group" aria-label={text.savedViews}>
+            <span className="tx-lens-label">{text.savedViews}</span>
+            <div className="tx-saved-view-options">
+              {savedViews.map((view) => (
+                <span key={view.id} className="tx-saved-view-chip">
+                  <button type="button" className={activeSavedViewId === view.id ? "active" : ""} aria-pressed={activeSavedViewId === view.id} onClick={() => applySavedView(view)}>{view.name}</button>
+                  <button type="button" className="tx-saved-view-remove" aria-label={text.removeSavedView.replace("{name}", view.name)} onClick={() => removeSavedView(view.id)}>×</button>
+                </span>
+              ))}
+              <button type="button" className="tx-saved-view-add" onClick={() => setToolsOpen(true)}>+ {text.saveView}</button>
+            </div>
+          </div>
+
           <div className="tx-quick-types" role="group" aria-label={text.quickFilter}>
             <button type="button" className={activityFilter === "all" ? "active" : ""} aria-pressed={activityFilter === "all"} onClick={() => { setActivityFilter("all"); setTypeFilter("all"); }}>{text.all}</button>
             <button type="button" className={activityFilter === "trade" ? "active" : ""} aria-pressed={activityFilter === "trade"} onClick={() => { setActivityFilter("trade"); setTypeFilter("all"); }}>{text.tradeActivity}</button>
@@ -496,6 +566,18 @@ export default function Transactions() {
       {toolsOpen ? (
         <section className="demo-v10-gl tx-tool-panel">
           {!readOnly ? <TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /> : null}
+          <section className="tx-saved-view-editor" aria-label={text.saveView}>
+            <div className="tx-saved-view-editor-head">
+              <span>{text.savedViews}</span>
+              <small>{savedViews.length}/{MAX_SAVED_TRANSACTION_VIEWS}</small>
+            </div>
+            <div className="tx-saved-view-form">
+              <input id="tx-saved-view-name" aria-label={text.savedViewName} value={savedViewName} maxLength={28} onChange={(event) => setSavedViewName(event.target.value)} placeholder={text.savedViewNamePlaceholder} />
+              <button type="button" disabled={!activeFilterCount} onClick={saveCurrentView}>{text.saveCurrentView}</button>
+            </div>
+            {savedViews.length === 0 ? <p className="tx-saved-view-empty">{text.savedViewEmpty}</p> : null}
+            {savedViewError ? <p className="tx-saved-view-error" role="alert">{savedViewError}</p> : null}
+          </section>
           <div className="field" style={{ marginTop: 8 }}>
             <label htmlFor="tx-search">{text.search}</label>
             <input id="tx-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={text.searchPlaceholder} />
