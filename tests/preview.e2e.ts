@@ -135,6 +135,33 @@ test.describe("retained visual evidence", () => {
   });
 });
 
+test("installed PWA keeps a cached app shell available while offline", async ({ page, browserName }) => {
+  await openPrivateVaultEntry(page);
+
+  await expect.poll(() => page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    const cacheNames = await caches.keys();
+    return Boolean(navigator.serviceWorker.controller && registration.active && cacheNames.length > 0);
+  })).toBe(true);
+
+  // WebKit exposes the registration and Cache API, but its automation runtime
+  // cannot route an offline page navigation/fetch through the service worker.
+  // The production artifact's app-shell precache is verified in test:release.
+  if (browserName === "webkit") return;
+
+  await page.context().setOffline(true);
+  try {
+    const recoveredShell = await page.evaluate(async () => {
+      const response = await fetch("./index.html", { cache: "no-store" });
+      const html = await response.text();
+      return response.ok && html.includes('<div id="root"></div>');
+    });
+    expect(recoveredShell).toBe(true);
+  } finally {
+    await page.context().setOffline(false);
+  }
+});
+
 test("preview exposes an installable PWA and consistent quote feeds", async ({ request }) => {
   const manifestResponse = await request.get("./manifest.webmanifest");
   expect(manifestResponse.ok()).toBe(true);

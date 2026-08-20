@@ -75,6 +75,7 @@ await Promise.all([
   assertPng("icons/icon-maskable-512.png", 512),
 ]);
 
+assert.match(serviceWorker, /index\.html/, "App shell is not precached");
 assert.match(serviceWorker, /data\/quotes\.json/, "Quote feed is not precached");
 assert.match(serviceWorker, /icon-maskable-512\.png/, "Maskable icon is not precached");
 assertQuoteConsistency(quotes, legacy);
