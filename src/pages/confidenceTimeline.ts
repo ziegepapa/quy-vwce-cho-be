@@ -1,7 +1,9 @@
 import type { SyncStatus } from "../lib/sync/types";
 
 export type ConfidenceEventKind = "quote" | "transaction_created" | "transaction_updated" | "import";
-export type ConfidenceTimelineEvent = { id: string; kind: ConfidenceEventKind; at: string; source: "quote" | "ledger" | "import" };
+export type ConfidenceTimelineSource = "quote" | "ledger" | "import";
+export type ConfidenceTimelineLens = "all" | "30d" | "90d" | "thisYear";
+export type ConfidenceTimelineEvent = { id: string; kind: ConfidenceEventKind; at: string; source: ConfidenceTimelineSource };
 
 function timestamp(value: string | undefined): number | null {
   if (!value) return null;
@@ -9,9 +11,19 @@ function timestamp(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function startForLens(lens: ConfidenceTimelineLens, now: Date): number | null {
+  const nowTimestamp = now.getTime();
+  if (!Number.isFinite(nowTimestamp)) return null;
+  if (lens === "30d") return nowTimestamp - 30 * 86_400_000;
+  if (lens === "90d") return nowTimestamp - 90 * 86_400_000;
+  if (lens === "thisYear") return new Date(now.getFullYear(), 0, 1).getTime();
+  return null;
+}
+
 /**
- * Read-only audit feed. It never fabricates times: rows with invalid timestamps
- * are omitted and sync is exposed as a present state, not a historical event.
+ * Read-only metadata feed. It never fabricates times: rows with invalid
+ * timestamps are omitted and sync is exposed as a present state, not history.
+ * Filters are applied before sorting/windowing and never mutate source records.
  */
 export function buildConfidenceTimeline(input: {
   quotes: readonly { id: string; updatedAt: string }[];
@@ -20,7 +32,10 @@ export function buildConfidenceTimeline(input: {
   syncStatus: SyncStatus;
   pending: number;
   limit?: number;
-}): { events: ConfidenceTimelineEvent[]; sync: { status: SyncStatus; pending: number } } {
+  lens?: ConfidenceTimelineLens;
+  sources?: readonly ConfidenceTimelineSource[];
+  now?: Date;
+}): { events: ConfidenceTimelineEvent[]; totalEvents: number; sync: { status: SyncStatus; pending: number } } {
   const events: ConfidenceTimelineEvent[] = [];
   for (const quote of input.quotes ?? []) {
     if (timestamp(quote.updatedAt) != null) events.push({ id: `quote:${quote.id}`, kind: "quote", at: quote.updatedAt, source: "quote" });
@@ -38,7 +53,17 @@ export function buildConfidenceTimeline(input: {
   for (const statement of input.depotStatements ?? []) {
     if (!statement.deletedAt && timestamp(statement.createdAt) != null) events.push({ id: `statement:${statement.id}`, kind: "import", at: statement.createdAt, source: "import" });
   }
-  const limit = Math.max(1, Math.min(12, input.limit ?? 6));
-  events.sort((a, b) => timestamp(b.at)! - timestamp(a.at)! || a.id.localeCompare(b.id));
-  return { events: events.slice(0, limit), sync: { status: input.syncStatus, pending: Math.max(0, input.pending) } };
+
+  const lens = input.lens ?? "all";
+  const sourceSet = new Set(input.sources ?? ["quote", "ledger", "import"]);
+  const start = startForLens(lens, input.now ?? new Date());
+  const filtered = events.filter((event) => sourceSet.has(event.source) && (start == null || timestamp(event.at)! >= start));
+  filtered.sort((a, b) => timestamp(b.at)! - timestamp(a.at)! || a.id.localeCompare(b.id));
+  const limit = Math.max(1, Math.min(30, input.limit ?? 30));
+
+  return {
+    events: filtered.slice(0, limit),
+    totalEvents: filtered.length,
+    sync: { status: input.syncStatus, pending: Math.max(0, input.pending) },
+  };
 }

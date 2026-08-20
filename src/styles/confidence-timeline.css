@@ -23,4 +23,12 @@
 .ct-events strong { overflow: hidden; color: var(--demo-sub, #d4d4d8); font-size: 12px; font-weight: 820; text-overflow: ellipsis; white-space: nowrap; }
 .ct-events small { overflow: hidden; color: var(--demo-dim, #71717a); font-size: 10px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .ct-back { display: inline-flex; align-items: center; min-height: 38px; padding: 8px 10px; color: var(--demo-vi, #8b5cf6); font-size: 12px; font-weight: 820; text-decoration: none; border-radius: 10px; }
-@media (max-width: 360px) { .ct-shell { padding-inline: 10px; } .ct-sync, .ct-card { padding: 12px; } .ct-events li { grid-template-columns: 16px minmax(0, 1fr); gap: 7px; } }
+.ct-lenses { gap: 12px; }
+.ct-lens-group { display: grid; gap: 6px; }
+.ct-lens-group > span { color: var(--demo-dim, #71717a); font-size: 10px; font-weight: 820; letter-spacing: .06em; text-transform: uppercase; }
+.ct-lens-group > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.ct-lens-group button, .ct-more { min-height: 32px; padding: 7px 9px; color: var(--demo-sub, #d4d4d8); font: inherit; font-size: 11px; font-weight: 760; background: color-mix(in srgb, var(--demo-g, #18181b) 54%, transparent); border: 1px solid color-mix(in srgb, var(--demo-gb, #3f3f46) 78%, transparent); border-radius: 8px; cursor: pointer; }
+.ct-lens-group button[aria-pressed="true"] { color: var(--demo-vi, #8b5cf6); background: color-mix(in srgb, var(--demo-vi, #8b5cf6) 13%, transparent); border-color: color-mix(in srgb, var(--demo-vi, #8b5cf6) 52%, transparent); }
+.ct-lens-group button:focus-visible, .ct-more:focus-visible, .ct-back:focus-visible { outline: 2px solid var(--demo-vi, #8b5cf6); outline-offset: 2px; }
+.ct-more { width: 100%; margin-top: 10px; color: var(--demo-vi, #8b5cf6); }
+@media (max-width: 360px) { .ct-shell { padding-inline: 10px; } .ct-sync, .ct-card { padding: 12px; } .ct-events li { grid-template-columns: 16px minmax(0, 1fr); gap: 7px; } .ct-lens-group > div { gap: 6px; } .ct-lens-group button { flex: 1 1 auto; } }
