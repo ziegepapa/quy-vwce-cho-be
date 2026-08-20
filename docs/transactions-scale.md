@@ -9,8 +9,8 @@ The application must remain usable with **100–1,000+ active transactions** on 
 | Concern | Contract |
 |---|---|
 | Source of truth | `listTransactions()` remains the single local-ledger read; no parallel cache is introduced. |
-| Ordering | Rows are ordered descending by date, then `updatedAt`, then stable `id`. |
-| Filtering | Year, type and text filters are applied before grouping and before visibility limiting. |
+| Ordering | Default order is descending by date, then `updatedAt`, then stable `id`. The journal may also show oldest-first or highest-amount-first; every mode has the same stable tie-break. |
+| Filtering | Activity, year, exact type and localized text search are applied before sorting, grouping and visibility limiting. |
 | Rendering | The initial screen renders at most 60 transaction rows; **Show more** adds another 60. |
 | Grouping | Month headers render only when that month contains at least one visible transaction. |
 | Summaries | Portfolio analysis continues to use the full filtered-independent ledger, so list paging cannot change balances or P&L. |
@@ -23,7 +23,7 @@ For a vertically grouped, variable-height, editable mobile ledger, a fixed-heigh
 
 ## Regression requirements
 
-The pure list view model must be tested with a ledger of at least 1,000 entries. Tests must prove that filtering is deterministic, no more than the requested row limit is rendered, groups are not empty, and expanding the window reveals the next chronological rows without duplicating or losing a transaction.
+The pure list view model must be tested with a ledger of at least 1,000 entries. Tests must prove that activity/type/year/text filtering is deterministic, localized labels can be searched, sort modes preserve a stable tie-break, no more than the requested row limit is rendered, groups are not empty, and expanding the default chronological window reveals the next rows without duplicating or losing a transaction.
 
 ## Data integrity boundary
 
