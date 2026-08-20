@@ -21,6 +21,7 @@ import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
 import { IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import { conflictCtaLabel, hasLogoutBlockers, openSyncConflictSection, readSyncConflictFocusToken, reconcileVisibleLogoutBlockers, type LogoutBlockerCounts } from "./components/SyncConflictSection";
+import { buildSyncHealth } from "./components/syncHealth";
 import Overview from "./pages/Overview";
 import Transactions from "./pages/Transactions";
 import Goals from "./pages/Goals";
@@ -172,6 +173,8 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
   const [pending, setPending] = useState(0);
+  const [syncRunning, setSyncRunning] = useState(false);
+  const [syncHealthBlockers, setSyncHealthBlockers] = useState<LogoutBlockers>(EMPTY_LOGOUT_BLOCKERS);
   const [syncFeedback, setSyncFeedback] = useState<{ message: string; tone: "success" | "error" | "info" } | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [recoveryRequired, setRecoveryRequired] = useState(false);
@@ -190,9 +193,11 @@ export default function App() {
   const { api: navActionsApi, navAction } = useNavActionRegistry();
 
   const refreshSyncBadge = useCallback(async () => {
-    const p = await outboxCount(); const c = (await listConflicts()).length;
-    if (!navigator.onLine) setSyncStatus("offline"); else if (c > 0) setSyncStatus("conflict"); else if (p > 0) setSyncStatus("syncing"); else setSyncStatus("synced");
+    const [p, conflicts, deadItems] = await Promise.all([outboxCount(), listConflicts(), listDeadOutbox()]);
+    const blockers = { pending: Math.max(0, p - deadItems.length), dead: deadItems.length, conflicts: conflicts.length };
+    if (!navigator.onLine) setSyncStatus("offline"); else if (blockers.conflicts > 0) setSyncStatus("conflict"); else if (p > 0) setSyncStatus("syncing"); else setSyncStatus("synced");
     setPending(p);
+    setSyncHealthBlockers(blockers);
   }, []);
   const handleConflictResolved = useCallback(async () => {
     await refreshSyncBadge();
@@ -228,7 +233,8 @@ export default function App() {
           const needsRecovery = isRecoveryPending(counts, meta);
           setRecoveryRequired(needsRecovery); setShowWizard(false); setRecoveryChecked(true);
           if (!needsRecovery) {
-            try { setSyncStatus("syncing"); await runSync(auth.user.id); } catch { /* network */ }
+            try { setSyncStatus("syncing"); setSyncRunning(true); await runSync(auth.user.id); } catch { /* network */ }
+            finally { setSyncRunning(false); }
             await refreshSyncBadge();
             setSettings(await getSettings());
           }
@@ -240,7 +246,10 @@ export default function App() {
 
   useEffect(() => {
     const on = () => {
-      if (auth.user && auth.vaultReady && !recoveryRequired && !logoutGate && !logoutCleanupPending) void runSync(auth.user.id).then(() => refreshSyncBadge());
+      if (auth.user && auth.vaultReady && !recoveryRequired && !logoutGate && !logoutCleanupPending) {
+        setSyncRunning(true);
+        void runSync(auth.user.id).then(() => refreshSyncBadge()).finally(() => setSyncRunning(false));
+      }
       else if (!recoveryRequired && !logoutGate && !logoutCleanupPending) void refreshSyncBadge();
     };
     const off = () => setSyncStatus("offline");
@@ -255,6 +264,25 @@ export default function App() {
   }, [locale]);
 
   const recoveryActive = Boolean(auth.user) && recoveryRequired;
+  const syncHealth = useMemo(() => buildSyncHealth({
+    signedIn: Boolean(auth.user && auth.vaultReady),
+    online: navigator.onLine,
+    running: syncRunning,
+    pending: syncHealthBlockers.pending,
+    dead: syncHealthBlockers.dead,
+    conflicts: syncHealthBlockers.conflicts,
+    recoveryPending: recoveryActive,
+  }), [auth.user, auth.vaultReady, syncRunning, syncHealthBlockers, recoveryActive]);
+
+  async function handleSyncHealthAction() {
+    if (syncHealth.action === "recover") { setShowWizard(true); return; }
+    if (syncHealth.action === "conflicts") { handleOpenSyncConflicts(); return; }
+    if (syncHealth.action === "retry") {
+      try { await reviveDeadOutbox(); }
+      catch { setSyncFeedback({ message: text.syncFailed, tone: "error" }); return; }
+    }
+    if (syncHealth.action === "sync" || syncHealth.action === "retry") void handleSyncNow();
+  }
 
   async function handleSignOut() {
     setLogoutNotice(null);
@@ -284,6 +312,7 @@ export default function App() {
       return { message: text.syncNeedsRecovery, tone: "info" };
     }
     setSyncStatus("syncing");
+    setSyncRunning(true);
     setSyncFeedback(null);
     try {
       const result = await runSync(auth.user.id);
@@ -303,6 +332,8 @@ export default function App() {
       const feedback = { message: text.syncFailed, tone: "error" as const };
       setSyncFeedback(feedback);
       return feedback;
+    } finally {
+      setSyncRunning(false);
     }
   }
   async function retryLogoutBlockers() {
@@ -376,8 +407,9 @@ export default function App() {
         displayName={displayName}
         syncStatus={syncStatus}
         pending={pending}
+        syncHealth={syncHealth}
         onSignOut={handleSignOut}
-        onSyncNow={recoveryActive ? undefined : handleSyncNow}
+        onSyncNow={recoveryActive ? undefined : handleSyncHealthAction}
         onUpdatePrice={undefined}
         onSearch={navAction("search")}
         onFilter={navAction("filter")}
@@ -408,7 +440,7 @@ export default function App() {
         <Route path="/notfallmappe" element={<Notfallmappe />} />
         <Route path="/handoff" element={<HouseholdHandoff syncStatus={syncStatus} pending={pending} />} />
         <Route path="/timeline" element={<ConfidenceTimeline syncStatus={syncStatus} pending={pending} />} />
-        <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} onSyncNow={auth.user ? handleSyncNow : undefined} />} />
+        <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} onSyncNow={auth.user ? handleSyncNow : undefined} syncHealth={syncHealth} onSyncHealthAction={handleSyncHealthAction} onRequestSignOut={auth.user ? handleSignOut : undefined} />} />
       </Routes></RecoveryReadOnlyProvider></main></NavActionsProvider>
     </div><BottomDock items={primaryNav} />
 

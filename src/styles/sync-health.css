@@ -1,0 +1,50 @@
+.sync-health {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--demo-line, #fff) 24%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--demo-card, #14121d) 92%, transparent);
+}
+
+.sync-health-safe { border-color: color-mix(in srgb, var(--demo-em, #10b981) 45%, transparent); }
+.sync-health-info { border-color: color-mix(in srgb, var(--demo-vi, #8b5cf6) 45%, transparent); }
+.sync-health-attention { border-color: color-mix(in srgb, var(--demo-ye, #f59e0b) 52%, transparent); }
+.sync-health-blocked { border-color: color-mix(in srgb, var(--demo-re, #ef4444) 62%, transparent); }
+
+.sync-health-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  color: var(--demo-em, #10b981);
+  background: color-mix(in srgb, var(--demo-em, #10b981) 14%, transparent);
+  font-weight: 800;
+}
+.sync-health-attention .sync-health-icon { color: var(--demo-ye, #f59e0b); background: color-mix(in srgb, var(--demo-ye, #f59e0b) 14%, transparent); }
+.sync-health-blocked .sync-health-icon { color: var(--demo-re, #ef4444); background: color-mix(in srgb, var(--demo-re, #ef4444) 14%, transparent); }
+.sync-health-info .sync-health-icon { color: var(--demo-vi, #8b5cf6); background: color-mix(in srgb, var(--demo-vi, #8b5cf6) 14%, transparent); }
+.sync-health-icon.is-running { animation: sync-health-spin 0.9s linear infinite; }
+
+.sync-health-copy { min-width: 0; display: grid; gap: 3px; }
+.sync-health-copy strong,
+.sync-health-copy small { overflow-wrap: anywhere; }
+.sync-health-copy strong { color: var(--demo-tx, #f4f1ff); font-size: .88rem; }
+.sync-health-copy small { color: var(--demo-sub, #b5aec7); font-size: .76rem; line-height: 1.35; }
+.sync-health-action { white-space: normal; min-height: 34px; padding: 7px 9px; font-size: .76rem; }
+
+.sync-health-compact { padding: 8px 10px; border-radius: 12px; }
+.sync-health-compact .sync-health-icon { width: 22px; height: 22px; font-size: .78rem; }
+.sync-health-compact .sync-health-copy strong { font-size: .76rem; }
+
+@keyframes sync-health-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sync-health-icon.is-running { animation: none; } }
+@media (max-width: 430px) {
+  .sync-health { grid-template-columns: auto minmax(0, 1fr); }
+  .sync-health-action { grid-column: 2; justify-self: start; }
+}

@@ -58,12 +58,12 @@ function loadedSettings(): AppSettings {
   } as unknown as AppSettings;
 }
 
-function renderSettings() {
+function renderSettings(props: Partial<Parameters<typeof SettingsPage>[0]> = {}) {
   return render(
     createElement(
       MemoryRouter,
       null,
-      createElement(SettingsPage, { onReload: vi.fn() }),
+      createElement(SettingsPage, { onReload: vi.fn(), ...props }),
     ),
   );
 }
@@ -109,5 +109,28 @@ describe("Settings initial load state", () => {
 
     expect(await screen.findByText("Giao diện")).toBeTruthy();
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
+  });
+
+  it("routes Settings sign-out through the app-shell callback", async () => {
+    dbMocks.getSettings.mockResolvedValue(loadedSettings());
+    const onRequestSignOut = vi.fn();
+    renderSettings({ onRequestSignOut });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Đăng xuất/i }));
+
+    expect(onRequestSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the shared conflict health state supplied by App shell", async () => {
+    dbMocks.getSettings.mockResolvedValue(loadedSettings());
+    renderSettings({
+      syncHealth: {
+        signedIn: true, online: true, running: false, pending: 0, dead: 0,
+        conflicts: 2, recoveryPending: false, state: "conflict", tone: "blocked", action: "conflicts",
+      },
+    });
+
+    expect((await screen.findAllByText("2 xung đột dữ liệu")).length).toBeGreaterThanOrEqual(2);
+    expect(document.querySelector('[data-sync-health="conflict"]')).toBeTruthy();
   });
 });
