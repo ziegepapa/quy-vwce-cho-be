@@ -5,7 +5,8 @@ type Props = {
   children: ReactNode;
   title: string;
   message: string;
-  retryLabel?: string;
+  /** The route owns localized recovery copy; a boundary must never invent a fallback locale. */
+  retryLabel: string;
 };
 
 type State = {
@@ -60,7 +61,7 @@ export default class PageFailureBoundary extends Component<Props, State> {
         <section className="empty card" role="alert">
           <h1 className="page-title">{this.props.title}</h1>
           <p>{this.props.message}</p>
-          <button type="button" onClick={this.retry}>{this.props.retryLabel ?? "Thử lại"}</button>
+          <button type="button" onClick={this.retry}>{this.props.retryLabel}</button>
         </section>
       );
     }
