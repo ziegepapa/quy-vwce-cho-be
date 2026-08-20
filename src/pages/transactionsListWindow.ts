@@ -5,6 +5,7 @@ export const TRANSACTION_WINDOW_SIZE = 60;
 
 export type TransactionActivity = "all" | "trade" | "funding" | "outflow";
 export type TransactionSort = "newest" | "oldest" | "amount_desc";
+export type TransactionTimeLens = "all" | "this_month" | "last_90_days" | "this_year" | "last_year";
 
 export type TransactionListFilters = {
   query: string;
@@ -12,6 +13,9 @@ export type TransactionListFilters = {
   type: "all" | TxType;
   activity?: TransactionActivity;
   sort?: TransactionSort;
+  /** Display-only time range. `today` makes date boundaries deterministic for callers and tests. */
+  timeLens?: TransactionTimeLens;
+  today?: string;
   /** Localized type labels make journal search match what the owner sees on screen. */
   typeSearchTerms?: Partial<Record<TxType, string>>;
 };
@@ -57,6 +61,25 @@ function matchesActivity(tx: Transaction, activity: TransactionActivity) {
   return tx.type === "cash_out" || tx.type === "tax" || tx.type === "fee";
 }
 
+function isoToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function minusDays(isoDate: string, days: number) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day - days));
+  return date.toISOString().slice(0, 10);
+}
+
+function matchesTimeLens(tx: Transaction, lens: TransactionTimeLens, today: string) {
+  if (lens === "all") return true;
+  const year = today.slice(0, 4);
+  if (lens === "this_month") return tx.date.slice(0, 7) === today.slice(0, 7);
+  if (lens === "this_year") return tx.date.startsWith(year);
+  if (lens === "last_year") return tx.date.startsWith(String(Number(year) - 1));
+  return tx.date >= minusDays(today, 89) && tx.date <= today;
+}
+
 /**
  * Display-only list window. It never mutates transactions or changes portfolio
  * analytics; this keeps scrolling/paging independent from financial rules.
@@ -69,11 +92,14 @@ export function buildTransactionListWindow(
   const query = filters.query.trim().toLocaleLowerCase();
   const activity = filters.activity ?? "all";
   const sort = filters.sort ?? "newest";
+  const timeLens = filters.timeLens ?? "all";
+  const today = filters.today ?? isoToday();
   const filtered = transactions
     .filter((tx) => {
       if (filters.year !== "all" && !tx.date.startsWith(filters.year)) return false;
       if (filters.type !== "all" && tx.type !== filters.type) return false;
       if (!matchesActivity(tx, activity)) return false;
+      if (!matchesTimeLens(tx, timeLens, today)) return false;
       if (!query) return true;
       const searchable = `${tx.notes} ${tx.type.replaceAll("_", " ")} ${filters.typeSearchTerms?.[tx.type] ?? ""} ${tx.amount} ${resolveInstrumentIsin(tx)}`.toLocaleLowerCase();
       return searchable.includes(query);

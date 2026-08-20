@@ -88,4 +88,24 @@ describe("transactionsListWindow", () => {
     expect(localizedSearch.total).toBe(500);
     expect(visibleIds(localizedSearch).every((id) => Number(id.slice(3)) % 2 === 0)).toBe(true);
   });
+
+  it("applies Smart time lenses with inclusive, deterministic boundaries", () => {
+    const transactions = [
+      "2026-08-20", "2026-08-01", "2026-05-23", "2026-05-22", "2025-12-31",
+    ].map((date, index) => ({
+      id: `lens-${index}`,
+      date,
+      type: "cash_in" as const,
+      amount: 100 + index,
+      notes: "time lens",
+      createdAt: `${date}T00:00:00.000Z`,
+      updatedAt: `${date}T00:00:00.000Z`,
+    }));
+    const filters = { query: "", year: "all", type: "all" as const, today: "2026-08-20" };
+
+    expect(buildTransactionListWindow(transactions, { ...filters, timeLens: "this_month" }, 60).total).toBe(2);
+    expect(buildTransactionListWindow(transactions, { ...filters, timeLens: "last_90_days" }, 60).total).toBe(3);
+    expect(buildTransactionListWindow(transactions, { ...filters, timeLens: "this_year" }, 60).total).toBe(4);
+    expect(buildTransactionListWindow(transactions, { ...filters, timeLens: "last_year" }, 60).total).toBe(1);
+  });
 });

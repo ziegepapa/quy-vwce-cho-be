@@ -47,10 +47,13 @@ describe("Transactions load and empty states", () => {
 
     expect(await screen.findByText("Transaktionsjournal")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Schnellfilter" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Zeitraum" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Dieser Monat" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Wertpapiere" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Einzahlungen" })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "+ VWCE kaufen" })[0]).toBeTruthy();
     expect(document.body.textContent).not.toContain("Nhật ký giao dịch");
+    expect(document.body.textContent).not.toContain("Tháng này");
   });
 
   it("does not claim the ledger is empty while it is still loading", () => {
@@ -116,6 +119,20 @@ describe("Transactions load and empty states", () => {
     expect(document.querySelector(".tx-item")?.textContent).toContain("Mua VWCE");
     expect(document.querySelector(".tx-item")?.textContent).not.toContain("Góp");
     expect(screen.getByRole("button", { name: "Đầu tư" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("offers Smart time lenses and resets them together with the journal filters", async () => {
+    dbMocks.listTransactions.mockResolvedValue([]);
+    render(createElement(Transactions));
+
+    await screen.findByText("Nhật ký giao dịch");
+    fireEvent.click(screen.getByRole("button", { name: "Tháng này" }));
+    expect(screen.getByRole("button", { name: "Tháng này" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Lọc / PDF · 1 bộ lọc" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Lọc / PDF · 1 bộ lọc" }));
+    fireEvent.click(screen.getByRole("button", { name: "Xóa lọc" }));
+    expect(screen.getByRole("button", { name: "Toàn bộ" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("opens intentional quick-create flows with the matching transaction type preselected", async () => {
