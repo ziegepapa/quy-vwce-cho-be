@@ -130,10 +130,12 @@ describe("Overview German locale", () => {
     expect(screen.getByText("Portfolio-Check")).toBeTruthy();
     expect(screen.getByLabelText("Plan und Realität")).toBeTruthy();
     expect(screen.getByText("Sparplan bis heute")).toBeTruthy();
+    expect(screen.getByLabelText("Jahresrückblick")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Bericht exportieren" })).toBeTruthy();
     expect(screen.getAllByText("Aufmerksamkeit").length).toBeGreaterThan(1);
     expect(screen.getAllByText("Einzahlungen").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Noch nicht bewertbar").length).toBeGreaterThan(0);
-    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Gần nhất|Hiệu suất danh mục|Vốn góp|Lãi|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Kế hoạch & thực tế|Sparplan đến nay|Đã ghi nhận/);
+    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Gần nhất|Hiệu suất danh mục|Vốn góp|Lãi|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Kế hoạch & thực tế|Sparplan đến nay|Đã ghi nhận|Tổng kết năm|Xuất báo cáo|Chưa lưu chuỗi giá/);
   });
 });
 
@@ -153,6 +155,7 @@ describe("Overview demo v10 hierarchy", () => {
     expect(container.querySelector(".streak-card .sc-dots")).toBeTruthy();
     expect(container.querySelector(".heartbeat-card .heartbeat-grid")).toBeTruthy();
     expect(container.querySelector(".plan-reality-card .plan-reality-grid")).toBeTruthy();
+    expect(container.querySelector(".year-review-card .year-review-grid")).toBeTruthy();
     expect(container.querySelector(".perf-card .perf-top")).toBeTruthy();
     expect(container.querySelector(".perf-card .perf-bar-track")).toBeTruthy();
     expect(container.querySelector(".perf-card .perf-legend")).toBeTruthy();

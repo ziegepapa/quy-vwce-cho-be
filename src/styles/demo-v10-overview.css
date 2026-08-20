@@ -268,3 +268,30 @@
   .ov .plan-reality-grid > div { padding: 7px; }
   .ov .plan-reality-grid strong { font-size: 13px; }
 }
+
+/* YEAR-IN-REVIEW-2026: factual year summary, no inferred price performance. */
+.ov .year-review-card { display: grid; gap: 10px; padding: 13px; border-color: color-mix(in srgb, var(--demo-em) 22%, var(--demo-gb)); }
+.ov .year-review-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ov .year-review-head > div { display: grid; min-width: 0; gap: 2px; }
+.ov .year-review-head span { color: var(--demo-text); font-size: 12px; font-weight: 820; }
+.ov .year-review-head strong { overflow: hidden; color: var(--demo-dim); font-size: 9px; font-weight: 720; text-overflow: ellipsis; white-space: nowrap; }
+.ov .year-review-export { min-height: 32px; padding: 6px 9px; color: var(--demo-em); font-size: 10px; font-weight: 800; white-space: nowrap; background: color-mix(in srgb, var(--demo-em) 10%, transparent); border: 1px solid color-mix(in srgb, var(--demo-em) 32%, transparent); border-radius: 9px; }
+.ov .year-review-export:focus-visible { outline: 2px solid var(--demo-vi); outline-offset: 2px; }
+.ov .year-review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.ov .year-review-grid > div { display: grid; min-width: 0; gap: 3px; padding: 8px; background: color-mix(in srgb, var(--demo-g) 56%, transparent); border: 1px solid color-mix(in srgb, var(--demo-gb) 74%, transparent); border-radius: 10px; }
+.ov .year-review-grid span { overflow: hidden; color: var(--demo-dim); font-size: 9px; font-weight: 760; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.ov .year-review-grid strong { overflow: hidden; color: var(--demo-sub); font-size: 13px; font-weight: 840; font-variant-numeric: tabular-nums; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+.ov .year-review-grid > div:nth-child(1) strong { color: var(--demo-vi); }
+.ov .year-review-grid > div:nth-child(2) strong { color: var(--demo-am); }
+.ov .year-review-grid > div:nth-child(3) strong { color: var(--demo-em); }
+.ov .year-review-grid strong.needs-review { color: var(--demo-am); }
+.ov .year-review-grid strong.calm { color: var(--demo-em); }
+.ov .year-review-card p { margin: 0; color: var(--demo-dim); font-size: 10px; font-weight: 680; line-height: 1.35; }
+@media (max-width: 360px) {
+  .ov .year-review-card { padding: 12px; }
+  .ov .year-review-head { align-items: flex-start; }
+  .ov .year-review-export { min-height: 31px; padding-inline: 8px; }
+  .ov .year-review-grid { gap: 6px; }
+  .ov .year-review-grid > div { padding: 7px; }
+  .ov .year-review-grid strong { font-size: 12px; }
+}

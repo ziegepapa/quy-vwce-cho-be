@@ -3,6 +3,7 @@ import { useLocale } from "../../lib/locale";
 import { formatMoney } from "../../lib/calc";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
 import type { PlanVsReality } from "../../pages/planVsReality";
+import type { YearInReview } from "../../pages/yearInReview";
 import "../../styles/demo-v10-overview.css";
 
 type OverviewFrameProps = {
@@ -28,6 +29,7 @@ type OverviewFrameProps = {
   priceComparison: { averageBuyPrice: number; currentPrice: number } | null;
   heartbeat: PortfolioHeartbeat;
   planVsReality: PlanVsReality;
+  yearInReview: YearInReview;
 };
 
 function overviewCopy(locale: "vi" | "de") {
@@ -75,6 +77,15 @@ function overviewCopy(locale: "vi" | "de") {
     planRealityNotStarted: "Der Plan startet noch nicht",
     planRealityOnTrack: "Planbetrag erreicht",
     planRealityBelowPlan: "Unter dem Planbetrag",
+    yearReview: "Jahresrückblick",
+    yearReviewExport: "Bericht exportieren",
+    yearReviewContributed: "Eingezahlt",
+    yearReviewFeesTaxes: "Gebühren & Steuern",
+    yearReviewTransactions: "Erfasste Buchungen",
+    yearReviewQuality: (count: number) => count === 0 ? "Keine Datenpunkte offen" : `${count} Datenpunkte prüfen`,
+    yearReviewPriceSnapshot: "Preis-Snapshot",
+    yearReviewNoSnapshot: "Kein Preis-Snapshot erfasst",
+    yearReviewNoHistory: "Keine Preisreihe gespeichert; es wird keine Preisveränderung abgeleitet.",
   } : {
     pageLabel: "Tổng quan",
     contributionMonths: "tháng góp",
@@ -119,6 +130,15 @@ function overviewCopy(locale: "vi" | "de") {
     planRealityNotStarted: "Kế hoạch chưa bắt đầu",
     planRealityOnTrack: "Đã đạt mức kế hoạch",
     planRealityBelowPlan: "Chưa đạt mức kế hoạch",
+    yearReview: "Tổng kết năm",
+    yearReviewExport: "Xuất báo cáo",
+    yearReviewContributed: "Đã góp",
+    yearReviewFeesTaxes: "Phí & thuế",
+    yearReviewTransactions: "Giao dịch đã ghi",
+    yearReviewQuality: (count: number) => count === 0 ? "Không còn mục dữ liệu cần rà soát" : `${count} mục dữ liệu cần rà soát`,
+    yearReviewPriceSnapshot: "Snapshot giá",
+    yearReviewNoSnapshot: "Chưa có snapshot giá",
+    yearReviewNoHistory: "Chưa lưu chuỗi giá; ứng dụng không suy diễn biến động giá.",
   };
 }
 
@@ -162,6 +182,7 @@ export default function OverviewFrame({
   priceComparison,
   heartbeat,
   planVsReality,
+  yearInReview,
 }: OverviewFrameProps) {
   const { locale } = useLocale();
   const text = overviewCopy(locale);
@@ -197,6 +218,23 @@ export default function OverviewFrame({
     : planVsReality.state === "below_plan"
       ? text.planRealityBelowPlan
       : text.planRealityNotStarted;
+  const exportYearReview = () => {
+    const lines = [
+      `${text.yearReview} ${yearInReview.year}`,
+      `${text.yearReviewContributed}: ${formatMoney(yearInReview.contributionAmount)}`,
+      `${text.yearReviewFeesTaxes}: ${formatMoney(yearInReview.fees + yearInReview.taxes)}`,
+      `${text.yearReviewTransactions}: ${yearInReview.transactionCount}`,
+      `${text.yearReviewQuality(yearInReview.qualityIssueCount)}`,
+      yearInReview.priceSnapshot ? `${text.yearReviewPriceSnapshot}: ${formatMoney(yearInReview.priceSnapshot.price)} · ${yearInReview.priceSnapshot.asOf}` : text.yearReviewNoSnapshot,
+      text.yearReviewNoHistory,
+    ];
+    const url = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/plain;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `vwce-year-in-review-${yearInReview.year}.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <main className="demo-v10-screen" aria-label={text.pageLabel}>
@@ -304,6 +342,17 @@ export default function OverviewFrame({
           </div>
           <div className="plan-reality-track" aria-label={`${text.planReality}: ${planVsReality.progressPct.toFixed(0)}%`}><span style={{ width: `${planVsReality.progressPct}%` }} /></div>
           <p>{planVsReality.plannedMonths === 0 ? text.planRealityNotStarted : `${text.planRealityMonths(planVsReality.plannedMonths, planVsReality.recordedMonths)} · ${planVsReality.missingMonths > 0 ? text.planRealityMissing(planVsReality.missingMonths) : text.planRealityOnTrack}`}</p>
+        </section>
+
+        <section className="gl year-review-card" aria-label={text.yearReview}>
+          <div className="year-review-head"><div><span>{text.yearReview} · {yearInReview.year}</span><strong>{text.yearReviewTransactions}: {yearInReview.transactionCount}</strong></div><button type="button" className="year-review-export" onClick={exportYearReview}>{text.yearReviewExport}</button></div>
+          <div className="year-review-grid">
+            <div><span>{text.yearReviewContributed}</span><strong>{formatMoney(yearInReview.contributionAmount)}</strong></div>
+            <div><span>{text.yearReviewFeesTaxes}</span><strong>{formatMoney(yearInReview.fees + yearInReview.taxes)}</strong></div>
+            <div><span>{text.yearReviewPriceSnapshot}</span><strong>{yearInReview.priceSnapshot ? formatMoney(yearInReview.priceSnapshot.price) : "—"}</strong></div>
+            <div><span>{text.heartbeatAttention}</span><strong className={yearInReview.qualityIssueCount > 0 ? "needs-review" : "calm"}>{text.yearReviewQuality(yearInReview.qualityIssueCount)}</strong></div>
+          </div>
+          <p>{yearInReview.priceSnapshot ? `${text.yearReviewPriceSnapshot}: ${yearInReview.priceSnapshot.asOf} · ` : ""}{text.yearReviewNoHistory}</p>
         </section>
 
         <section className={`gl perf-card perf-card-${performanceState}`} data-performance-state={performanceState}>
