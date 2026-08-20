@@ -13,6 +13,13 @@ export type HouseholdHandoff = {
     documentLocationCount: number;
     lastPrintedAt: string | null;
   };
+  readiness: {
+    complete: number;
+    total: number;
+    planReady: boolean;
+    emergencyReady: boolean;
+    printedReady: boolean;
+  };
 };
 
 /**
@@ -43,6 +50,12 @@ export function buildHouseholdHandoff(input: {
   const wishesReady = Boolean(emergency?.wishes.trim());
   const sections = [purposeReady, contacts.length > 0, documents.length > 0, wishesReady];
 
+  const completeSections = sections.filter(Boolean).length;
+  const planReady = Boolean(target?.targetUseDate && phase?.status);
+  const emergencyReady = completeSections === sections.length;
+  const printedReady = Boolean(emergency?.lastPrintedAt);
+  const readiness = [planReady, emergencyReady, printedReady];
+
   return {
     planName: input.planName.trim() || "VWCE Vault",
     childName: input.childName.trim() || null,
@@ -50,11 +63,18 @@ export function buildHouseholdHandoff(input: {
     planStatus: phase?.status ?? null,
     yearsLeft: phase?.yearsLeft ?? null,
     emergency: {
-      completeSections: sections.filter(Boolean).length,
+      completeSections,
       totalSections: sections.length,
       contactCount: contacts.length,
       documentLocationCount: documents.length,
       lastPrintedAt: emergency?.lastPrintedAt || null,
+    },
+    readiness: {
+      complete: readiness.filter(Boolean).length,
+      total: readiness.length,
+      planReady,
+      emergencyReady,
+      printedReady,
     },
   };
 }
