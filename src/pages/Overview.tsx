@@ -10,6 +10,7 @@ import { useLocale } from "../lib/locale";
 import { findTransactionQualityIssues } from "./transactionQualityInbox";
 import { buildPortfolioHeartbeat } from "./portfolioHeartbeat";
 import { buildPlanVsReality } from "./planVsReality";
+import { buildYearInReview } from "./yearInReview";
 
 function overviewPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
@@ -126,11 +127,12 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     const averageBuyPrice = portfolio.vwceQty > 0 && portfolio.vwceCostBasis > 0
       ? portfolio.vwceCostBasis / portfolio.vwceQty
       : null;
+    const qualityIssues = findTransactionQualityIssues(transactions);
     const heartbeat = buildPortfolioHeartbeat({
       nextContribution: nextPlanDate(settings.startDate, locale, currentDate),
       performanceState,
       performance,
-      qualityIssueCount: findTransactionQualityIssues(transactions).length,
+      qualityIssueCount: qualityIssues.length,
       missingPriceCount: market.missingIsins.length,
       stalePriceCount: snapshot.stalePriceIsins.length,
     });
@@ -141,6 +143,14 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       trackInAppCash: settings.trackInAppCash,
       transactions,
       today: currentDate.toISOString().slice(0, 10),
+    });
+    const yearInReview = buildYearInReview({
+      today: currentDate.toISOString().slice(0, 10),
+      trackInAppCash: settings.trackInAppCash,
+      transactions,
+      qualityIssues,
+      latestPrice: vwcePrice,
+      latestPriceDate: snapshot.vwceAsOf ?? "",
     });
 
     return {
@@ -164,6 +174,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       performance,
       heartbeat,
       planVsReality,
+      yearInReview,
       performanceState,
       contributionWidth: performanceState === "unavailable"
         ? 0
