@@ -10,7 +10,7 @@
     "prebuild": "npm run generate:pwa-icons",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run && npm run test:price && npm run test:locale-audit && npm run test:bundle",
+    "test": "vitest run && npm run test:price && npm run test:locale-audit && npm run test:bundle && npm run test:external-boundary",
     "benchmark:ledger": "vite-node scripts/benchmark-ledger.ts",
     "benchmark:ledger:check": "LEDGER_BENCHMARK_ASSERT_BUDGET=1 vite-node scripts/benchmark-ledger.ts",
     "audit:locale": "node scripts/audit-ui-localization.mjs",
@@ -22,6 +22,8 @@
     "test:preview": "playwright test",
     "test:release": "node scripts/verify-release.mjs",
     "test:edge-smoke": "node scripts/smoke-ai-edge.mjs",
+    "check:external-boundary": "node scripts/check-external-boundary.mjs",
+    "test:external-boundary": "node --test scripts/check-external-boundary.test.mjs",
     "verify:production": "node scripts/verify-production.mjs",
     "update:price": "node scripts/update-quotes.mjs",
     "update:price:legacy": "node scripts/update-vwce-price.mjs"
