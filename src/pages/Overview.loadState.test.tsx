@@ -124,7 +124,7 @@ describe("Overview German locale", () => {
     expect(screen.getByText("Nächste Rate")).toBeTruthy();
     expect(screen.getByText("Portfolio-Performance")).toBeTruthy();
     expect(screen.getAllByText("Einzahlungen").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Ertrag").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Noch nicht bewertbar").length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Gần nhất|Hiệu suất danh mục|Vốn góp|Lãi/);
   });
 });
@@ -150,7 +150,9 @@ describe("Overview demo v10 hierarchy", () => {
     expect(screen.getByRole("button", { name: /Thu gọn/ }).getAttribute("aria-expanded")).toBe("true");
     expect(container.querySelector(".cr-am")?.textContent).toContain("100,00");
     expect(container.querySelector(".cr-am")?.textContent).toContain("/th");
-    expect(container.querySelector(".perf-bar-gain")?.getAttribute("style")).toContain("width: 0%");
+    expect(container.querySelector(".perf-card")?.getAttribute("data-performance-state")).toBe("unavailable");
+    expect(container.querySelector(".perf-bar-gain")).toBeNull();
+    expect(container.querySelector(".perf-bar-loss")).toBeNull();
     expect(container.querySelector(".sparkline-svg path")).toBeNull();
   });
 
@@ -165,6 +167,50 @@ describe("Overview demo v10 hierarchy", () => {
     expect(container.querySelector(".h-row .bdg")?.textContent?.trim()).toBe("—");
     expect(container.querySelector(".hr-pct")?.textContent?.trim()).toBe("1");
     expect(container.querySelectorAll(".sc-dots .dot.done")).toHaveLength(1);
+  });
+
+  it("switches the performance card to a gain segment when the live quote exceeds the purchase cost", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-gain", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([{ id: "quote-gain", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 150, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".perf-card")?.getAttribute("data-performance-state")).toBe("gain"));
+    expect(container.querySelector(".perf-return")?.textContent).toBe("+50,0%");
+    expect(container.querySelector(".perf-bar-base")?.getAttribute("style")).toContain("width: 66.666");
+    expect(container.querySelector(".perf-bar-gain")?.getAttribute("style")).toContain("width: 33.333");
+    expect(container.querySelector(".perf-bar-loss")).toBeNull();
+    expect(screen.getAllByText("Lãi").length).toBeGreaterThan(0);
+  });
+
+  it("switches the performance card to a loss segment when the live quote falls below the purchase cost", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-loss", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([{ id: "quote-loss", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 80, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".perf-card")?.getAttribute("data-performance-state")).toBe("loss"));
+    expect(container.querySelector(".perf-return")?.textContent).toBe("-20,0%");
+    expect(container.querySelector(".perf-bar-base")?.getAttribute("style")).toContain("width: 100%");
+    expect(container.querySelector(".perf-bar-loss")?.getAttribute("style")).toContain("width: 20%");
+    expect(container.querySelector(".perf-bar-gain")).toBeNull();
+    expect(screen.getAllByText("Lỗ").length).toBeGreaterThan(0);
+  });
+
+  it("marks the performance as unavailable instead of inventing a gain or loss without a quote", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-unvalued", "2026-08-01")]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".perf-card")?.getAttribute("data-performance-state")).toBe("unavailable"));
+    expect(container.querySelector(".perf-return")?.textContent).toBe("—");
+    expect(container.querySelector(".perf-bar-base")).toBeNull();
+    expect(container.querySelector(".perf-bar-gain")).toBeNull();
+    expect(container.querySelector(".perf-bar-loss")).toBeNull();
+    expect(screen.getAllByText("Chưa định giá").length).toBeGreaterThan(0);
   });
 
   it("draws the compact price comparison only when current price and average buy price are both real", async () => {

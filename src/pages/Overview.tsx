@@ -101,15 +101,25 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       trackInAppCash: settings.trackInAppCash,
     });
     const pnl = hero.pnl;
+    const performanceState: "gain" | "loss" | "flat" | "unavailable" = pnl == null || lifetime.amount <= 0
+      ? "unavailable"
+      : pnl > 0
+        ? "gain"
+        : pnl < 0
+          ? "loss"
+          : "flat";
     const performance = hero.pnlPct == null
       ? null
-      : `${hero.pnlPct >= 0 ? "+" : ""}${hero.pnlPct.toFixed(1).replace(".", ",")}%`;
+      : `${hero.pnlPct > 0 ? "+" : ""}${hero.pnlPct.toFixed(1).replace(".", ",")}%`;
     const currentDate = new Date();
     const plannedContribution = monthsFromStart(settings.startDate, currentDate) >= 12
       ? settings.contributionY2
       : settings.contributionY1;
     const contributionTotal = lifetime.amount > 0 ? formatMoney(lifetime.amount) : null;
     const performanceBase = Math.max(1, lifetime.amount + Math.max(0, pnl ?? 0));
+    const lossWidth = lifetime.amount > 0 && pnl != null && pnl < 0
+      ? Math.min(100, Math.max(0, (Math.abs(pnl) / lifetime.amount) * 100))
+      : 0;
     const averageBuyPrice = portfolio.vwceQty > 0 && portfolio.vwceCostBasis > 0
       ? portfolio.vwceCostBasis / portfolio.vwceQty
       : null;
@@ -133,10 +143,14 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       savingsPlan: Number.isFinite(plannedContribution) && plannedContribution > 0 ? formatMoney(plannedContribution) : null,
       nextContribution: nextPlanDate(settings.startDate, locale, currentDate),
       performance,
-      contributionWidth: lifetime.amount > 0 ? Math.min(100, Math.max(0, (lifetime.amount / performanceBase) * 100)) : 0,
-      gainWidth: lifetime.amount > 0 && pnl != null && pnl > 0
+      performanceState,
+      contributionWidth: performanceState === "unavailable"
+        ? 0
+        : lifetime.amount > 0 ? Math.min(100, Math.max(0, (lifetime.amount / performanceBase) * 100)) : 0,
+      gainWidth: performanceState === "gain" && lifetime.amount > 0 && pnl != null
         ? Math.min(100, Math.max(0, 100 - (lifetime.amount / performanceBase) * 100))
         : 0,
+      lossWidth,
       contributionTotal,
       gainTotal: pnl == null ? null : formatMoney(pnl),
       averageBuyPrice: averageBuyPrice == null ? null : formatMoney(averageBuyPrice),
