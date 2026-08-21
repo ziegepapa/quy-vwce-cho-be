@@ -4,7 +4,6 @@ import type { HouseholdHandoff } from "./householdHandoff";
 export type ContinuitySnapshot = {
   planName: string;
   targetUseDate: string | null;
-  planStatus: string | null;
   yearsLeft: number | null;
   readiness: { complete: number; total: number };
   sync: { status: SyncStatus; pending: number };
@@ -22,7 +21,6 @@ export function buildContinuitySnapshot(input: {
   return {
     planName: input.handoff.planName,
     targetUseDate: input.handoff.targetUseDate,
-    planStatus: input.handoff.planStatus,
     yearsLeft: input.handoff.yearsLeft,
     readiness: {
       complete: input.handoff.readiness.complete,

@@ -11,7 +11,6 @@ import {
   DEFAULT_TER,
   MAX_YEARS,
   clamp,
-  estimateGermanExitTax,
   findMonthlyForTarget,
   findYearsForTarget,
   projectEnd,
@@ -34,9 +33,9 @@ const UNDO_MS = 12_000;
 
 function simulationPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
-    cautious: "Vorsichtig", base: "Basis", bull: "Günstig", setYearOne: (value: string) => `Jahr 1 wurde auf ${value} gesetzt`, setFromYearTwo: (value: string) => `Beitrag ab Jahr 2 wurde auf ${value} gesetzt`, setReturn: (value: string) => `VWCE-Rendite wurde auf ${value} gesetzt`, yearOne: (value: string) => `Jahr 1 = ${value}`, fromYearTwo: (value: string) => `Beitrag ab Jahr 2 = ${value}`, return: (value: string) => `VWCE-Rendite = ${value}`, savedChanges: (count: number) => `${count} Änderungen wurden gespeichert`, noSelection: "Keine Auswahl", saveOne: "1 Änderung speichern", saveMany: (count: number) => `${count} Änderungen speichern`, afterTax: "nach Steuern", presentValue: "heutige Kaufkraft", beforeTaxNominal: "vor Steuern · nominal", range: "Bandbreite", inflation: (value: string) => `Inflation ${value}%`, tax: "mit Steuern", noTax: "ohne Steuern", contributionGrowth: (value: string) => `Beitrag ${value}% / Jahr`, advanced: (parts: string) => `Erweiterte Optionen · ${parts}`,
+    cautious: "Vorsichtig", base: "Basis", bull: "Günstig", setYearOne: (value: string) => `Jahr 1 wurde auf ${value} gesetzt`, setFromYearTwo: (value: string) => `Beitrag ab Jahr 2 wurde auf ${value} gesetzt`, setReturn: (value: string) => `VWCE-Rendite wurde auf ${value} gesetzt`, yearOne: (value: string) => `Jahr 1 = ${value}`, fromYearTwo: (value: string) => `Beitrag ab Jahr 2 = ${value}`, return: (value: string) => `VWCE-Rendite = ${value}`, savedChanges: (count: number) => `${count} Änderungen wurden gespeichert`, noSelection: "Keine Auswahl", saveOne: "1 Änderung speichern", saveMany: (count: number) => `${count} Änderungen speichern`, presentValue: "heutige Kaufkraft", nominal: "nominal", range: "Bandbreite", inflation: (value: string) => `Inflation ${value}%`, contributionGrowth: (value: string) => `Beitrag ${value}% / Jahr`, advanced: (parts: string) => `Erweiterte Optionen · ${parts}`,
   } : {
-    cautious: "Thận trọng", base: "Cơ sở", bull: "Thuận lợi", setYearOne: (value: string) => `Đã đặt Góp năm 1 = ${value}`, setFromYearTwo: (value: string) => `Đã đặt Góp từ năm 2 = ${value}`, setReturn: (value: string) => `Đã đặt Lợi nhuận VWCE = ${value}`, yearOne: (value: string) => `Góp năm 1 = ${value}`, fromYearTwo: (value: string) => `Góp từ năm 2 = ${value}`, return: (value: string) => `Lợi nhuận VWCE = ${value}`, savedChanges: (count: number) => `Đã lưu ${count} thay đổi`, noSelection: "Chưa chọn gì", saveOne: "Lưu 1 thay đổi", saveMany: (count: number) => `Lưu ${count} thay đổi`, afterTax: "sau thuế", presentValue: "giá hôm nay", beforeTaxNominal: "trước thuế · danh nghĩa", range: "biên độ", inflation: (value: string) => `lạm phát ${value}%`, tax: "có thuế", noTax: "không thuế", contributionGrowth: (value: string) => `góp ${value}%/năm`, advanced: (parts: string) => `Tùy chọn nâng cao · ${parts}`,
+    cautious: "Thận trọng", base: "Cơ sở", bull: "Thuận lợi", setYearOne: (value: string) => `Đã đặt Góp năm 1 = ${value}`, setFromYearTwo: (value: string) => `Đã đặt Góp từ năm 2 = ${value}`, setReturn: (value: string) => `Đã đặt Lợi nhuận VWCE = ${value}`, yearOne: (value: string) => `Góp năm 1 = ${value}`, fromYearTwo: (value: string) => `Góp từ năm 2 = ${value}`, return: (value: string) => `Lợi nhuận VWCE = ${value}`, savedChanges: (count: number) => `Đã lưu ${count} thay đổi`, noSelection: "Chưa chọn gì", saveOne: "Lưu 1 thay đổi", saveMany: (count: number) => `Lưu ${count} thay đổi`, presentValue: "giá hôm nay", nominal: "danh nghĩa", range: "biên độ", inflation: (value: string) => `lạm phát ${value}%`, contributionGrowth: (value: string) => `góp ${value}%/năm`, advanced: (parts: string) => `Tùy chọn nâng cao · ${parts}`,
   };
 }
 
@@ -60,8 +59,6 @@ export default function Simulation() {
   const [bandInput, setBandInput] = useState("2");
   const [inflationOn, setInflationOn] = useState(true);
   const [inflationPct, setInflationPct] = useState("2");
-  const [taxOn, setTaxOn] = useState(true);
-  const [showAfterTax, setShowAfterTax] = useState(true);
   const [showPP, setShowPP] = useState(false);
   const [showAllYears, setShowAllYears] = useState(false);
   const [targetAmount, setTargetAmount] = useState("50000");
@@ -127,14 +124,13 @@ export default function Simulation() {
     return Math.max(0, realBalance);
   }, [balanceOverride, realBalance]);
 
-  const initialCostBasis = balanceOverride.trim() !== "" ? initialBalance : realCostBasis;
-
   const monthlyN = Math.max(0, parseDecimal(monthly));
   const growthN = growthOn ? Math.max(-0.2, Math.min(0.2, parseDecimal(growthPct) / 100)) : 0;
   const lumpN = Math.max(0, parseDecimal(lumpSum));
   const inflationN = inflationOn ? Math.max(0, parseDecimal(inflationPct) / 100) : 0;
   const targetN = Math.max(0, parseDecimal(targetAmount));
-  const ter = taxOn ? DEFAULT_TER : 0;
+  // TER remains a disclosed simulation assumption. Tax calculation is not part of the production path.
+  const ter = DEFAULT_TER;
 
   const baseRate = clamp(parseDecimal(rateInput) / 100, 0, 0.5);
   const band = clamp(parseDecimal(bandInput) / 100, 0, 0.1);
@@ -188,25 +184,10 @@ export default function Simulation() {
         monthlyContribution: monthlyForProject,
         annualReturn: sc.rate,
       });
-      const tax = taxOn
-        ? estimateGermanExitTax(out.terminal, out.contributed, initialCostBasis)
-        : { tax: 0, afterTax: out.terminal };
       const pp = inflationOn ? purchasingPower(out.terminal, inflationN, yearsForProject) : out.terminal;
-      const ppAfter = inflationOn
-        ? purchasingPower(tax.afterTax, inflationN, yearsForProject)
-        : tax.afterTax;
-      return { sc, out, tax, pp, ppAfter };
+      return { sc, out, pp };
     });
-  }, [
-    scenarios,
-    baseCommon,
-    yearsForProject,
-    monthlyForProject,
-    taxOn,
-    inflationOn,
-    inflationN,
-    initialCostBasis,
-  ]);
+  }, [scenarios, baseCommon, yearsForProject, monthlyForProject, inflationOn, inflationN]);
 
   const primary = results.find((r) => r.sc.id === "base") ?? results[1] ?? results[0];
 
@@ -440,20 +421,11 @@ export default function Simulation() {
         ? text.saveOne
         : text.saveMany(selectedCount);
 
-  const useTax = taxOn && showAfterTax;
   const usePP = inflationOn && showPP;
-  let headlineValue = primary?.out.terminal ?? 0;
-  if (primary) {
-    if (useTax && usePP) headlineValue = primary.ppAfter;
-    else if (useTax) headlineValue = primary.tax.afterTax;
-    else if (usePP) headlineValue = primary.pp;
-    else headlineValue = primary.out.terminal;
-  }
-  const headlineNoteParts: string[] = [];
-  if (useTax) headlineNoteParts.push(text.afterTax);
-  if (usePP) headlineNoteParts.push(text.presentValue);
-  const headlineNote =
-    headlineNoteParts.length > 0 ? headlineNoteParts.join(" · ") : text.beforeTaxNominal;
+  const headlineValue = primary
+    ? (usePP ? primary.pp : primary.out.terminal)
+    : 0;
+  const headlineNote = usePP ? text.presentValue : text.nominal;
 
   const shownInterest = primary
     ? Math.max(0, headlineValue - primary.out.contributed - initialBalance)
@@ -466,8 +438,6 @@ export default function Simulation() {
   const advParts: string[] = [];
   advParts.push(`${text.range} ±${round2(band * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN")}`);
   if (inflationOn) advParts.push(text.inflation(inflationPct));
-  if (taxOn) advParts.push(text.tax);
-  else advParts.push(text.noTax);
   if (growthOn) advParts.push(text.contributionGrowth(growthPct));
   const advSummary = text.advanced(advParts.join(" · "));
 
@@ -521,10 +491,6 @@ export default function Simulation() {
       setInflationOn={setInflationOn}
       inflationPct={inflationPct}
       setInflationPct={setInflationPct}
-      taxOn={taxOn}
-      setTaxOn={setTaxOn}
-      showAfterTax={showAfterTax}
-      setShowAfterTax={setShowAfterTax}
       showPP={showPP}
       setShowPP={setShowPP}
       yearRows={yearRows}

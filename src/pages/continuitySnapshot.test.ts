@@ -23,7 +23,6 @@ describe("buildContinuitySnapshot", () => {
     expect(snapshot).toEqual({
       planName: "VWCE für Anna",
       targetUseDate: "2040-06-01",
-      planStatus: expect.any(String),
       yearsLeft: expect.any(Number),
       readiness: { complete: 3, total: 3 },
       sync: { status: "synced", pending: 0 },
@@ -46,7 +45,7 @@ describe("buildContinuitySnapshot", () => {
 
     expect(snapshot.planName).toBe("VWCE Vault");
     expect(snapshot.targetUseDate).toBeNull();
-    expect(snapshot.planStatus).toBeNull();
+    expect("planStatus" in snapshot).toBe(false);
     expect(snapshot.yearsLeft).toBeNull();
     expect(snapshot.readiness).toEqual({ complete: 0, total: 3 });
     expect(snapshot.sync).toEqual({ status: "offline", pending: 2 });
