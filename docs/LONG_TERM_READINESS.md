@@ -1,144 +1,177 @@
 # Long-Term Stable Baseline v1 — Báo cáo Readiness
 
 **Tác giả:** Manus AI
-**Phiên bản ứng dụng:** 1.6.0
-**Commit phát hành đã kiểm chứng:** `a06b0fa234ca7f0db3c88a6c759c0e7cab654bfd` (merge PR #232) [1]
+
+**Phiên bản ứng dụng:** `1.6.0`
+
+**Commit phát hành mới nhất đã kiểm chứng:** `cfb19a86aa14ea8d1dee3788d58c859926a334d3` (merge PR #243) [1]
+
 **Ngày đánh giá evidence:** 21-08-2026 (GMT+2)
+
 **Đối tượng sử dụng:** Gia đình sở hữu vault và người bảo trì kế tiếp.
 
 > **Trạng thái baseline 23/08/2026: `CONDITIONAL — NOT READY` cho vai trò sổ cái tài chính duy nhất, có thẩm quyền tuyệt đối.**
 >
-> Có đủ evidence để vận hành VWCE Vault như một **tracker local-first** có kiểm soát, với sao kê/chứng từ broker độc lập vẫn được lưu giữ. Chưa có đủ evidence để tuyên bố hệ thống là security-complete, RLS-behavioral-verified, migration-reproducible hoặc thay thế hoàn toàn chứng từ broker. Quyết định này là cố ý thận trọng, không phải sự cố phát hành.
+> VWCE Vault có đủ evidence để tiếp tục vận hành như một **tracker local-first** có kiểm soát, khi owner lưu sao kê/chứng từ broker độc lập và diễn tập backup. Security dependency audit nay sạch; client release, UX mobile-first và release gates đã được harden. Tuy nhiên H4 chưa có request-level behavioral RLS proof và H5 chưa có ordered migration baseline cùng controlled upgrade/rollback proof. P11.2 vẫn tuyệt đối bị khóa chờ independent German tax expert review. Các điểm này không được che khuất bởi CI xanh.
 
 | Phạm vi sử dụng | Kết luận | Điều kiện vận hành |
 |---|---|---|
-| Theo dõi danh mục local-first hằng ngày | **Có thể sử dụng** | Owner chủ động export backup, xem Sync Health và giữ sao kê broker độc lập. |
-| Bản ghi duy nhất để quyết định/tái tạo toàn bộ lịch sử tài chính | **Không sẵn sàng** | H4, H5 và dependency audit còn blocker độc lập. |
+| Theo dõi danh mục local-first hằng ngày | **Có thể sử dụng** | Owner chủ động export backup, xem Sync Health/Data Health và giữ sao kê broker độc lập. |
+| Bản ghi duy nhất để quyết định hoặc tái tạo toàn bộ lịch sử tài chính | **Không sẵn sàng** | H4 và H5 còn blocker độc lập; không bỏ qua chúng vì dependency audit đã sạch. |
 | Tính thuế, FIFO hoặc Vorabpauschale | **Không được hỗ trợ** | P11.2 bị khóa; không dùng output để khai thuế. |
 
 ## 1. Mục đích sản phẩm
 
-VWCE Vault là PWA mobile-first giúp gia đình theo dõi giao dịch, khoản góp, giá trị danh mục, backup và trạng thái đồng bộ theo mô hình dữ liệu cục bộ trước. Đây là công cụ ghi nhận và rà soát dữ liệu do owner kiểm soát, **không phải** broker, công cụ thực hiện lệnh, tư vấn đầu tư hay dịch vụ lập/khai thuế. Các boundary không suy diễn này được khóa trong policy và regression contract H0–H2-B. [3]
+VWCE Vault là PWA mobile-first để gia đình ghi nhận giao dịch, khoản góp, giá trị danh mục, backup và trạng thái đồng bộ theo mô hình local-first. Đây là công cụ ghi nhận và rà soát dữ liệu do owner kiểm soát, **không phải** broker, công cụ thực hiện lệnh, tư vấn đầu tư hay dịch vụ lập/khai thuế. Các boundary này được khóa trong policy và regression contract H0–H2-B. [2]
 
 ## 2. Vòng đời vô thời hạn
 
-Hệ thống được xem là có **vòng đời vô thời hạn**. Mốc 2042, nếu có trong kế hoạch gia đình, chỉ là một mốc mục tiêu tài chính; nó không phải ngày hết hạn phần mềm, không phải mốc xóa dữ liệu và không được hard-code thành giới hạn hoạt động của ứng dụng. Mọi thay đổi tương lai phải ưu tiên tính đúng, toàn vẹn dữ liệu và khả năng khôi phục hơn tính năng mới. [3]
+Hệ thống có **vòng đời vô thời hạn**. Mốc 2042, nếu có trong kế hoạch gia đình, là mốc mục tiêu tài chính; không phải ngày hết hạn phần mềm, mốc xóa dữ liệu hay giới hạn hoạt động được hard-code. Mọi thay đổi tương lai phải ưu tiên tính đúng, toàn vẹn dữ liệu và khả năng khôi phục hơn tính năng mới. [3]
 
-## 3. Kiến trúc hiện tại
+## 3. Kiến trúc và release hiện tại
 
-Bản phát hành hiện tại sử dụng React 18, TypeScript và Vite ở client; Dexie/IndexedDB làm vault local-first; Supabase chỉ phục vụ contract đăng nhập/đồng bộ hiện hữu; PWA cung cấp app shell offline; GitHub Pages nhận artifact sau merge vào `main`. Production verification sau deploy H7 xác nhận app version 1.6.0, shell PWA và quote feeds công khai hoạt động. [1] [2]
+Release hiện tại dùng React 18, TypeScript, Vite `8.2.2`, Dexie/IndexedDB cho vault local-first, Supabase chỉ cho auth/sync contract hiện hữu, và GitHub Pages cho static PWA. PR #243 đã deploy thành công trên `main`; production verification sau deploy xác nhận app version `1.6.0`, app shell, PWA và quote feed công khai hoạt động, với VWCE `165.66 EUR` tại lần kiểm tra ngày 20-08-2026. [1] [4]
 
 | Thành phần | Trách nhiệm | Ranh giới đã khóa |
 |---|---|---|
 | React/TypeScript/Vite | UI song ngữ, build và runtime client | Không đưa secret/service-role vào client. |
-| Dexie/IndexedDB | Vault local-first và replay dữ liệu | Không đổi `DEXIE_DB_VERSION=4` trong H0–H7. |
+| Dexie/IndexedDB | Vault local-first và replay dữ liệu | Giữ `DEXIE_DB_VERSION=4`; không có migration trong baseline này. |
 | Supabase | Auth/sync contract hiện hữu | Không tạo migration, không auto-resolve conflict. |
-| PWA/GitHub Pages | Shell cài đặt/offline và static hosting | CSP hiện là meta CSP; chưa phải HTTP response-header CSP. |
+| PWA/GitHub Pages | Shell cài đặt/offline và static hosting | CSP là meta CSP; chưa là HTTP response-header CSP. |
 
 ## 4. Hoàn tất H0–H2-B: nền tảng toàn vẹn tài chính
 
-H0 và H0.1 đặt boundary chính sách: không có tax estimate public hoặc hướng dẫn glide-path mang tính prescriptive. H1 thiết lập một nguồn version chuẩn từ `package.json`. H2-A lập ADR và inventory evidence; H2-B đưa classifier canonical vào mọi đường ghi mới và replay, đồng thời tạo quarantine **derived** cho chứng cứ legacy không an toàn. [3]
+H0 và H0.1 đặt policy boundary: không có tax estimate public hoặc glide-path prescriptive. H1 dùng `package.json` làm nguồn version chuẩn. H2-A lập ADR và inventory evidence; H2-B đưa classifier canonical vào mọi đường ghi mới và replay, đồng thời tạo quarantine **derived** cho evidence legacy không an toàn. [2]
 
-Điểm quan trọng là H2-B không sửa raw historical transaction, không nâng Dexie/schema backup, không thay sync semantics và không auto-repair. Các thay đổi được thử qua golden persistence/replay, path UI và benchmark deterministic ở quy mô ledger lớn; một record không đủ dữ liệu được giữ lại như evidence thay vì bị “đoán” cho hợp lệ. [3]
+H2-B không sửa raw historical transaction, không nâng Dexie/schema backup, không thay sync semantics và không auto-repair. Golden persistence/replay, UI path và benchmark deterministic ở quy mô ledger lớn bảo đảm một record thiếu thông tin được giữ làm evidence thay vì bị “đoán” là hợp lệ. [2]
 
 ## 5. Financial invariants
 
 | Invariant | Hành vi bắt buộc | Hành vi bị cấm |
 |---|---|---|
-| Oversell | Bán vượt lượng nắm giữ là **`INVALID`** và bị từ chối khi new ingestion. | Không âm holdings, không tự điều chỉnh số lượng. |
+| Oversell | Bán vượt lượng nắm giữ là **`INVALID`** và bị từ chối khi new ingestion. | Không âm holdings, không tự điều chỉnh quantity. |
 | Missing quantity | Giao dịch thiếu quantity là **`INCOMPLETE`**. | Không gán số lượng mặc định hoặc giả định FIFO. |
-| Legacy unsafe evidence | Vẫn giữ raw record, nhưng không tạo financial effect qua derived quarantine. | Không xóa, rewrite hay “sửa” quá khứ im lặng. |
-| Replay | Sắp xếp/replay xác định qua contract canonical. | Không phụ thuộc thứ tự tình cờ của storage hoặc UI. |
+| Legacy unsafe evidence | Giữ raw record nhưng không tạo financial effect qua derived quarantine. | Không xóa, rewrite hay “sửa” quá khứ im lặng. |
+| Replay | Sắp xếp/replay xác định qua contract canonical. | Không phụ thuộc thứ tự ngẫu nhiên của storage/UI. |
 | Conflict | Owner tự xem và chọn từng xung đột. | Không auto-merge, auto-select local/server hoặc ghi đè tự động. |
 
-Các invariant trên là cơ sở để giao diện Data Health chỉ báo cáo fact có nguồn, thay vì tạo điểm “chất lượng” tổng hợp, forecast hay action đầu tư. [3] [7]
+Các invariant này là cơ sở để Data Health báo fact có nguồn thay vì health score tổng hợp, forecast hoặc action đầu tư. Regression gates trên PR #242/#243 tiếp tục bao gồm financial policy, H2-B oversell, ledger benchmark 10.000 giao dịch và contracts của saved views/filter. [1] [2]
 
 ## 6. Bằng chứng backup và recovery: H3
 
-H3 giữ `schemaVersion: 4` và bổ sung metadata envelope **tùy chọn**: app release, nhãn Dexie, portable domain allowlist và exact record count. Nếu metadata có mặt nhưng sai shape/identity/count, import fail-closed trước khi đi vào restore destructive; backup v1–v4 không có metadata vẫn đọc được. [3]
+H3 giữ `schemaVersion: 4` và bổ sung optional metadata envelope: app release, nhãn Dexie, portable domain allowlist và exact record count. Nếu metadata hiện diện nhưng sai shape/identity/count, import fail-closed trước restore destructive; backup v1–v4 không có metadata vẫn đọc được. [2]
 
-Synthetic restore drill đã kiểm tra chuỗi calculate → export → JSON boundary → wipe → import → reopen → canonical replay → compare, bao gồm settings, goals, quote evidence, transactions live/tombstone và một legacy row quarantine. Đây là evidence fixture tổng hợp, không phải bằng chứng rằng backup gia đình đang lưu an toàn ngoài thiết bị. Owner vẫn phải export định kỳ, kiểm tra file và diễn tập trong vault/profile thử nghiệm. [3] [4]
+Synthetic restore drill kiểm tra calculate → export → JSON boundary → wipe → import → reopen → canonical replay → compare, gồm settings, goals, quote evidence, transactions live/tombstone và legacy row quarantine. Đây là evidence fixture tổng hợp, **không** chứng minh backup gia đình đang an toàn ngoài thiết bị. Owner vẫn cần export định kỳ, kiểm tra file và diễn tập trên vault/profile thử nghiệm. [2] [5]
 
 ## 7. Bằng chứng RLS và security: H4
 
-H4 có evidence **một phần**: catalog policy read-only cho thấy RLS bật và policy owner-only được định nghĩa cho collection sync hiện hữu; static scan cũng không thấy TypeScript/TSX client surface chứa service-role secret. Điều đó củng cố intended boundary, nhưng không thay thế một test behavioral thực tế. [5]
+H4 có **static policy evidence**: catalog/source policy định nghĩa RLS owner-only cho `profiles`, `app_settings`, `goals`, `transactions`, `annual_checklists` và `monthly_snapshots`; static scan không thấy client TypeScript/TSX surface chứa service-role secret. Điều đó xác nhận intended boundary, không thay thế request thực bằng JWT của từng principal. [6]
 
-User-A allow, User-B deny và anonymous deny chưa được chạy trên môi trường disposable không chứa dữ liệu gia đình. Theo ràng buộc no-cost hiện tại, không tạo Supabase branch/project trả phí và tuyệt đối không dùng production family data làm fixture. Vì vậy H4 vẫn là blocker chính thức và không được mô tả là đã đóng. [3] [5]
+Đánh giá local-only ngày 21-08 không thể tạo proof behavioral hợp lệ. Supabase local yêu cầu Docker-compatible runtime với Auth, API và Postgres; documentation hiện hành nêu stack local miễn phí nhưng yêu cầu Docker và tối thiểu 7 GB RAM. Sandbox evaluation có 3.8 GiB RAM tổng, 2.3 GiB available, không có Docker/Supabase CLI; vì vậy không cài/chạy một stack có khả năng thiếu tài nguyên. Plain PostgreSQL không được dùng làm surrogate để nâng claim vì nó không kiểm chứng Supabase Auth/JWT/PostgREST request path. [7]
+
+| Matrix H4 bắt buộc | Trạng thái | Lý do |
+|---|---|---|
+| User A đọc/sửa/xóa record của chính mình | Chưa chạy | Không có full controlled Supabase local stack. |
+| User B đọc/sửa/xóa record của User A bị từ chối | Chưa chạy | Không dùng production family data, account hay branch/project trả phí. |
+| Anonymous read/write bị từ chối | Chưa chạy | Cần auth/token/API request path thực trong môi trường isolated. |
+| Deleted-user cleanup/foreign-key behavior | Chưa chạy | Cần fixture identity synthetic trong stack đầy đủ. |
+| Client flow qua published auth/token path | Chưa chạy | Catalog/RLS static proof không thay thế token-level request. |
+
+**Trạng thái H4 cuối:** **`PARTIAL — STATIC POLICY EVIDENCE ONLY`**. Không có production shortcut, service-role simulation hoặc remote write/delete fixture.
 
 ## 8. Bằng chứng đồng bộ
 
-Outbox, tombstone, recovery và conflict contract hiện hữu được giữ nguyên qua toàn bộ H0–H7. Sync vận hành fail-closed: pending/retry/offline không được diễn giải thành server acceptance; recovery chưa hoàn tất chặn write; logout bị chặn khi còn pending/outbox error/conflict/recovery blocker; và conflict dừng để owner chọn rõ ràng. [4]
+Outbox, tombstone, recovery và conflict contracts hiện hữu được giữ nguyên qua toàn bộ hardening/UX PRs. Sync vận hành fail-closed: pending/retry/offline không được diễn giải thành server acceptance; recovery chưa hoàn tất chặn write; logout bị chặn khi còn pending/outbox error/conflict/recovery blocker; và conflict dừng để owner chọn rõ ràng. [5]
 
-Đây là bằng chứng về contract source/test và vận hành có kiểm soát, không phải bằng chứng behavioral RLS multi-user. Bất cứ công việc nào thay đổi sync namespace, conflict resolution hoặc tombstone phải có ADR, test compatibility và review riêng. [3] [4]
+Đây là evidence contract source/test và vận hành có kiểm soát, không phải behavioral RLS multi-user. Không thay đổi sync namespace, conflict resolution hoặc tombstone trong baseline này. [2]
 
 ## 9. Toàn vẹn quote
 
-Quote feed lưu provenance có kiểm tra: shape/envelope, date, currency, ISIN, provider URL, duplicate key và future-date được validate trước write. Trạng thái offline/error/partial hoặc giá stale/missing giữ nguyên tính không hoàn chỉnh; app không bịa giá lịch sử, không biến missing price thành zero và không suy ra performance từ một quote hiện tại. [4]
+Quote feed có provenance validation cho shape/envelope, date, currency, ISIN, provider URL, duplicate key và future-date trước write. Offline/error/partial hoặc giá stale/missing giữ nguyên trạng thái không hoàn chỉnh; app không bịa giá lịch sử, không biến missing price thành zero và không suy ra performance từ một quote hiện tại. [5]
 
-Production verification H7 xác nhận shell/PWA/quote feeds hoạt động ở thời điểm kiểm tra, nhưng không biến một quote trả về thành bảo đảm availability liên tục hay khuyến nghị mua/bán/giữ. [2]
+Production verification sau PR #243 xác nhận shell/PWA/quote feeds tại thời điểm kiểm tra. Nó không biến một lần quote trả về thành đảm bảo availability liên tục hay khuyến nghị mua/bán/giữ. [4]
 
-## 10. Provenance và import: H5
+## 10. Provenance và migration reproducibility: H5
 
-Trade Republic execution PDF giữ contract source-specific `source`, `sourceVersion` và document-derived `externalRef`, có validation/dedupe trước persistence. Depot statement chỉ là evidence đối soát read-only. Manual entry cố ý không nhận generic auto-dedupe vì không có broker-document identity đáng tin cậy. [3] [6]
+Trade Republic execution PDF giữ contract source-specific `source`, `sourceVersion` và document-derived `externalRef`, với validation/dedupe trước persistence. Depot statement chỉ là evidence đối soát read-only; manual entry cố ý không nhận generic auto-dedupe vì không có broker-document identity đáng tin cậy. [8]
 
-H5 chưa có ordered baseline migration history: `schema.sql` là bootstrap thủ công và repository chỉ có migration muộn hơn. Không tạo DDL, data backfill, importer batch, generic migration hoặc upgrade drill trên production data. Một controlled no-family-data environment cùng migration/backup/sync/rollback proof là điều kiện bắt buộc trước khi thay đổi trạng thái H5. [3] [6]
+Đánh giá controlled local ngày 21-08 chứng minh `supabase/migrations/` chỉ có `002_soft_delete_and_triggers.sql`. Khi áp dụng file này lên blank PostgreSQL database synthetic, replay fail tại `public.app_settings` không tồn tại: repository không có ordered initial migration baseline. Khi thử manual `schema.sql` trước `002`, plain PostgreSQL dừng tại managed Supabase function `auth.uid()` không tồn tại. Không thêm function giả, không sửa schema/migration, không pull schema từ production và không chạy destructive remote drill; một harness như vậy sẽ không chứng minh Supabase-compatible upgrade/rollback. [7] [8]
 
-## 11. Data Health: H6
+| Chứng cứ H5 yêu cầu | Trạng thái | Kết luận |
+|---|---|---|
+| Ordered baseline cho blank apply | Không có | Migration tree không standalone/replayable từ DB trống. |
+| Representative upgrade | Chưa chạy | Không có full controlled Supabase stack và baseline migration. |
+| Backup/sync compatibility trong environment mới | Chưa chạy | H3 client restore evidence không suy rộng thành database/sync migration evidence. |
+| Rollback drill | Chưa chạy | Không làm migration/DDL/rollback trên production hoặc data gia đình. |
 
-H6 cung cấp Portfolio Data Health read-only, deterministic, gồm reason/source/severity/count/link từ canonical transaction health, quote snapshot và backup bookkeeping facts. Unknown vẫn là unknown; không có numeric health score, background repair, forecast hay action đầu tư. Transaction inbox chỉ mở đường chỉnh sửa hiện hữu để owner tự xem quyết định. [3] [7]
+**Trạng thái H5 cuối:** **`BLOCKED — NO ORDERED BASELINE; NO FULL CONTROLLED SUPABASE UPGRADE/ROLLBACK ENVIRONMENT`**.
 
-Yearly Review bổ sung factual calendar-year withdrawals, contribution months và same-year Plan-vs-Reality fact. Household Handoff là aggregate-only, owner-triggered và loại trừ contacts, document locations, account/broker identifiers, transaction rows và portfolio amount. [3] [7]
+## 11. Data Health và UX information architecture: H6
 
-## 12. Dependency, reproducibility và security: H7
+H6 cung cấp Portfolio Data Health read-only, deterministic, gồm reason/source/severity/count/link từ canonical transaction health, quote snapshot và backup bookkeeping facts. Unknown vẫn là unknown; không có numeric health score, background repair, forecast hay action đầu tư. Transaction inbox chỉ mở đường chỉnh sửa hiện hữu để owner tự xem/ra quyết định. [9]
 
-H7 thêm `package-lock.json` v3, đổi test/build/edge/preview/quote workflow sang `npm ci`, exact-pin Playwright 1.62.1 và đồng bộ preview browser image. Các guard regression kiểm tra lockfile/workflow/client-image parity; full local gate, CI PR và main deploy đều đã pass. [1] [2] [8]
+PR #242 chuyển Overview thành compact portfolio-state surface: hero, price, holdings/Sparplan, rhythm, Data Health summary, current goal và yearly review compact; loại bỏ streak/performance dashboard dư thừa. PR #243 chuyển Transactions sang ledger-first: factual summary, Data Quality entry gọn, search, mobile filter sheet, active chips, instrument/status display lens, saved views/PDF disclosure và mobile safe-area clearance. Các thay đổi này không sửa classifier/replay, holdings/cost basis/P&L semantics, quote, Dexie/schema, backup, sync/auth/RLS hay migration. [1] [10] [11]
 
-Static shell có meta CSP và source-level guard từ chối service-role references, dynamic evaluation và raw HTML sinks dưới `src/**`. Đây là defense-in-depth phù hợp với GitHub Pages, **không** thay RLS, penetration test hoặc response-header CSP; `style-src 'unsafe-inline'` vẫn cần cho React inline styles hiện hữu. [3] [8]
+## 12. Dependency, reproducibility và client security: H7–H8
 
-Dependency audit vẫn còn **5 moderate, 1 high và 1 critical advisory**, bao gồm critical Vitest, high Vite và moderate React Router. Các fix tương ứng đòi major-version upgrade trong PR riêng có migration review; tuyệt đối không dùng `npm audit fix --force`. Blocker này tự nó đã ngăn một tuyên bố security-complete. [3] [8]
+H7 thêm `package-lock.json` v3, chuẩn hóa workflow sang `npm ci`, exact-pin Playwright `1.62.1`, đồng bộ browser image và kiểm tra lockfile/workflow/client-image parity. GitHub Actions runtime được cập nhật lên `checkout@v5`, `setup-node@v5`, `upload-artifact@v7` và `download-artifact@v8`, loại bỏ warnings Node 20. [12] [13]
+
+H8 được triển khai qua PR nhỏ độc lập: Vitest security bridge `3.2.6` (PR #236), Vite build ecosystem gồm Vite `8.2.2`, Vitest `4.1.11`, React SWC plugin và PWA plugin (PR #237), rồi React Router `7.18.2` (PR #238). `npm audit --json` ở commit release hiện hành trả về **0 total vulnerabilities**: 0 info, low, moderate, high và critical. Không dùng `npm audit fix --force`. [14] [15] [16]
+
+Static shell có meta CSP; source-level guard từ chối service-role references, dynamic evaluation và raw HTML sinks dưới `src/**`. Đây là defense-in-depth phù hợp static GitHub Pages, không thay RLS behavioral proof, penetration test hoặc HTTP response-header CSP. [12]
 
 ## 13. Known limitations
 
 | Hạn chế | Hệ quả thực tế | Cách vận hành an toàn hiện tại |
 |---|---|---|
-| H4 thiếu behavioral RLS matrix | Không thể independent-verify user isolation production. | Không dùng app như sole authoritative record; giữ broker statements. |
-| H5 thiếu migration reproducibility drill | Không thể chứng minh upgrade path của database/sync bằng controlled environment. | Không đổi schema/migration/importer; giữ portable backup. |
-| Dependency audit critical/high/moderate | Không thể claim security-complete. | Tách major upgrades thành PR review riêng. |
+| H4 thiếu behavioral RLS matrix | Không independent-verify user isolation bằng real auth/API principal. | Không dùng app làm sole authoritative record; giữ broker statements. |
+| H5 thiếu migration reproducibility drill | Không chứng minh upgrade/rollback path của database/sync. | Không đổi schema/migration/importer; giữ portable backup. |
 | Meta CSP trên GitHub Pages | Không có CSP HTTP response header. | Giữ policy meta + guard source; chỉ nâng claim khi có hosting evidence. |
-| Backup local owner-controlled | Export không tự là off-device backup/tamper proof. | Lưu một bản bên ngoài thiết bị và diễn tập restore fixture. |
+| Backup local owner-controlled | Export không tự là off-device backup/tamper proof. | Lưu một bản ngoài thiết bị và diễn tập restore fixture. |
+| Lazy PDF HMR resolution | Vite dev HMR có thể không resolve Lazy PDF importer, dù production build/preview đúng. | Không dùng dev-only error làm release blocker; giữ CI production preview smoke. |
 
 ## 14. Giới hạn P11.2 về thuế
 
-P11.2 về FIFO/Vorabpauschale bị **khóa tuyệt đối trong baseline này** cho đến khi có independent German tax expert review. P11.1 chỉ là UI lot evidence read-only với fixture tổng hợp; không có tax engine, không có FIFO engine, không có Vorabpauschale, không có report để nộp thuế và không có lời khuyên thuế. [9]
+P11.2 về FIFO/Vorabpauschale bị **khóa tuyệt đối** cho đến khi có independent German tax expert review. P11.1 chỉ là UI lot evidence read-only với fixture tổng hợp; không có tax engine, FIFO engine, Vorabpauschale, report nộp thuế hoặc lời khuyên thuế. [17]
 
-Nếu một ngày scope được mở lại, từng pha phải có data manifest, broker evidence/version/date, trạng thái “chưa đủ dữ liệu/không xác định”, negative tests và ADR/migration plan riêng trước khi đụng data/sync/auth/schema. Không được dùng output của release hiện tại cho filing, tính nghĩa vụ thuế hay thay đổi savings plan. [9]
+Nếu scope mở lại, từng pha cần data manifest, broker evidence/version/date, trạng thái “chưa đủ dữ liệu/không xác định”, negative tests và ADR/migration plan riêng trước khi đụng data/sync/auth/schema. Không dùng output release này cho filing, tính nghĩa vụ thuế hay thay đổi savings plan.
 
-## 15. Chính sách bảo trì
+## 15. Chính sách merge và vận hành
 
-Mọi PR tương lai liên quan financial semantics, schema/Dexie, backup compatibility, sync semantics, migration, quote economics hoặc tax scope phải nêu rõ YES/NO, có ADR nếu bất kỳ field nào là YES, nêu rollback strategy và chạy toàn bộ gate. Không cho phép auto-repair, auto conflict resolution, destructive migration hay raw-evidence rewrite dưới dạng “maintenance”. [3]
+Mọi PR liên quan financial semantics, schema/Dexie, backup compatibility, sync semantics, migration, quote economics hoặc tax scope phải nêu rõ YES/NO, có ADR nếu bất kỳ field nào là YES, có rollback strategy và chạy full gates. Không cho phép auto-repair, auto conflict resolution, destructive migration hay raw-evidence rewrite dưới danh nghĩa maintenance. [2]
 
-Cổng tối thiểu trước merge là `test-build`, `edge-smoke` và `preview-smoke`; deploy chạy sau merge vào `main`. Người bảo trì phải kiểm tra `npm test`, ledger benchmark, locale audit, build, bundle budget, release và preview evidence theo runbook. [2] [4]
+Cổng bắt buộc trước merge là `test-build`, `edge-smoke` và `preview-smoke`; deploy chạy sau merge vào `main`. Run #32498319727 của PR #243 trên `main` pass cả ba gates và deploy. Local matrix trước merge #243 đã pass `npm ci`, `npm test`, ledger benchmark 10.000, build/bundle budget, release, preview `14/14` và edge smoke. [1] [4]
 
 ## 16. Chính sách phát triển tương lai
 
-Hướng phát triển chỉ được mở khi không hạ thấp ưu tiên: **correctness → data integrity → recovery → security → compatibility → maintainability → release reliability → UX → new features**. Vòng đời vô thời hạn yêu cầu compatibility được lập kế hoạch qua ADR/migration evidence, thay vì hard-code một ngày kết thúc hoặc thay dữ liệu lịch sử để “dọn sạch”. [3]
+Hướng phát triển chỉ được mở khi không hạ thấp thứ tự ưu tiên: **correctness → data integrity → recovery → security → compatibility → maintainability → release reliability → UX → new features**. Vòng đời vô thời hạn yêu cầu compatibility được lập kế hoạch bằng ADR/migration evidence thay vì hard-code ngày kết thúc hoặc thay dữ liệu lịch sử để “dọn sạch”. [3]
 
-AI không có trong production critical path. Bất cứ proposal AI/API nào phải là opt-in, có consent/data contract/cost/fallback local/negative tests riêng và không được thay quyết định của owner về giao dịch, backup, conflict, đầu tư hoặc thuế. [4]
+AI không có trong production critical path. Bất cứ proposal AI/API nào phải opt-in, có consent/data contract/cost/fallback local/negative tests riêng, và không thay owner quyết định giao dịch, backup, conflict, đầu tư hoặc thuế. [5]
 
 ## 17. Trạng thái baseline ngày 23/08/2026
 
-**Quyết định cuối cùng: `CONDITIONAL — NOT READY` (cho vai trò sole authoritative financial record).** H0–H3, H6 và phần reproducibility/client-boundary của H7 có evidence merge/CI/deploy/production verification; hệ thống được xem là an toàn trong phạm vi **local-first tracker, owner-controlled backup và broker statement độc lập**. [1] [2] [3]
+**Quyết định cuối:** **`CONDITIONAL — NOT READY`** cho vai trò sole authoritative financial record.
 
-Readiness không chuyển thành `SAFE AFTER HARDENING` cho đến khi đồng thời có: (a) H4 User-A/User-B/anonymous behavioral proof trong môi trường disposable, (b) H5 ordered migration + controlled upgrade/rollback proof, (c) major-upgrade remediation cho dependency critical/high/moderate advisories, và (d) bất kỳ tax scope nào chỉ sau independent German tax expert review. Không có blocker nào được bỏ qua chỉ vì CI hiện xanh.
+Baseline v1.6.0 đã đạt tiến bộ cụ thể: dependency audit sạch, release/build/PWA/quote feeds được production-verified; Overview và Transactions có information architecture mobile-first rõ ràng hơn; financial core, sync, backup format, Dexie schema và historical data đều không đổi. Tuy nhiên chính sách quyết định không được hạ chuẩn: **`SAFE AFTER HARDENING` chỉ khả dụng khi đồng thời có H4 behavioral RLS proof và H5 migration reproducibility proof.** Cả hai điều kiện không được chứng minh trong no-cost controlled environment hiện tại; P11.2 vẫn là tax boundary độc lập.
+
+Vì vậy hệ thống phù hợp trong phạm vi **local-first tracker, owner-controlled backup và broker statement độc lập**. Nó chưa được quảng bá là security-complete, RLS-behavioral-verified, migration-reproducible hoặc thay thế hoàn toàn chứng từ broker.
 
 ## References
 
-[1]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/232 "PR #232 — reproducible release baseline"
-[2]: https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/32487088064 "Main H7 CI and GitHub Pages deploy"
-[3]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/HARDENING_IMPLEMENTATION_PLAN.md "H0–H7 implementation evidence and no-go boundaries"
-[4]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/OPERATIONS_RUNBOOK.md "Owner operating, recovery, PWA and release runbook"
-[5]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/H4-RLS-EVIDENCE.md "H4 partial RLS evidence and behavioral-proof blocker"
-[6]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/adr/ADR-H5-provenance-and-migration-discipline.md "H5 provenance and migration discipline"
-[7]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/adr/ADR-H6-data-health-yearly-review-handoff.md "H6 Data Health, Yearly Review and Handoff boundary"
-[8]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/adr/ADR-H7-reproducibility-security-release-baseline.md "H7 reproducibility, client security and dependency-audit boundary"
-[9]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/p11-tax-lot-scope.md "P11 tax/lot scope and German expert review gate"
+[1]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/243 "PR #243 — streamlined transaction ledger filters"
+[2]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/HARDENING_IMPLEMENTATION_PLAN.md "H0–H7 implementation evidence and boundaries"
+[3]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/235 "PR #235 — indefinite product lifecycle wording"
+[4]: https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/32498319727 "Main CI and GitHub Pages deploy after PR #243"
+[5]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/OPERATIONS_RUNBOOK.md "Owner operation, recovery, PWA and release runbook"
+[6]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/H4-RLS-EVIDENCE.md "Existing H4 static RLS evidence"
+[7]: https://supabase.com/docs/guides/local-development "Supabase Local Development & CLI"
+[8]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/supabase/migrations/002_soft_delete_and_triggers.sql "Current migration tree"
+[9]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/231 "PR #231 — factual portfolio data health"
+[10]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/242 "PR #242 — Overview information architecture"
+[11]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/243 "PR #243 — Transactions information architecture"
+[12]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/232 "PR #232 — reproducible release/client security baseline"
+[13]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/241 "PR #241 — GitHub Actions runtime upgrade"
+[14]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/236 "PR #236 — Vitest security bridge"
+[15]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/237 "PR #237 — Vite build ecosystem upgrade"
+[16]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/238 "PR #238 — React Router security baseline"
+[17]: https://github.com/ziegepapa/quy-vwce-cho-be/blob/main/docs/p11-tax-lot-scope.md "P11 tax/lot scope and expert review gate"
