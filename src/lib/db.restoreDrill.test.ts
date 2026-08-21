@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 
 import { beforeEach, describe, expect, it } from "vitest";
+import { APP_RELEASE_VERSION } from "./appVersion";
 import { replayTransactions } from "./calc";
 import { clearAllData, db, exportBackup, importBackup } from "./db";
 import { defaultSettings } from "./defaults";
@@ -15,7 +16,13 @@ import type {
   QuoteSelectionPreference,
   Transaction,
 } from "./types";
-import { VWCE_ISIN } from "./types";
+import {
+  BACKUP_PORTABLE_DOMAINS,
+  BACKUP_SCHEMA_VERSION,
+  DEXIE_DB_VERSION,
+  VWCE_ISIN,
+  type BackupPayload,
+} from "./types";
 
 const T = "2026-08-21T12:00:00.000Z";
 const D = "2026-08-21";
@@ -123,15 +130,24 @@ describe("H3 deterministic synthetic restore drill", () => {
     const exported = await exportBackup();
     const serialised = JSON.parse(JSON.stringify(exported));
 
-    expect(exported.metadata?.recordCounts).toMatchObject({
-      transactions: 8,
-      deletedTransactions: 1,
-      goals: 1,
-      deletedGoals: 1,
-      instruments: 1,
-      quotes: 1,
-      quoteCandidates: 1,
-      quotePreferences: 1,
+    expect(exported.metadata).toEqual({
+      backupSchemaVersion: BACKUP_SCHEMA_VERSION,
+      appReleaseVersion: APP_RELEASE_VERSION,
+      dexieSchemaVersion: DEXIE_DB_VERSION,
+      supportedDomains: [...BACKUP_PORTABLE_DOMAINS],
+      recordCounts: {
+        settings: 1,
+        goals: 1,
+        transactions: 8,
+        annualChecklists: 1,
+        monthlySnapshots: 1,
+        instruments: 1,
+        quotes: 1,
+        quoteCandidates: 1,
+        quotePreferences: 1,
+        deletedGoals: 1,
+        deletedTransactions: 1,
+      },
     });
     expect(before.replay).toMatchObject({
       vwceQty: 3,
@@ -163,5 +179,52 @@ describe("H3 deterministic synthetic restore drill", () => {
     expect(await db.outbox.count()).toBe(0);
     expect(await db.conflicts.count()).toBe(0);
     expect(await db.syncMeta.count()).toBe(0);
+  });
+
+  it.each([
+    ["malformed root", () => null],
+    ["unsupported schema version", (backup: BackupPayload) => ({ ...backup, schemaVersion: 999 })],
+    ["duplicate transaction identity", (backup: BackupPayload) => ({
+      ...backup,
+      metadata: undefined,
+      transactions: [...backup.transactions, { ...backup.transactions[0] }],
+    })],
+    ["invalid portable domain identity", (backup: BackupPayload) => ({
+      ...backup,
+      metadata: undefined,
+      instruments: [{ name: "Synthetic broken instrument", currency: "EUR" }],
+    })],
+    ["incomplete required collection", (backup: BackupPayload) => {
+      const { settings: _settings, ...withoutSettings } = backup;
+      return withoutSettings;
+    }],
+    ["invalid transaction number", (backup: BackupPayload) => ({
+      ...backup,
+      metadata: undefined,
+      transactions: [{ ...backup.transactions[0], amount: Number.NaN }],
+    })],
+    ["conflicting live and deleted transaction", (backup: BackupPayload) => ({
+      ...backup,
+      metadata: undefined,
+      deletedTransactions: [
+        ...(backup.deletedTransactions ?? []),
+        { ...backup.transactions[0], deletedAt: T },
+      ],
+    })],
+    ["metadata record-count inconsistency", (backup: BackupPayload) => ({
+      ...backup,
+      metadata: {
+        ...backup.metadata!,
+        recordCounts: { ...backup.metadata!.recordCounts, transactions: 999 },
+      },
+    })],
+  ])("rejects %s fail-closed without changing the synthetic vault", async (_label, corrupt) => {
+    await seedSyntheticVault();
+    const before = await portableState();
+    const exported = await exportBackup();
+
+    await expect(importBackup(corrupt(exported) as BackupPayload)).rejects.toThrow();
+
+    expect(await portableState()).toEqual(before);
   });
 });
