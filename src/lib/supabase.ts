@@ -12,6 +12,10 @@ export const supabase: SupabaseClient | null = supabaseConfigured
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
+        // AuthProvider registers the recovery-event subscriber before calling
+        // initialize(), so a password-recovery callback cannot emit before the
+        // UI has a listener. This remains the standard Supabase client flow.
+        skipAutoInitialize: true,
         storage: typeof window !== "undefined" ? window.localStorage : undefined,
       },
     })

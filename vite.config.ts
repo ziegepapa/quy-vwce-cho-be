@@ -64,6 +64,10 @@ export default defineConfig({
     environment: "node",
     include: [
       "src/**/*.test.ts",
+      // Post-baseline: root recovery callback, listener-first initialization and
+      // safe invalid-link state must run under jsdom in the normal release gate.
+      "src/lib/auth.recovery.test.ts",
+      "src/pages/Auth.recovery.test.tsx",
       // Giữ contract thị giác demo (màu hiệu suất và card Giá) ngoài TS build.
       "src/styles/demoV10VisualRegression.test.js",
       // PR0: bat dan tung file .test.tsx da doc toan bo source.
