@@ -1,11 +1,14 @@
 import type { Transaction, TxType } from "../lib/types";
 import { resolveInstrumentIsin } from "../lib/instrument";
+import { VWCE_ISIN } from "../lib/types";
 
 export const TRANSACTION_WINDOW_SIZE = 60;
 
 export type TransactionActivity = "all" | "trade" | "funding" | "outflow";
 export type TransactionSort = "newest" | "oldest" | "amount_desc";
 export type TransactionTimeLens = "all" | "this_month" | "last_90_days" | "this_year" | "last_year";
+export type TransactionInstrumentLens = "all" | "vwce" | "other";
+export type TransactionQualityLens = "all" | "normal" | "needs_review";
 
 export type TransactionListFilters = {
   query: string;
@@ -18,6 +21,11 @@ export type TransactionListFilters = {
   today?: string;
   /** Localized type labels make journal search match what the owner sees on screen. */
   typeSearchTerms?: Partial<Record<TxType, string>>;
+  /** Display-only instrument filter; it never changes a transaction's instrument. */
+  instrument?: TransactionInstrumentLens;
+  /** Display-only quality filter supplied by the existing canonical quality audit. */
+  quality?: TransactionQualityLens;
+  qualityTransactionIds?: ReadonlySet<string>;
 };
 
 export type TransactionMonthGroup = {
@@ -71,6 +79,18 @@ function minusDays(isoDate: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function matchesInstrument(tx: Transaction, instrument: TransactionInstrumentLens) {
+  if (instrument === "all") return true;
+  const isin = resolveInstrumentIsin(tx);
+  return instrument === "vwce" ? isin === VWCE_ISIN : Boolean(isin && isin !== VWCE_ISIN);
+}
+
+function matchesQuality(tx: Transaction, quality: TransactionQualityLens, qualityTransactionIds: ReadonlySet<string>) {
+  if (quality === "all") return true;
+  const needsReview = qualityTransactionIds.has(tx.id);
+  return quality === "needs_review" ? needsReview : !needsReview;
+}
+
 function matchesTimeLens(tx: Transaction, lens: TransactionTimeLens, today: string) {
   if (lens === "all") return true;
   const year = today.slice(0, 4);
@@ -93,12 +113,17 @@ export function buildTransactionListWindow(
   const activity = filters.activity ?? "all";
   const sort = filters.sort ?? "newest";
   const timeLens = filters.timeLens ?? "all";
+  const instrument = filters.instrument ?? "all";
+  const quality = filters.quality ?? "all";
+  const qualityTransactionIds = filters.qualityTransactionIds ?? new Set<string>();
   const today = filters.today ?? isoToday();
   const filtered = transactions
     .filter((tx) => {
       if (filters.year !== "all" && !tx.date.startsWith(filters.year)) return false;
       if (filters.type !== "all" && tx.type !== filters.type) return false;
       if (!matchesActivity(tx, activity)) return false;
+      if (!matchesInstrument(tx, instrument)) return false;
+      if (!matchesQuality(tx, quality, qualityTransactionIds)) return false;
       if (!matchesTimeLens(tx, timeLens, today)) return false;
       if (!query) return true;
       const searchable = `${tx.notes} ${tx.type.replaceAll("_", " ")} ${filters.typeSearchTerms?.[tx.type] ?? ""} ${tx.amount} ${resolveInstrumentIsin(tx)}`.toLocaleLowerCase();
