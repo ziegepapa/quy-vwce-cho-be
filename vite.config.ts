@@ -29,7 +29,7 @@ export default defineConfig({
         id: "/quy-vwce-cho-be/",
         name: "Quỹ VWCE cho bé",
         short_name: "VWCE bé",
-        description: "Theo dõi kế hoạch VWCE 2026–2042 offline",
+        description: "Theo dõi kế hoạch VWCE dài hạn; mốc mục tiêu hiện tại là 2042. Dùng được offline.",
         theme_color: "#1e3a5f",
         background_color: "#f4f6fb",
         display: "standalone",
