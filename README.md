@@ -1,42 +1,43 @@
 # Quỹ VWCE cho bé
 
-PWA **local-first** theo dõi kế hoạch đầu tư **Vanguard FTSE All-World UCITS ETF (VWCE, IE00BK5BQT80)** từ **07/2026 → 06/2042**.
+**VWCE Vault** là PWA **local-first** để theo dõi, ghi nhận và mô phỏng kế hoạch đầu tư gia đình với **Vanguard FTSE All-World UCITS ETF (VWCE, ISIN IE00BK5BQT80)**.
 
-- **Local-first:** IndexedDB (Dexie), hỗ trợ offline
-- **Cloud:** Supabase Auth + đồng bộ theo người dùng
-- **Privacy:** không analytics; AI tùy chọn và mặc định tắt
-- **Platform:** tối ưu Safari/iPhone, hỗ trợ PWA
+> **Mốc 2042 chỉ là mục tiêu hiện tại của kế hoạch đầu tư cho bé.** Phần mềm có **vòng đời không xác định** và được thiết kế để tiếp tục sử dụng cho các mục tiêu, năm và kế hoạch trong tương lai.
 
 ## Production
 
 **https://ziegepapa.github.io/quy-vwce-cho-be/**
 
-## Chức năng
+## Tính năng chính
 
-- **Tổng quan:** tài sản, vốn, lãi/lỗ, tiến độ mục tiêu
-- **Giao dịch:** mua/bán VWCE, cash, phí, thuế
-- **Mục tiêu:** các mốc 2038 / 2039 / 2042, lạm phát và buffer
-- **Mô phỏng:** kịch bản 3% / 5% / 7%
-- **Cài đặt:** giá VWCE, checklist, backup/restore, PWA
-- **Hồ sơ khẩn cấp:** thông tin dành cho người thân
+- **Tổng quan:** giá trị danh mục, vốn đóng, lãi/lỗ và trạng thái kế hoạch.
+- **Giao dịch:** mua/bán VWCE, cash, phí, thuế được ghi nhận và lịch sử giao dịch.
+- **Mục tiêu:** ngày mục tiêu, thời gian còn lại, lạm phát và các thông số kế hoạch.
+- **Mô phỏng:** các kịch bản lợi suất và dòng tiền theo giả định.
+- **Cài đặt:** giá VWCE, checklist, backup/restore và PWA.
+- **Hồ sơ khẩn cấp:** thông tin hỗ trợ người thân khi cần tiếp quản.
 
-## Công nghệ
+## Kiến trúc
 
-React · TypeScript · Vite · Dexie · Supabase · Vitest · Playwright · GitHub Actions · GitHub Pages
+- **Local-first:** IndexedDB/Dexie là lớp dữ liệu chính và hoạt động offline.
+- **Cloud:** Supabase Auth + đồng bộ theo từng người dùng khi bật cloud.
+- **PWA:** tối ưu Safari/iPhone và có thể cài lên Màn hình chính.
+- **Privacy:** không analytics; không đưa secret vào frontend.
+- **Financial core:** transaction classifier, deterministic replay, validation và legacy quarantine.
 
 ```text
-src/lib/       logic, IndexedDB, sync, Trace, types
-src/pages/     UI, auth, onboarding
-scripts/       price feed, icons, release/production checks
-supabase/      Edge Function AI tùy chọn
+src/lib/       logic, IndexedDB, financial calculations, sync, types
+src/pages/     application UI, auth, onboarding
+scripts/       price feeds, icons, release/production checks
+supabase/      auth/database/optional legacy Edge Function
 ```
 
-## Phát triển
+## Phát triển local
 
 Yêu cầu **Node.js 22+**.
 
 ```bash
-npm install
+npm ci
 npm run dev
 npm test
 npm run build
@@ -51,23 +52,27 @@ npm run build
 npm run test:preview
 ```
 
-Frontend config nằm trong `.env.example`. **Không** đưa provider key hoặc secret vào `VITE_*` hay source code.
+Frontend configuration nằm trong `.env.example`.
+
+**Không** đưa service-role key, provider key, password hoặc secret vào `VITE_*`, PWA, bundle, backup, diagnostics hay repository.
 
 ## CI / Deploy
 
-Push lên `main` chạy workflow **Test and Deploy**: unit tests, TypeScript/build, release checks, price feeds, Edge Function smoke test và Playwright. GitHub Pages chỉ deploy khi các cổng kiểm tra đạt.
+Push lên `main` chạy các quality gates của project, gồm test, TypeScript/build, release verification, price-feed checks, smoke tests và Playwright. GitHub Pages chỉ deploy sau khi các cổng bắt buộc đạt.
 
-**Production Health** chạy hằng ngày để kiểm tra PWA, service worker, shell và price feeds.
+**Production Health** kiểm tra định kỳ shell, PWA/service worker và price feeds.
 
 ## PWA trên iPhone
 
-Mở production bằng **Safari → Chia sẻ → Thêm vào Màn hình chính**. App hỗ trợ offline sau lần tải đầu.
+Mở production bằng **Safari → Chia sẻ → Thêm vào Màn hình chính**.
 
-## Backup / restore
+## Backup / Restore
 
-- **JSON:** Cài đặt → Xuất/Nhập JSON
-- **CSV:** xuất giao dịch UTF-8, tương thích Excel
-- Backup do owner tự lưu và tự chịu trách nhiệm. Recovery drill nên thực hiện bằng fixture tổng hợp theo [`runbook`](./docs/OPERATIONS_RUNBOOK.md), không dùng backup gia đình thật.
+- **JSON:** xuất/nhập từ Cài đặt.
+- **CSV:** xuất giao dịch dạng UTF-8, phù hợp Excel.
+- Backup do owner tự lưu tại nơi mình kiểm soát.
+- Recovery drill chỉ dùng **fixture tổng hợp**, không dùng backup gia đình thật để thử lỗi.
+- Quy trình vận hành: [`docs/OPERATIONS_RUNBOOK.md`](./docs/OPERATIONS_RUNBOOK.md).
 
 ## Quy ước dòng tiền
 
@@ -75,28 +80,49 @@ Mở production bằng **Safari → Chia sẻ → Thêm vào Màn hình chính**
 |---|---:|---:|
 | `cash_in` | + | + |
 | `cash_out` | − | tăng phần đã rút |
-| `buy_vwce` | − toàn bộ | — |
+| `buy_vwce` | − toàn bộ thanh toán | — |
 | `sell_vwce` | + sau phí/thuế | — |
 | `fee` / `tax` | − | — |
 | `safe_interest` | + | — |
 | `adjust` | ±, bắt buộc ghi chú | — |
 
-Giá vốn bình quân chỉ dùng theo dõi nội bộ. App **không** tính Vorabpauschale, tax lot/FIFO reconciliation hoặc kết quả khai thuế. Đây là discovery riêng, chỉ triển khai sau khi có nguồn dữ liệu và kiểm tra chuyên gia thuế Đức.
+**Financial safety:** giao dịch mới được phân loại `accepted / incomplete / invalid`; oversell và economics không hợp lệ không được tạo hiệu ứng tài chính; replay theo thứ tự xác định và legacy unsafe rows có thể bị quarantine khi replay.
+
+## Thuế
+
+Giá vốn bình quân chỉ dùng để theo dõi nội bộ. Ứng dụng **không phải phần mềm khai thuế Đức** và hiện không triển khai:
+
+- FIFO / tax-lot reconciliation;
+- Vorabpauschale;
+- tax optimization;
+- tax advice.
+
+Mọi mở rộng về thuế phải có nguồn dữ liệu phù hợp và **independent German tax-expert review** trước khi triển khai.
 
 ## AI Trace
 
-Không có AI UI trong production. AI Trace legacy còn tồn tại trong source nhưng không được runtime gọi; deterministic Trace chạy cục bộ, không gọi mạng. Việc retire legacy được xử lý riêng bằng ADR/PR.
+Không có AI UI trên production critical path. Legacy AI/Trace code có thể vẫn tồn tại trong repository nhưng không phải thành phần bắt buộc để ứng dụng hoạt động; deterministic explanations chạy cục bộ, không gọi mạng.
 
 ## Bảo mật & quyền riêng tư
 
-`VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY` là public client configuration. Service-role key, provider key và credential riêng **không được phép** xuất hiện trong PWA, bundle, backup, diagnostics hoặc repository.
+`VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY` là public client configuration. RLS được thiết kế theo user/owner boundary; production policy và security evidence phải được xác minh theo runbook.
 
-RLS được thiết kế theo user; production policy phải được xác minh theo [`OPERATIONS_RUNBOOK`](./docs/OPERATIONS_RUNBOOK.md).
+Không dùng production financial data cho test fixtures hoặc recovery drills.
+
+## Trạng thái hiện tại
+
+**Readiness: `CONDITIONAL — NOT READY`** cho vai trò **sổ cái tài chính duy nhất có thẩm quyền tuyệt đối**.
+
+Ứng dụng vẫn phù hợp để sử dụng như **local-first family investment tracker**, cùng với backup do owner kiểm soát và **sao kê/chứng từ broker độc lập**.
+
+Một số evidence về security/migration và các hạng mục dependency có thể vẫn cần hoàn thiện trước khi nâng mức readiness. Đây là limitation của readiness hiện tại, **không phải giới hạn vòng đời phần mềm**.
+
+## Nguyên tắc dự án
+
+`Correctness > Data integrity > Recovery > Security > Compatibility > Maintainability > UX > New features`
+
+VWCE Vault được xây dựng cho **sử dụng dài hạn vô thời hạn**. Mốc mục tiêu của một kế hoạch cụ thể có thể thay đổi; phần mềm, dữ liệu lịch sử và schema phải tiếp tục có khả năng bảo trì và nâng cấp trong tương lai.
 
 ## Miễn trừ
 
-Ứng dụng chỉ để **theo dõi và mô phỏng**. Không phải tư vấn đầu tư, tư vấn thuế và không cam kết lợi nhuận.
-
-## Trạng thái
-
-Core web, Simulation, PWA, backup/restore, price pipeline, CI và production monitoring đã có automated checks. AI Trace legacy không nằm trên đường vận hành cốt lõi.
+VWCE Vault chỉ hỗ trợ **theo dõi, ghi nhận và mô phỏng**. Đây không phải tư vấn đầu tư, tư vấn thuế và không cam kết lợi nhuận.
