@@ -1,5 +1,5 @@
-import type { BackupPayload } from "./types";
-import { BACKUP_SCHEMA_VERSION } from "./types";
+import type { BackupPayload, BackupPortableDomain } from "./types";
+import { BACKUP_PORTABLE_DOMAINS, BACKUP_SCHEMA_VERSION } from "./types";
 import { classifyTransaction, validateTransactionNumbers } from "./transactionValidation";
 
 const REQUIRED_ARRAY_FIELDS = [
@@ -17,12 +17,93 @@ const OPTIONAL_ARRAY_FIELDS = [
   "quotePreferences",
 ] as const;
 
+const IDENTITY_FIELDS = {
+  settings: "id",
+  goals: "id",
+  transactions: "id",
+  annualChecklists: "id",
+  monthlySnapshots: "id",
+  instruments: "isin",
+  quotes: "id",
+  quoteCandidates: "id",
+  quotePreferences: "id",
+  deletedGoals: "id",
+  deletedTransactions: "id",
+} as const;
+
 export type BackupPayloadValidation =
   | { ok: true; payload: BackupPayload }
   | { ok: false; error: string };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function metadataError(message: string): BackupPayloadValidation {
+  return { ok: false, error: `Backup metadata không hợp lệ: ${message}` };
+}
+
+/**
+ * H3 metadata is additive. When present, it is checked before restore clears
+ * any table; when absent, backups emitted before H3 remain fully compatible.
+ */
+function validateCollectionIdentities(value: Record<string, unknown>): BackupPayloadValidation | null {
+  for (const [collection, identityField] of Object.entries(IDENTITY_FIELDS)) {
+    const rows = value[collection];
+    if (rows === undefined) continue;
+    if (!Array.isArray(rows)) continue; // Required/optional array guards own this message.
+    const identities = new Set<string>();
+    for (const [index, row] of rows.entries()) {
+      if (!isRecord(row) || typeof row[identityField] !== "string" || !row[identityField].trim()) {
+        return { ok: false, error: `Backup ${collection}[${index}] thiếu ${identityField}` };
+      }
+      const identity = row[identityField];
+      if (identities.has(identity)) {
+        return { ok: false, error: `Backup ${collection}: ${identityField} trùng: ${identity}` };
+      }
+      identities.add(identity);
+    }
+  }
+  return null;
+}
+
+function validateBackupMetadata(value: Record<string, unknown>): BackupPayloadValidation | null {
+  const metadata = value.metadata;
+  if (metadata === undefined) return null;
+  if (!isRecord(metadata)) return metadataError("metadata");
+  if (metadata.backupSchemaVersion !== value.schemaVersion) {
+    return metadataError("backupSchemaVersion không khớp schemaVersion");
+  }
+  if (typeof metadata.appReleaseVersion !== "string" || !metadata.appReleaseVersion.trim()) {
+    return metadataError("appReleaseVersion");
+  }
+  if (
+    typeof metadata.dexieSchemaVersion !== "number" ||
+    !Number.isSafeInteger(metadata.dexieSchemaVersion) ||
+    metadata.dexieSchemaVersion < 1
+  ) {
+    return metadataError("dexieSchemaVersion");
+  }
+  if (!Array.isArray(metadata.supportedDomains)) return metadataError("supportedDomains");
+  const supportedDomains = new Set(metadata.supportedDomains);
+  if (
+    supportedDomains.size !== BACKUP_PORTABLE_DOMAINS.length ||
+    metadata.supportedDomains.length !== BACKUP_PORTABLE_DOMAINS.length ||
+    BACKUP_PORTABLE_DOMAINS.some((domain) => !supportedDomains.has(domain))
+  ) {
+    return metadataError("supportedDomains");
+  }
+  if (!isRecord(metadata.recordCounts)) return metadataError("recordCounts");
+  for (const domain of BACKUP_PORTABLE_DOMAINS) {
+    const count = metadata.recordCounts[domain];
+    if (typeof count !== "number" || !Number.isSafeInteger(count) || count < 0) {
+      return metadataError(`recordCounts.${domain}`);
+    }
+    const rows = value[domain as BackupPortableDomain];
+    const actual = Array.isArray(rows) ? rows.length : 0;
+    if (count !== actual) return metadataError(`recordCounts.${domain} không khớp payload`);
+  }
+  return null;
 }
 
 /**
@@ -91,6 +172,12 @@ export function validateBackupPayload(value: unknown): BackupPayloadValidation {
       error: `Backup c\u00f3 tr\u01b0\u1eddng kh\u00f4ng h\u1ee3p l\u1ec7: ${invalidOptional.join(", ")}`,
     };
   }
+
+  const identityValidation = validateCollectionIdentities(value);
+  if (identityValidation) return identityValidation;
+
+  const metadataValidation = validateBackupMetadata(value);
+  if (metadataValidation) return metadataValidation;
 
   for (const [index, transaction] of (value.transactions as unknown[]).entries()) {
     const validation = validateTransactionNumbers(transaction);

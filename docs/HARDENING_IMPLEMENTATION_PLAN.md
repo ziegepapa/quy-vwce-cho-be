@@ -99,6 +99,20 @@ The single canonical classifier in `src/lib/transactionValidation.ts` assigns ev
 | H2 silently becomes a schema migration | High | It increases backup/sync/recovery risk. | No new field or Dexie bump unless a separate ADR/migration PR explicitly approved. |
 | Performance regression on large transaction history | Medium | Validation during replay could affect UI responsiveness. | Pure function benchmark at 1k/10k fixture scale and current ledger benchmark gate. |
 
+## H3 — Backup integrity and deterministic restore drill (implemented)
+
+H3 extends the existing v1–v4 backup contract without changing its compatibility namespace. New exports retain `schemaVersion: 4` and add optional descriptive metadata for backup schema, canonical app release, Dexie version label, portable domain allowlist and exact record counts. Existing backups without metadata remain valid. If metadata is present but internally inconsistent, import fails before the existing destructive restore path is entered.
+
+| H3 boundary | Implemented contract | Compatibility / safety limit |
+|---|---|---|
+| Export metadata | Uses `package.json`-derived `APP_RELEASE_VERSION`; keeps app, backup and Dexie version namespaces separate; reports portable domain counts. | Metadata does not gate app/Dexie compatibility and does not bump any schema version. |
+| Import preflight | Validates metadata shape, schema-label agreement, fixed domain allowlist and exact payload counts before restore. | This detects inconsistency/truncation only; it is not a cryptographic checksum, signature, source proof or tamper guarantee. |
+| Legacy files | v1–v4 files emitted before H3 omit `metadata` and remain readable. | No historical file is rewritten or automatically enriched. |
+| Synthetic restore drill | Exercises calculate → export → JSON boundary → wipe → import → reopen → replay → compare with settings, goals, snapshots, instruments, quote evidence/candidates/preferences, live/tombstone transactions and a finite quarantined legacy row. | Fixture only; no owner vault or family backup is read. |
+| Existing recovery gates | Pending-sync/conflict import block, safety-export UI, fail-before-clear and atomic tombstone behavior remain covered. | H3 does not alter outbox, conflicts, syncMeta or conflict-resolution semantics. |
+
+**H3 compatibility statement.** No Dexie migration, Supabase migration, backup schema bump, historical-data rewrite, raw-evidence repair, tax calculation or transaction semantic change is introduced. H2-B remains the sole classifier/replay contract. Rollback is a code revert; a backup emitted with optional metadata remains readable by pre-H3 parsers because its required v4 payload fields and `schemaVersion` are unchanged.
+
 ## PR contract template
 
 Every H1–H7 PR description must state the following fields exactly: purpose, narrow scope, files changed, **financial semantics changed (YES/NO)**, schema changed (YES/NO), backup compatibility changed (YES/NO), sync semantics changed (YES/NO), migration required (YES/NO), tests added, tests passed, rollback strategy and known limitations.

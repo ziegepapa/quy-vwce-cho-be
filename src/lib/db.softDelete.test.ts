@@ -203,6 +203,9 @@ describe("A3 soft delete", () => {
     // Simulate an old backup that still embedded tombstones.
     const dirtyPayload = await exportBackup();
     dirtyPayload.schemaVersion = 3;
+    // This fixture represents a file emitted before H3; metadata did not exist
+    // then and must not be carried across a hand-edited schema simulation.
+    delete dirtyPayload.metadata;
     dirtyPayload.settings = [
       minimalSettings({ depotStatements: [live, dead] }),
     ];

@@ -1,5 +1,6 @@
-import type { AppSettings, BackupPayload } from "./types";
-import { BACKUP_SCHEMA_VERSION } from "./types";
+import type { AppSettings, BackupPayload, BackupPortableDomain } from "./types";
+import { BACKUP_PORTABLE_DOMAINS, BACKUP_SCHEMA_VERSION, DEXIE_DB_VERSION } from "./types";
+import { APP_RELEASE_VERSION } from "./appVersion";
 import { nowIso } from "./defaults";
 import { db } from "./db.m01a";
 
@@ -40,6 +41,19 @@ export async function exportBackup(): Promise<BackupPayload> {
   // restore the deletion intent and re-enqueue the server-side delete.
   const deletedGoals = goalsAll.filter((g) => !isLive(g));
   const deletedTransactions = transactionsAll.filter((t) => !isLive(t));
+  const recordCounts: Record<BackupPortableDomain, number> = {
+    settings: settings.length,
+    goals: goals.length,
+    transactions: transactions.length,
+    annualChecklists: annualChecklists.length,
+    monthlySnapshots: monthlySnapshots.length,
+    instruments: instruments.length,
+    quotes: quotes.length,
+    quoteCandidates: quoteCandidates.length,
+    quotePreferences: quotePreferences.length,
+    deletedGoals: deletedGoals.length,
+    deletedTransactions: deletedTransactions.length,
+  };
   const exportedAt = nowIso();
   const payload: BackupPayload = {
     schemaVersion: BACKUP_SCHEMA_VERSION,
@@ -55,6 +69,13 @@ export async function exportBackup(): Promise<BackupPayload> {
     quotePreferences,
     deletedGoals,
     deletedTransactions,
+    metadata: {
+      backupSchemaVersion: BACKUP_SCHEMA_VERSION,
+      appReleaseVersion: APP_RELEASE_VERSION,
+      dexieSchemaVersion: DEXIE_DB_VERSION,
+      supportedDomains: [...BACKUP_PORTABLE_DOMAINS],
+      recordCounts,
+    },
   };
 
   const meta = await db.appMetadata.get("meta");

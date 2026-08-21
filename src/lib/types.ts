@@ -250,6 +250,37 @@ export type MonthlySnapshot = {
   contributed: number; withdrawn: number; createdAt: string; updatedAt: string;
 };
 export type AppMetadata = { id: string; schemaVersion: number; lastBackupAt: string; createdAt: string; updatedAt: string };
+
+/** Portable business domains included in a v4 backup snapshot. */
+export const BACKUP_PORTABLE_DOMAINS = [
+  "settings",
+  "goals",
+  "transactions",
+  "annualChecklists",
+  "monthlySnapshots",
+  "instruments",
+  "quotes",
+  "quoteCandidates",
+  "quotePreferences",
+  "deletedGoals",
+  "deletedTransactions",
+] as const;
+export type BackupPortableDomain = typeof BACKUP_PORTABLE_DOMAINS[number];
+
+/**
+ * Additive snapshot-description fields introduced by H3.
+ * This is not a cryptographic checksum, proof of origin, or restore gate for
+ * the app/Dexie version. The top-level schemaVersion remains authoritative for
+ * format compatibility.
+ */
+export type BackupMetadata = {
+  backupSchemaVersion: number;
+  appReleaseVersion: string;
+  dexieSchemaVersion: number;
+  supportedDomains: BackupPortableDomain[];
+  recordCounts: Record<BackupPortableDomain, number>;
+};
+
 export type BackupPayload = {
   schemaVersion: number; exportedAt: string; settings: AppSettings[]; goals: Goal[];
   transactions: Transaction[]; annualChecklists: AnnualChecklist[]; monthlySnapshots: MonthlySnapshot[];
@@ -260,6 +291,8 @@ export type BackupPayload = {
   /** DELETE-TOMBSTONE-BACKUP-001-b (v4): soft-deleted rows carried across backups. */
   deletedGoals?: Goal[];
   deletedTransactions?: Transaction[];
+  /** Optional so backups emitted before H3 remain readable. */
+  metadata?: BackupMetadata;
 };
 
 export const BACKUP_SCHEMA_VERSION = 4;
