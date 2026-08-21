@@ -113,6 +113,19 @@ H3 extends the existing v1–v4 backup contract without changing its compatibili
 
 **H3 compatibility statement.** No Dexie migration, Supabase migration, backup schema bump, historical-data rewrite, raw-evidence repair, tax calculation or transaction semantic change is introduced. H2-B remains the sole classifier/replay contract. Rollback is a code revert; a backup emitted with optional metadata remains readable by pre-H3 parsers because its required v4 payload fields and `schemaVersion` are unchanged.
 
+## H4 — RLS and auth boundary (partial evidence; not closed)
+
+The repository and a read-only controlled-project catalog inspection confirm enabled RLS and authenticated owner-only policy definitions for all current sync collections. This is useful production policy evidence but is **not** behavioral proof: no User-A/User-B/anonymous token matrix has been executed. The owner chose not to create a paid Supabase development branch and production family data must not be used as a test fixture.
+
+| H4 evidence | Status | Readiness consequence |
+|---|---|---|
+| RLS enabled and owner-only policy catalog | Verified read-only. | Supports the intended boundary but does not close H4. |
+| Frontend service-role/secret static scan | No matching TypeScript/TSX surface found. | Supports source boundary only. |
+| User-A/User-B/anonymous behavioral matrix | **Blocked.** | No claim that production RLS is behavioral-verified. |
+| Sync conflict/tombstone behavior | Preserved by existing contracts/tests. | H4 introduces no auto-merge or mutation workaround. |
+
+See [`H4-RLS-EVIDENCE.md`](./H4-RLS-EVIDENCE.md) for the safe evidence boundary and reopening conditions. A no-cost decision is a valid blocker; it must remain visible in final readiness rather than being bypassed with production test data or administrative-role simulation.
+
 ## PR contract template
 
 Every H1–H7 PR description must state the following fields exactly: purpose, narrow scope, files changed, **financial semantics changed (YES/NO)**, schema changed (YES/NO), backup compatibility changed (YES/NO), sync semantics changed (YES/NO), migration required (YES/NO), tests added, tests passed, rollback strategy and known limitations.
