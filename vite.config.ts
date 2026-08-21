@@ -1,8 +1,8 @@
 /// <reference types="vitest" />
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react-swc";
 import { VitePWA } from "vite-plugin-pwa";
-import appPackage from "./package.json";
+import appPackage from "./package.json" with { type: "json" };
 
 const appReleaseVersion = appPackage.version;
 

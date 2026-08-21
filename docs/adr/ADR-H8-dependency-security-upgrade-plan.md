@@ -17,9 +17,13 @@ Thực hiện theo thứ tự **Vitest security bridge → Vite + Vitest 4 peer-
 | PR độc lập | Dependency hiện tại | Target audit | Mục tiêu và rủi ro chính |
 |---|---:|---:|---|
 | H8.1 | Vitest `2.1.8` | `3.2.6` | Security bridge loại critical test-server advisory (`<3.2.6`) mà không kéo Vite major; kiểm tra config, mock, fake IndexedDB, DOM test và scripts dùng `vite-node`. |
-| H8.2 | Vite `5.4.11` + Vitest `3.2.6` | Vite `8.2.2` + Vitest `4.1.11` | Loại Vite/esbuild advisory và hoàn tất target Vitest 4; hai package nằm trong một PR duy nhất vì Vitest 4 yêu cầu Vite `^6 || ^7 || ^8`. Kiểm tra build, plugin React, PWA/Workbox, artifact, base path và bundle. |
+| H8.2 | Vite `5.4.11`, Vitest `3.2.6`, React plugin 4, PWA plugin `0.21.1` | Vite `8.2.2`, Vitest `4.1.11`, React SWC plugin `4.3.3`, PWA plugin `1.3.0`, direct `vite-node` `6.0.0` | Loại Vite/esbuild advisory và hoàn tất target Vitest 4. Vitest 4 yêu cầu Vite `^6 || ^7 || ^8`; PWA plugin cũ chỉ hỗ trợ đến Vite 6; Vitest 4 không còn cung cấp executable `vite-node` transitively cho benchmark. Kiểm tra build, React transform, PWA/Workbox, artifact, base path và bundle. |
 | H8.3 | React Router DOM `6.28.0` | `7.18.2` | Loại router advisory; kiểm tra deep-link, `NavLink`, navigation state, locale và installed-PWA route boot. |
 | H8.4 | GitHub Actions runtime | Chỉ action cần thiết | Loại cảnh báo Node-runtime mà không đổi permissions, secrets, branch publish hoặc deploy flow. |
+
+## React transform compatibility
+
+Vite 8 yêu cầu React plugin mới. `@vitejs/plugin-react` 6 là plugin Babel chính thức nhưng npm không peer-resolve sạch với Workbox/Babel 7 hiện hữu: optional Rolldown Babel peer dẫn tới yêu cầu Babel 8 release candidate. Không dùng `--force`, `--legacy-peer-deps` hoặc Babel prerelease để che resolution conflict. H8.2 dùng `@vitejs/plugin-react-swc` 4.3.3, official Vite React transform plugin có peer range hỗ trợ Vite 8; config chỉ đổi import plugin, còn JSX/application semantics không đổi. Preview giữ warning hiệu năng từ plugin về việc không có SWC plugin bổ sung; warning này không phải lỗi build/runtime và được ghi nhận để xem xét sau security baseline, không tự ý đưa Babel prerelease vào release.
 
 ## Breaking-change handling
 
@@ -37,7 +41,7 @@ Mỗi upgrade bắt đầu từ changelog/release note chính thức của packa
 | Production | Sau merge CI green/deploy, chạy `npm run verify:production`; kiểm tra version, shell PWA và quote feed. |
 | Audit | Lưu output `npm audit` trước/sau; không gọi advisory đã được giải quyết là “fixed” nếu audit còn báo nó. |
 
-H8.2 bổ sung kiểm tra VitePWA manifest/workbox, GitHub Pages `base`, deep-link fallback, public assets, CSP meta và Vitest 4 peer compatibility. H8.3 bổ sung direct URL test cho bốn route chính cùng overlay/modal focus; không mở thêm route hay redesign navigation architecture. H8.1 phải kiểm tra environment Node/jsdom, test include patterns, `vite-node` benchmark và Playwright integration không bị drift.
+H8.2 bổ sung kiểm tra VitePWA manifest/workbox, GitHub Pages `base`, deep-link fallback, public assets, CSP meta, Vitest 4 peer compatibility và direct `vite-node` benchmark executable. H8.3 bổ sung direct URL test cho bốn route chính cùng overlay/modal focus; không mở thêm route hay redesign navigation architecture. H8.1 phải kiểm tra environment Node/jsdom, test include patterns, `vite-node` benchmark và Playwright integration không bị drift.
 
 ## Rollback
 
