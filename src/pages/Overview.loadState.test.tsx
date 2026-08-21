@@ -124,57 +124,43 @@ describe("Overview German locale", () => {
     renderGermanOverview();
 
     expect(await screen.findByText("VWCE-Kurs")).toBeTruthy();
-    expect(screen.getAllByText("Beitragsmonate").length).toBeGreaterThan(1);
     expect(screen.getByText("Anteile")).toBeTruthy();
-    expect(screen.getByText("Einzahlungsserie")).toBeTruthy();
-    expect(screen.getAllByText("Nächste Rate").length).toBeGreaterThan(1);
-    expect(screen.getByText("Portfolio-Performance")).toBeTruthy();
-    expect(screen.getByText("Portfolio-Check")).toBeTruthy();
+    expect(screen.getAllByText("Sparplan").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Portfoliorhythmus")).toBeTruthy();
     expect(screen.getByLabelText("Datenstatus")).toBeTruthy();
-    expect(screen.getAllByText("Hinweis").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Plan und Realität")).toBeTruthy();
-    expect(screen.getByText("Sparplan bis heute")).toBeTruthy();
+    expect(screen.getByLabelText("Aktueller Langfristplan")).toBeTruthy();
+    expect(screen.getByText(/Zieltermin:/)).toBeTruthy();
     expect(screen.getByLabelText("Jahresrückblick")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Bericht exportieren" })).toBeTruthy();
-    expect(screen.getAllByText("Aufmerksamkeit").length).toBeGreaterThan(1);
-    expect(screen.getAllByText("Einzahlungen").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Noch nicht bewertbar").length).toBeGreaterThan(0);
-    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Gần nhất|Hiệu suất danh mục|Vốn góp|Lãi|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Tình trạng dữ liệu|Không có mục dữ liệu cần chú ý|Kế hoạch & thực tế|Sparplan đến nay|Đã ghi nhận|Tổng kết năm|Xuất báo cáo|Chưa lưu chuỗi giá/);
+    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Hiệu suất danh mục|Vốn góp|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Tình trạng dữ liệu|Kế hoạch dài hạn hiện tại|Tổng kết năm|Xuất báo cáo/);
   });
 });
 
 describe("Overview demo v10 hierarchy", () => {
-  it("renders the complete five-block hierarchy with empty-state geometry", async () => {
+  it("renders a calm portfolio-state hierarchy without duplicating the transaction dashboard", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
 
     const { container } = renderOverview();
 
     await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
     expect(container.querySelector(".gl.hero .hero-flex .hero-left .h-eye")).toBeTruthy();
-    expect(container.querySelector(".gl.hero .hero-flex .hero-ring .hr-shell .hr-svg")).toBeTruthy();
-    expect(container.querySelector(".gl.hero .hero-flex .hero-ring .hr-shell .hr-center")).toBeTruthy();
     expect(container.querySelector(".price-row .pr-left .pr-label")).toBeTruthy();
     expect(container.querySelector(".combo-row .cr-item .cr-lbl")).toBeTruthy();
-    expect(container.querySelector(".streak-card .sc-top .sc-left")).toBeTruthy();
-    expect(container.querySelector(".streak-card .sc-dots")).toBeTruthy();
     expect(container.querySelector(".heartbeat-card .heartbeat-grid")).toBeTruthy();
-    expect(container.querySelector(".data-health-card")).toBeTruthy();
-    expect(container.querySelector(".plan-reality-card .plan-reality-grid")).toBeTruthy();
-    expect(container.querySelector(".year-review-card .year-review-grid")).toBeTruthy();
-    expect(container.querySelector(".perf-card .perf-top")).toBeTruthy();
-    expect(container.querySelector(".perf-card .perf-bar-track")).toBeTruthy();
-    expect(container.querySelector(".perf-card .perf-legend")).toBeTruthy();
-    expect(container.querySelector(".perf-card .perf-detail")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Thu gọn/ }).getAttribute("aria-expanded")).toBe("true");
+    expect(container.querySelector(".data-health-card .data-health-summary")).toBeTruthy();
+    expect(container.querySelector(".data-health-list")).toBeNull();
+    expect(container.querySelector(".plan-reality-card .overview-goal-title")).toBeTruthy();
+    expect(container.querySelector(".year-review-card .year-review-compact")).toBeTruthy();
+    expect(container.querySelectorAll(".year-review-compact > div")).toHaveLength(2);
+    expect(container.querySelector(".streak-card")).toBeNull();
+    expect(container.querySelector(".perf-card")).toBeNull();
     expect(container.querySelector(".cr-am")?.textContent).toContain("100,00");
     expect(container.querySelector(".cr-am")?.textContent).toContain("/th");
-    expect(container.querySelector(".perf-card")?.getAttribute("data-performance-state")).toBe("unavailable");
-    expect(container.querySelector(".perf-bar-gain")).toBeNull();
-    expect(container.querySelector(".perf-bar-loss")).toBeNull();
-    expect(container.querySelector(".sparkline-svg path")).toBeNull();
+    expect(container.querySelector(".heartbeat-value.performance")?.textContent).toBe("Chưa định giá");
   });
 
-  it("binds streak and portfolio values without inventing a PnL badge", async () => {
+  it("binds the current portfolio value without inventing a PnL badge or contribution streak", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([cashIn("tx-cash-1", "2026-08-01", 1000)]);
 
@@ -183,11 +169,11 @@ describe("Overview demo v10 hierarchy", () => {
     await waitFor(() => expect(container.querySelector(".hero")).toBeTruthy());
     expect(container.querySelector(".h-num")?.textContent?.trim()).not.toBe("");
     expect(container.querySelector(".h-row .bdg")?.textContent?.trim()).toBe("—");
-    expect(container.querySelector(".hr-pct")?.textContent?.trim()).toBe("1");
-    expect(container.querySelectorAll(".sc-dots .dot.done")).toHaveLength(1);
+    expect(container.querySelector(".hero-ring")).toBeNull();
+    expect(container.querySelector(".streak-card")).toBeNull();
   });
 
-  it("renders factual Data Health with reason, source, severity and existing review links", async () => {
+  it("renders one compact Data Health summary that links to the existing review surface", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-health", "2026-08-01")]);
     dbMocks.listQuotes.mockResolvedValue([{ id: "quote-health", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
@@ -196,11 +182,11 @@ describe("Overview demo v10 hierarchy", () => {
 
     await waitFor(() => expect(container.querySelector(".data-health-card")).toBeTruthy());
     expect(screen.getByLabelText("Tình trạng dữ liệu")).toBeTruthy();
-    expect(screen.getByText("Sổ giao dịch")).toBeTruthy();
-    expect(screen.getByText("Metadata backup")).toBeTruthy();
-    expect(screen.getByText("Gợi ý")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Chưa ghi nhận lần xuất backup/ }).getAttribute("href")).toBe("#/settings");
-    expect(container.querySelector(".data-health-card a[href='#/transactions']")?.textContent).toContain("1 giao dịch cần rà soát");
+    expect(container.querySelectorAll(".data-health-card a")).toHaveLength(1);
+    const healthLink = container.querySelector<HTMLAnchorElement>(".data-health-card a");
+    expect(healthLink?.getAttribute("href")).toBe("#/settings");
+    expect(healthLink?.textContent).toContain("2 mục dữ liệu cần rà soát");
+    expect(container.querySelector(".data-health-list")).toBeNull();
   });
 
   it("routes a data-quality attention signal to the existing transaction review workflow", async () => {
@@ -221,54 +207,47 @@ describe("Overview demo v10 hierarchy", () => {
     const { container } = renderOverview();
 
     await waitFor(() => expect(container.querySelector(".heartbeat-card")?.getAttribute("data-heartbeat-attention")).toBe("missing_prices"));
-    expect(screen.getByRole("link", { name: /1 mã thiếu giá/ }).getAttribute("href")).toBe("#/settings");
+    expect(screen.getByRole("link", { name: /Thiếu giá cho 1 mã/ }).getAttribute("href")).toBe("#/settings");
   });
 
-  it("switches the performance card to a gain segment when the live quote exceeds the purchase cost", async () => {
+  it("keeps a factual gain state in Portfolio Rhythm without a second performance dashboard", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-gain", "2026-08-01")]);
     dbMocks.listQuotes.mockResolvedValue([{ id: "quote-gain", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 150, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".perf-card")?.getAttribute("data-performance-state")).toBe("gain"));
-    expect(container.querySelector(".perf-return")?.textContent).toBe("+50,0%");
-    expect(container.querySelector(".perf-bar-base")?.getAttribute("style")).toContain("width: 66.666");
-    expect(container.querySelector(".perf-bar-gain")?.getAttribute("style")).toContain("width: 33.333");
-    expect(container.querySelector(".perf-bar-loss")).toBeNull();
-    expect(screen.getAllByText("Lãi").length).toBeGreaterThan(0);
+    await waitFor(() => expect(container.querySelector(".heartbeat-value.performance")?.textContent).toBe("+50,0%"));
+    expect(container.querySelector(".heartbeat-value.performance")?.className).toContain("gain");
+    expect(screen.getByText("Đang lãi")).toBeTruthy();
+    expect(container.querySelector(".perf-card")).toBeNull();
   });
 
-  it("switches the performance card to a loss segment when the live quote falls below the purchase cost", async () => {
+  it("keeps a factual loss state in Portfolio Rhythm without an inferred chart", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-loss", "2026-08-01")]);
     dbMocks.listQuotes.mockResolvedValue([{ id: "quote-loss", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 80, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".perf-card")?.getAttribute("data-performance-state")).toBe("loss"));
-    expect(container.querySelector(".perf-return")?.textContent).toBe("-20,0%");
-    expect(container.querySelector(".perf-bar-base")?.getAttribute("style")).toContain("width: 100%");
-    expect(container.querySelector(".perf-bar-loss")?.getAttribute("style")).toContain("width: 20%");
-    expect(container.querySelector(".perf-bar-gain")).toBeNull();
-    expect(screen.getAllByText("Lỗ").length).toBeGreaterThan(0);
+    await waitFor(() => expect(container.querySelector(".heartbeat-value.performance")?.textContent).toBe("-20,0%"));
+    expect(container.querySelector(".heartbeat-value.performance")?.className).toContain("loss");
+    expect(screen.getByText("Đang lỗ")).toBeTruthy();
+    expect(container.querySelector(".perf-card")).toBeNull();
   });
 
-  it("marks the performance as unavailable instead of inventing a gain or loss without a quote", async () => {
+  it("marks performance as unavailable instead of inventing gain or loss without a quote", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-unvalued", "2026-08-01")]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".perf-card")?.getAttribute("data-performance-state")).toBe("unavailable"));
-    expect(container.querySelector(".perf-return")?.textContent).toBe("—");
-    expect(container.querySelector(".perf-bar-base")).toBeNull();
-    expect(container.querySelector(".perf-bar-gain")).toBeNull();
-    expect(container.querySelector(".perf-bar-loss")).toBeNull();
-    expect(screen.getAllByText("Chưa định giá").length).toBeGreaterThan(0);
+    await waitFor(() => expect(container.querySelector(".heartbeat-value.performance")?.textContent).toBe("Chưa định giá"));
+    expect(container.querySelector(".heartbeat-value.performance")?.className).toContain("unavailable");
+    expect(container.querySelector(".perf-card")).toBeNull();
   });
 
-  it("draws the compact price comparison only when current price and average buy price are both real", async () => {
+  it("shows a factual current price without adding a performance comparison chart", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-vwce-1", "2026-08-01")]);
     dbMocks.listQuotes.mockResolvedValue([{ id: "quote-vwce", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
@@ -276,9 +255,9 @@ describe("Overview demo v10 hierarchy", () => {
     const { container } = renderOverview();
 
     await waitFor(() => expect(container.querySelector(".price-row")).toBeTruthy());
-    expect(container.querySelector(".sparkline-svg path")).toBeTruthy();
     expect(container.querySelector(".pr-big")?.textContent).toContain("110,00");
-    expect(container.querySelector(".perf-detail")?.textContent).toContain("Giá mua TB100,00");
+    expect(container.querySelector(".sparkline-svg")).toBeNull();
+    expect(container.querySelector(".perf-card")).toBeNull();
   });
 
   it("preserves the valuation-incomplete label while retaining demo card geometry", async () => {
@@ -293,7 +272,7 @@ describe("Overview demo v10 hierarchy", () => {
 
     await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
     expect(screen.getByText("Tài sản đã định giá")).toBeTruthy();
-    expect(container.querySelector(".perf-card .perf-return")?.textContent?.trim()).toBe("—");
+    expect(container.querySelector(".heartbeat-value.performance")?.textContent?.trim()).toBe("Chưa định giá");
     expect(container.querySelector(".price-row")).toBeTruthy();
     expect(container.querySelector(".combo-row")).toBeTruthy();
   });
