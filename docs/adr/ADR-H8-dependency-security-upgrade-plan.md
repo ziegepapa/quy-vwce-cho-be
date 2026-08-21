@@ -1,12 +1,14 @@
 # ADR-H8 — Kế hoạch nâng dependency để khắc phục security advisory
 
-**Trạng thái:** Accepted — kế hoạch thực thi; từng upgrade vẫn cần PR riêng.  
+**Trạng thái:** Accepted — đã triển khai qua các PR riêng; đây là record của kế hoạch và kết quả.
 **Ngày:** 21-08-2026.  
 **Phạm vi:** Vitest, Vite và React Router; không bao gồm UX, schema, sync hoặc logic tài chính.
 
 ## Bối cảnh
 
-`npm audit` trên lockfile H7 hiện báo **5 moderate, 1 high và 1 critical advisory**. Audit gợi ý Vitest `4.1.11`, Vite `8.2.2` và React Router DOM `7.18.2`. Kiểm tra peer dependency thực tế cho thấy Vitest `4.1.11` yêu cầu Vite `^6 || ^7 || ^8`, nên không thể là một Vitest-only PR trên baseline Vite 5. Vitest `3.2.6` vá critical advisory vì advisory ảnh hưởng `<3.2.6` và vẫn tương thích baseline; Vite 8 và Vitest 4 sẽ được nâng cùng nhau ở PR kế tiếp do peer coupling bắt buộc. Critical advisory của Vitest là file read/execute khi UI server lắng nghe; Vite có advisory high liên quan `server.fs.deny` trên Windows; React Router có advisory open redirect/hydration deserialization. [1] [2] [3]
+Tại H7 snapshot, `npm audit` báo **5 moderate, 1 high và 1 critical advisory**. Audit gợi ý Vitest `4.1.11`, Vite `8.2.2` và React Router DOM `7.18.2`. Kiểm tra peer dependency thực tế cho thấy Vitest `4.1.11` yêu cầu Vite `^6 || ^7 || ^8`, nên không thể là một Vitest-only PR trên baseline Vite 5. Vitest `3.2.6` vá critical advisory vì advisory ảnh hưởng `<3.2.6` và vẫn tương thích baseline; Vite 8 và Vitest 4 được nâng cùng nhau do peer coupling bắt buộc. Critical advisory của Vitest là file read/execute khi UI server lắng nghe; Vite có advisory high liên quan `server.fs.deny` trên Windows; React Router có advisory open redirect/hydration deserialization. [1] [2] [3]
+
+Kế hoạch đã hoàn tất qua PR #236 (Vitest bridge), #237 (Vite 8 ecosystem), #238 (React Router 7) và #241 (GitHub Actions runtime). `npm audit --json` tại baseline hiện hành báo **0 total vulnerabilities**. Đây là resolution của dependency advisory, không phải resolution của H4/H5 hoặc P11.2. [4]
 
 > Không dùng `npm audit fix --force` và không thực hiện blanket upgrade. Mỗi package được nâng riêng, có commit/PR/review/rollback độc lập để một regression không che khuất nguyên nhân hoặc làm thay đổi financial contract.
 
@@ -14,12 +16,12 @@
 
 Thực hiện theo thứ tự **Vitest security bridge → Vite + Vitest 4 peer-coupled → React Router**. Vitest 4 không bị gộp tùy tiện với Vite: coupling được audit/peer dependency bắt buộc và chỉ gồm hai package build-test liên quan. Một PR GitHub Actions runtime chỉ được mở sau ba dependency PR, và không được gộp vào chúng. Mỗi PR phải giữ các câu trả lời sau ở mức **NO**: financial semantics changed, schema/Dexie changed, backup compatibility changed, sync semantics changed, migration required, auth/RLS policy changed.
 
-| PR độc lập | Dependency hiện tại | Target audit | Mục tiêu và rủi ro chính |
+| Hạng mục | Baseline trước | Target | Kết quả đã chứng minh |
 |---|---:|---:|---|
-| H8.1 | Vitest `2.1.8` | `3.2.6` | Security bridge loại critical test-server advisory (`<3.2.6`) mà không kéo Vite major; kiểm tra config, mock, fake IndexedDB, DOM test và scripts dùng `vite-node`. |
-| H8.2 | Vite `5.4.11`, Vitest `3.2.6`, React plugin 4, PWA plugin `0.21.1` | Vite `8.2.2`, Vitest `4.1.11`, React SWC plugin `4.3.3`, PWA plugin `1.3.0`, direct `vite-node` `6.0.0` | Loại Vite/esbuild advisory và hoàn tất target Vitest 4. Vitest 4 yêu cầu Vite `^6 || ^7 || ^8`; PWA plugin cũ chỉ hỗ trợ đến Vite 6; Vitest 4 không còn cung cấp executable `vite-node` transitively cho benchmark. Kiểm tra build, React transform, PWA/Workbox, artifact, base path và bundle. |
-| H8.3 | React Router DOM `6.28.0` | `7.18.2` | Loại router advisory; kiểm tra deep-link, `NavLink`, navigation state, locale và installed-PWA route boot. |
-| H8.4 | GitHub Actions runtime | Chỉ action cần thiết | Loại cảnh báo Node-runtime mà không đổi permissions, secrets, branch publish hoặc deploy flow. |
+| H8.1 / PR #236 | Vitest `2.1.8` | `3.2.6` | Security bridge loại critical test-server advisory mà không kéo Vite major; config, mock, fake IndexedDB, DOM test và scripts `vite-node` pass. |
+| H8.2 / PR #237 | Vite `5.4.11`, Vitest `3.2.6`, React plugin 4, PWA plugin `0.21.1` | Vite `8.2.2`, Vitest `4.1.11`, React SWC plugin `4.3.3`, PWA plugin `1.3.0`, direct `vite-node` `6.0.0` | Vite/esbuild advisory resolved; build, React transform, PWA/Workbox, artifact, base path và bundle matrix pass. |
+| H8.3 / PR #238 | React Router DOM `6.28.0` | `7.18.2` | Router advisory resolved; route, locale, installed-PWA/browser regression pass. |
+| H8.4 / PR #241 | GitHub Actions runtime | Chỉ action cần thiết | Node-runtime warnings removed mà không đổi permissions, secrets, branch publish hoặc deploy flow. |
 
 ## React transform compatibility
 
@@ -60,3 +62,4 @@ Nếu cả H8.1–H8.3 pass và audit không còn các advisory đã nêu, block
 [1]: https://github.com/advisories/GHSA-5xrq-8626-4rwp "Vitest arbitrary file read and execution advisory"
 [2]: https://github.com/advisories/GHSA-fx2h-pf6j-xcff "Vite server.fs.deny bypass advisory"
 [3]: https://github.com/advisories/GHSA-wrjc-x8rr-h8h6 "React Router open redirect advisory"
+[4]: ../LONG_TERM_READINESS.md "Current dependency audit and remaining readiness blockers"
