@@ -126,6 +126,14 @@ The repository and a read-only controlled-project catalog inspection confirm ena
 
 See [`H4-RLS-EVIDENCE.md`](./H4-RLS-EVIDENCE.md) for the safe evidence boundary and reopening conditions. A no-cost decision is a valid blocker; it must remain visible in final readiness rather than being bypassed with production test data or administrative-role simulation.
 
+## H5 — Provenance and migration discipline (policy complete; implementation blocked)
+
+Current Trade Republic execution import already persists a source-specific `source`, `sourceVersion` and document-derived `externalRef`, validates reviewed fields, checks duplicate execution evidence before write, and rechecks immediately before persistence. Depot statements remain read-only reconciliation evidence. Manual records intentionally have no broker-document identity and therefore must not receive generic auto-dedupe.
+
+Repository migration reproducibility is not yet proven: `schema.sql` remains a manual bootstrap artifact, local tree contains only the later `002_soft_delete_and_triggers.sql`, and read-only environment inventory reports no recorded migration history. H5 does not manufacture baseline migrations, perform DDL, backfill data, add provenance fields, add CSV/broker import batches, or test upgrades against production family data. No approved data contract requires any of those changes today.
+
+See [`ADR-H5-provenance-and-migration-discipline.md`](./adr/ADR-H5-provenance-and-migration-discipline.md). Any future data/schema/import PR must clear the ADR, ordered-migration, controlled-upgrade, RLS, backup/sync compatibility and rollback gates defined there. Until a no-family-data controlled environment is permitted, that work is explicitly blocked rather than silently deferred.
+
 ## PR contract template
 
 Every H1–H7 PR description must state the following fields exactly: purpose, narrow scope, files changed, **financial semantics changed (YES/NO)**, schema changed (YES/NO), backup compatibility changed (YES/NO), sync semantics changed (YES/NO), migration required (YES/NO), tests added, tests passed, rollback strategy and known limitations.
