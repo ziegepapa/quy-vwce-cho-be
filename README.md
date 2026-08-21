@@ -2,7 +2,7 @@
 
 **VWCE Vault** là PWA **local-first** để theo dõi, ghi nhận và mô phỏng kế hoạch đầu tư gia đình với **Vanguard FTSE All-World UCITS ETF (VWCE, ISIN IE00BK5BQT80)**.
 
-> **Mốc 2042 chỉ là mục tiêu hiện tại của kế hoạch đầu tư cho bé.** Phần mềm có **vòng đời không xác định** và được thiết kế để tiếp tục sử dụng cho các mục tiêu, năm và kế hoạch trong tương lai.
+> **Mốc 2042 chỉ là mục tiêu hiện tại của kế hoạch đầu tư cho bé.** VWCE Vault có **vòng đời vô thời hạn** (*indefinite lifecycle*), không có application end date, và được thiết kế để tiếp tục sử dụng cho các mục tiêu, năm và kế hoạch trong tương lai.
 
 ## Production
 
@@ -105,9 +105,15 @@ Không có AI UI trên production critical path. Legacy AI/Trace code có thể 
 
 ## Bảo mật & quyền riêng tư
 
-`VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY` là public client configuration. RLS được thiết kế theo user/owner boundary; production policy và security evidence phải được xác minh theo runbook.
+`VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY` là public client configuration. RLS được thiết kế theo user/owner boundary; production policy và security evidence phải được xác minh theo detailed readiness report.
+
+`npm audit --json` tại baseline hiện hành báo **0 vulnerabilities**. Không dùng `npm audit fix --force`; mọi dependency upgrade phải là PR độc lập, có full release matrix và audit delta. [1]
 
 Không dùng production financial data cho test fixtures hoặc recovery drills.
+
+### Đặt lại mật khẩu
+
+Chọn **Quên mật khẩu** trên màn hình đăng nhập rồi kiểm tra email. Link hợp lệ mở root application callback để Supabase xử lý recovery session; sau đó app chỉ hiển thị form đặt mật khẩu mới. Link sai hoặc hết hạn chỉ hiện thông báo an toàn bằng đúng locale, không hiển thị token hay raw provider error. Nếu link không dùng được, yêu cầu link mới; không gửi ảnh chụp email/link hoặc credential cho người bảo trì. [2]
 
 ## Trạng thái hiện tại
 
@@ -115,7 +121,7 @@ Không dùng production financial data cho test fixtures hoặc recovery drills.
 
 Ứng dụng vẫn phù hợp để sử dụng như **local-first family investment tracker**, cùng với backup do owner kiểm soát và **sao kê/chứng từ broker độc lập**.
 
-Một số evidence về security/migration và các hạng mục dependency có thể vẫn cần hoàn thiện trước khi nâng mức readiness. Đây là limitation của readiness hiện tại, **không phải giới hạn vòng đời phần mềm**.
+Dependency audit không còn là blocker. Readiness vẫn chưa thể nâng vì H4 chưa có behavioral RLS proof, H5 chưa có migration reproducibility proof, và P11.2 chờ independent German tax-expert review. Đây là limitation của readiness hiện tại, **không phải giới hạn vòng đời phần mềm**. Xem [`docs/LONG_TERM_READINESS.md`](./docs/LONG_TERM_READINESS.md) để biết evidence và decision hiện hành. [1]
 
 ## Nguyên tắc dự án
 
@@ -123,6 +129,15 @@ Một số evidence về security/migration và các hạng mục dependency có
 
 VWCE Vault được xây dựng cho **sử dụng dài hạn vô thời hạn**. Mốc mục tiêu của một kế hoạch cụ thể có thể thay đổi; phần mềm, dữ liệu lịch sử và schema phải tiếp tục có khả năng bảo trì và nâng cấp trong tương lai.
 
+## Handover và vận hành
+
+Người bảo trì phải dùng [`docs/OPERATIONS_RUNBOOK.md`](./docs/OPERATIONS_RUNBOOK.md) cho normal release, emergency recovery và dependency update; dùng [`docs/LONG_TERM_READINESS.md`](./docs/LONG_TERM_READINESS.md) cho các evidence/boundary chưa đóng. Recovery drill chỉ chạy với vault/profile thử nghiệm và fixture tổng hợp.
+
 ## Miễn trừ
 
 VWCE Vault chỉ hỗ trợ **theo dõi, ghi nhận và mô phỏng**. Đây không phải tư vấn đầu tư, tư vấn thuế và không cam kết lợi nhuận.
+
+## References
+
+[1]: ./docs/LONG_TERM_READINESS.md "Current readiness decision and dependency-audit evidence"
+[2]: https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail "Supabase JavaScript password recovery"

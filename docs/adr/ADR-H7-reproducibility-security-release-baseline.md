@@ -24,15 +24,21 @@ GitHub Pages does not let this project configure HTTP response headers. The meta
 
 ## Dependency audit status
 
-The H7 lock graph was inspected with `npm audit` on 21-08-2026. Direct Playwright high advisories were remediated by pinning **1.62.1** and matching its CI container. The remaining audit result is **five moderate, one high and one critical** advisory. Available remediations require the following major upgrades:
+### H7 historical snapshot
 
-| Direct path | Remaining severity | Available remediation | H7 decision |
+At the H7 lockfile snapshot on 21-08-2026, direct Playwright high advisories were remediated by pinning **1.62.1** and matching its CI container. The remaining audit result was **five moderate, one high and one critical** advisory. That historical result motivated the dedicated H8 dependency plan; it is not the audit state of the current baseline.
+
+| Direct path at H7 | Historical severity | Planned remediation | H7 decision |
 |---|---:|---|---|
-| Vitest / vite-node | Critical / moderate | Vitest 4.1.11 major | Deferred: requires test-runner migration and full controlled compatibility PR. |
-| Vite / esbuild | High / moderate | Vite 8.2.2 major | Deferred: requires build/PWA/CI compatibility PR. |
-| React Router | Moderate | React Router DOM 7.18.2 major | Deferred: requires routing behavior and browser regression PR. |
+| Vitest / vite-node | Critical / moderate | Vitest `3.2.6` bridge, then Vitest `4.1.11` with Vite 8 | Defer to controlled compatibility PRs. |
+| Vite / esbuild | High / moderate | Vite `8.2.2` ecosystem PR | Defer to controlled build/PWA/CI compatibility PR. |
+| React Router | Moderate | React Router DOM `7.18.2` PR | Defer to routing/browser regression PR. |
 
-H7 intentionally does not use `npm audit fix --force`. Auto-upgrading these foundational packages would violate the small-PR, deterministic regression and no-silent-semantic-change policy. This unresolved critical advisory blocks a **security-complete** readiness claim.
+### Resolution after H7
+
+H8.1, H8.2, H8.3 and the follow-on Actions runtime update were completed in separate PRs #236, #237, #238 and #241. The current `npm audit --json` result is **0 total vulnerabilities**. This resolves the dependency-audit blocker described by the H7 snapshot; it does not prove H4 behavioral RLS or H5 migration reproducibility, so it does not independently change the `CONDITIONAL — NOT READY` readiness decision. [1]
+
+H7 and H8 intentionally did not use `npm audit fix --force`. Any future dependency update remains a small, deterministic, fully-regressed PR rather than an auto-fix.
 
 ## Operational evidence
 
@@ -43,6 +49,10 @@ Quote freshness remains derived from the existing closed-session quote rules and
 ## Non-goals
 
 H7 does not change H0–H6 contracts, financial semantics, ledger replay, schema/Dexie version, backup format, Supabase schema/RLS, sync conflict handling, quote economics, PWA product semantics, tax/FIFO/Vorabpauschale, AI, automatic remediation, server hosting headers, penetration testing, or P11.2.
+
+## References
+
+[1]: ../LONG_TERM_READINESS.md "Current dependency audit, H4/H5 status and readiness decision"
 
 ## Rollback
 
