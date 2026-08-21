@@ -142,6 +142,16 @@ Yearly Review now records live calendar-year withdrawals, unique contribution mo
 
 See [`ADR-H6-data-health-yearly-review-handoff.md`](./adr/ADR-H6-data-health-yearly-review-handoff.md). H6 changes no financial classifier/replay semantics, schema/Dexie version, backup format, Supabase migration/RLS policy, sync behavior, tax behavior, AI behavior or P11.2 status.
 
+## H7 — Reproducibility, client security and release evidence (implemented with explicit security blocker)
+
+H7 commits lockfile v3 and moves test/build, edge-smoke, preview-smoke and scheduled quote update workflows to `npm ci`. The Playwright client is exact-pinned and must match the pinned preview browser image; a regression guard fails on lockfile/workflow/image drift. Direct Playwright high advisories were remediated while preserving explicit browser parity.
+
+The static shell now has a restrictive meta CSP, and a client-security boundary guard rejects service-role references, dynamic code evaluation and raw HTML sinks in `src/**`. It is deliberately source-level defense-in-depth: GitHub Pages cannot set server response headers, React inline styles still require `style-src 'unsafe-inline'`, and the guard cannot replace RLS/behavioral authorization proof.
+
+PWA/quote/edge production verification and the 10,000-transaction ledger benchmark remain required operational evidence. The H7 dependency audit still has five moderate, one high and one critical advisory whose available fixes require major Vite, Vitest or React Router migrations. H7 does not run `npm audit fix --force`; this unresolved critical advisory blocks a security-complete readiness decision.
+
+See [`ADR-H7-reproducibility-security-release-baseline.md`](./adr/ADR-H7-reproducibility-security-release-baseline.md). H7 changes no financial ledger semantics, schema/version, backup format, Supabase migration/RLS, sync/conflict behavior, quote economics or P11.2 status.
+
 ## PR contract template
 
 Every H1–H7 PR description must state the following fields exactly: purpose, narrow scope, files changed, **financial semantics changed (YES/NO)**, schema changed (YES/NO), backup compatibility changed (YES/NO), sync semantics changed (YES/NO), migration required (YES/NO), tests added, tests passed, rollback strategy and known limitations.

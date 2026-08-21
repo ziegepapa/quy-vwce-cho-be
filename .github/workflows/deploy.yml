@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm install
+      - run: npm ci
       - run: npm test
       - name: Guard operational posture
         run: npm run check:operational-posture
@@ -64,7 +64,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: npm install
+      - run: npm ci
       - name: Check Edge Function in Deno
         run: deno check supabase/functions/explain-trace/index.ts
       - name: Run isolated Edge Function smoke environment
@@ -76,7 +76,7 @@ jobs:
     # out 15m on azure.archive.ubuntu.com before tests started; #162 cancelled).
     # Image tag must match the pinned @playwright/test version below.
     container:
-      image: mcr.microsoft.com/playwright:v1.54.2-jammy
+      image: mcr.microsoft.com/playwright:v1.62.1-jammy
       options: --ipc=host
     timeout-minutes: 20
     steps:
@@ -84,10 +84,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm install
-      # package.json uses ^1.54.2; pin exact client so browser revisions match image.
-      - name: Pin Playwright client to image browsers (1.54.2)
-        run: npm install --no-save @playwright/test@1.54.2
+      - run: npm ci
+      # package-lock pins @playwright/test 1.62.1, matching the browser image above.
       - name: Build production preview
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
