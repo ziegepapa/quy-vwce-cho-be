@@ -1,6 +1,6 @@
 import type { BackupPayload } from "./types";
 import { BACKUP_SCHEMA_VERSION } from "./types";
-import { validateTransactionNumbers } from "./transactionValidation";
+import { classifyTransaction, validateTransactionNumbers } from "./transactionValidation";
 
 const REQUIRED_ARRAY_FIELDS = [
   "settings",
@@ -97,9 +97,13 @@ export function validateBackupPayload(value: unknown): BackupPayloadValidation {
     if (!validation.ok) {
       return {
         ok: false,
-        error: `Backup transactions[${index}] kh\u00f4ng h\u1ee3p l\u1ec7: ${validation.error}`,
+        error: `Backup transactions[${index}] không hợp lệ: ${validation.error}`,
       };
     }
+    // H2-B applies the same pure classifier used by new ingestion/replay. A
+    // finite legacy invalid/incomplete result is intentionally not rejected:
+    // restore preserves raw evidence and canonical replay quarantines it.
+    classifyTransaction(transaction);
   }
 
   // -------------------------------------------------------------------------

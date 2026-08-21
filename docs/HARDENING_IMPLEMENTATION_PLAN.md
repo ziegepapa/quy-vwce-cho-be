@@ -44,21 +44,21 @@ Audit P0 được xác nhận như baseline triển khai: version truth bị ph�
 
 **H1 rollback:** revert only the source/version guard change; no data or schema rollback is needed.
 
-## H2 — File plan (proposal only; do not implement before semantic ADR approval)
+## H2 — Canonical transaction integrity (H2-A/H2-B implemented)
 
-H2 is the highest-risk phase because it can change which persisted historical transactions affect financial replay. It needs an ADR that defines the exact distinction among **new input rejected**, **legacy evidence retained but ineffective**, and **valid canonical transaction accepted**.
+H2 is the highest-risk phase because it can change which persisted historical transactions affect financial replay. H2-A recorded the approved semantic contract in [`ADR-H2-financial-semantics.md`](./adr/ADR-H2-financial-semantics.md). H2-B implements that contract with the exact distinction among **new input rejected**, **legacy evidence retained but ineffective**, and **valid canonical transaction accepted**. It does not rewrite historical evidence or introduce a data migration.
 
-| File / area | Proposed role | Mandatory caution |
+| File / area | Implemented H2-B role | Mandatory caution retained |
 |---|---|---|
-| `docs/adr/ADR-canonical-transaction-safety.md` *(new; prerequisite)* | Define type/date/ISIN/sign/quantity/price rules; define status/result contract; define legacy behavior and no-rewrite guarantee. | Requires owner review before production code. |
-| `src/lib/transactionValidation.ts` | Evolve into one pure canonical normalization/validation contract or split a pure `transactionCanonical.ts` helper. | It must not silently coerce financial values. |
-| `src/lib/instrument.ts` | Reuse normalized ISIN/type rules; avoid duplicate validation. | Legacy VWCE alias compatibility must be explicit. |
-| `src/lib/calc.ts` | Make replay ignore/reject unsafe security sale and negative economics without cash/proceeds/cost-basis/quantity mutation. | Changing this affects historical portfolio state; no silent clamp. |
-| `src/lib/db.m01a.ts` and transaction writer modules | Enforce new-input persistence boundary using the canonical validator. | Do not block DB opening solely because legacy rows exist. |
-| `src/lib/backupSchema.ts`, public backup import gate, `src/lib/db.m09.ts` | Validate imported new payload before clear/restore; preserve legacy evidence under ADR rules. | Invalid payload must fail closed; no partial import. |
-| `src/lib/sync/engine.ts` and sync guard tests | Apply the same boundary to remote hydration/outbox without auto-resolve. | Must preserve local-first/outbox/tombstone/conflict behavior. |
-| `src/pages/transactionQualityInbox.ts` | Display legacy invalid/incomplete state read-only after its semantic contract exists. | Health UI cannot mutate or “fix” a transaction. |
-| Calculation, validation, DB, backup, sync and UI test files | Golden regression matrix and deterministic replay proof. | Tests must specify cash, position, cost basis and totalSold exact no-effect outcomes. |
+| [`docs/adr/ADR-H2-financial-semantics.md`](./adr/ADR-H2-financial-semantics.md) | Approved type/date/ISIN/sign/quantity/price contract, status/reason taxonomy, deterministic ordering and legacy Option B quarantine. | No production policy may extend this contract without a separate reviewed ADR. |
+| `src/lib/transactionValidation.ts` | One pure canonical classifier, normalizer, ordering comparator and strict new-ingestion assertion. | It must not silently coerce financial values. |
+| `src/lib/instrument.ts` | Shared normalized ISIN/type rules. | Legacy VWCE alias compatibility remains explicit. |
+| `src/lib/calc.ts` | Applies accepted transactions only; unsafe sale or negative economics has no cash/proceeds/cost-basis/quantity effect. | Historical replay safety changes are limited to derived quarantine; no clamp. |
+| `src/lib/db.m07b.ts` and transaction writer modules | Enforce canonical new-input validation and holdings-aware oversell rejection. | DB opening and raw legacy storage remain available. |
+| `src/lib/backupSchema.ts` and public backup import gate | Classify finite legacy payload evidence without rewrite; preserve it for replay quarantine. | Malformed/non-finite payload remains fail-closed; no partial restore. |
+| `src/lib/sync/engine.ts` and sync guard tests | Classify remote evidence at hydration while preserving raw finite rows and existing outbox/tombstone/conflict behavior. | No auto-resolve or raw-row deletion. |
+| `src/pages/Transactions.tsx` | Shows classifier reason in the active locale and blocks false success. | UI never repairs or alters existing legacy evidence. |
+| Calculation, validation, DB, backup, sync and UI test files | Golden regression matrix and deterministic replay proof. | Tests specify exact cash, position, cost basis and totalSold no-effect outcomes where relevant. |
 
 ### H2 acceptance matrix
 
@@ -73,6 +73,20 @@ H2 is the highest-risk phase because it can change which persisted historical tr
 | Same canonical set replayed twice | Exact same portfolio state. |
 | UI filtered list | Cannot change ledger/portfolio totals. |
 | Duplicate candidate | Deduplication rule must be deterministic and evidence-preserving; no automatic removal of existing history. |
+
+### H2-B implementation status
+
+The single canonical classifier in `src/lib/transactionValidation.ts` assigns every transaction to `accepted`, `incomplete`, or `invalid`, with an explicit reason code. New manual and importer ingestion requires `accepted`. The persistence write boundary also evaluates a candidate in the canonical `date → createdAt → id` ledger order, so a newly submitted oversell is rejected against the actual replayed holding rather than relying on a UI-only check.
+
+| Contract boundary | H2-B behavior | Evidence |
+|---|---|---|
+| New manual write | Rejects incomplete or invalid semantics; rejects oversell against canonical holdings; leaves transaction/outbox unchanged. | `db.transactionNumericInvariant.test.ts` |
+| Trade Republic draft | Uses the shared classifier before ingesting a draft. | `tr/toTransaction.test.ts` |
+| Deterministic replay | Sorts by `date → createdAt → id`; only `accepted` rows reach ledger application. | `calc.replay.test.ts`, `transactionValidation.test.ts` |
+| Legacy backup/sync/direct evidence | Retains finite raw evidence without repair or a schema field, then gives unsafe rows zero replay effect. | `backupSchema.test.ts`, `sync/engineTransactionGuard.test.ts`, `db.transactionTableGuard.test.ts` |
+| Manual UI | Shows an exact Vietnamese or German classifier reason, retains the entered form values, and does not present false success. | `Transactions.loadState.test.tsx` |
+
+**Compatibility statement.** H2-B changes financial replay safety for invalid/incomplete legacy evidence by derived quarantine only. It does **not** change Dexie schema/version, backup schema/version, Supabase migration namespace, sync conflict semantics, raw backup/sync evidence, or historical data. It performs no auto-repair, automatic conflict resolution, FIFO, tax calculation, or tax advice.
 
 ## H2 risk assessment
 

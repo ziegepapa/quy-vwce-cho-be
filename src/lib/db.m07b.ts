@@ -1,8 +1,15 @@
 import type { AppSettings, Goal, Transaction } from "./types";
 import { SCHEMA_VERSION } from "./types";
 import { defaultGoals, defaultSettings, nowIso } from "./defaults";
-import { isValidIsin, normalizeIsin, resolveInstrumentIsin } from "./instrument";
-import { assertValidTransactionNumbers } from "./transactionValidation";
+import { normalizeIsin, resolveInstrumentIsin } from "./instrument";
+import { applyTransaction, emptyPortfolio, getPosition } from "./calc";
+import {
+  assertAcceptedTransactionForNewIngestion,
+  assertValidTransactionNumbers,
+  classifyTransactionAgainstHoldings,
+  compareTransactionReplayOrder,
+  TransactionSemanticError,
+} from "./transactionValidation";
 import { enqueueOutbox, settingsGuardBaseVersion } from "./sync/outbox";
 import { db } from "./db.m01a";
 import { ensureMultiAssetMigrated } from "./db.m01b";
@@ -113,26 +120,36 @@ export async function findTransactionByExternalRef(
   );
 }
 
+async function assertAcceptedInCanonicalLedger(candidate: Transaction): Promise<void> {
+  const ordered = (await db.transactions.toArray())
+    .filter((transaction) => !transaction.deletedAt && transaction.id !== candidate.id)
+    .concat(candidate)
+    .sort(compareTransactionReplayOrder);
+  let state = emptyPortfolio();
+  for (const transaction of ordered) {
+    const isin = resolveInstrumentIsin(transaction);
+    const held = isin ? getPosition(state, isin).qty : undefined;
+    const classification = classifyTransactionAgainstHoldings(transaction, held);
+    if (transaction.id === candidate.id && classification.status !== "accepted") {
+      throw new TransactionSemanticError(classification);
+    }
+    if (classification.status === "accepted") {
+      state = applyTransaction(state, classification.normalized);
+    }
+  }
+}
+
 export async function upsertTransaction(
   tx: Transaction,
   opts?: { sync?: boolean },
 ): Promise<void> {
   assertValidTransactionNumbers(tx);
-  if (
-    tx.type === "buy_security" ||
-    tx.type === "sell_security" ||
-    tx.type === "buy_vwce" ||
-    tx.type === "sell_vwce"
-  ) {
-    const resolved = resolveInstrumentIsin(tx);
-    if (!resolved) {
-      throw new Error("Security transaction requires instrumentIsin");
-    }
-    if (!isValidIsin(resolved)) {
-      throw new Error(`Security transaction has invalid ISIN checksum: ${resolved}`);
-    }
-    tx = { ...tx, instrumentIsin: resolved };
-  }
+  // H2-B: the public manual/import boundary accepts only an explicit canonical
+  // transaction. Existing raw evidence from backup/sync never routes through
+  // this API and remains preserved for deterministic replay quarantine.
+  const canonical = assertAcceptedTransactionForNewIngestion(tx);
+  tx = { ...tx, ...canonical };
+  await assertAcceptedInCanonicalLedger(tx);
   const ver = ((tx as Transaction & { version?: number }).version ?? 0) + 1;
   const { deletedAt: _drop, ...rest } = tx as Transaction & { deletedAt?: string; version?: number };
   const next = { ...rest, updatedAt: nowIso(), version: ver } as Transaction & { version: number };

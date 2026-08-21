@@ -239,6 +239,36 @@ describe("Transactions load and empty states", () => {
     expect((screen.getByLabelText("Loại") as HTMLSelectElement).value).toBe("cash_in");
   });
 
+  it("shows a precise H2-B semantic reason and blocks persistence for a manual oversell", async () => {
+    dbMocks.listTransactions.mockResolvedValue([
+      {
+        id: "buy-held",
+        date: "2026-08-01",
+        type: "buy_vwce",
+        amount: 200,
+        unitPrice: 100,
+        quantity: 2,
+        instrumentIsin: "IE00BK5BQT80",
+        notes: "",
+        createdAt: "2026-08-01T00:00:00Z",
+        updatedAt: "2026-08-01T00:00:00Z",
+        source: "manual",
+      },
+    ]);
+    render(createElement(Transactions));
+
+    await screen.findByRole("button", { name: /Mua VWCE, 01\/08\/2026/ });
+    fireEvent.click(screen.getByRole("button", { name: "+ Thêm" }));
+    fireEvent.change(screen.getByLabelText("Loại"), { target: { value: "sell_vwce" } });
+    fireEvent.change(screen.getByLabelText(/Tổng tiền/), { target: { value: "300" } });
+    fireEvent.change(screen.getByLabelText(/Số lượng/), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("Số lượng bán vượt quá số lượng đang được ghi nhận.");
+    expect(dbMocks.upsertTransaction).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Thêm giao dịch" })).toBeTruthy();
+  });
+
   it("distinguishes no filter matches from a genuinely empty ledger", async () => {
     dbMocks.listTransactions.mockResolvedValue([
       {

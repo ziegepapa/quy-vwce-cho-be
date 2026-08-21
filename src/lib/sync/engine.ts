@@ -17,6 +17,7 @@ import type {
 } from "./types";
 import { enqueueOutbox, outboxCount, removeOutboxForEntity } from "./outbox";
 import { reconcileTombstoneOutbox } from "./tombstoneReconcile";
+import { classifyTransaction } from "../transactionValidation";
 
 export { enqueueOutbox, outboxCount, removeOutboxForEntity };
 
@@ -562,6 +563,12 @@ async function pullDeltaUnlocked(userId: string): Promise<{ pulled: number; conf
       } else {
         const remotePayload = withoutDeletionMarkers(currentRemote.data);
         if (!remotePayload) throw new Error("Sync failed");
+        if (table === "transactions") {
+          // H2-B: classify every remote financial record without auto-repair,
+          // deletion or conflict resolution. Finite legacy evidence is retained
+          // raw; canonical replay deterministically quarantines non-accepted rows.
+          classifyTransaction(remotePayload);
+        }
         await store.put({ ...remotePayload, id: entityId, version: currentRemote.version });
       }
       pulled += 1;

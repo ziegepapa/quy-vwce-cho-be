@@ -10,7 +10,12 @@ import {
 } from "../lib/db";
 import type { Quote, Transaction, TxType } from "../lib/types";
 import { VWCE_ISIN } from "../lib/types";
-import { calcQuantity, parseDecimal } from "../lib/calc";
+import { calcQuantity, parseDecimal, replayTransactions } from "../lib/calc";
+import {
+  classifyTransactionAgainstHoldings,
+  TransactionSemanticError,
+  type TransactionSemanticReason,
+} from "../lib/transactionValidation";
 import { formatDisplayDate, formatDisplayMoney, formatDisplayQuantity } from "../ui/localeFormatting";
 import { nowIso } from "../lib/defaults";
 import {
@@ -88,6 +93,44 @@ function iconGlyph(type: TxType): string {
   return "⇄";
 }
 
+function financialReasonCopy(locale: "vi" | "de", reason: TransactionSemanticReason): string {
+  const de: Record<TransactionSemanticReason, string> = {
+    INVALID_RECORD: "Die Transaktion ist nicht vollständig lesbar und wurde nicht gespeichert.",
+    INVALID_TYPE: "Der Transaktionstyp ist ungültig. Die Transaktion wurde nicht gespeichert.",
+    INVALID_DATE: "Das Datum ist ungültig. Die Transaktion wurde nicht gespeichert.",
+    INVALID_AMOUNT: "Der Betrag muss für diesen Transaktionstyp positiv sein. Die Transaktion wurde nicht gespeichert.",
+    INVALID_FEE: "Die Gebühr darf nicht negativ sein. Die Transaktion wurde nicht gespeichert.",
+    INVALID_TAX: "Die Steuer darf nicht negativ sein. Die Transaktion wurde nicht gespeichert.",
+    INVALID_QUANTITY: "Die Stückzahl darf nicht negativ sein. Die Transaktion wurde nicht gespeichert.",
+    ZERO_QUANTITY: "Die Stückzahl muss größer als null sein. Die Transaktion wurde nicht gespeichert.",
+    INVALID_UNIT_PRICE: "Der Stückpreis muss positiv sein. Die Transaktion wurde nicht gespeichert.",
+    INVALID_ISIN: "Die ISIN ist ungültig. Die Transaktion wurde nicht gespeichert.",
+    INVALID_ECONOMICS: "Gebühr und Steuer dürfen den Betrag nicht übersteigen. Die Transaktion wurde nicht gespeichert.",
+    MISSING_BUY_QUANTITY_EVIDENCE: "Für den Kauf fehlen Stückzahl oder ein positiver Stückpreis. Die Transaktion wurde nicht gespeichert.",
+    MISSING_SALE_QUANTITY: "Für einen Verkauf fehlt die Stückzahl. Die Transaktion wurde nicht gespeichert.",
+    MISSING_ADJUSTMENT_NOTE: "Für eine Anpassung ist eine Notiz erforderlich. Die Transaktion wurde nicht gespeichert.",
+    OVERSOLD: "Die Verkaufsmenge übersteigt den aktuell gebuchten Bestand. Die Transaktion wurde nicht gespeichert.",
+  };
+  const vi: Record<TransactionSemanticReason, string> = {
+    INVALID_RECORD: "Giao dịch không đọc được đầy đủ và chưa được lưu.",
+    INVALID_TYPE: "Loại giao dịch không hợp lệ. Giao dịch chưa được lưu.",
+    INVALID_DATE: "Ngày không hợp lệ. Giao dịch chưa được lưu.",
+    INVALID_AMOUNT: "Số tiền phải dương với loại giao dịch này. Giao dịch chưa được lưu.",
+    INVALID_FEE: "Phí không được âm. Giao dịch chưa được lưu.",
+    INVALID_TAX: "Thuế không được âm. Giao dịch chưa được lưu.",
+    INVALID_QUANTITY: "Số lượng không được âm. Giao dịch chưa được lưu.",
+    ZERO_QUANTITY: "Số lượng phải lớn hơn 0. Giao dịch chưa được lưu.",
+    INVALID_UNIT_PRICE: "Giá đơn vị phải dương. Giao dịch chưa được lưu.",
+    INVALID_ISIN: "ISIN không hợp lệ. Giao dịch chưa được lưu.",
+    INVALID_ECONOMICS: "Phí và thuế không được vượt số tiền. Giao dịch chưa được lưu.",
+    MISSING_BUY_QUANTITY_EVIDENCE: "Thiếu số lượng hoặc giá đơn vị dương cho giao dịch mua. Giao dịch chưa được lưu.",
+    MISSING_SALE_QUANTITY: "Giao dịch bán thiếu số lượng. Giao dịch chưa được lưu.",
+    MISSING_ADJUSTMENT_NOTE: "Điều chỉnh cần có ghi chú. Giao dịch chưa được lưu.",
+    OVERSOLD: "Số lượng bán vượt quá số lượng đang được ghi nhận. Giao dịch chưa được lưu.",
+  };
+  return locale === "de" ? de[reason] : vi[reason];
+}
+
 export default function Transactions() {
   const { locale } = useLocale();
   const types = useMemo(() => transactionTypes(locale), [locale]);
@@ -120,6 +163,7 @@ export default function Transactions() {
   const deferredQuery = useDeferredValue(q);
   const [qtyError, setQtyError] = useState("");
   const [isinError, setIsinError] = useState("");
+  const [financialError, setFinancialError] = useState("");
   const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   async function reload() {
@@ -211,6 +255,7 @@ export default function Transactions() {
     }
     setQtyError("");
     setIsinError("");
+    setFinancialError("");
     if (!form.date || !form.amount.trim()) {
       alert(text.dateAmountRequired);
       return;
@@ -254,16 +299,7 @@ export default function Transactions() {
 
     const previous = editId ? txs.find((tx) => tx.id === editId) : undefined;
     const t = nowIso();
-    if (security && instrumentIsin && instrumentIsin !== VWCE_ISIN) {
-      await upsertInstrument({
-        isin: instrumentIsin,
-        name: instrumentIsin,
-        currency: "EUR",
-        createdAt: t,
-        updatedAt: t,
-      });
-    }
-    await upsertTransaction({
+    const candidate: Transaction = {
       id: editId ?? uid("tx"),
       date: form.date,
       type: form.type,
@@ -279,7 +315,37 @@ export default function Transactions() {
       source: previous?.source ?? "manual",
       sourceVersion: previous?.sourceVersion,
       externalRef: previous?.externalRef,
-    });
+    };
+    const replayBase = txs.filter((tx) => tx.id !== candidate.id);
+    const priorState = replayTransactions(replayBase);
+    const held = instrumentIsin ? priorState.positions[instrumentIsin]?.qty : undefined;
+    const semantic = classifyTransactionAgainstHoldings(candidate, held);
+    if (semantic.status !== "accepted") {
+      setFinancialError(financialReasonCopy(locale, semantic.reasonCode));
+      return;
+    }
+
+    try {
+      if (security && instrumentIsin && instrumentIsin !== VWCE_ISIN) {
+        await upsertInstrument({
+          isin: instrumentIsin,
+          name: instrumentIsin,
+          currency: "EUR",
+          createdAt: t,
+          updatedAt: t,
+        });
+      }
+      await upsertTransaction(candidate);
+    } catch (error) {
+      if (error instanceof TransactionSemanticError) {
+        setFinancialError(financialReasonCopy(locale, error.result.reasonCode));
+      } else {
+        setFinancialError(locale === "de"
+          ? "Die Transaktion konnte nicht gespeichert werden. Ihre Eingaben bleiben sichtbar."
+          : "Không thể lưu giao dịch. Dữ liệu bạn đã nhập vẫn được giữ lại.");
+      }
+      return;
+    }
     setShow(false);
     setForm(emptyForm());
     setEditId(null);
@@ -785,6 +851,7 @@ export default function Transactions() {
               <label htmlFor="f-notes">{text.notes}{form.type === "adjust" ? text.notesRequired : ""}</label>
               <textarea id="f-notes" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
+            {financialError ? <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{financialError}</p> : null}
             <div className="stack">
               <button type="button" onClick={() => void save()}>{text.save}</button>
               <button type="button" data-dialog-close className="secondary" onClick={() => setShow(false)}>{text.cancel}</button>
