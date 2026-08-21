@@ -4,6 +4,7 @@ import { formatMoney } from "../../lib/calc";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
 import type { PlanVsReality } from "../../pages/planVsReality";
 import type { YearInReview } from "../../pages/yearInReview";
+import type { PortfolioDataHealth, PortfolioDataHealthIssue } from "../../pages/portfolioDataHealth";
 import "../../styles/demo-v10-overview.css";
 
 type OverviewFrameProps = {
@@ -28,6 +29,7 @@ type OverviewFrameProps = {
   averageBuyPrice: string | null;
   priceComparison: { averageBuyPrice: number; currentPrice: number } | null;
   heartbeat: PortfolioHeartbeat;
+  dataHealth: PortfolioDataHealth;
   planVsReality: PlanVsReality;
   planReviewYears: number[];
   onPlanReviewYearChange: (year: number) => void;
@@ -73,6 +75,18 @@ function overviewCopy(locale: "vi" | "de") {
     heartbeatStalePrices: (count: number) => `Kurse für ${count} Wertpapiere aktualisieren`,
     heartbeatClear: "Alles im Blick",
     heartbeatReview: "Prüfen",
+    dataHealth: "Datenstatus",
+    dataHealthClear: "Keine Datenhinweise",
+    dataHealthAction: "Aktion erforderlich",
+    dataHealthReview: "Prüfen",
+    dataHealthTip: "Hinweis",
+    dataHealthTransaction: (count: number) => `${count} Transaktion${count === 1 ? "" : "en"} prüfen`,
+    dataHealthMissingQuotes: (count: number) => `Kurse für ${count} Wertpapier${count === 1 ? "" : "e"} fehlen`,
+    dataHealthStaleQuotes: (count: number) => `Kurse für ${count} Wertpapier${count === 1 ? "" : "e"} aktualisieren`,
+    dataHealthBackup: "Noch kein Backup-Export erfasst",
+    dataHealthLedger: "Transaktionsbuch",
+    dataHealthQuotes: "Kurs-Snapshot",
+    dataHealthBackupSource: "Backup-Metadaten",
     planReality: "Plan und Realität",
     planRealityYear: "Prüfjahr",
     planRealityPlanned: "Sparplan bis heute",
@@ -86,6 +100,10 @@ function overviewCopy(locale: "vi" | "de") {
     yearReviewYear: "Prüfjahr",
     yearReviewExport: "Bericht exportieren",
     yearReviewContributed: "Eingezahlt",
+    yearReviewWithdrawn: "Ausgezahlt",
+    yearReviewContributionMonths: "Beitragsmonate",
+    yearReviewPlanMonths: (recorded: number, planned: number, missing: number) => missing > 0 ? `${recorded}/${planned} Monate erfasst · ${missing} offen` : `${recorded}/${planned} Monate erfasst`,
+    yearReviewPlanUnknown: "Kein Planvergleich für dieses Jahr",
     yearReviewFeesTaxes: "Gebühren & Steuern",
     yearReviewTransactions: "Erfasste Buchungen",
     yearReviewQuality: (count: number) => count === 0 ? "Keine Datenpunkte offen" : `${count} Datenpunkte prüfen`,
@@ -128,6 +146,18 @@ function overviewCopy(locale: "vi" | "de") {
     heartbeatStalePrices: (count: number) => `Cập nhật giá cho ${count} mã`,
     heartbeatClear: "Không có việc cần xử lý",
     heartbeatReview: "Rà soát",
+    dataHealth: "Tình trạng dữ liệu",
+    dataHealthClear: "Không có mục dữ liệu cần chú ý",
+    dataHealthAction: "Cần xử lý",
+    dataHealthReview: "Cần kiểm tra",
+    dataHealthTip: "Gợi ý",
+    dataHealthTransaction: (count: number) => `${count} giao dịch cần rà soát`,
+    dataHealthMissingQuotes: (count: number) => `Thiếu giá cho ${count} mã`,
+    dataHealthStaleQuotes: (count: number) => `Cần cập nhật giá cho ${count} mã`,
+    dataHealthBackup: "Chưa ghi nhận lần xuất backup",
+    dataHealthLedger: "Sổ giao dịch",
+    dataHealthQuotes: "Snapshot giá",
+    dataHealthBackupSource: "Metadata backup",
     planReality: "Kế hoạch & thực tế",
     planRealityYear: "Năm rà soát",
     planRealityPlanned: "Sparplan đến nay",
@@ -141,6 +171,10 @@ function overviewCopy(locale: "vi" | "de") {
     yearReviewYear: "Năm rà soát",
     yearReviewExport: "Xuất báo cáo",
     yearReviewContributed: "Đã góp",
+    yearReviewWithdrawn: "Đã rút",
+    yearReviewContributionMonths: "Tháng góp",
+    yearReviewPlanMonths: (recorded: number, planned: number, missing: number) => missing > 0 ? `Đã ghi nhận ${recorded}/${planned} tháng · còn thiếu ${missing}` : `Đã ghi nhận ${recorded}/${planned} tháng`,
+    yearReviewPlanUnknown: "Chưa có đối chiếu kế hoạch cho năm này",
     yearReviewFeesTaxes: "Phí & thuế",
     yearReviewTransactions: "Giao dịch đã ghi",
     yearReviewQuality: (count: number) => count === 0 ? "Không còn mục dữ liệu cần rà soát" : `${count} mục dữ liệu cần rà soát`,
@@ -189,6 +223,7 @@ export default function OverviewFrame({
   averageBuyPrice,
   priceComparison,
   heartbeat,
+  dataHealth,
   planVsReality,
   planReviewYears,
   onPlanReviewYearChange,
@@ -218,6 +253,22 @@ export default function OverviewFrame({
       : heartbeat.performanceState === "flat"
         ? text.heartbeatFlat
         : text.heartbeatUnavailable;
+  const dataHealthIssueLabel = (issue: PortfolioDataHealthIssue) => {
+    if (issue.code === "transaction_quality") return text.dataHealthTransaction(issue.count);
+    if (issue.code === "missing_quotes") return text.dataHealthMissingQuotes(issue.count);
+    if (issue.code === "stale_quotes") return text.dataHealthStaleQuotes(issue.count);
+    return text.dataHealthBackup;
+  };
+  const dataHealthSourceLabel = (issue: PortfolioDataHealthIssue) => {
+    if (issue.source === "transaction_ledger") return text.dataHealthLedger;
+    if (issue.source === "quote_snapshot") return text.dataHealthQuotes;
+    return text.dataHealthBackupSource;
+  };
+  const dataHealthSeverityLabel = (issue: PortfolioDataHealthIssue) => issue.severity === "action"
+    ? text.dataHealthAction
+    : issue.severity === "review"
+      ? text.dataHealthReview
+      : text.dataHealthTip;
   const heartbeatAttentionLabel = heartbeat.attention.kind === "quality"
     ? text.heartbeatQuality(heartbeat.attention.count)
     : heartbeat.attention.kind === "missing_prices"
@@ -234,6 +285,11 @@ export default function OverviewFrame({
     const lines = [
       `${text.yearReview} ${yearInReview.year}`,
       `${text.yearReviewContributed}: ${formatMoney(yearInReview.contributionAmount)}`,
+      `${text.yearReviewWithdrawn}: ${formatMoney(yearInReview.withdrawnAmount)}`,
+      `${text.yearReviewContributionMonths}: ${yearInReview.contributionMonths}`,
+      yearInReview.plannedContributionMonths == null || yearInReview.missingContributionMonths == null
+        ? text.yearReviewPlanUnknown
+        : text.yearReviewPlanMonths(yearInReview.contributionMonths, yearInReview.plannedContributionMonths, yearInReview.missingContributionMonths),
       `${text.yearReviewFeesTaxes}: ${formatMoney(yearInReview.fees + yearInReview.taxes)}`,
       `${text.yearReviewTransactions}: ${yearInReview.transactionCount}`,
       `${text.yearReviewQuality(yearInReview.qualityIssueCount)}`,
@@ -346,6 +402,20 @@ export default function OverviewFrame({
           </div>
         </section>
 
+        <section className={`gl data-health-card data-health-${dataHealth.issues[0]?.severity ?? "clear"}`} aria-label={text.dataHealth}>
+          <div className="data-health-head"><span>{text.dataHealth}</span><strong>{dataHealth.issues.length ? dataHealth.issues.length : text.dataHealthClear}</strong></div>
+          {dataHealth.issues.length === 0 ? null : (
+            <div className="data-health-list">
+              {dataHealth.issues.map((issue) => (
+                <a key={`${issue.source}-${issue.code}`} className={`data-health-item ${issue.severity}`} href={issue.href}>
+                  <span className="data-health-copy"><strong>{dataHealthIssueLabel(issue)}</strong><small>{dataHealthSourceLabel(issue)}</small></span>
+                  <span className={`data-health-severity ${issue.severity}`}>{dataHealthSeverityLabel(issue)}</span>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+
         <section className={`gl plan-reality-card plan-reality-${planVsReality.state}`} data-plan-reality-state={planVsReality.state} aria-label={text.planReality}>
           <div className="plan-reality-head">
             <span>{text.planReality}</span>
@@ -389,6 +459,9 @@ export default function OverviewFrame({
           </div>
           <div className="year-review-grid">
             <div><span>{text.yearReviewContributed}</span><strong>{formatMoney(yearInReview.contributionAmount)}</strong></div>
+            <div><span>{text.yearReviewWithdrawn}</span><strong>{formatMoney(yearInReview.withdrawnAmount)}</strong></div>
+            <div><span>{text.yearReviewContributionMonths}</span><strong>{yearInReview.contributionMonths}</strong></div>
+            <div><span>{text.planReality}</span><strong className={yearInReview.missingContributionMonths && yearInReview.missingContributionMonths > 0 ? "needs-review" : "calm"}>{yearInReview.plannedContributionMonths == null || yearInReview.missingContributionMonths == null ? text.yearReviewPlanUnknown : text.yearReviewPlanMonths(yearInReview.contributionMonths, yearInReview.plannedContributionMonths, yearInReview.missingContributionMonths)}</strong></div>
             <div><span>{text.yearReviewFeesTaxes}</span><strong>{formatMoney(yearInReview.fees + yearInReview.taxes)}</strong></div>
             <div><span>{text.yearReviewPriceSnapshot}</span><strong>{yearInReview.priceSnapshot ? formatMoney(yearInReview.priceSnapshot.price) : "—"}</strong></div>
             <div><span>{text.heartbeatAttention}</span><strong className={yearInReview.qualityIssueCount > 0 ? "needs-review" : "calm"}>{text.yearReviewQuality(yearInReview.qualityIssueCount)}</strong></div>

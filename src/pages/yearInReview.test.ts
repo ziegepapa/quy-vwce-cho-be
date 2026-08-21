@@ -76,6 +76,37 @@ describe("buildYearInReview", () => {
     });
   });
 
+  it("reports factual withdrawals, unique contribution months and same-year plan progress without a scenario", () => {
+    const review = buildYearInReview({
+      ...base,
+      trackInAppCash: true,
+      transactions: [
+        { date: "2026-01-02", type: "cash_in", amount: 100 },
+        { date: "2026-01-18", type: "cash_in", amount: 50 },
+        { date: "2026-02-05", type: "cash_in", amount: 100 },
+        { date: "2026-02-10", type: "cash_out", amount: 40 },
+      ],
+      planProgress: { year: 2026, plannedMonths: 4, missingMonths: 2 },
+    });
+
+    expect(review).toMatchObject({
+      contributionAmount: 250,
+      contributionMonths: 2,
+      withdrawnAmount: 40,
+      plannedContributionMonths: 4,
+      missingContributionMonths: 2,
+    });
+  });
+
+  it("leaves plan-month fields unknown when the provided plan fact belongs to another year", () => {
+    const review = buildYearInReview({
+      ...base,
+      planProgress: { year: 2025, plannedMonths: 12, missingMonths: 3 },
+    });
+
+    expect(review).toMatchObject({ plannedContributionMonths: null, missingContributionMonths: null });
+  });
+
   it("lists only current/past years with live local evidence and clamps a future year", () => {
     expect(yearInReviewYears({
       today: "2027-08-20",

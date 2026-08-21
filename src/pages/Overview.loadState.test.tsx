@@ -11,6 +11,7 @@ const dbMocks = vi.hoisted(() => ({
   getSettings: vi.fn(),
   listQuotes: vi.fn(),
   listTransactions: vi.fn(),
+  db: { appMetadata: { get: vi.fn() } },
 }));
 
 vi.mock("../lib/db", () => dbMocks);
@@ -74,6 +75,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   dbMocks.listQuotes.mockResolvedValue([]);
   dbMocks.listTransactions.mockResolvedValue([]);
+  dbMocks.db.appMetadata.get.mockResolvedValue({ lastBackupAt: "" });
 });
 
 afterEach(() => {
@@ -122,12 +124,14 @@ describe("Overview German locale", () => {
     renderGermanOverview();
 
     expect(await screen.findByText("VWCE-Kurs")).toBeTruthy();
-    expect(screen.getByText("Beitragsmonate")).toBeTruthy();
+    expect(screen.getAllByText("Beitragsmonate").length).toBeGreaterThan(1);
     expect(screen.getByText("Anteile")).toBeTruthy();
     expect(screen.getByText("Einzahlungsserie")).toBeTruthy();
     expect(screen.getAllByText("Nächste Rate").length).toBeGreaterThan(1);
     expect(screen.getByText("Portfolio-Performance")).toBeTruthy();
     expect(screen.getByText("Portfolio-Check")).toBeTruthy();
+    expect(screen.getByLabelText("Datenstatus")).toBeTruthy();
+    expect(screen.getAllByText("Hinweis").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Plan und Realität")).toBeTruthy();
     expect(screen.getByText("Sparplan bis heute")).toBeTruthy();
     expect(screen.getByLabelText("Jahresrückblick")).toBeTruthy();
@@ -135,7 +139,7 @@ describe("Overview German locale", () => {
     expect(screen.getAllByText("Aufmerksamkeit").length).toBeGreaterThan(1);
     expect(screen.getAllByText("Einzahlungen").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Noch nicht bewertbar").length).toBeGreaterThan(0);
-    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Gần nhất|Hiệu suất danh mục|Vốn góp|Lãi|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Kế hoạch & thực tế|Sparplan đến nay|Đã ghi nhận|Tổng kết năm|Xuất báo cáo|Chưa lưu chuỗi giá/);
+    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Gần nhất|Hiệu suất danh mục|Vốn góp|Lãi|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Tình trạng dữ liệu|Không có mục dữ liệu cần chú ý|Kế hoạch & thực tế|Sparplan đến nay|Đã ghi nhận|Tổng kết năm|Xuất báo cáo|Chưa lưu chuỗi giá/);
   });
 });
 
@@ -154,6 +158,7 @@ describe("Overview demo v10 hierarchy", () => {
     expect(container.querySelector(".streak-card .sc-top .sc-left")).toBeTruthy();
     expect(container.querySelector(".streak-card .sc-dots")).toBeTruthy();
     expect(container.querySelector(".heartbeat-card .heartbeat-grid")).toBeTruthy();
+    expect(container.querySelector(".data-health-card")).toBeTruthy();
     expect(container.querySelector(".plan-reality-card .plan-reality-grid")).toBeTruthy();
     expect(container.querySelector(".year-review-card .year-review-grid")).toBeTruthy();
     expect(container.querySelector(".perf-card .perf-top")).toBeTruthy();
@@ -182,6 +187,22 @@ describe("Overview demo v10 hierarchy", () => {
     expect(container.querySelectorAll(".sc-dots .dot.done")).toHaveLength(1);
   });
 
+  it("renders factual Data Health with reason, source, severity and existing review links", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-health", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([{ id: "quote-health", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".data-health-card")).toBeTruthy());
+    expect(screen.getByLabelText("Tình trạng dữ liệu")).toBeTruthy();
+    expect(screen.getByText("Sổ giao dịch")).toBeTruthy();
+    expect(screen.getByText("Metadata backup")).toBeTruthy();
+    expect(screen.getByText("Gợi ý")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Chưa ghi nhận lần xuất backup/ }).getAttribute("href")).toBe("#/settings");
+    expect(container.querySelector(".data-health-card a[href='#/transactions']")?.textContent).toContain("1 giao dịch cần rà soát");
+  });
+
   it("routes a data-quality attention signal to the existing transaction review workflow", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-quality", "2026-08-01")]);
@@ -190,7 +211,7 @@ describe("Overview demo v10 hierarchy", () => {
     const { container } = renderOverview();
 
     await waitFor(() => expect(container.querySelector(".heartbeat-card")?.getAttribute("data-heartbeat-attention")).toBe("quality"));
-    expect(screen.getByRole("link", { name: /1 giao dịch cần rà soát/ }).getAttribute("href")).toBe("#/transactions");
+    expect(container.querySelector(".heartbeat-card a[href='#/transactions']")?.textContent).toContain("1 giao dịch cần rà soát");
   });
 
   it("routes a missing-price attention signal to Settings when transaction data is complete", async () => {
