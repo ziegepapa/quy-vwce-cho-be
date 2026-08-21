@@ -36,6 +36,7 @@ type AuthState = {
   session: Session | null;
   user: User | null;
   recoveryMode: boolean;
+  recoveryError: "invalid_or_expired" | null;
   mfaReady: boolean;
   mfaRequired: boolean;
   mfaEnrolled: boolean;
@@ -53,17 +54,14 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-export function buildAuthRedirectUrl(
-  origin: string,
-  basePath: string,
-  hashPath: "/" | "/settings",
-): string {
+export function buildAuthRedirectUrl(origin: string, basePath: string): string {
   const normalizedBase = basePath.startsWith("/") ? basePath : `/${basePath}`;
   const withTrailingSlash = normalizedBase.endsWith("/") ? normalizedBase : `${normalizedBase}/`;
   const normalizedOrigin = origin.replace(/\/+$/, "");
-  const url = new URL(withTrailingSlash, `${normalizedOrigin}/`);
-  url.hash = hashPath;
-  return url.toString();
+  // Supabase implicit recovery returns its session in the URL fragment. A
+  // HashRouter destination here would consume the only fragment slot before
+  // detectSessionInUrl can process the callback.
+  return new URL(withTrailingSlash, `${normalizedOrigin}/`).toString();
 }
 
 export function passwordPolicyError(password: string): string | undefined {
@@ -107,12 +105,18 @@ export async function signOutBeforeLocalClear(
   }
 }
 
-function redirectTo(hashPath: "/" | "/settings"): string | undefined {
+function isRecoveryCallbackError(): boolean {
+  if (typeof window === "undefined") return false;
+  const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  // Inspect keys only; never parse, persist, render or log callback tokens.
+  return fragment.has("error") || fragment.has("error_code");
+}
+
+function redirectTo(): string | undefined {
   if (typeof window === "undefined") return undefined;
   return buildAuthRedirectUrl(
     window.location.origin,
     import.meta.env.BASE_URL || window.location.pathname,
-    hashPath,
   );
 }
 
@@ -137,29 +141,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(!supabaseConfigured);
   const [session, setSession] = useState<Session | null>(null);
   const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<"invalid_or_expired" | null>(null);
   const [mfaReady, setMfaReady] = useState(!supabaseConfigured);
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaEnrolled, setMfaEnrolled] = useState(false);
   const [mfaError, setMfaError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabase) {
+    const client = supabase;
+    if (!client) {
       setReady(true);
       setMfaReady(true);
       return;
     }
     let mounted = true;
-    const { data: sub } = supabase.auth.onAuthStateChange((event, nextSession) => {
+    const { data: sub } = client.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
       setSession(nextSession);
-      if (event === "PASSWORD_RECOVERY") setRecoveryMode(true);
+      if (event === "PASSWORD_RECOVERY") {
+        setRecoveryError(null);
+        setRecoveryMode(true);
+      }
       if (event === "SIGNED_OUT") setRecoveryMode(false);
     });
-    void supabase.auth.getSession().then(({ data }) => {
-      if (mounted) {
-        setSession(data.session);
-        setReady(true);
+    // `skipAutoInitialize` in supabase.ts lets this subscription exist before
+    // Supabase consumes a password-recovery callback and emits PASSWORD_RECOVERY.
+    void client.auth.initialize().then(({ error }) => {
+      if (mounted && error && isRecoveryCallbackError()) {
+        setRecoveryError("invalid_or_expired");
       }
+      return client.auth.getSession();
+    }).then(({ data }) => {
+      if (mounted) setSession(data.session);
+    }).catch(() => {
+      if (mounted && isRecoveryCallbackError()) setRecoveryError("invalid_or_expired");
+    }).finally(() => {
+      if (mounted) setReady(true);
     });
     return () => {
       mounted = false;
@@ -225,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback(async (email: string) => {
     if (!supabase) return { error: "Chưa cấu hình Supabase." };
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectTo("/settings"),
+      redirectTo: redirectTo(),
     });
     if (error) return { error: mapError(error.message) };
     return {};
@@ -311,6 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       recoveryMode,
+      recoveryError,
       mfaReady,
       mfaRequired,
       mfaEnrolled,
@@ -329,6 +347,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       session,
       recoveryMode,
+      recoveryError,
       mfaReady,
       mfaRequired,
       mfaEnrolled,

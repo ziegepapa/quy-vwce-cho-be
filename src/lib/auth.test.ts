@@ -8,17 +8,13 @@ import {
 } from "./auth";
 
 describe("private-vault auth helpers", () => {
-  it("builds exact GitHub Pages recovery redirects", () => {
+  it("builds a fragment-free GitHub Pages recovery callback", () => {
     expect(
-      buildAuthRedirectUrl(
-        "https://ziegepapa.github.io",
-        "/quy-vwce-cho-be/",
-        "/settings",
-      ),
-    ).toBe("https://ziegepapa.github.io/quy-vwce-cho-be/#/settings");
+      buildAuthRedirectUrl("https://ziegepapa.github.io", "/quy-vwce-cho-be/"),
+    ).toBe("https://ziegepapa.github.io/quy-vwce-cho-be/");
     expect(
-      buildAuthRedirectUrl("https://ziegepapa.github.io", "/quy-vwce-cho-be/", "/"),
-    ).toBe("https://ziegepapa.github.io/quy-vwce-cho-be/#/");
+      buildAuthRedirectUrl("https://ziegepapa.github.io/", "quy-vwce-cho-be"),
+    ).toBe("https://ziegepapa.github.io/quy-vwce-cho-be/");
   });
 
   it("keeps the client password rule aligned at fourteen characters", () => {
