@@ -28,6 +28,7 @@ const dbMocks = vi.hoisted(() => ({
   saveSettings: vi.fn(),
 }));
 const syncMocks = vi.hoisted(() => ({
+  getSyncMeta: vi.fn(),
   listDeadOutbox: vi.fn(),
   pushOutbox: vi.fn(),
   reviveDeadOutbox: vi.fn(),
@@ -123,6 +124,7 @@ beforeEach(() => {
   dbMocks.listTransactions.mockResolvedValue([]);
   dbMocks.saveSettings.mockResolvedValue(undefined);
   syncMocks.listDeadOutbox.mockResolvedValue([]);
+  syncMocks.getSyncMeta.mockResolvedValue({ lastPulledAt: "", lastPushedAt: "" });
   syncMocks.pushOutbox.mockResolvedValue(undefined);
   syncMocks.reviveDeadOutbox.mockResolvedValue(undefined);
   Object.defineProperty(URL, "createObjectURL", {

@@ -18,7 +18,7 @@ import type { ThemeChoice } from "../lib/theme";
 import { persistTheme, readTheme } from "../lib/theme";
 import { useLocale, type AppLocale } from "../lib/locale";
 import { useAuth } from "../lib/auth";
-import { listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
+import { getSyncMeta, listDeadOutbox, pushOutbox, reviveDeadOutbox } from "../lib/sync/engine";
 import type { OutboxItem, PendingSyncSummary } from "../lib/sync/types";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import SettingsPricePanel from "../components/SettingsPricePanel";
@@ -57,6 +57,18 @@ type SettingsText = {
   pendingAcceptRisk: string;
   deleteToken: string;
   deleteError: string;
+  accountSecurity: string;
+  currentEmail: string;
+  lastLogin: string;
+  lastLoginUnavailable: string;
+  passwordRecovery: string;
+  passwordRecoverySub: string;
+  syncDetails: string;
+  lastLocalSync: string;
+  lastLocalSyncUnavailable: string;
+  data: string;
+  app: string;
+  supportHandover: string;
 };
 
 function settingsStrings(locale: AppLocale): SettingsText {
@@ -84,6 +96,18 @@ function settingsStrings(locale: AppLocale): SettingsText {
     pendingAcceptRisk: "Trotzdem importieren (Risiko akzeptieren)",
     deleteToken: "LOESCHEN",
     deleteError: "Lokale Daten konnten nicht gelöscht werden.",
+    accountSecurity: "Konto & Sicherheit",
+    currentEmail: "Aktuelle E-Mail-Adresse",
+    lastLogin: "Letzte Anmeldung",
+    lastLoginUnavailable: "Vom Anbieter noch nicht verfügbar",
+    passwordRecovery: "Passwort & Wiederherstellung",
+    passwordRecoverySub: "Passwort zurücksetzen ist auf der Anmeldeseite verfügbar.",
+    syncDetails: "Details",
+    lastLocalSync: "Letzter Abgleich auf diesem Gerät",
+    lastLocalSyncUnavailable: "Noch kein lokaler Abgleich erfasst",
+    data: "Daten",
+    app: "App",
+    supportHandover: "Notfallmappe & Übergabe",
   } : {
     saveError: "Không lưu được Cài đặt. Bản đang chỉnh vẫn còn trên màn hình.",
     pendingPushError: "Không đẩy được các thay đổi đang chờ. Dữ liệu trên thiết bị vẫn được giữ nguyên.",
@@ -108,6 +132,18 @@ function settingsStrings(locale: AppLocale): SettingsText {
     pendingAcceptRisk: "Vẫn nhập (chấp nhận rủi ro)",
     deleteToken: "XOA",
     deleteError: "Không xóa được dữ liệu.",
+    accountSecurity: "Tài khoản & bảo mật",
+    currentEmail: "Email hiện tại",
+    lastLogin: "Đăng nhập lần cuối",
+    lastLoginUnavailable: "Nhà cung cấp chưa có thời điểm này",
+    passwordRecovery: "Mật khẩu & khôi phục",
+    passwordRecoverySub: "Đặt lại mật khẩu có ở màn hình đăng nhập.",
+    syncDetails: "Chi tiết",
+    lastLocalSync: "Đồng bộ gần nhất trên thiết bị này",
+    lastLocalSyncUnavailable: "Chưa có lần đồng bộ local được ghi nhận",
+    data: "Dữ liệu",
+    app: "Ứng dụng",
+    supportHandover: "Hồ sơ khẩn cấp & bàn giao",
   };
 }
 
@@ -115,6 +151,13 @@ function localDate(value: string, locale: AppLocale): string {
   return new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
     dateStyle: "medium",
   }).format(new Date(`${value}T00:00:00`));
+}
+
+function localDateTime(value: string, locale: AppLocale): string {
+  return new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 function pendingSyncDetails(summary: PendingSyncSummary, locale: AppLocale): string {
@@ -143,25 +186,6 @@ const DEMO_THEME_OPTIONS: Array<{ value: ThemeChoice; label: string; dot: "vault
   { value: "dark", label: "Ocean", dot: "ocean" },
   { value: "light", label: "Ember", dot: "ember" },
 ];
-
-function berlinNow(locale: "vi" | "de" = "vi") {
-  const now = new Date();
-  return {
-    time: new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Europe/Berlin",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(now),
-    date: new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
-      timeZone: "Europe/Berlin",
-      weekday: "long",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).format(now),
-  };
-}
 
 export default function SettingsPage({
   onReload,
@@ -212,7 +236,7 @@ export default function SettingsPage({
   const { locale, setLocale, t } = useLocale();
   const text = useMemo(() => settingsStrings(locale), [locale]);
   const [dead, setDead] = useState<OutboxItem[]>([]);
-  const [clock, setClock] = useState(() => berlinNow(locale));
+  const [lastLocalSyncAt, setLastLocalSyncAt] = useState("");
   const [mfaEnrollment, setMfaEnrollment] = useState<{
     factorId: string;
     qrCode: string;
@@ -253,13 +277,6 @@ export default function SettingsPage({
   };
 
   useEffect(() => {
-    const tick = () => setClock(berlinNow(locale));
-    tick();
-    const id = window.setInterval(tick, 30_000);
-    return () => window.clearInterval(id);
-  }, [locale]);
-
-  useEffect(() => {
     mounted.current = true;
     let cancelled = false;
     setSettingsLoading(true);
@@ -268,11 +285,14 @@ export default function SettingsPage({
       try {
         const nextSettings = await getSettings();
         const nextMetaBackup = (await db.appMetadata.get("meta"))?.lastBackupAt ?? "";
-        const nextDead = auth.user?.id ? await listDeadOutbox() : [];
+        const [nextDead, syncMeta] = auth.user?.id
+          ? await Promise.all([listDeadOutbox(), getSyncMeta(auth.user.id)])
+          : [[] as OutboxItem[], null] as const;
         if (cancelled) return;
         setSettings(nextSettings);
         setMetaBackup(nextMetaBackup);
         setDead(nextDead);
+        setLastLocalSyncAt(syncMeta ? [syncMeta.lastPulledAt, syncMeta.lastPushedAt].filter(Boolean).sort().at(-1) ?? "" : "");
       } catch {
         if (!cancelled) setSettingsLoadError(true);
       } finally {
@@ -389,6 +409,10 @@ export default function SettingsPage({
       if (result.tone === "error") setActionError(result.message);
       else setMfaMessage(result.message);
       setDead(auth.user?.id ? await listDeadOutbox() : []);
+      if (auth.user?.id) {
+        const meta = await getSyncMeta(auth.user.id);
+        setLastLocalSyncAt([meta.lastPulledAt, meta.lastPushedAt].filter(Boolean).sort().at(-1) ?? "");
+      }
     } finally {
       setSyncingNow(false);
     }
@@ -568,17 +592,6 @@ export default function SettingsPage({
   return (
     <main className="demo-v10-screen" aria-label={t("settingsAria")}>
       <div className="set-wrap">
-      <section className="gl set-dt">
-        <div className="dt-lbl">{t("berlinTime")}</div>
-        <div className="dt-big">{clock.time}</div>
-        <div className="dt-date">{clock.date}</div>
-        <div className="dt-sync">
-          <span className="sdot" aria-hidden />
-          {syncLabel}
-          {saveState === "saving" ? ` · ${t("syncing")}` : saveState === "dirty" ? ` · ${t("saved")}` : ""}
-        </div>
-      </section>
-
       {saveError || actionError ? (
         <div className="gl" style={{ padding: 12 }} role="alert">
           <span>{saveError ?? actionError}</span>
@@ -594,99 +607,29 @@ export default function SettingsPage({
         </div>
       ) : null}
 
-      <div className="set-sec">{t("interface")}</div>
+      <div className="set-sec">{text.accountSecurity}</div>
       <section className="gl set-block">
-        <div className="theme-picker">
-          {DEMO_THEME_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className={"th-opt" + (theme === opt.value ? " sel" : "")}
-              onClick={() => pickTheme(opt.value)}
-            >
-              <span className={`th-dot ${opt.dot}`} aria-hidden />
-              <span className="th-name">{opt.label}</span>
-            </button>
-          ))}
+        <div className="set-row set-row-static">
+          <span className="si-ico v" aria-hidden>@</span>
+          <span className="sr-body">
+            <span className="sr-name">{text.currentEmail}</span>
+            <span className="sr-sub">{auth.user?.email ?? t("syncNeedsSignIn")}</span>
+          </span>
         </div>
-      </section>
-
-      <div className="set-sec">{t("language")}</div>
-      <section className="gl set-block">
-        <div className="lang-options">
-          <button type="button" className={`lang-opt${locale === "vi" ? " selected" : ""}`} onClick={() => setLocale("vi")}>
-            {t("vietnamese")}<small>{locale === "vi" ? t("using") : t("available")}</small>
-          </button>
-          <button type="button" className={`lang-opt${locale === "de" ? " selected" : ""}`} onClick={() => setLocale("de")}>
-            {t("german")}<small>{locale === "de" ? t("active") : t("available")}</small>
-          </button>
+        <div className="set-row set-row-static">
+          <span className="si-ico e" aria-hidden>◷</span>
+          <span className="sr-body">
+            <span className="sr-name">{text.lastLogin}</span>
+            <span className="sr-sub">{auth.user?.last_sign_in_at ? localDateTime(auth.user.last_sign_in_at, locale) : text.lastLoginUnavailable}</span>
+          </span>
         </div>
-      </section>
-
-      <div className="set-sec">{t("sync")}</div>
-      <section className="gl set-block">
-        {syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} /> : null}
-        <button
-          type="button"
-          className="set-row"
-          disabled={syncingNow}
-          onClick={() => void runVisibleSync()}
-        >
-          <span className="si-ico e" aria-hidden>
-            ↻
-          </span>
+        <div className="set-row set-row-static">
+          <span className="si-ico v" aria-hidden>⌁</span>
           <span className="sr-body">
-            <span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span>
-            <span className="sr-sub">{auth.user?.id ? syncLabel : t("syncNeedsSignIn")}</span>
+            <span className="sr-name">{text.passwordRecovery}</span>
+            <span className="sr-sub">{text.passwordRecoverySub}</span>
           </span>
-          <span className="sr-arr">›</span>
-        </button>
-        <button type="button" className="set-row" onClick={() => void doExport()}>
-          <span className="si-ico v" aria-hidden>
-            ↥
-          </span>
-          <span className="sr-body">
-            <span className="sr-name">{t("exportJson")}</span>
-            <span className="sr-sub">
-              {metaBackup ? t("backupOn").replace("{date}", localDate(metaBackup.slice(0, 10), locale)) : t("noBackup")}
-            </span>
-          </span>
-          <span className="sr-arr">›</span>
-        </button>
-        <label className="set-row">
-          <span className="si-ico a" aria-hidden>
-            ↧
-          </span>
-          <span className="sr-body">
-            <span className="sr-name">{t("importBackup")}</span>
-            <span className="sr-sub">{text.jsonBackup}</span>
-          </span>
-          <span className="sr-arr">›</span>
-          <input
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) doImport(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
-      </section>
-
-      <div className="set-sec">{t("account")}</div>
-      <section className="gl set-block">
-        <Link to="/notfallmappe" className="set-row" style={{ textDecoration: "none" }}>
-          <span className="si-ico v" aria-hidden>
-            🛡
-          </span>
-          <span className="sr-body">
-            <span className="sr-name">{t("emergencyFile")}</span>
-            <span className="sr-sub">{text.emergencySub}</span>
-          </span>
-          <span className="sr-arr">›</span>
-        </Link>
+        </div>
         <button
           type="button"
           className="set-row"
@@ -709,17 +652,95 @@ export default function SettingsPage({
             })()
           }
         >
-          <span className="si-ico e" aria-hidden>
-            ⍁
-          </span>
+          <span className="si-ico e" aria-hidden>⍁</span>
           <span className="sr-body">
             <span className="sr-name">{t("mfaState")}</span>
-            <span className="sr-sub">
-              {auth.mfaEnrolled ? t("mfaEnabled") : mfaBusy ? t("mfaCreating") : t("mfaSetup")}
-            </span>
+            <span className="sr-sub">{auth.mfaEnrolled ? t("mfaEnabled") : mfaBusy ? t("mfaCreating") : t("mfaSetup")}</span>
           </span>
           <span className="sr-arr">›</span>
         </button>
+      </section>
+
+      <div className="set-sec">{t("sync")}</div>
+      <section className="gl set-block">
+        {syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
+        <div className="set-row set-row-static">
+          <span className="si-ico e" aria-hidden>↻</span>
+          <span className="sr-body">
+            <span className="sr-name">{syncingNow ? t("syncing") : syncLabel}</span>
+            <span className="sr-sub">{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : text.lastLocalSyncUnavailable}</span>
+          </span>
+        </div>
+        <button type="button" className="set-row" disabled={syncingNow} onClick={() => void runVisibleSync()}>
+          <span className="si-ico e" aria-hidden>↻</span>
+          <span className="sr-body">
+            <span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span>
+            <span className="sr-sub">{auth.user?.id ? syncLabel : t("syncNeedsSignIn")}</span>
+          </span>
+          <span className="sr-arr">›</span>
+        </button>
+        <details className="set-sync-details">
+          <summary>{text.syncDetails}</summary>
+          <LocalDiagnosticsPanel />
+        </details>
+      </section>
+
+      <div className="set-sec">{text.data}</div>
+      <section className="gl set-block">
+        <button type="button" className="set-row" onClick={() => void doExport()}>
+          <span className="si-ico v" aria-hidden>↥</span>
+          <span className="sr-body">
+            <span className="sr-name">{t("exportJson")}</span>
+            <span className="sr-sub">{metaBackup ? t("backupOn").replace("{date}", localDate(metaBackup.slice(0, 10), locale)) : t("noBackup")}</span>
+          </span>
+          <span className="sr-arr">›</span>
+        </button>
+        <label className="set-row">
+          <span className="si-ico a" aria-hidden>↧</span>
+          <span className="sr-body">
+            <span className="sr-name">{t("importBackup")}</span>
+            <span className="sr-sub">{text.jsonBackup}</span>
+          </span>
+          <span className="sr-arr">›</span>
+          <input
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) doImport(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      </section>
+
+      <div className="set-sec">{text.app}</div>
+      <section className="gl set-block">
+        <div className="theme-picker">
+          {DEMO_THEME_OPTIONS.map((opt) => (
+            <button key={opt.value} type="button" className={"th-opt" + (theme === opt.value ? " sel" : "")} onClick={() => pickTheme(opt.value)}>
+              <span className={`th-dot ${opt.dot}`} aria-hidden />
+              <span className="th-name">{opt.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="lang-options">
+          <button type="button" className={`lang-opt${locale === "vi" ? " selected" : ""}`} onClick={() => setLocale("vi")}>
+            {t("vietnamese")}<small>{locale === "vi" ? t("using") : t("available")}</small>
+          </button>
+          <button type="button" className={`lang-opt${locale === "de" ? " selected" : ""}`} onClick={() => setLocale("de")}>
+            {t("german")}<small>{locale === "de" ? t("active") : t("available")}</small>
+          </button>
+        </div>
+        <Link to="/notfallmappe" className="set-row" style={{ textDecoration: "none" }}>
+          <span className="si-ico v" aria-hidden>🛡</span>
+          <span className="sr-body">
+            <span className="sr-name">{text.supportHandover}</span>
+            <span className="sr-sub">{text.emergencySub}</span>
+          </span>
+          <span className="sr-arr">›</span>
+        </Link>
       </section>
 
       {mfaEnrollment ? (
@@ -821,8 +842,6 @@ export default function SettingsPage({
             />
           ) : <p className="advanced-empty">{t("syncConflictsSignIn")}</p>}
         </details>
-
-        <LocalDiagnosticsPanel />
 
         <details className="advanced-group" open={openAdvancedGroup === "plan"}>
           <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("plan"); }}>{t("plan")}</summary>

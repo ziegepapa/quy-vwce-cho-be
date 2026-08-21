@@ -11,6 +11,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase, supabaseConfigured } from "./supabase";
 
 export const MIN_PASSWORD_LENGTH = 14;
+const RECOVERY_INTENT_KEY = "vwce:password-recovery-intent:v1";
 
 type AssuranceLevel = string | null;
 
@@ -36,7 +37,9 @@ type AuthState = {
   session: Session | null;
   user: User | null;
   recoveryMode: boolean;
+  recoveryCompleted: boolean;
   recoveryError: "invalid_or_expired" | null;
+  dismissRecoveryError: () => void;
   mfaReady: boolean;
   mfaRequired: boolean;
   mfaEnrolled: boolean;
@@ -46,6 +49,7 @@ type AuthState = {
   signOut: () => Promise<AuthActionResult>;
   resetPassword: (email: string) => Promise<AuthActionResult>;
   updatePassword: (password: string) => Promise<AuthActionResult>;
+  continueAfterRecovery: () => void;
   refreshMfa: () => Promise<void>;
   verifyMfa: (code: string) => Promise<AuthActionResult>;
   startMfaEnrollment: () => Promise<AuthActionResult<MfaEnrollment>>;
@@ -112,6 +116,22 @@ function isRecoveryCallbackError(): boolean {
   return fragment.has("error") || fragment.has("error_code");
 }
 
+function readRecoveryIntent(): boolean {
+  if (typeof window === "undefined") return false;
+  try { return window.sessionStorage.getItem(RECOVERY_INTENT_KEY) === "1"; }
+  catch { return false; }
+}
+
+function persistRecoveryIntent(active: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (active) window.sessionStorage.setItem(RECOVERY_INTENT_KEY, "1");
+    else window.sessionStorage.removeItem(RECOVERY_INTENT_KEY);
+  } catch {
+    // The in-memory recovery state remains available if session storage is unavailable.
+  }
+}
+
 function redirectTo(): string | undefined {
   if (typeof window === "undefined") return undefined;
   return buildAuthRedirectUrl(
@@ -141,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(!supabaseConfigured);
   const [session, setSession] = useState<Session | null>(null);
   const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoveryCompleted, setRecoveryCompleted] = useState(false);
   const [recoveryError, setRecoveryError] = useState<"invalid_or_expired" | null>(null);
   const [mfaReady, setMfaReady] = useState(!supabaseConfigured);
   const [mfaRequired, setMfaRequired] = useState(false);
@@ -159,22 +180,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return;
       setSession(nextSession);
       if (event === "PASSWORD_RECOVERY") {
+        // Persist only a token-free, tab-scoped UI intent. The Supabase SDK remains
+        // the sole owner of the provider session and any callback tokens.
+        persistRecoveryIntent(true);
+        setRecoveryCompleted(false);
         setRecoveryError(null);
         setRecoveryMode(true);
       }
-      if (event === "SIGNED_OUT") setRecoveryMode(false);
+      if (event === "SIGNED_OUT") {
+        persistRecoveryIntent(false);
+        setRecoveryMode(false);
+        setRecoveryCompleted(false);
+      }
     });
     // `skipAutoInitialize` in supabase.ts lets this subscription exist before
     // Supabase consumes a password-recovery callback and emits PASSWORD_RECOVERY.
     void client.auth.initialize().then(({ error }) => {
       if (mounted && error && isRecoveryCallbackError()) {
+        persistRecoveryIntent(false);
+        setRecoveryMode(false);
         setRecoveryError("invalid_or_expired");
       }
       return client.auth.getSession();
     }).then(({ data }) => {
-      if (mounted) setSession(data.session);
+      if (!mounted) return;
+      setSession(data.session);
+      // A browser refresh can occur after Supabase consumed the fragment. Restore
+      // only the token-free intent and only while the provider still has a session.
+      if (data.session && readRecoveryIntent()) {
+        setRecoveryCompleted(false);
+        setRecoveryError(null);
+        setRecoveryMode(true);
+      } else if (!data.session) {
+        persistRecoveryIntent(false);
+      }
     }).catch(() => {
-      if (mounted && isRecoveryCallbackError()) setRecoveryError("invalid_or_expired");
+      if (mounted && isRecoveryCallbackError()) {
+        persistRecoveryIntent(false);
+        setRecoveryMode(false);
+        setRecoveryError("invalid_or_expired");
+      }
     }).finally(() => {
       if (mounted) setReady(true);
     });
@@ -255,7 +300,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!supabase || !session) return { error: "Phiên khôi phục không còn hợp lệ." };
       const { error } = await supabase.auth.updateUser({ password });
       if (error) return { error: mapError(error.message) };
+      persistRecoveryIntent(false);
       setRecoveryMode(false);
+      setRecoveryCompleted(true);
       await refreshMfa();
       return {};
     },
@@ -318,8 +365,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [challengeAndVerify],
   );
 
+  const dismissRecoveryError = useCallback(() => {
+    setRecoveryError(null);
+  }, []);
+
+  const continueAfterRecovery = useCallback(() => {
+    setRecoveryCompleted(false);
+    setRecoveryError(null);
+  }, []);
+
   const vaultReady =
-    !session || (mfaReady && !mfaRequired && !mfaError && !recoveryMode);
+    !session || (mfaReady && !mfaRequired && !mfaError && !recoveryMode && !recoveryCompleted);
 
   const value = useMemo<AuthState>(
     () => ({
@@ -328,7 +384,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       recoveryMode,
+      recoveryCompleted,
       recoveryError,
+      dismissRecoveryError,
       mfaReady,
       mfaRequired,
       mfaEnrolled,
@@ -338,6 +396,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       resetPassword,
       updatePassword,
+      continueAfterRecovery,
       refreshMfa,
       verifyMfa,
       startMfaEnrollment,
@@ -347,7 +406,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       session,
       recoveryMode,
+      recoveryCompleted,
       recoveryError,
+      dismissRecoveryError,
       mfaReady,
       mfaRequired,
       mfaEnrolled,
@@ -357,6 +418,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       resetPassword,
       updatePassword,
+      continueAfterRecovery,
       refreshMfa,
       verifyMfa,
       startMfaEnrollment,

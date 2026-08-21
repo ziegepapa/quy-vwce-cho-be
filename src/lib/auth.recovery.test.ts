@@ -76,6 +76,7 @@ beforeEach(() => {
   latestAuth = null;
   authMocks.calls.length = 0;
   window.localStorage.clear();
+  window.sessionStorage.clear();
   authMocks.onAuthStateChange.mockImplementation((callback) => {
     authMocks.calls.push("subscribe");
     authMocks.setListener(callback);
@@ -104,6 +105,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
+  window.sessionStorage.clear();
   window.location.hash = "";
 });
 
@@ -121,7 +123,23 @@ describe("password-recovery callback startup", () => {
     // The application never manually writes a recovery token. The real
     // Supabase SDK owns normal session persistence in its configured storage.
     expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.getItem("vwce:password-recovery-intent:v1")).toBe("1");
     expect(screen.getByText(/"recoveryMode":true/)).toBeTruthy();
+  });
+
+  it("restores recovery mode after a refresh when the provider session remains valid", async () => {
+    const first = renderProvider();
+    await waitFor(() => expect(latestAuth?.recoveryMode).toBe(true));
+    first.unmount();
+
+    authMocks.initialize.mockResolvedValueOnce({ error: null });
+    authMocks.getSession.mockResolvedValueOnce({ data: { session: RECOVERY_SESSION }, error: null });
+    renderProvider();
+
+    await waitFor(() => expect(latestAuth?.recoveryMode).toBe(true));
+    expect(window.sessionStorage.getItem("vwce:password-recovery-intent:v1")).toBe("1");
+    expect(window.sessionStorage.getItem("vwce:password-recovery-intent:v1")).not.toContain("synthetic-access-token");
+    expect(window.localStorage.length).toBe(0);
   });
 
   it("keeps an invalid recovery callback out of session state and exposes only a safe error code", async () => {
@@ -166,6 +184,8 @@ describe("password-recovery callback startup", () => {
 
     expect(authMocks.updateUser).toHaveBeenCalledWith({ password: "x".repeat(14) });
     await waitFor(() => expect(latestAuth?.recoveryMode).toBe(false));
+    await waitFor(() => expect(latestAuth?.recoveryCompleted).toBe(true));
+    expect(window.sessionStorage.getItem("vwce:password-recovery-intent:v1")).toBeNull();
     expect(window.localStorage.length).toBe(0);
   });
 

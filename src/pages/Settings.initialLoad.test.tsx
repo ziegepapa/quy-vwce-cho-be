@@ -19,6 +19,7 @@ const dbMocks = vi.hoisted(() => ({
   saveSettings: vi.fn(),
 }));
 const syncMocks = vi.hoisted(() => ({
+  getSyncMeta: vi.fn(),
   listDeadOutbox: vi.fn(),
   pushOutbox: vi.fn(),
   reviveDeadOutbox: vi.fn(),
@@ -77,6 +78,7 @@ beforeEach(() => {
     updatedAt: new Date().toISOString(),
   });
   syncMocks.listDeadOutbox.mockResolvedValue([]);
+  syncMocks.getSyncMeta.mockResolvedValue({ lastPulledAt: "", lastPushedAt: "" });
 });
 
 afterEach(() => cleanup());
@@ -90,7 +92,7 @@ describe("Settings initial load state", () => {
     const status = screen.getByRole("status");
     expect(status.getAttribute("aria-busy")).toBe("true");
     expect(status.getAttribute("aria-label")).toBe("Đang tải Cài đặt");
-    expect(screen.queryByText("Giao diện")).toBeNull();
+    expect(screen.queryByText("Tài khoản & bảo mật")).toBeNull();
   });
 
   it("fails closed and retries the initial read", async () => {
@@ -103,11 +105,11 @@ describe("Settings initial load state", () => {
     expect(
       await screen.findByRole("heading", { name: "Không tải được Cài đặt" }),
     ).toBeTruthy();
-    expect(screen.queryByText("Giao diện")).toBeNull();
+    expect(screen.queryByText("Tài khoản & bảo mật")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
 
-    expect(await screen.findByText("Giao diện")).toBeTruthy();
+    expect(await screen.findByText("Tài khoản & bảo mật")).toBeTruthy();
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
   });
 

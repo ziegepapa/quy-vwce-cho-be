@@ -22,6 +22,7 @@ const dbMocks = vi.hoisted(() => ({
   saveSettings: vi.fn(),
 }));
 const syncMocks = vi.hoisted(() => ({
+  getSyncMeta: vi.fn(),
   listDeadOutbox: vi.fn(),
   pushOutbox: vi.fn(),
   reviveDeadOutbox: vi.fn(),
@@ -100,6 +101,7 @@ beforeEach(() => {
   dbMocks.listTransactions.mockResolvedValue([]);
   dbMocks.saveSettings.mockResolvedValue(undefined);
   syncMocks.listDeadOutbox.mockResolvedValue([]);
+  syncMocks.getSyncMeta.mockResolvedValue({ lastPulledAt: "", lastPushedAt: "" });
   Object.defineProperty(URL, "createObjectURL", {
     configurable: true,
     value: vi.fn(() => "blob:test"),
@@ -114,11 +116,14 @@ afterEach(() => {
 });
 
 describe("German Settings and mobile Advanced hierarchy", () => {
-  it("uses German copy and keeps all Advanced groups collapsed until explicitly opened", async () => {
+  it("uses German copy, removes the large clock and keeps sync diagnostics behind a compact disclosure", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
     const { container } = renderGermanSettings();
 
-    await screen.findByText("Erscheinungsbild");
+    await screen.findByText("Konto & Sicherheit");
+    expect(screen.getByText("Aktuelle E-Mail-Adresse")).toBeTruthy();
+    expect(screen.getByText("Letzte Anmeldung")).toBeTruthy();
+    expect(screen.queryByText("Berlin · aktuelle Zeit")).toBeNull();
     expect(screen.getByRole("button", { name: "Vietnamesisch Verfügbar" })).toBeTruthy();
     expect(screen.getByText("Kurse & Marktdaten")).toBeTruthy();
     expect(screen.getByText("Synchronisierung & Datenkonflikte")).toBeTruthy();
@@ -126,16 +131,18 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(screen.getByText("Verwendungsplan")).toBeTruthy();
     expect(screen.getByText("Sicherung & lokale Daten")).toBeTruthy();
     expect(screen.getByText(`v${APP_RELEASE_VERSION} · Online`)).toBeTruthy();
+    const syncDetails = container.querySelector("details.set-sync-details") as HTMLDetailsElement;
+    expect(syncDetails.open).toBe(false);
     const groups = [...container.querySelectorAll("details.advanced-group")] as HTMLDetailsElement[];
     expect(groups).toHaveLength(5);
     expect(groups.every((group) => group.open === false)).toBe(true);
 
     fireEvent.click(screen.getByText("Kurse & Marktdaten"));
-    expect(groups[0]?.open).toBe(true);
+    expect(groups[1]?.open).toBe(true);
     fireEvent.click(screen.getByText("Synchronisierung & Datenkonflikte"));
     await waitFor(() => {
-      expect(groups[0]?.open).toBe(false);
-      expect(groups[1]?.open).toBe(true);
+      expect(groups[1]?.open).toBe(false);
+      expect(groups[2]?.open).toBe(true);
     });
 
     fireEvent.click(screen.getByRole("button", { name: /JSON exportieren/ }));
