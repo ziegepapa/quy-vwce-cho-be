@@ -7,9 +7,12 @@ import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
 const authMocks = vi.hoisted(() => ({
   current: {
     configured: true,
-    user: null,
+    user: null as { id: string; email: string } | null,
     recoveryMode: false,
+    recoveryCompleted: false,
     recoveryError: "invalid_or_expired" as "invalid_or_expired" | null,
+    dismissRecoveryError: vi.fn(),
+    continueAfterRecovery: vi.fn(),
     mfaRequired: false,
     mfaError: null as string | null,
     signIn: vi.fn(),
@@ -39,7 +42,10 @@ beforeEach(() => {
     configured: true,
     user: null,
     recoveryMode: false,
+    recoveryCompleted: false,
     recoveryError: "invalid_or_expired",
+    dismissRecoveryError: vi.fn(),
+    continueAfterRecovery: vi.fn(),
     mfaRequired: false,
     mfaError: null,
     signIn: vi.fn(),
@@ -72,6 +78,48 @@ describe("Auth password-recovery locale boundary", () => {
       "Der Wiederherstellungslink ist ungültig oder abgelaufen. Fordern Sie einen neuen Link an.",
     );
     expect(screen.queryByText(/khôi phục|không hợp lệ|synthetic/i)).toBeNull();
+  });
+
+  it("offers a safe resend path from the Vietnamese invalid-link state", () => {
+    authMocks.current.dismissRecoveryError = vi.fn(() => {
+      authMocks.current.recoveryError = null;
+    });
+    renderAuth("vi");
+
+    fireEvent.click(screen.getByRole("button", { name: "Gửi lại email đặt lại mật khẩu" }));
+    expect(authMocks.current.dismissRecoveryError).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Gửi email" })).toBeTruthy();
+  });
+
+  it("shows the explicit Vietnamese post-reset success state before opening the vault", () => {
+    authMocks.current = {
+      ...authMocks.current,
+      user: { id: "synthetic-user", email: "owner@example.invalid" },
+      recoveryCompleted: true,
+      recoveryError: null,
+    };
+    renderAuth("vi");
+
+    expect(screen.getByRole("heading", { name: "Đã cập nhật mật khẩu" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Mở kho" }));
+    expect(authMocks.current.continueAfterRecovery).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects confirmation mismatch before the password-update call", () => {
+    authMocks.current = {
+      ...authMocks.current,
+      user: { id: "synthetic-user", email: "owner@example.invalid" },
+      recoveryMode: true,
+      recoveryError: null,
+    };
+    renderAuth("vi");
+
+    fireEvent.change(screen.getByLabelText("Đặt mật khẩu mới"), { target: { value: "x".repeat(14) } });
+    fireEvent.change(screen.getByLabelText("Nhập lại mật khẩu"), { target: { value: "y".repeat(14) } });
+    fireEvent.submit(screen.getByRole("button", { name: "Lưu mật khẩu mới" }).closest("form")!);
+
+    expect(screen.getByRole("alert").textContent).toBe("Hai mật khẩu chưa khớp.");
+    expect(authMocks.current.updatePassword).not.toHaveBeenCalled();
   });
 
   it("does not surface a Vietnamese provider error in the German forgot-password form", async () => {

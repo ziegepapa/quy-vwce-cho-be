@@ -30,9 +30,9 @@ function Brand({ label }: { label: string }) {
 
 function authCopy(locale: "vi" | "de") {
   return locale === "de" ? {
-    brand: "VWCE-Fonds für das Kind", missingConfig: "Anmeldung nicht konfiguriert", missingConfigBody: "Im Build fehlen VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.", passwordsMismatch: "Die beiden Passwörter stimmen nicht überein.", passwordPolicy: "Das Passwort erfüllt nicht die Sicherheitsanforderungen.", newPassword: "Neues Passwort", recoveryBody: "Der Wiederherstellungslink ist gültig. Legen Sie ein eigenes Passwort für den Familien-Vault fest.", recoveryInvalid: "Der Wiederherstellungslink ist ungültig oder abgelaufen. Fordern Sie einen neuen Link an.", password: "Passwort", confirmPassword: "Passwort wiederholen", minimum: (count: number) => `Mindestens ${count} Zeichen`, updating: "Wird aktualisiert…", savePassword: "Neues Passwort speichern", mfa: "Zwei-Faktor-Bestätigung", mfaBody: "Geben Sie den sechsstelligen Code Ihrer Authenticator-App ein, um den Vault zu öffnen.", checking: "Wird geprüft…", retry: "Erneut versuchen", totp: "TOTP-Code", verifying: "Wird bestätigt…", openVault: "Vault öffnen", openingVault: "Vault wird geöffnet…", resetSent: "Falls das Konto existiert, wurde eine E-Mail zum Zurücksetzen gesendet.", login: "Anmelden", forgot: "Passwort vergessen", privateVault: "Privater Familien-Vault. Neue Konten werden ausschließlich vom Owner angelegt und bestätigt.", processing: "Wird verarbeitet…", sendEmail: "E-Mail senden", backToLogin: "Zur Anmeldung", disclaimer: "Keine Anlageberatung. Daten verbleiben auf diesem Gerät und werden erst nach Anmeldung synchronisiert.",
+    brand: "VWCE-Fonds für das Kind", missingConfig: "Anmeldung nicht konfiguriert", missingConfigBody: "Im Build fehlen VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.", passwordsMismatch: "Die beiden Passwörter stimmen nicht überein.", passwordPolicy: "Das Passwort erfüllt nicht die Sicherheitsanforderungen.", newPassword: "Neues Passwort", recoveryBody: "Der Wiederherstellungslink ist gültig. Legen Sie ein eigenes Passwort für den Familien-Vault fest.", recoveryInvalid: "Der Wiederherstellungslink ist ungültig oder abgelaufen. Fordern Sie einen neuen Link an.", recoverySuccess: "Passwort aktualisiert", recoverySuccessBody: "Ihr neues Passwort wurde gespeichert. Öffnen Sie den Vault weiter oder melden Sie sich erneut an, wenn die Sitzung abgelaufen ist.", requestNewLink: "Neue Reset-E-Mail anfordern", password: "Passwort", confirmPassword: "Passwort wiederholen", minimum: (count: number) => `Mindestens ${count} Zeichen`, updating: "Wird aktualisiert…", savePassword: "Neues Passwort speichern", mfa: "Zwei-Faktor-Bestätigung", mfaBody: "Geben Sie den sechsstelligen Code Ihrer Authenticator-App ein, um den Vault zu öffnen.", checking: "Wird geprüft…", retry: "Erneut versuchen", totp: "TOTP-Code", verifying: "Wird bestätigt…", openVault: "Vault öffnen", openingVault: "Vault wird geöffnet…", resetSent: "Falls das Konto existiert, wurde eine E-Mail zum Zurücksetzen gesendet.", login: "Anmelden", forgot: "Passwort vergessen", privateVault: "Privater Familien-Vault. Neue Konten werden ausschließlich vom Owner angelegt und bestätigt.", processing: "Wird verarbeitet…", sendEmail: "E-Mail senden", backToLogin: "Zur Anmeldung", disclaimer: "Keine Anlageberatung. Daten verbleiben auf diesem Gerät und werden erst nach Anmeldung synchronisiert.",
   } : {
-    brand: "Quỹ VWCE cho bé", missingConfig: "Chưa cấu hình đăng nhập", missingConfigBody: "Thiếu VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY trong build.", passwordsMismatch: "Hai mật khẩu chưa khớp.", passwordPolicy: "Mật khẩu chưa đáp ứng yêu cầu bảo mật.", newPassword: "Đặt mật khẩu mới", recoveryBody: "Link recovery hợp lệ. Hãy đặt mật khẩu riêng cho kho gia đình.", recoveryInvalid: "Link khôi phục không hợp lệ hoặc đã hết hạn. Hãy yêu cầu một link mới.", password: "Mật khẩu", confirmPassword: "Nhập lại mật khẩu", minimum: (count: number) => `Tối thiểu ${count} ký tự`, updating: "Đang cập nhật…", savePassword: "Lưu mật khẩu mới", mfa: "Xác minh hai bước", mfaBody: "Nhập mã 6 chữ số từ ứng dụng authenticator để mở kho.", checking: "Đang kiểm tra…", retry: "Thử lại", totp: "Mã TOTP", verifying: "Đang xác minh…", openVault: "Mở kho", openingVault: "Đang mở kho…", resetSent: "Đã gửi email đặt lại mật khẩu nếu account tồn tại.", login: "Đăng nhập", forgot: "Quên mật khẩu", privateVault: "Kho gia đình riêng tư. Tài khoản mới chỉ do Owner tạo và xác minh trước.", processing: "Đang xử lý…", sendEmail: "Gửi email", backToLogin: "Về đăng nhập", disclaimer: "Không phải tư vấn đầu tư. Dữ liệu trên thiết bị và đồng bộ khi đã đăng nhập.",
+    brand: "Quỹ VWCE cho bé", missingConfig: "Chưa cấu hình đăng nhập", missingConfigBody: "Thiếu VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY trong build.", passwordsMismatch: "Hai mật khẩu chưa khớp.", passwordPolicy: "Mật khẩu chưa đáp ứng yêu cầu bảo mật.", newPassword: "Đặt mật khẩu mới", recoveryBody: "Link recovery hợp lệ. Hãy đặt mật khẩu riêng cho kho gia đình.", recoveryInvalid: "Link khôi phục không hợp lệ hoặc đã hết hạn. Hãy yêu cầu một link mới.", recoverySuccess: "Đã cập nhật mật khẩu", recoverySuccessBody: "Mật khẩu mới đã được lưu. Bạn có thể tiếp tục mở kho hoặc đăng nhập lại nếu phiên đã hết hạn.", requestNewLink: "Gửi lại email đặt lại mật khẩu", password: "Mật khẩu", confirmPassword: "Nhập lại mật khẩu", minimum: (count: number) => `Tối thiểu ${count} ký tự`, updating: "Đang cập nhật…", savePassword: "Lưu mật khẩu mới", mfa: "Xác minh hai bước", mfaBody: "Nhập mã 6 chữ số từ ứng dụng authenticator để mở kho.", checking: "Đang kiểm tra…", retry: "Thử lại", totp: "Mã TOTP", verifying: "Đang xác minh…", openVault: "Mở kho", openingVault: "Đang mở kho…", resetSent: "Đã gửi email đặt lại mật khẩu nếu account tồn tại.", login: "Đăng nhập", forgot: "Quên mật khẩu", privateVault: "Kho gia đình riêng tư. Tài khoản mới chỉ do Owner tạo và xác minh trước.", processing: "Đang xử lý…", sendEmail: "Gửi email", backToLogin: "Về đăng nhập", disclaimer: "Không phải tư vấn đầu tư. Dữ liệu trên thiết bị và đồng bộ khi đã đăng nhập.",
   };
 }
 
@@ -57,6 +57,41 @@ export default function AuthPage() {
           <p className="muted">
             {text.missingConfigBody}
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (auth.user && auth.recoveryCompleted) {
+    return (
+      <div className="app-shell auth-shell">
+        <Brand label={text.brand} />
+        <div className="card auth-card">
+          <h1 className="page-title">{text.recoverySuccess}</h1>
+          <p className="muted">{text.recoverySuccessBody}</p>
+          <button type="button" onClick={auth.continueAfterRecovery} style={{ width: "100%" }}>
+            {text.openVault}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!auth.user && auth.recoveryError) {
+    return (
+      <div className="app-shell auth-shell">
+        <Brand label={text.brand} />
+        <div className="card auth-card">
+          <h1 className="page-title">{text.forgot}</h1>
+          <div className="banner error" role="alert">{text.recoveryInvalid}</div>
+          <div className="stack" style={{ marginTop: "1rem" }}>
+            <button type="button" onClick={() => { auth.dismissRecoveryError(); setMode("forgot"); }}>
+              {text.requestNewLink}
+            </button>
+            <button type="button" className="secondary" onClick={() => { auth.dismissRecoveryError(); setMode("login"); }}>
+              {text.backToLogin}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -254,7 +289,6 @@ export default function AuthPage() {
             </div>
           ) : null}
 
-          {auth.recoveryError ? <div className="banner error" role="alert">{text.recoveryInvalid}</div> : null}
           {error ? <div className="banner error" role="alert">{error}</div> : null}
           {info ? <div className="banner success" role="status">{info}</div> : null}
 
