@@ -383,7 +383,22 @@ export default function App() {
     }
   }
 
-  if (!auth.ready || !ready || (auth.user && (!auth.mfaReady || !recoveryChecked))) return <div className="app-shell"><p className="muted">{text.loading}</p></div>;
+  // Auth provider not ready yet — only true cold start.
+  if (!auth.ready) {
+    return <div className="app-shell"><p className="muted">{text.loading}</p></div>;
+  }
+
+  // Password recovery must reach AuthPage even when vaultReady is false and the
+  // data-recovery checklist has not run (recoveryChecked stays false while
+  // vaultReady is false). Do not block on MFA readiness here either: recovery
+  // owns the session until the user sets a new password or continues.
+  if (auth.user && (auth.recoveryMode || auth.recoveryCompleted)) {
+    return <AuthPage />;
+  }
+
+  if (!ready || (auth.user && (!auth.mfaReady || !recoveryChecked))) {
+    return <div className="app-shell"><p className="muted">{text.loading}</p></div>;
+  }
   if (logoutGate || logoutCleanupPending) return <div className="app-shell" role={logoutCleanupPending ? "alert" : "status"}><div className={logoutCleanupPending ? "banner error" : "banner"}><h1 className="page-title">{logoutCleanupPending ? text.cloudSessionEnded : text.closingVault}</h1><p>{logoutNotice ?? text.finishingCloudSession}</p>{logoutCleanupPending ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutCleanup()}>{logoutRetrying ? text.cleanupRetrying : text.cleanupRetry}</button> : null}</div></div>;
   if (migrationError) return <div className="app-shell" role="alert"><h1>{text.migrationTitle}</h1><p className="muted">{text.migrationBody}</p><p>{migrationError}</p><button type="button" className="btn primary" onClick={() => void reload()}>{text.retryMigration}</button></div>;
   if (auth.configured && (!auth.user || !auth.vaultReady)) return <AuthPage />;
