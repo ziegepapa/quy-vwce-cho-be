@@ -3,7 +3,6 @@ import { db, getSettings, listQuotes, listTransactions } from "../lib/db";
 import { formatMoney } from "../lib/calc";
 import { buildOverviewHero } from "../lib/overviewNumbers";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
-import { computeContributionStreak } from "../lib/contributionStreak";
 import { computeHeroLifetimeContribution } from "../lib/heroLifetime";
 import OverviewFrame from "../components/demo-v10/OverviewFrame";
 import { useLocale } from "../lib/locale";
@@ -35,6 +34,24 @@ function monthsFromStart(startDate: string, now: Date): number {
   const start = new Date(`${startDate}T12:00:00`);
   if (!Number.isFinite(start.getTime())) return 0;
   return (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth();
+}
+
+function formatGoalTargetDate(value: string | null | undefined, locale: "vi" | "de"): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T12:00:00`);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+}
+
+function goalHorizon(value: string | null | undefined, locale: "vi" | "de", now = new Date()): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const target = new Date(`${value}T12:00:00`);
+  if (!Number.isFinite(target.getTime())) return null;
+  const months = (target.getFullYear() - now.getFullYear()) * 12 + target.getMonth() - now.getMonth() - (target.getDate() < now.getDate() ? 1 : 0);
+  if (months < 0) return locale === "de" ? "Zieltermin erreicht" : "Đã đến mốc mục tiêu";
+  const years = Math.floor(months / 12);
+  const remainingMonths = months % 12;
+  return locale === "de" ? `${years} J. ${remainingMonths} Mon.` : `${years} năm ${remainingMonths} tháng`;
 }
 
 function nextPlanDate(startDate: string, locale: "vi" | "de", now = new Date()): string | null {
@@ -104,7 +121,6 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       transactionCount: transactions.length,
       trackInAppCash: settings.trackInAppCash ?? true,
     });
-    const streak = computeContributionStreak(transactions);
     const lifetime = computeHeroLifetimeContribution({
       transactions,
       trackInAppCash: settings.trackInAppCash,
@@ -124,14 +140,6 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     const plannedContribution = monthsFromStart(settings.startDate, currentDate) >= 12
       ? settings.contributionY2
       : settings.contributionY1;
-    const contributionTotal = lifetime.amount > 0 ? formatMoney(lifetime.amount) : null;
-    const performanceBase = Math.max(1, lifetime.amount + Math.max(0, pnl ?? 0));
-    const lossWidth = lifetime.amount > 0 && pnl != null && pnl < 0
-      ? Math.min(100, Math.max(0, (Math.abs(pnl) / lifetime.amount) * 100))
-      : 0;
-    const averageBuyPrice = portfolio.vwceQty > 0 && portfolio.vwceCostBasis > 0
-      ? portfolio.vwceCostBasis / portfolio.vwceQty
-      : null;
     const qualityIssues = findTransactionQualityIssues(transactions);
     const heartbeat = buildPortfolioHeartbeat({
       nextContribution: nextPlanDate(settings.startDate, locale, currentDate),
@@ -189,7 +197,6 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       assets: formatMoney(hero.assets),
       pnl: pnl == null || pnl === 0 ? null : `${pnl > 0 ? "▲ +" : "▼ −"}${formatMoney(Math.abs(pnl))}`,
       pnlPositive: (pnl ?? 0) >= 0,
-      streakMonths: streak.streakMonths,
       price: vwcePrice > 0
         ? `€${vwcePrice.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : null,
@@ -201,8 +208,6 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
         ? portfolio.vwceQty.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 4 })
         : null,
       savingsPlan: Number.isFinite(plannedContribution) && plannedContribution > 0 ? formatMoney(plannedContribution) : null,
-      nextContribution: heartbeat.nextContribution,
-      performance,
       heartbeat,
       dataHealth,
       planVsReality,
@@ -211,18 +216,8 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       yearInReview,
       yearReviewYears,
       onYearReviewYearChange: setYearReviewYear,
-      performanceState,
-      contributionWidth: performanceState === "unavailable"
-        ? 0
-        : lifetime.amount > 0 ? Math.min(100, Math.max(0, (lifetime.amount / performanceBase) * 100)) : 0,
-      gainWidth: performanceState === "gain" && lifetime.amount > 0 && pnl != null
-        ? Math.min(100, Math.max(0, 100 - (lifetime.amount / performanceBase) * 100))
-        : 0,
-      lossWidth,
-      contributionTotal,
-      gainTotal: pnl == null ? null : formatMoney(pnl),
-      averageBuyPrice: averageBuyPrice == null ? null : formatMoney(averageBuyPrice),
-      priceComparison: vwcePrice > 0 && averageBuyPrice != null ? { averageBuyPrice, currentPrice: vwcePrice } : null,
+      goalTargetDate: formatGoalTargetDate(settings.endDate, locale),
+      goalHorizon: goalHorizon(settings.endDate, locale, currentDate),
     };
   }, [lastBackupAt, locale, planReviewYear, yearReviewYear, settings, text, transactions, quotes]);
 

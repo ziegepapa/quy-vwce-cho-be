@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { useLocale } from "../../lib/locale";
 import { formatMoney } from "../../lib/calc";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
 import type { PlanVsReality } from "../../pages/planVsReality";
 import type { YearInReview } from "../../pages/yearInReview";
-import type { PortfolioDataHealth, PortfolioDataHealthIssue } from "../../pages/portfolioDataHealth";
+import type { PortfolioDataHealth } from "../../pages/portfolioDataHealth";
 import "../../styles/demo-v10-overview.css";
 
 type OverviewFrameProps = {
@@ -12,24 +12,15 @@ type OverviewFrameProps = {
   assets: string;
   pnl: string | null;
   pnlPositive: boolean;
-  streakMonths: number;
   price: string | null;
   priceAsOf: string | null;
   stale: boolean;
   shares: string | null;
   savingsPlan: string | null;
-  nextContribution: string | null;
-  performance: string | null;
-  performanceState: "gain" | "loss" | "flat" | "unavailable";
-  contributionWidth: number;
-  gainWidth: number;
-  lossWidth: number;
-  contributionTotal: string | null;
-  gainTotal: string | null;
-  averageBuyPrice: string | null;
-  priceComparison: { averageBuyPrice: number; currentPrice: number } | null;
   heartbeat: PortfolioHeartbeat;
   dataHealth: PortfolioDataHealth;
+  goalTargetDate: string | null;
+  goalHorizon: string | null;
   planVsReality: PlanVsReality;
   planReviewYears: number[];
   onPlanReviewYearChange: (year: number) => void;
@@ -41,163 +32,100 @@ type OverviewFrameProps = {
 function overviewCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     pageLabel: "Übersicht",
-    contributionMonths: "Beitragsmonate",
     price: "VWCE-Kurs",
+    currentPrice: "AKTUELL",
     stalePrice: "ALTER KURS",
-    priceHistoryUnavailable: "Nicht genügend Kursverlauf-Daten",
-    priceVsAverage: "Aktueller Kurs gegenüber dem durchschnittlichen Kaufpreis",
     shares: "Anteile",
     savingsPlan: "Sparplan",
     perMonth: "/ Mon.",
-    consecutiveMonths: "Monate in Folge",
-    contributionStreak: "Einzahlungsserie",
-    nextContribution: "Nächste Rate",
-    streakAria: (months: number) => `${months} Beitragsmonate in Folge`,
-    portfolioPerformance: "Portfolio-Performance",
-    contributions: "Einzahlungen",
-    gains: "Ertrag",
-    loss: "Verlust",
-    breakEven: "Unverändert",
-    unvalued: "Noch nicht bewertbar",
-    averageBuyPrice: "Ø Kaufpreis",
-    details: "Details",
-    collapse: "Einklappen",
-    heartbeat: "Portfolio-Check",
-    heartbeatNext: "Nächste Rate",
-    heartbeatPerformance: "Performance",
-    heartbeatAttention: "Aufmerksamkeit",
-    heartbeatGain: "Im Plus",
-    heartbeatLoss: "Im Minus",
-    heartbeatFlat: "Unverändert",
-    heartbeatUnavailable: "Noch nicht bewertbar",
-    heartbeatQuality: (count: number) => `${count} Transaktionen prüfen`,
-    heartbeatMissingPrices: (count: number) => `Preise für ${count} Wertpapiere fehlen`,
-    heartbeatStalePrices: (count: number) => `Kurse für ${count} Wertpapiere aktualisieren`,
-    heartbeatClear: "Alles im Blick",
-    heartbeatReview: "Prüfen",
+    rhythm: "Portfoliorhythmus",
+    rhythmNext: "Nächste Rate",
+    rhythmPerformance: "Aktueller Stand",
+    rhythmAttention: "Aufmerksamkeit",
+    performanceGain: "Im Plus",
+    performanceLoss: "Im Minus",
+    performanceFlat: "Unverändert",
+    performanceUnavailable: "Noch nicht bewertbar",
+    rhythmQuality: (count: number) => `${count} Transaktion${count === 1 ? "" : "en"} prüfen`,
+    rhythmMissingPrices: (count: number) => `Kurse für ${count} Wertpapier${count === 1 ? "" : "e"} fehlen`,
+    rhythmStalePrices: (count: number) => `Kurse für ${count} Wertpapier${count === 1 ? "" : "e"} aktualisieren`,
+    rhythmClear: "Alles im Blick",
+    review: "Prüfen",
     dataHealth: "Datenstatus",
     dataHealthClear: "Keine Datenhinweise",
+    dataHealthSummary: (count: number) => `${count} Datenpunkt${count === 1 ? "" : "e"} prüfen`,
     dataHealthAction: "Aktion erforderlich",
     dataHealthReview: "Prüfen",
     dataHealthTip: "Hinweis",
-    dataHealthTransaction: (count: number) => `${count} Transaktion${count === 1 ? "" : "en"} prüfen`,
-    dataHealthMissingQuotes: (count: number) => `Kurse für ${count} Wertpapier${count === 1 ? "" : "e"} fehlen`,
-    dataHealthStaleQuotes: (count: number) => `Kurse für ${count} Wertpapier${count === 1 ? "" : "e"} aktualisieren`,
-    dataHealthBackup: "Noch kein Backup-Export erfasst",
-    dataHealthLedger: "Transaktionsbuch",
-    dataHealthQuotes: "Kurs-Snapshot",
-    dataHealthBackupSource: "Backup-Metadaten",
-    planReality: "Plan und Realität",
-    planRealityYear: "Prüfjahr",
-    planRealityPlanned: "Sparplan bis heute",
-    planRealityRecorded: "Erfasst",
-    planRealityMonths: (planned: number, recorded: number) => `${recorded}/${planned} Monate erfasst`,
-    planRealityMissing: (count: number) => `${count} Monat${count === 1 ? "" : "e"} ohne erfassten Beitrag`,
-    planRealityNotStarted: "Der Plan startet noch nicht",
-    planRealityOnTrack: "Planbetrag erreicht",
-    planRealityBelowPlan: "Unter dem Planbetrag",
+    currentPlan: "Aktueller Langfristplan",
+    targetDate: "Zieltermin",
+    timeHorizon: "Zeitraum",
+    targetUnknown: "Noch kein Zieltermin erfasst",
+    reviewYear: "Prüfjahr",
+    planPlanned: "Sparplan bis heute",
+    planRecorded: "Erfasst",
+    planNotStarted: "Der Plan startet noch nicht",
+    planOnTrack: "Planbetrag erreicht",
+    planBelowPlan: "Unter dem Planbetrag",
+    planMonths: (planned: number, recorded: number) => `${recorded}/${planned} Monate erfasst`,
+    planMissing: (count: number) => `${count} Monat${count === 1 ? "" : "e"} ohne erfassten Beitrag`,
     yearReview: "Jahresrückblick",
     yearReviewYear: "Prüfjahr",
     yearReviewExport: "Bericht exportieren",
-    yearReviewContributed: "Eingezahlt",
-    yearReviewWithdrawn: "Ausgezahlt",
-    yearReviewContributionMonths: "Beitragsmonate",
-    yearReviewPlanMonths: (recorded: number, planned: number, missing: number) => missing > 0 ? `${recorded}/${planned} Monate erfasst · ${missing} offen` : `${recorded}/${planned} Monate erfasst`,
-    yearReviewPlanUnknown: "Kein Planvergleich für dieses Jahr",
-    yearReviewFeesTaxes: "Gebühren & Steuern",
     yearReviewTransactions: "Erfasste Buchungen",
     yearReviewQuality: (count: number) => count === 0 ? "Keine Datenpunkte offen" : `${count} Datenpunkte prüfen`,
+    yearReviewContributed: "Eingezahlt",
+    yearReviewWithdrawn: "Ausgezahlt",
     yearReviewPriceSnapshot: "Preis-Snapshot",
     yearReviewNoSnapshot: "Kein Preis-Snapshot erfasst",
-    yearReviewNoHistory: "Keine Preisreihe gespeichert; es wird keine Preisveränderung abgeleitet.",
   } : {
     pageLabel: "Tổng quan",
-    contributionMonths: "tháng góp",
     price: "Giá VWCE",
+    currentPrice: "MỚI NHẤT",
     stalePrice: "GIÁ CŨ",
-    priceHistoryUnavailable: "Chưa đủ dữ liệu lịch sử giá",
-    priceVsAverage: "Giá hiện tại so với giá mua trung bình",
     shares: "Cổ phần",
-    savingsPlan: "Sparplan",
+    savingsPlan: "Khoản góp hằng tháng",
     perMonth: "/th",
-    consecutiveMonths: "tháng liên tiếp",
-    contributionStreak: "Chuỗi Sparplan",
-    nextContribution: "Mua tiếp",
-    streakAria: (months: number) => `${months} tháng góp liên tiếp`,
-    portfolioPerformance: "Hiệu suất danh mục",
-    contributions: "Vốn góp",
-    gains: "Lãi",
-    loss: "Lỗ",
-    breakEven: "Hòa vốn",
-    unvalued: "Chưa định giá",
-    averageBuyPrice: "Giá mua TB",
-    details: "Chi tiết",
-    collapse: "Thu gọn",
-    heartbeat: "Nhịp danh mục",
-    heartbeatNext: "Kỳ góp tiếp theo",
-    heartbeatPerformance: "Hiệu suất hiện tại",
-    heartbeatAttention: "Cần chú ý",
-    heartbeatGain: "Đang lãi",
-    heartbeatLoss: "Đang lỗ",
-    heartbeatFlat: "Hòa vốn",
-    heartbeatUnavailable: "Chưa định giá",
-    heartbeatQuality: (count: number) => `${count} giao dịch cần rà soát`,
-    heartbeatMissingPrices: (count: number) => `${count} mã thiếu giá`,
-    heartbeatStalePrices: (count: number) => `Cập nhật giá cho ${count} mã`,
-    heartbeatClear: "Không có việc cần xử lý",
-    heartbeatReview: "Rà soát",
+    rhythm: "Nhịp danh mục",
+    rhythmNext: "Kỳ góp tiếp theo",
+    rhythmPerformance: "Hiệu suất hiện tại",
+    rhythmAttention: "Cần chú ý",
+    performanceGain: "Đang lãi",
+    performanceLoss: "Đang lỗ",
+    performanceFlat: "Hòa vốn",
+    performanceUnavailable: "Chưa định giá",
+    rhythmQuality: (count: number) => `${count} giao dịch cần rà soát`,
+    rhythmMissingPrices: (count: number) => `Thiếu giá cho ${count} mã`,
+    rhythmStalePrices: (count: number) => `Cần cập nhật giá cho ${count} mã`,
+    rhythmClear: "Không có việc cần xử lý",
+    review: "Rà soát",
     dataHealth: "Tình trạng dữ liệu",
     dataHealthClear: "Không có mục dữ liệu cần chú ý",
+    dataHealthSummary: (count: number) => `${count} mục dữ liệu cần rà soát`,
     dataHealthAction: "Cần xử lý",
     dataHealthReview: "Cần kiểm tra",
     dataHealthTip: "Gợi ý",
-    dataHealthTransaction: (count: number) => `${count} giao dịch cần rà soát`,
-    dataHealthMissingQuotes: (count: number) => `Thiếu giá cho ${count} mã`,
-    dataHealthStaleQuotes: (count: number) => `Cần cập nhật giá cho ${count} mã`,
-    dataHealthBackup: "Chưa ghi nhận lần xuất backup",
-    dataHealthLedger: "Sổ giao dịch",
-    dataHealthQuotes: "Snapshot giá",
-    dataHealthBackupSource: "Metadata backup",
-    planReality: "Kế hoạch & thực tế",
-    planRealityYear: "Năm rà soát",
-    planRealityPlanned: "Sparplan đến nay",
-    planRealityRecorded: "Đã ghi nhận",
-    planRealityMonths: (planned: number, recorded: number) => `Đã ghi nhận ${recorded}/${planned} tháng`,
-    planRealityMissing: (count: number) => `${count} tháng chưa có khoản góp ghi nhận`,
-    planRealityNotStarted: "Kế hoạch chưa bắt đầu",
-    planRealityOnTrack: "Đã đạt mức kế hoạch",
-    planRealityBelowPlan: "Chưa đạt mức kế hoạch",
+    currentPlan: "Kế hoạch dài hạn hiện tại",
+    targetDate: "Ngày mục tiêu",
+    timeHorizon: "Thời gian còn lại",
+    targetUnknown: "Chưa có ngày mục tiêu",
+    reviewYear: "Năm rà soát",
+    planPlanned: "Kế hoạch góp đến nay",
+    planRecorded: "Đã ghi nhận",
+    planNotStarted: "Kế hoạch chưa bắt đầu",
+    planOnTrack: "Đã đạt mức kế hoạch",
+    planBelowPlan: "Chưa đạt mức kế hoạch",
+    planMonths: (planned: number, recorded: number) => `Đã ghi nhận ${recorded}/${planned} tháng`,
+    planMissing: (count: number) => `${count} tháng chưa có khoản góp ghi nhận`,
     yearReview: "Tổng kết năm",
     yearReviewYear: "Năm rà soát",
     yearReviewExport: "Xuất báo cáo",
-    yearReviewContributed: "Đã góp",
-    yearReviewWithdrawn: "Đã rút",
-    yearReviewContributionMonths: "Tháng góp",
-    yearReviewPlanMonths: (recorded: number, planned: number, missing: number) => missing > 0 ? `Đã ghi nhận ${recorded}/${planned} tháng · còn thiếu ${missing}` : `Đã ghi nhận ${recorded}/${planned} tháng`,
-    yearReviewPlanUnknown: "Chưa có đối chiếu kế hoạch cho năm này",
-    yearReviewFeesTaxes: "Phí & thuế",
     yearReviewTransactions: "Giao dịch đã ghi",
     yearReviewQuality: (count: number) => count === 0 ? "Không còn mục dữ liệu cần rà soát" : `${count} mục dữ liệu cần rà soát`,
+    yearReviewContributed: "Đã góp",
+    yearReviewWithdrawn: "Đã rút",
     yearReviewPriceSnapshot: "Snapshot giá",
     yearReviewNoSnapshot: "Chưa có snapshot giá",
-    yearReviewNoHistory: "Chưa lưu chuỗi giá; ứng dụng không suy diễn biến động giá.",
-  };
-}
-
-function comparisonPath(comparison: { averageBuyPrice: number; currentPrice: number } | null) {
-  if (!comparison) return null;
-  const values = [comparison.averageBuyPrice, comparison.currentPrice];
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const spread = Math.max(max - min, Math.max(max, 1) * 0.035);
-  const y = (value: number) => 24 - ((value - min + spread * 0.15) / (spread * 1.3)) * 19;
-  const start = y(comparison.averageBuyPrice).toFixed(1);
-  const end = y(comparison.currentPrice).toFixed(1);
-  return {
-    line: `M2 ${start} C26 ${start}, 52 ${end}, 86 ${end}`,
-    fill: `M2 ${start} C26 ${start}, 52 ${end}, 86 ${end} L86 30 L2 30 Z`,
-    endY: end,
-    positive: comparison.currentPrice >= comparison.averageBuyPrice,
   };
 }
 
@@ -206,24 +134,15 @@ export default function OverviewFrame({
   assets,
   pnl,
   pnlPositive,
-  streakMonths,
   price,
   priceAsOf,
   stale,
   shares,
   savingsPlan,
-  nextContribution,
-  performance,
-  performanceState,
-  contributionWidth,
-  gainWidth,
-  lossWidth,
-  contributionTotal,
-  gainTotal,
-  averageBuyPrice,
-  priceComparison,
   heartbeat,
   dataHealth,
+  goalTargetDate,
+  goalHorizon,
   planVsReality,
   planReviewYears,
   onPlanReviewYearChange,
@@ -233,70 +152,41 @@ export default function OverviewFrame({
 }: OverviewFrameProps) {
   const { locale } = useLocale();
   const text = overviewCopy(locale);
-  const [detailsOpen, setDetailsOpen] = useState(true);
-  const months = Math.max(0, streakMonths);
-  const circumference = 2 * Math.PI * 30;
-  const dash = circumference * Math.min(1, months / 24);
-  const dotCount = Math.min(12, Math.max(1, months));
-  const comparison = comparisonPath(priceComparison);
-  const performanceDeltaLabel = performanceState === "gain"
-    ? text.gains
-    : performanceState === "loss"
-      ? text.loss
-      : performanceState === "flat"
-        ? text.breakEven
-        : text.unvalued;
-  const heartbeatPerformanceLabel = heartbeat.performanceState === "gain"
-    ? text.heartbeatGain
+  const primaryHealthIssue = dataHealth.issues[0] ?? null;
+  const performanceLabel = heartbeat.performanceState === "gain"
+    ? text.performanceGain
     : heartbeat.performanceState === "loss"
-      ? text.heartbeatLoss
+      ? text.performanceLoss
       : heartbeat.performanceState === "flat"
-        ? text.heartbeatFlat
-        : text.heartbeatUnavailable;
-  const dataHealthIssueLabel = (issue: PortfolioDataHealthIssue) => {
-    if (issue.code === "transaction_quality") return text.dataHealthTransaction(issue.count);
-    if (issue.code === "missing_quotes") return text.dataHealthMissingQuotes(issue.count);
-    if (issue.code === "stale_quotes") return text.dataHealthStaleQuotes(issue.count);
-    return text.dataHealthBackup;
-  };
-  const dataHealthSourceLabel = (issue: PortfolioDataHealthIssue) => {
-    if (issue.source === "transaction_ledger") return text.dataHealthLedger;
-    if (issue.source === "quote_snapshot") return text.dataHealthQuotes;
-    return text.dataHealthBackupSource;
-  };
-  const dataHealthSeverityLabel = (issue: PortfolioDataHealthIssue) => issue.severity === "action"
-    ? text.dataHealthAction
-    : issue.severity === "review"
-      ? text.dataHealthReview
-      : text.dataHealthTip;
-  const heartbeatAttentionLabel = heartbeat.attention.kind === "quality"
-    ? text.heartbeatQuality(heartbeat.attention.count)
+        ? text.performanceFlat
+        : text.performanceUnavailable;
+  const rhythmAttentionLabel = heartbeat.attention.kind === "quality"
+    ? text.rhythmQuality(heartbeat.attention.count)
     : heartbeat.attention.kind === "missing_prices"
-      ? text.heartbeatMissingPrices(heartbeat.attention.count)
+      ? text.rhythmMissingPrices(heartbeat.attention.count)
       : heartbeat.attention.kind === "stale_prices"
-        ? text.heartbeatStalePrices(heartbeat.attention.count)
-        : text.heartbeatClear;
-  const planRealityStateLabel = planVsReality.state === "on_track"
-    ? text.planRealityOnTrack
+        ? text.rhythmStalePrices(heartbeat.attention.count)
+        : text.rhythmClear;
+  const planStateLabel = planVsReality.state === "on_track"
+    ? text.planOnTrack
     : planVsReality.state === "below_plan"
-      ? text.planRealityBelowPlan
-      : text.planRealityNotStarted;
+      ? text.planBelowPlan
+      : text.planNotStarted;
+  const planDetail = planVsReality.plannedMonths === 0
+    ? text.planNotStarted
+    : `${text.planMonths(planVsReality.plannedMonths, planVsReality.recordedMonths)} · ${planVsReality.missingMonths > 0 ? text.planMissing(planVsReality.missingMonths) : text.planOnTrack}`;
+  const yearReviewLine = useMemo(() => [
+    `${text.yearReview} ${yearInReview.year}`,
+    `${text.yearReviewContributed}: ${formatMoney(yearInReview.contributionAmount)}`,
+    `${text.yearReviewWithdrawn}: ${formatMoney(yearInReview.withdrawnAmount)}`,
+    `${text.yearReviewTransactions}: ${yearInReview.transactionCount}`,
+    text.yearReviewQuality(yearInReview.qualityIssueCount),
+    yearInReview.priceSnapshot
+      ? `${text.yearReviewPriceSnapshot}: ${formatMoney(yearInReview.priceSnapshot.price)} · ${yearInReview.priceSnapshot.asOf}`
+      : text.yearReviewNoSnapshot,
+  ].join("\n"), [text, yearInReview]);
   const exportYearReview = () => {
-    const lines = [
-      `${text.yearReview} ${yearInReview.year}`,
-      `${text.yearReviewContributed}: ${formatMoney(yearInReview.contributionAmount)}`,
-      `${text.yearReviewWithdrawn}: ${formatMoney(yearInReview.withdrawnAmount)}`,
-      `${text.yearReviewContributionMonths}: ${yearInReview.contributionMonths}`,
-      yearInReview.plannedContributionMonths == null || yearInReview.missingContributionMonths == null
-        ? text.yearReviewPlanUnknown
-        : text.yearReviewPlanMonths(yearInReview.contributionMonths, yearInReview.plannedContributionMonths, yearInReview.missingContributionMonths),
-      `${text.yearReviewFeesTaxes}: ${formatMoney(yearInReview.fees + yearInReview.taxes)}`,
-      `${text.yearReviewTransactions}: ${yearInReview.transactionCount}`,
-      `${text.yearReviewQuality(yearInReview.qualityIssueCount)}`,
-      yearInReview.priceSnapshot ? `${text.yearReviewPriceSnapshot}: ${formatMoney(yearInReview.priceSnapshot.price)} · ${yearInReview.priceSnapshot.asOf}` : text.yearReviewNoSnapshot,
-      text.yearReviewNoHistory,
-    ];
-    const url = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/plain;charset=utf-8" }));
+    const url = URL.createObjectURL(new Blob([`${yearReviewLine}\n`], { type: "text/plain;charset=utf-8" }));
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = `vwce-year-in-review-${yearInReview.year}.txt`;
@@ -306,7 +196,7 @@ export default function OverviewFrame({
 
   return (
     <main className="demo-v10-screen" aria-label={text.pageLabel}>
-      <div className="ov">
+      <div className="ov overview-state-surface">
         <section className="gl hero">
           <div className="hero-flex">
             <div className="hero-left">
@@ -316,37 +206,10 @@ export default function OverviewFrame({
                 <span className={`bdg ${pnlPositive ? "bdg-up" : "bdg-down"}`}>{pnl ?? "—"}</span>
               </div>
             </div>
-            <div className="hero-ring">
-              <div className="hr-shell">
-                <div className="hr-pulse" aria-hidden />
-                <svg className="hr-svg" viewBox="0 0 76 76" aria-hidden>
-                  <defs>
-                    <linearGradient id="overview-ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="var(--demo-vi)" />
-                      <stop offset="100%" stopColor="var(--demo-em)" />
-                    </linearGradient>
-                  </defs>
-                  <circle cx="38" cy="38" r="30" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="7" />
-                  <circle
-                    cx="38"
-                    cy="38"
-                    r="30"
-                    fill="none"
-                    stroke="url(#overview-ring-gradient)"
-                    strokeWidth="7"
-                    strokeLinecap="round"
-                    strokeDasharray={`${dash} ${circumference}`}
-                    transform="rotate(-90 38 38)"
-                  />
-                </svg>
-                <div className="hr-center"><div className="hr-pct">{months || "—"}</div></div>
-              </div>
-              <div className="hr-cap">{text.contributionMonths}</div>
-            </div>
           </div>
         </section>
 
-        <section className="gl">
+        <section className="gl" aria-label={text.price}>
           <div className={`price-row${stale ? " stale" : ""}`}>
             <div className="pr-left">
               <div className="pr-label">{text.price}</div>
@@ -358,85 +221,56 @@ export default function OverviewFrame({
               <div className="pr-ts">{priceAsOf ?? "—"}</div>
             </div>
             <div className="pr-right">
-              <span className={`pr-pill ${stale ? "old" : "live"}`}><span className={stale ? "da" : "dl"} />{stale ? text.stalePrice : price ? "LIVE" : "—"}</span>
-              {comparison ? (
-                <svg className={`sparkline-svg ${comparison.positive ? "up" : "down"}`} viewBox="0 0 88 30" preserveAspectRatio="none" aria-label={text.priceVsAverage}>
-                  <defs>
-                    <linearGradient id="overview-spark-fill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="currentColor" stopOpacity=".32" />
-                      <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path d={comparison.fill} fill="url(#overview-spark-fill)" />
-                  <path d={comparison.line} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  <circle cx="86" cy={comparison.endY} r="2.5" fill="currentColor" />
-                </svg>
-              ) : <span className="sparkline-empty" aria-label={text.priceHistoryUnavailable}>—</span>}
+              <span className={`pr-pill ${stale ? "old" : "live"}`}>
+                <span className={stale ? "da" : "dl"} />
+                {stale ? text.stalePrice : price ? text.currentPrice : "—"}
+              </span>
             </div>
           </div>
         </section>
 
-        <section className="gl combo-row">
+        <section className="gl combo-row" aria-label={`${text.shares} · ${text.savingsPlan}`}>
           <div className="cr-item"><div className="cr-lbl">{text.shares}</div><div className="cr-val cr-em">{shares ?? "—"}</div></div>
           <div className="cr-div" aria-hidden />
           <div className="cr-item"><div className="cr-lbl">{text.savingsPlan}</div><div className="cr-val cr-am">{savingsPlan ?? "—"}{savingsPlan ? <span className="cr-unit">{text.perMonth}</span> : null}</div></div>
         </section>
 
-        <section className="gl streak-card">
-          <div className="sc-top">
-            <div className="sc-left">
-              <span className="sc-flame" aria-hidden>🔥</span>
-              <div><div className="sc-count-row"><span className="sc-count">{months || "—"}</span><span className="sc-unit">{text.consecutiveMonths}</span></div><div className="sc-title">{text.contributionStreak}</div></div>
-            </div>
-            <div className="sc-right"><div className="sc-next-lbl">{text.nextContribution}</div><div className="sc-next-date">{nextContribution ?? "—"}</div></div>
-          </div>
-          <div className="sc-dots" aria-label={text.streakAria(months)}>{Array.from({ length: dotCount }, (_, index) => <span key={index} className={months > 0 ? "dot done" : "dot"} />)}</div>
-        </section>
-
-        <section className={`gl heartbeat-card heartbeat-${heartbeat.attention.kind}`} data-heartbeat-attention={heartbeat.attention.kind} aria-label={text.heartbeat}>
-          <div className="heartbeat-head"><span>{text.heartbeat}</span><span className={`heartbeat-status ${heartbeat.attention.kind === "none" ? "calm" : "needs-review"}`}>{heartbeat.attention.kind === "none" ? text.heartbeatClear : text.heartbeatAttention}</span></div>
+        <section className={`gl heartbeat-card heartbeat-${heartbeat.attention.kind}`} data-heartbeat-attention={heartbeat.attention.kind} aria-label={text.rhythm}>
+          <div className="heartbeat-head"><span>{text.rhythm}</span><span className={`heartbeat-status ${heartbeat.attention.kind === "none" ? "calm" : "needs-review"}`}>{heartbeat.attention.kind === "none" ? text.rhythmClear : text.rhythmAttention}</span></div>
           <div className="heartbeat-grid">
-            <div className="heartbeat-item"><span className="heartbeat-label">{text.heartbeatNext}</span><strong className="heartbeat-value next">{heartbeat.nextContribution ?? "—"}</strong></div>
-            <div className="heartbeat-item"><span className="heartbeat-label">{text.heartbeatPerformance}</span><strong className={`heartbeat-value performance ${heartbeat.performanceState}`}>{heartbeat.performance ?? heartbeatPerformanceLabel}</strong><small>{heartbeat.performance ? heartbeatPerformanceLabel : null}</small></div>
-            <div className="heartbeat-item attention"><span className="heartbeat-label">{text.heartbeatAttention}</span>{heartbeat.attention.href ? <a className="heartbeat-action" href={heartbeat.attention.href}>{heartbeatAttentionLabel}<span>{text.heartbeatReview} ›</span></a> : <strong className="heartbeat-value calm">{heartbeatAttentionLabel}</strong>}</div>
+            <div className="heartbeat-item"><span className="heartbeat-label">{text.rhythmNext}</span><strong className="heartbeat-value next">{heartbeat.nextContribution ?? "—"}</strong></div>
+            <div className="heartbeat-item"><span className="heartbeat-label">{text.rhythmPerformance}</span><strong className={`heartbeat-value performance ${heartbeat.performanceState}`}>{heartbeat.performance ?? performanceLabel}</strong><small>{heartbeat.performance ? performanceLabel : null}</small></div>
+            <div className="heartbeat-item attention"><span className="heartbeat-label">{text.rhythmAttention}</span>{heartbeat.attention.href ? <a className="heartbeat-action" href={heartbeat.attention.href}>{rhythmAttentionLabel}<span>{text.review} ›</span></a> : <strong className="heartbeat-value calm">{rhythmAttentionLabel}</strong>}</div>
           </div>
         </section>
 
-        <section className={`gl data-health-card data-health-${dataHealth.issues[0]?.severity ?? "clear"}`} aria-label={text.dataHealth}>
-          <div className="data-health-head"><span>{text.dataHealth}</span><strong>{dataHealth.issues.length ? dataHealth.issues.length : text.dataHealthClear}</strong></div>
-          {dataHealth.issues.length === 0 ? null : (
-            <div className="data-health-list">
-              {dataHealth.issues.map((issue) => (
-                <a key={`${issue.source}-${issue.code}`} className={`data-health-item ${issue.severity}`} href={issue.href}>
-                  <span className="data-health-copy"><strong>{dataHealthIssueLabel(issue)}</strong><small>{dataHealthSourceLabel(issue)}</small></span>
-                  <span className={`data-health-severity ${issue.severity}`}>{dataHealthSeverityLabel(issue)}</span>
-                </a>
-              ))}
-            </div>
-          )}
+        <section className={`gl data-health-card data-health-${primaryHealthIssue?.severity ?? "clear"}`} aria-label={text.dataHealth}>
+          <div className="data-health-head"><span>{text.dataHealth}</span><strong>{dataHealth.issues.length ? text.dataHealthSummary(dataHealth.issues.length) : text.dataHealthClear}</strong></div>
+          {primaryHealthIssue ? (
+            <a className={`data-health-item data-health-summary ${primaryHealthIssue.severity}`} href={primaryHealthIssue.href}>
+              <span className="data-health-copy"><strong>{text.dataHealthSummary(dataHealth.issues.length)}</strong><small>{primaryHealthIssue.severity === "action" ? text.dataHealthAction : primaryHealthIssue.severity === "review" ? text.dataHealthReview : text.dataHealthTip}</small></span>
+              <span className={`data-health-severity ${primaryHealthIssue.severity}`}>{text.review} ›</span>
+            </a>
+          ) : null}
         </section>
 
-        <section className={`gl plan-reality-card plan-reality-${planVsReality.state}`} data-plan-reality-state={planVsReality.state} aria-label={text.planReality}>
-          <div className="plan-reality-head">
-            <span>{text.planReality}</span>
+        <section className={`gl plan-reality-card plan-reality-${planVsReality.state}`} data-plan-reality-state={planVsReality.state} aria-label={text.currentPlan}>
+          <div className="plan-reality-head overview-goal-head">
+            <div className="overview-goal-title"><span>{text.currentPlan}</span><small>{text.targetDate}: <strong>{goalTargetDate ?? text.targetUnknown}</strong>{goalHorizon ? ` · ${text.timeHorizon}: ${goalHorizon}` : ""}</small></div>
             <label className="plan-reality-year-label">
-              <span>{text.planRealityYear}</span>
-              <select
-                aria-label={text.planRealityYear}
-                value={planVsReality.year}
-                onChange={(event) => onPlanReviewYearChange(Number(event.target.value))}
-              >
+              <span>{text.reviewYear}</span>
+              <select aria-label={text.reviewYear} value={planVsReality.year} onChange={(event) => onPlanReviewYearChange(Number(event.target.value))}>
                 {planReviewYears.map((year) => <option key={year} value={year}>{year}</option>)}
               </select>
             </label>
-            <strong>{planRealityStateLabel}</strong>
+            <strong>{planStateLabel}</strong>
           </div>
           <div className="plan-reality-grid">
-            <div><span>{text.planRealityPlanned}</span><strong>{formatMoney(planVsReality.plannedAmount)}</strong></div>
-            <div><span>{text.planRealityRecorded}</span><strong>{formatMoney(planVsReality.actualAmount)}</strong></div>
+            <div><span>{text.planPlanned}</span><strong>{formatMoney(planVsReality.plannedAmount)}</strong></div>
+            <div><span>{text.planRecorded}</span><strong>{formatMoney(planVsReality.actualAmount)}</strong></div>
           </div>
-          <div className="plan-reality-track" aria-label={`${text.planReality}: ${planVsReality.progressPct.toFixed(0)}%`}><span style={{ width: `${planVsReality.progressPct}%` }} /></div>
-          <p>{planVsReality.plannedMonths === 0 ? text.planRealityNotStarted : `${text.planRealityMonths(planVsReality.plannedMonths, planVsReality.recordedMonths)} · ${planVsReality.missingMonths > 0 ? text.planRealityMissing(planVsReality.missingMonths) : text.planRealityOnTrack}`}</p>
+          <div className="plan-reality-track" aria-label={`${text.currentPlan}: ${planVsReality.progressPct.toFixed(0)}%`}><span style={{ width: `${planVsReality.progressPct}%` }} /></div>
+          <p>{planDetail}</p>
         </section>
 
         <section className="gl year-review-card" aria-label={text.yearReview}>
@@ -445,48 +279,17 @@ export default function OverviewFrame({
               <span>{text.yearReview}</span>
               <label className="year-review-year-label">
                 <span>{text.yearReviewYear}</span>
-                <select
-                  aria-label={text.yearReviewYear}
-                  value={yearInReview.year}
-                  onChange={(event) => onYearReviewYearChange(Number(event.target.value))}
-                >
+                <select aria-label={text.yearReviewYear} value={yearInReview.year} onChange={(event) => onYearReviewYearChange(Number(event.target.value))}>
                   {yearReviewYears.map((year) => <option key={year} value={year}>{year}</option>)}
                 </select>
               </label>
-              <strong>{text.yearReviewTransactions}: {yearInReview.transactionCount}</strong>
             </div>
             <button type="button" className="year-review-export" onClick={exportYearReview}>{text.yearReviewExport}</button>
           </div>
-          <div className="year-review-grid">
-            <div><span>{text.yearReviewContributed}</span><strong>{formatMoney(yearInReview.contributionAmount)}</strong></div>
-            <div><span>{text.yearReviewWithdrawn}</span><strong>{formatMoney(yearInReview.withdrawnAmount)}</strong></div>
-            <div><span>{text.yearReviewContributionMonths}</span><strong>{yearInReview.contributionMonths}</strong></div>
-            <div><span>{text.planReality}</span><strong className={yearInReview.missingContributionMonths && yearInReview.missingContributionMonths > 0 ? "needs-review" : "calm"}>{yearInReview.plannedContributionMonths == null || yearInReview.missingContributionMonths == null ? text.yearReviewPlanUnknown : text.yearReviewPlanMonths(yearInReview.contributionMonths, yearInReview.plannedContributionMonths, yearInReview.missingContributionMonths)}</strong></div>
-            <div><span>{text.yearReviewFeesTaxes}</span><strong>{formatMoney(yearInReview.fees + yearInReview.taxes)}</strong></div>
-            <div><span>{text.yearReviewPriceSnapshot}</span><strong>{yearInReview.priceSnapshot ? formatMoney(yearInReview.priceSnapshot.price) : "—"}</strong></div>
-            <div><span>{text.heartbeatAttention}</span><strong className={yearInReview.qualityIssueCount > 0 ? "needs-review" : "calm"}>{text.yearReviewQuality(yearInReview.qualityIssueCount)}</strong></div>
+          <div className="year-review-grid year-review-compact">
+            <div><span>{text.yearReviewTransactions}</span><strong>{yearInReview.transactionCount}</strong></div>
+            <div><span>{text.rhythmAttention}</span><strong className={yearInReview.qualityIssueCount > 0 ? "needs-review" : "calm"}>{text.yearReviewQuality(yearInReview.qualityIssueCount)}</strong></div>
           </div>
-          <p>{yearInReview.priceSnapshot ? `${text.yearReviewPriceSnapshot}: ${yearInReview.priceSnapshot.asOf} · ` : ""}{text.yearReviewNoHistory}</p>
-        </section>
-
-        <section className={`gl perf-card perf-card-${performanceState}`} data-performance-state={performanceState}>
-          <div className="perf-top"><span className="perf-title">{text.portfolioPerformance}</span><span className={`perf-return ${performanceState}`}>{performance ?? "—"}</span></div>
-          <div className="perf-bar-track" aria-label={`${text.portfolioPerformance}: ${performanceDeltaLabel}`}>
-            {performanceState !== "unavailable" ? <div className="perf-bar-base" style={{ width: `${contributionWidth}%` }} /> : null}
-            {performanceState === "gain" ? <div className="perf-bar-gain" style={{ left: `${contributionWidth}%`, width: `${gainWidth}%` }} /> : null}
-            {performanceState === "loss" ? <div className="perf-bar-loss" style={{ width: `${lossWidth}%` }} /> : null}
-          </div>
-          <div className="perf-legend"><div className="pl-item"><span className="pl-dot base" /><span className="pl-txt">{text.contributions}</span></div><div className="pl-item"><span className={`pl-dot ${performanceState}`} /><span className="pl-txt">{performanceDeltaLabel}</span></div></div>
-          <button type="button" className="perf-toggle" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((open) => !open)}>{detailsOpen ? text.collapse : text.details} <span aria-hidden>›</span></button>
-          {detailsOpen ? (
-            <div className="perf-detail" aria-label={text.details}>
-              <div className="pp-item"><div className="pp-lbl">{text.contributions}</div><div className="pp-val base">{contributionTotal ?? "—"}</div></div>
-              <div className="pp-sep" aria-hidden />
-              <div className="pp-item"><div className="pp-lbl">{performanceDeltaLabel}</div><div className={`pp-val ${performanceState}`}>{gainTotal ?? "—"}</div></div>
-              <div className="pp-sep" aria-hidden />
-              <div className="pp-item"><div className="pp-lbl">{text.averageBuyPrice}</div><div className="pp-val muted">{averageBuyPrice ?? "—"}</div></div>
-            </div>
-          ) : null}
         </section>
       </div>
     </main>
