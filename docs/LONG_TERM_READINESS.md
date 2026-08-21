@@ -4,7 +4,7 @@
 
 **Phiên bản ứng dụng:** `1.6.0`
 
-**Commit phát hành mới nhất đã kiểm chứng:** `f49f0de00410c38f5bbfdf798d33383f690e3c6c` (merge PR #248) [1]
+**Commit phát hành mới nhất đã kiểm chứng:** `ff3f1b6458cbddc940b470db8fbc6ceb1de5d2e5` (merge PR #251) [22]
 
 **Ngày đánh giá evidence:** 21-08-2026 (GMT+2)
 
@@ -30,7 +30,7 @@ Hệ thống có **vòng đời vô thời hạn**. Mốc 2042, nếu có trong 
 
 ## 3. Kiến trúc và release hiện tại
 
-Release hiện tại dùng React 18, TypeScript, Vite `8.2.2`, Dexie/IndexedDB cho vault local-first, Supabase chỉ cho auth/sync contract hiện hữu, và GitHub Pages cho static PWA. PR #248 đã deploy thành công trên `main`; production verification sau deploy xác nhận app version `1.6.0`, app shell, PWA và quote feed công khai hoạt động, với VWCE `165.66 EUR` tại lần kiểm tra ngày 20-08-2026. [1] [4]
+Release hiện tại dùng React 18, TypeScript, Vite `8.2.2`, Dexie/IndexedDB cho vault local-first, Supabase chỉ cho auth/sync contract hiện hữu, và GitHub Pages cho static PWA. PR #251 đã deploy thành công trên `main`; production verification không-invasive sau deploy xác nhận app version `1.6.0`, app shell, PWA và quote feed công khai hoạt động, với VWCE `166.3 EUR` tại lần kiểm tra ngày 21-08-2026. [22] [23]
 
 | Thành phần | Trách nhiệm | Ranh giới đã khóa |
 |---|---|---|
@@ -122,9 +122,11 @@ Static shell có meta CSP; source-level guard từ chối service-role reference
 
 ## 13. Post-baseline maintenance evidence
 
-PR #245 thêm maintenance/emergency-recovery runbook với release sequence, stop conditions, synthetic restore drill, dependency-update discipline và handover status. PR #246 mở rộng deterministic synthetic recovery evidence. PR #247 sửa password-recovery callback cho GitHub Pages HashRouter: callback redirect không còn chiếm token fragment; listener `PASSWORD_RECOVERY` được đăng ký trước initialization; invalid/expired link chỉ hiển thị safe locale copy, không raw error/token. PR #248 đồng bộ README/ADRs với audit sạch, lifecycle vô thời hạn và các readiness blockers còn lại. Tất cả bốn PR được merge sau ba required CI gates green, deploy `main` và production verification. [20] [18] [21] [1]
+PR #245 thêm runbook bảo trì/khôi phục khẩn cấp với release sequence, stop conditions, synthetic restore drill, dependency-update discipline và handover status. PR #246 mở rộng synthetic recovery evidence có tính xác định. PR #247 sửa password-recovery callback cho GitHub Pages HashRouter: callback redirect không còn chiếm token fragment; listener `PASSWORD_RECOVERY` được đăng ký trước initialization; link invalid/expired chỉ hiển thị locale copy an toàn, không raw error/token. PR #248 đồng bộ README/ADR với audit sạch, vòng đời vô thời hạn và các readiness blocker còn lại. PR #251 hoàn thiện UX recovery: intent token-free, tab-scoped chỉ khôi phục form khi provider session còn hợp lệ; màn hình thành công buộc owner chủ động mở vault; link invalid/expired có đường yêu cầu link mới hoặc quay lại đăng nhập, không render provider error/token. Cùng PR này, Cài đặt được rút gọn thành Account & Security → Sync → Data → App → Advanced, bỏ Berlin clock, dùng `last_sign_in_at` chỉ-đọc, hiển thị timestamp đồng bộ cục bộ theo fact và đặt chẩn đoán chi tiết sau disclosure. PR #251 không thay database schema, Dexie version, backup/import, sync semantics, financial core hoặc RLS. Tất cả năm PR được merge sau ba required CI gates xanh, deploy `main` và production verification. [20] [18] [21] [1] [22] [23]
 
-Các cải thiện này nâng recovery/handover/auth correctness và documentation provenance, nhưng không là behavioral RLS proof, migration reproducibility proof hoặc P11.2 tax review. Vì vậy không đủ điều kiện đổi decision readiness.
+Production verification #251 chỉ kiểm tra public app shell/PWA/quote feeds. Mailbox delivery và real-browser password-recovery E2E không được chạy vì không sử dụng credentials hay mailbox production; do đó hai phần này vẫn **chưa được kiểm chứng**, không được diễn giải thành evidence auth-provider end-to-end.
+
+Các cải thiện này nâng correctness của recovery/handover/auth, độ rõ ràng Cài đặt và documentation provenance, nhưng không là behavioral RLS proof, migration reproducibility proof hoặc P11.2 tax review. Vì vậy không đủ điều kiện đổi decision readiness.
 
 ## 14. Known limitations
 
@@ -146,7 +148,7 @@ Nếu scope mở lại, từng pha cần data manifest, broker evidence/version/
 
 Mọi PR liên quan financial semantics, schema/Dexie, backup compatibility, sync semantics, migration, quote economics hoặc tax scope phải nêu rõ YES/NO, có ADR nếu bất kỳ field nào là YES, có rollback strategy và chạy full gates. Không cho phép auto-repair, auto conflict resolution, destructive migration hay raw-evidence rewrite dưới danh nghĩa maintenance. [2]
 
-Cổng bắt buộc trước merge là `test-build`, `edge-smoke` và `preview-smoke`; deploy chạy sau merge vào `main`. Run #32505921557 của PR #248 trên `main` pass cả ba gates và deploy. Local matrix của các PR post-baseline tiếp tục pass `npm test`, ledger benchmark 10.000, build/bundle budget, release, preview `14/14` và edge smoke. [1] [4]
+Cổng bắt buộc trước merge là `test-build`, `edge-smoke` và `preview-smoke`; deploy chạy sau merge vào `main`. Run #32514368955 của PR #251 trên `main` pass cả ba gates và deploy; run này cũng thực hiện `npm test`, operational posture, ledger benchmark, locale policy, build/bundle budget và release artifact validation trong `test-build`. Local matrix trước merge tiếp tục pass `npm test`, ledger benchmark 10.000, build/bundle budget, release, preview `14/14` và edge smoke. [22] [23]
 
 ## 17. Chính sách phát triển tương lai
 
@@ -185,3 +187,5 @@ Vì vậy hệ thống phù hợp trong phạm vi **local-first tracker, owner-c
 [19]: ./H4-H5-POST_BASELINE_REEVALUATION.md "Post-baseline local/isolated H4-H5 re-evaluation evidence"
 [20]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/245 "PR #245 — post-baseline maintenance runbook"
 [21]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/247 "PR #247 — harden password recovery callback"
+[22]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/251 "PR #251 — streamline settings and complete password recovery UX"
+[23]: https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/32514368955 "Main CI and GitHub Pages deploy after PR #251"
