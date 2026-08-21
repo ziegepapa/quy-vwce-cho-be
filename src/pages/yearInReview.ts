@@ -6,6 +6,8 @@ import {
 } from "../lib/heroLifetime";
 import type { TransactionQualityIssue } from "./transactionQualityInbox";
 
+type YearReviewQualityIssue = Pick<TransactionQualityIssue, "transactionId" | "code" | "date" | "severity">;
+
 export type YearReviewTransaction = {
   date: string;
   type: string;
@@ -19,6 +21,11 @@ export type YearInReview = {
   year: number;
   contributionMode: HeroLifetimeMode;
   contributionAmount: number;
+  contributionMonths: number;
+  withdrawnAmount: number;
+  /** Null means no same-year plan fact was supplied; it is not inferred. */
+  plannedContributionMonths: number | null;
+  missingContributionMonths: number | null;
   transactionCount: number;
   fees: number;
   taxes: number;
@@ -36,7 +43,7 @@ export type YearInReview = {
 export function yearInReviewYears(input: {
   today: string;
   transactions: readonly YearReviewTransaction[];
-  qualityIssues: readonly TransactionQualityIssue[];
+  qualityIssues: readonly YearReviewQualityIssue[];
 }): number[] {
   const todayYear = yearOf(input.today) ?? new Date().getFullYear();
   const years = new Set<number>([todayYear]);
@@ -70,7 +77,8 @@ export function buildYearInReview(input: {
   today: string;
   trackInAppCash: boolean | null | undefined;
   transactions: readonly YearReviewTransaction[];
-  qualityIssues: readonly TransactionQualityIssue[];
+  qualityIssues: readonly YearReviewQualityIssue[];
+  planProgress?: { year: number; plannedMonths: number; missingMonths: number } | null;
   latestPrice: number;
   latestPriceDate: string;
   year?: number;
@@ -82,6 +90,8 @@ export function buildYearInReview(input: {
   const contributionMode = heroLifetimeMode(input.trackInAppCash);
   const countedTypes = contributionMode === "cash_first" ? CASH_FIRST_CONTRIBUTION_TYPES : SECURITIES_FIRST_CONTRIBUTION_TYPES;
   let contributionAmount = 0;
+  const contributionMonths = new Set<string>();
+  let withdrawnAmount = 0;
   let transactionCount = 0;
   let fees = 0;
   let taxes = 0;
@@ -91,9 +101,14 @@ export function buildYearInReview(input: {
     transactionCount += 1;
     fees += positiveFinite(tx.fee);
     taxes += positiveFinite(tx.tax);
-    if (countedTypes.includes(tx.type)) contributionAmount += positiveFinite(tx.amount);
+    if (countedTypes.includes(tx.type)) {
+      contributionAmount += positiveFinite(tx.amount);
+      if (positiveFinite(tx.amount) > 0) contributionMonths.add(tx.date.slice(0, 7));
+    }
+    if (tx.type === "cash_out") withdrawnAmount += positiveFinite(tx.amount);
   }
 
+  const planProgress = input.planProgress?.year === year ? input.planProgress : null;
   const issues = (input.qualityIssues ?? []).filter((issue) => yearOf(issue.date) === year);
   const price = positiveFinite(input.latestPrice);
   const priceSnapshot = price > 0 && yearOf(input.latestPriceDate) === year
@@ -103,9 +118,13 @@ export function buildYearInReview(input: {
   return {
     year,
     contributionMode,
-    contributionAmount,
-    transactionCount,
-    fees,
+      contributionAmount,
+      contributionMonths: contributionMonths.size,
+      withdrawnAmount,
+      plannedContributionMonths: planProgress?.plannedMonths ?? null,
+      missingContributionMonths: planProgress?.missingMonths ?? null,
+      transactionCount,
+      fees,
     taxes,
     qualityIssueCount: issues.length,
     actionIssueCount: issues.filter((issue) => issue.severity === "action").length,

@@ -134,6 +134,14 @@ Repository migration reproducibility is not yet proven: `schema.sql` remains a m
 
 See [`ADR-H5-provenance-and-migration-discipline.md`](./adr/ADR-H5-provenance-and-migration-discipline.md). Any future data/schema/import PR must clear the ADR, ordered-migration, controlled-upgrade, RLS, backup/sync compatibility and rollback gates defined there. Until a no-family-data controlled environment is permitted, that work is explicitly blocked rather than silently deferred.
 
+## H6 — Data Health, Yearly Review and household handoff (implemented)
+
+H6 adds a local, deterministic Portfolio Data Health model and card. It groups existing canonical transaction health, effective quote snapshot and backup bookkeeping facts into reason/source/severity/count/link rows. It has no numeric score, no auto-repair and no background task. Transaction links open the existing journal; quote/backup links open Settings. Missing metadata remains unknown, rather than producing a false backup warning.
+
+Yearly Review now records live calendar-year withdrawals, unique contribution months and a same-year Plan-vs-Reality missing-month fact, alongside prior contribution/fee/tax/quality/snapshot values. Different-year plan data remains unknown; the app still stores no price history and makes no price-performance inference from a current quote. Household Handoff remains aggregate-only and local/owner-triggered: it excludes contacts, document locations, account/broker identifiers, wishes, transaction rows and portfolio amounts.
+
+See [`ADR-H6-data-health-yearly-review-handoff.md`](./adr/ADR-H6-data-health-yearly-review-handoff.md). H6 changes no financial classifier/replay semantics, schema/Dexie version, backup format, Supabase migration/RLS policy, sync behavior, tax behavior, AI behavior or P11.2 status.
+
 ## PR contract template
 
 Every H1–H7 PR description must state the following fields exactly: purpose, narrow scope, files changed, **financial semantics changed (YES/NO)**, schema changed (YES/NO), backup compatibility changed (YES/NO), sync semantics changed (YES/NO), migration required (YES/NO), tests added, tests passed, rollback strategy and known limitations.

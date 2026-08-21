@@ -247,6 +247,31 @@
   .ov .heartbeat-grid { grid-template-columns: 1fr; }
 }
 
+/* PORTFOLIO-DATA-HEALTH-2026: factual, source-labeled review queue; no score or automated remediation. */
+.ov .data-health-card { display: grid; gap: 9px; padding: 13px; border-color: color-mix(in srgb, var(--demo-vi) 24%, var(--demo-gb)); }
+.ov .data-health-card.data-health-action { border-color: color-mix(in srgb, var(--demo-re) 42%, var(--demo-gb)); }
+.ov .data-health-card.data-health-review { border-color: color-mix(in srgb, var(--demo-am) 42%, var(--demo-gb)); }
+.ov .data-health-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--demo-text); font-size: 12px; font-weight: 820; }
+.ov .data-health-head strong { min-width: 0; overflow: hidden; color: var(--demo-sub); font-size: 10px; font-weight: 760; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.ov .data-health-list { display: grid; gap: 6px; }
+.ov .data-health-item { display: flex; align-items: center; justify-content: space-between; gap: 9px; min-width: 0; padding: 8px; color: inherit; text-decoration: none; background: color-mix(in srgb, var(--demo-g) 56%, transparent); border: 1px solid color-mix(in srgb, var(--demo-gb) 74%, transparent); border-radius: 10px; }
+.ov .data-health-item.action { border-color: color-mix(in srgb, var(--demo-re) 34%, var(--demo-gb)); }
+.ov .data-health-item.review { border-color: color-mix(in srgb, var(--demo-am) 34%, var(--demo-gb)); }
+.ov .data-health-copy { display: grid; min-width: 0; gap: 3px; }
+.ov .data-health-copy strong { overflow: hidden; color: var(--demo-text); font-size: 11px; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.ov .data-health-copy small { overflow: hidden; color: var(--demo-dim); font-size: 9px; font-weight: 700; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.ov .data-health-severity { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; font-size: 9px; font-weight: 820; letter-spacing: .03em; }
+.ov .data-health-severity.action { color: var(--demo-re); background: color-mix(in srgb, var(--demo-re) 13%, transparent); }
+.ov .data-health-severity.review { color: var(--demo-am); background: color-mix(in srgb, var(--demo-am) 13%, transparent); }
+.ov .data-health-severity.tip { color: var(--demo-vi); background: color-mix(in srgb, var(--demo-vi) 13%, transparent); }
+.ov .data-health-item:focus-visible { outline: 2px solid var(--demo-vi); outline-offset: 2px; }
+.ov .data-health-item:active { transform: scale(.99); }
+@media (max-width: 360px) {
+  .ov .data-health-item { align-items: flex-start; }
+  .ov .data-health-copy strong, .ov .data-health-copy small { white-space: normal; }
+  .ov .data-health-severity { font-size: 8px; }
+}
+
 /* PLAN-VS-REALITY-2026: calendar-year Sparplan progress, display only. */
 .ov .plan-reality-card { display: grid; gap: 10px; padding: 13px; border-color: color-mix(in srgb, var(--demo-vi) 24%, var(--demo-gb)); }
 .ov .plan-reality-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--demo-text); font-size: 12px; font-weight: 820; }

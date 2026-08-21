@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getSettings, listQuotes, listTransactions } from "../lib/db";
+import { db, getSettings, listQuotes, listTransactions } from "../lib/db";
 import { formatMoney } from "../lib/calc";
 import { buildOverviewHero } from "../lib/overviewNumbers";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
@@ -11,6 +11,7 @@ import { findTransactionQualityIssues } from "./transactionQualityInbox";
 import { buildPortfolioHeartbeat } from "./portfolioHeartbeat";
 import { buildPlanVsReality, planRealityReviewYears } from "./planVsReality";
 import { buildYearInReview, yearInReviewYears } from "./yearInReview";
+import { buildPortfolioDataHealth } from "./portfolioDataHealth";
 
 function overviewPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
@@ -56,6 +57,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
   const [settings, setSettings] = useState<Awaited<ReturnType<typeof getSettings>> | null>(null);
   const [transactions, setTransactions] = useState<Awaited<ReturnType<typeof listTransactions>>>([]);
   const [quotes, setQuotes] = useState<Awaited<ReturnType<typeof listQuotes>>>([]);
+  const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
   const [planReviewYear, setPlanReviewYear] = useState<number | null>(null);
   const [yearReviewYear, setYearReviewYear] = useState<number | null>(null);
 
@@ -63,12 +65,13 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     let alive = true;
     setLoading(true);
     setFailed(false);
-    void Promise.all([getSettings(), listTransactions(), listQuotes()])
-      .then(([nextSettings, nextTransactions, nextQuotes]) => {
+    void Promise.all([getSettings(), listTransactions(), listQuotes(), db.appMetadata.get("meta").catch(() => null)])
+      .then(([nextSettings, nextTransactions, nextQuotes, backupMeta]) => {
         if (!alive) return;
         setSettings(nextSettings);
         setTransactions(nextTransactions);
         setQuotes(nextQuotes);
+        setLastBackupAt(typeof backupMeta?.lastBackupAt === "string" ? backupMeta.lastBackupAt : null);
       })
       .catch(() => {
         if (alive) setFailed(true);
@@ -138,6 +141,12 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       missingPriceCount: market.missingIsins.length,
       stalePriceCount: snapshot.stalePriceIsins.length,
     });
+    const dataHealth = buildPortfolioDataHealth({
+      transactionIssues: qualityIssues,
+      missingQuoteIsins: market.missingIsins,
+      staleQuoteIsins: snapshot.stalePriceIsins,
+      lastBackupAt,
+    });
     const planToday = currentDate.toISOString().slice(0, 10);
     const planReviewYears = planRealityReviewYears({
       startDate: settings.startDate,
@@ -169,6 +178,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       trackInAppCash: settings.trackInAppCash,
       transactions,
       qualityIssues,
+      planProgress: planVsReality,
       latestPrice: vwcePrice,
       latestPriceDate: snapshot.vwceAsOf ?? "",
       year: selectedYearReviewYear,
@@ -194,6 +204,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       nextContribution: heartbeat.nextContribution,
       performance,
       heartbeat,
+      dataHealth,
       planVsReality,
       planReviewYears,
       onPlanReviewYearChange: setPlanReviewYear,
@@ -213,7 +224,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       averageBuyPrice: averageBuyPrice == null ? null : formatMoney(averageBuyPrice),
       priceComparison: vwcePrice > 0 && averageBuyPrice != null ? { averageBuyPrice, currentPrice: vwcePrice } : null,
     };
-  }, [locale, planReviewYear, yearReviewYear, settings, text, transactions, quotes]);
+  }, [lastBackupAt, locale, planReviewYear, yearReviewYear, settings, text, transactions, quotes]);
 
   if (loading) return <main className="demo-v10-screen" role="status" aria-label={text.loading} aria-busy="true" />;
   if (failed || !view) {
