@@ -71,6 +71,7 @@ export default defineConfig({
       "src/App.recoveryGate.test.tsx",
       // Giữ contract thị giác demo (màu hiệu suất và card Giá) ngoài TS build.
       "src/styles/demoV10VisualRegression.test.js",
+      "src/styles/txFilterSheetSafeArea.test.js",
       // PR0: bat dan tung file .test.tsx da doc toan bo source.
       "src/pages/Goals.loadState.test.tsx",
       "src/pages/Overview.loadState.test.tsx",

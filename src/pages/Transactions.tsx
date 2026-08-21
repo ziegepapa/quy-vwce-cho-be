@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   deleteTransaction,
   getSettings,
@@ -203,6 +204,28 @@ export default function Transactions() {
   const [timeLens, setTimeLens] = useState<TransactionTimeLens>("all");
   const [instrumentFilter, setInstrumentFilter] = useState<TransactionInstrumentLens>("all");
   const [qualityFilter, setQualityFilter] = useState<TransactionQualityLens>("all");
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const quality = searchParams.get("quality");
+    if (quality === "needs_review" || quality === "normal" || quality === "all") {
+      setQualityFilter(quality);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const dock = document.querySelector(".bottom-dock");
+    document.documentElement.classList.toggle("tx-filter-open", filterSheetOpen);
+    if (dock) {
+      if (filterSheetOpen) dock.classList.add("is-hidden");
+      else dock.classList.remove("is-hidden");
+    }
+    return () => {
+      document.documentElement.classList.remove("tx-filter-open");
+      document.querySelector(".bottom-dock")?.classList.remove("is-hidden");
+    };
+  }, [filterSheetOpen]);
+
   const [sort, setSort] = useState<TransactionSort>("newest");
   const [qualityVisibleLimit, setQualityVisibleLimit] = useState(3);
   const [savedViews, setSavedViews] = useState<SavedTransactionView[]>(() => readTransactionSavedViews());
@@ -642,12 +665,13 @@ export default function Transactions() {
 
       {filterSheetOpen ? (
         <div className="tx-filter-backdrop" role="presentation" onMouseDown={() => setFilterSheetOpen(false)}>
-          <section id="tx-filter-sheet" className="tx-filter-sheet" role="dialog" aria-modal="true" aria-label={text.filterSheet} onMouseDown={(event) => event.stopPropagation()}>
+          <section id="tx-filter-sheet" className="tx-filter-sheet" data-testid="tx-filter-sheet" role="dialog" aria-modal="true" aria-label={text.filterSheet} onMouseDown={(event) => event.stopPropagation()}>
             <div className="sheet-handle" aria-hidden />
             <div className="tx-filter-sheet-head">
               <h2>{text.filterSheet}</h2>
               <button type="button" className="tx-filter-close" onClick={() => setFilterSheetOpen(false)} aria-label={text.hideTools}>×</button>
             </div>
+            <div className="tx-filter-sheet-body">
             <div className="tx-filter-section" role="group" aria-label={text.timeLens}>
               <span>{text.timeLens}</span>
               <div className="tx-filter-options">
@@ -681,7 +705,11 @@ export default function Transactions() {
               </section>
             </details>
             {!readOnly ? <details className="tx-filter-support" onToggle={(event) => setPdfToolsOpen(event.currentTarget.open)}><summary>PDF</summary>{pdfToolsOpen ? <Suspense fallback={<p className="tx-tool-loading" role="status">{text.loading}</p>}><TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /></Suspense> : null}</details> : null}
-            <div className="tx-filter-actions"><button type="button" className="secondary" disabled={!activeFilterCount} onClick={resetJournal}>{text.clearFilters}</button><button type="button" onClick={() => setFilterSheetOpen(false)}>{text.applyFilters}</button></div>
+            </div>
+            <div className="tx-filter-actions" data-testid="tx-filter-actions">
+              <button type="button" className="secondary" disabled={!activeFilterCount} onClick={resetJournal}>{text.clearFilters}</button>
+              <button type="button" data-testid="tx-filter-apply" onClick={() => setFilterSheetOpen(false)}>{text.applyFilters}</button>
+            </div>
           </section>
         </div>
       ) : null}

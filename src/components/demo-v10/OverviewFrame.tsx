@@ -54,6 +54,7 @@ function overviewCopy(locale: "vi" | "de") {
     dataHealth: "Datenstatus",
     dataHealthClear: "Keine Datenhinweise",
     dataHealthSummary: (count: number) => `${count} Datenpunkt${count === 1 ? "" : "e"} prüfen`,
+    dataHealthMissingNotes: (count: number) => count === 1 ? "1 Notiz fehlt" : `${count} Notizen fehlen`,
     dataHealthAction: "Aktion erforderlich",
     dataHealthReview: "Prüfen",
     dataHealthTip: "Hinweis",
@@ -74,10 +75,11 @@ function overviewCopy(locale: "vi" | "de") {
     yearReviewExport: "Bericht exportieren",
     yearReviewTransactions: "Erfasste Buchungen",
     yearReviewQuality: (count: number) => count === 0 ? "Keine Datenpunkte offen" : `${count} Datenpunkte prüfen`,
+    yearReviewMissingNotes: (count: number) => count === 1 ? "1 Notiz fehlt" : `${count} Notizen fehlen`,
     yearReviewContributed: "Eingezahlt",
     yearReviewWithdrawn: "Ausgezahlt",
-    yearReviewPriceSnapshot: "Preis-Snapshot",
-    yearReviewNoSnapshot: "Kein Preis-Snapshot erfasst",
+    yearReviewPriceSnapshot: "Neuester Preis",
+    yearReviewNoSnapshot: "Noch kein aktueller Preis erfasst",
   } : {
     pageLabel: "Tổng quan",
     price: "Giá VWCE",
@@ -102,6 +104,7 @@ function overviewCopy(locale: "vi" | "de") {
     dataHealth: "Tình trạng dữ liệu",
     dataHealthClear: "Không có mục dữ liệu cần chú ý",
     dataHealthSummary: (count: number) => `${count} mục dữ liệu cần rà soát`,
+    dataHealthMissingNotes: (count: number) => count === 1 ? "1 ghi chú còn thiếu" : `${count} ghi chú còn thiếu`,
     dataHealthAction: "Cần xử lý",
     dataHealthReview: "Cần kiểm tra",
     dataHealthTip: "Gợi ý",
@@ -122,10 +125,11 @@ function overviewCopy(locale: "vi" | "de") {
     yearReviewExport: "Xuất báo cáo",
     yearReviewTransactions: "Giao dịch đã ghi",
     yearReviewQuality: (count: number) => count === 0 ? "Không còn mục dữ liệu cần rà soát" : `${count} mục dữ liệu cần rà soát`,
+    yearReviewMissingNotes: (count: number) => count === 1 ? "1 ghi chú còn thiếu" : `${count} ghi chú còn thiếu`,
     yearReviewContributed: "Đã góp",
     yearReviewWithdrawn: "Đã rút",
-    yearReviewPriceSnapshot: "Snapshot giá",
-    yearReviewNoSnapshot: "Chưa có snapshot giá",
+    yearReviewPriceSnapshot: "Giá gần nhất",
+    yearReviewNoSnapshot: "Chưa có giá gần nhất",
   };
 }
 
@@ -153,6 +157,16 @@ export default function OverviewFrame({
   const { locale } = useLocale();
   const text = overviewCopy(locale);
   const primaryHealthIssue = dataHealth.issues[0] ?? null;
+  const dataHealthLabel = !dataHealth.issues.length
+    ? text.dataHealthClear
+    : dataHealth.missingNotesOnly
+      ? text.dataHealthMissingNotes(dataHealth.missingNoteCount)
+      : text.dataHealthSummary(dataHealth.issues.length);
+  const yearReviewQualityLabel = yearInReview.qualityIssueCount === 0
+    ? text.yearReviewQuality(0)
+    : yearInReview.missingNotesOnly
+      ? text.yearReviewMissingNotes(yearInReview.missingNoteCount)
+      : text.yearReviewQuality(yearInReview.qualityIssueCount);
   const performanceLabel = heartbeat.performanceState === "gain"
     ? text.performanceGain
     : heartbeat.performanceState === "loss"
@@ -180,7 +194,9 @@ export default function OverviewFrame({
     `${text.yearReviewContributed}: ${formatMoney(yearInReview.contributionAmount)}`,
     `${text.yearReviewWithdrawn}: ${formatMoney(yearInReview.withdrawnAmount)}`,
     `${text.yearReviewTransactions}: ${yearInReview.transactionCount}`,
-    text.yearReviewQuality(yearInReview.qualityIssueCount),
+    yearInReview.missingNotesOnly
+      ? text.yearReviewMissingNotes(yearInReview.missingNoteCount)
+      : text.yearReviewQuality(yearInReview.qualityIssueCount),
     yearInReview.priceSnapshot
       ? `${text.yearReviewPriceSnapshot}: ${formatMoney(yearInReview.priceSnapshot.price)} · ${yearInReview.priceSnapshot.asOf}`
       : text.yearReviewNoSnapshot,
@@ -245,10 +261,10 @@ export default function OverviewFrame({
         </section>
 
         <section className={`gl data-health-card data-health-${primaryHealthIssue?.severity ?? "clear"}`} aria-label={text.dataHealth}>
-          <div className="data-health-head"><span>{text.dataHealth}</span><strong>{dataHealth.issues.length ? text.dataHealthSummary(dataHealth.issues.length) : text.dataHealthClear}</strong></div>
+          <div className="data-health-head"><span>{text.dataHealth}</span><strong>{dataHealthLabel}</strong></div>
           {primaryHealthIssue ? (
-            <a className={`data-health-item data-health-summary ${primaryHealthIssue.severity}`} href={primaryHealthIssue.href}>
-              <span className="data-health-copy"><strong>{text.dataHealthSummary(dataHealth.issues.length)}</strong><small>{primaryHealthIssue.severity === "action" ? text.dataHealthAction : primaryHealthIssue.severity === "review" ? text.dataHealthReview : text.dataHealthTip}</small></span>
+            <a className={`data-health-item data-health-summary ${primaryHealthIssue.severity}`} href={primaryHealthIssue.href} data-testid="data-health-primary-link">
+              <span className="data-health-copy"><strong>{dataHealthLabel}</strong><small>{primaryHealthIssue.severity === "action" ? text.dataHealthAction : primaryHealthIssue.severity === "review" ? text.dataHealthReview : text.dataHealthTip}</small></span>
               <span className={`data-health-severity ${primaryHealthIssue.severity}`}>{text.review} ›</span>
             </a>
           ) : null}
@@ -288,7 +304,7 @@ export default function OverviewFrame({
           </div>
           <div className="year-review-grid year-review-compact">
             <div><span>{text.yearReviewTransactions}</span><strong>{yearInReview.transactionCount}</strong></div>
-            <div><span>{text.rhythmAttention}</span><strong className={yearInReview.qualityIssueCount > 0 ? "needs-review" : "calm"}>{text.yearReviewQuality(yearInReview.qualityIssueCount)}</strong></div>
+            <div><span>{text.rhythmAttention}</span><strong className={yearInReview.qualityIssueCount > 0 ? "needs-review" : "calm"} data-testid="year-review-quality">{yearReviewQualityLabel}</strong></div>
           </div>
         </section>
       </div>

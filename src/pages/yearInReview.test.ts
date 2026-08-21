@@ -42,7 +42,7 @@ describe("buildYearInReview", () => {
         { transactionId: "c", code: "missing_note", severity: "tip", date: "2025-12-31" },
       ],
     });
-    expect(review).toMatchObject({ qualityIssueCount: 2, actionIssueCount: 1, reviewIssueCount: 1, priceSnapshot: { price: 166.5, asOf: "2026-08-19" }, priceHistoryAvailable: false });
+    expect(review).toMatchObject({ qualityIssueCount: 2, actionIssueCount: 1, reviewIssueCount: 1, missingNotesOnly: false, missingNoteCount: 0, priceSnapshot: { price: 166.5, asOf: "2026-08-19" }, priceHistoryAvailable: false });
   });
 
   it("does not invent a price snapshot from missing, invalid or undated values", () => {
@@ -118,5 +118,16 @@ describe("buildYearInReview", () => {
       qualityIssues: [{ transactionId: "q", code: "missing_note", severity: "review", date: "2026-04-01" }],
     })).toEqual([2027, 2026, 2025]);
     expect(buildYearInReview({ ...base, year: 2030 })).toMatchObject({ year: 2026 });
+  });
+
+  it("flags missingNotesOnly when every quality issue in the year is a missing note", () => {
+    const review = buildYearInReview({
+      ...base,
+      qualityIssues: [
+        { transactionId: "a", code: "missing_note", severity: "tip", date: "2026-03-01" },
+        { transactionId: "b", code: "missing_note", severity: "tip", date: "2026-04-01" },
+      ],
+    });
+    expect(review).toMatchObject({ qualityIssueCount: 2, missingNotesOnly: true, missingNoteCount: 2 });
   });
 });

@@ -200,6 +200,32 @@ describe("Overview demo v10 hierarchy", () => {
     expect(container.querySelector(".heartbeat-card a[href='#/transactions']")?.textContent).toContain("1 giao dịch cần rà soát");
   });
 
+  it("uses precise missing-notes wording when Data Health only has missing notes", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.db.appMetadata.get.mockResolvedValue({ lastBackupAt: "2026-08-01T00:00:00Z" });
+    dbMocks.listTransactions.mockResolvedValue([
+      buyVwce("tx-note-1", "2026-08-01"),
+      buyVwce("tx-note-2", "2026-08-02"),
+    ]);
+    dbMocks.listQuotes.mockResolvedValue([{
+      id: "quote-notes",
+      instrumentIsin: "IE00BK5BQT80",
+      currency: "EUR",
+      price: 110,
+      asOf: "2026-08-19",
+      source: "manual",
+      createdAt: TX_STAMP,
+      updatedAt: TX_STAMP,
+    }]);
+    const { container } = renderOverview();
+    await waitFor(() => expect(container.querySelector(".data-health-card")).toBeTruthy());
+    expect(container.textContent).toContain("2 ghi chú còn thiếu");
+    expect(container.textContent).not.toContain("2 mục dữ liệu cần rà soát");
+    const healthLink = container.querySelector(".data-health-card a");
+    expect(healthLink?.getAttribute("href")).toBe("#/transactions?quality=needs_review");
+  });
+
+
   it("routes a missing-price attention signal to Settings when transaction data is complete", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyMissingQuoteComplete("tx-missing-price", "2026-08-01")]);
