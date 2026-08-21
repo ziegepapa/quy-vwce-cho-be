@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  applyTransaction,
-  emptyPortfolio,
   parseDate,
   parseDecimal,
+  replayTransactions,
   round2,
 } from "../lib/calc";
 import { getSettings, listGoals, listTransactions, saveSettings } from "../lib/db";
@@ -100,13 +99,7 @@ export default function Simulation() {
     })();
   }, []);
 
-  const portfolio = useMemo(() => {
-    let p = emptyPortfolio();
-    for (const t of [...txs].sort((a, b) => (a.date < b.date ? -1 : 1))) {
-      p = applyTransaction(p, t);
-    }
-    return p;
-  }, [txs]);
+  const portfolio = useMemo(() => replayTransactions(txs), [txs]);
 
   const realBalance = useMemo(() => {
     const price = settings?.latestVwcePrice ?? 0;

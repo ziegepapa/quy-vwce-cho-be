@@ -17,7 +17,11 @@
  * Entries the replay refuses are counted and named instead of vanishing.
  */
 import type { DepotPosition, Transaction } from "./types";
-import { applyTransaction, calcQuantity, emptyPortfolio, formatDateVN } from "./calc";
+import { applyTransaction, calcQuantity, emptyPortfolio, formatDateVN, getPosition } from "./calc";
+import {
+  classifyTransactionAgainstHoldings,
+  compareTransactionReplayOrder,
+} from "./transactionValidation";
 import {
   hasResolvableInstrumentIsin,
   isSecurityBuy,
@@ -34,7 +38,7 @@ export type ReconciliationLedgerEntry = Pick<Transaction, "date" | "type" | "amo
   Partial<
     Pick<
       Transaction,
-      "quantity" | "unitPrice" | "fee" | "tax" | "instrumentIsin" | "deletedAt"
+      "id" | "createdAt" | "notes" | "quantity" | "unitPrice" | "fee" | "tax" | "instrumentIsin" | "deletedAt"
     >
   >;
 
@@ -177,11 +181,29 @@ export function replayLedgerQuantities(
   });
 
   eligible.sort((a, b) =>
-    a.entry.date < b.entry.date ? -1 : a.entry.date > b.entry.date ? 1 : a.index - b.index,
+    compareTransactionReplayOrder(
+      {
+        date: a.entry.date,
+        createdAt: a.entry.createdAt ?? "",
+        id: a.entry.id ?? `reconciliation-${a.index}`,
+      },
+      {
+        date: b.entry.date,
+        createdAt: b.entry.createdAt ?? "",
+        id: b.entry.id ?? `reconciliation-${b.index}`,
+      },
+    ),
   );
 
   let state = emptyPortfolio();
-  for (const item of eligible) state = applyTransaction(state, item.entry);
+  for (const item of eligible) {
+    const isin = resolveInstrumentIsin(item.entry);
+    const heldQuantity = isin ? getPosition(state, isin).qty : undefined;
+    const classification = classifyTransactionAgainstHoldings(item.entry, heldQuantity);
+    if (classification.status === "accepted") {
+      state = applyTransaction(state, classification.normalized);
+    }
+  }
 
   const quantities: Record<string, number> = {};
   for (const [isin, position] of Object.entries(state.positions)) {

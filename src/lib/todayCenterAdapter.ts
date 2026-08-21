@@ -1,7 +1,6 @@
 import {
-  applyTransaction,
-  emptyPortfolio,
   portfolioMarketValue,
+  replayTransactions,
   type PortfolioState,
 } from "./calc";
 import {
@@ -67,19 +66,6 @@ type UsableQuoteStatus = "valid-fresh" | "valid-stale";
 
 function normalizeIsin(value: string): string {
   return value.trim().toUpperCase();
-}
-
-function replayTransactions(transactions: Transaction[]): PortfolioState {
-  const ordered = transactions
-    .map((transaction, index) => ({ transaction, index }))
-    .filter(({ transaction }) => !transaction.deletedAt)
-    .sort((a, b) => a.transaction.date.localeCompare(b.transaction.date) || a.index - b.index);
-
-  let portfolio = emptyPortfolio();
-  for (const { transaction } of ordered) {
-    portfolio = applyTransaction(portfolio, transaction);
-  }
-  return portfolio;
 }
 
 /** Maps the production ledger and effective Quote rows into one UI-safe snapshot. */

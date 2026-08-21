@@ -78,13 +78,13 @@ describe("tx cash flow rules", () => {
     expect(s.cashBalance).toBe(60);
   });
 
-  it("cannot sell more than owned", () => {
+  it("oversell leaves holdings, proceeds, cash and cost basis unchanged", () => {
     let s = emptyPortfolio();
     s = applyTransaction(s, { type: "cash_in", amount: 100 });
     s = applyTransaction(s, { type: "buy_vwce", amount: 100, unitPrice: 50 });
+    const before = structuredClone(s);
     s = applyTransaction(s, { type: "sell_vwce", amount: 200, quantity: 10 });
-    expect(s.vwceQty).toBe(0);
-    expect(s.cashBalance).toBe(200);
+    expect(s).toEqual(before);
   });
 
   it("sell all", () => {
@@ -111,20 +111,17 @@ describe("tx cash flow rules", () => {
     expect(s.totalTax).toBe(5);
   });
 
-  it("sell without quantity still credits cash", () => {
+  it("sell without quantity leaves financial state unchanged", () => {
     let s = emptyPortfolio();
     s = applyTransaction(s, { type: "cash_in", amount: 100 });
+    const before = structuredClone(s);
     s = applyTransaction(s, {
       type: "sell_vwce",
       amount: 500,
       fee: 10,
       tax: 5,
     });
-    expect(s.cashBalance).toBe(585);
-    expect(s.totalSold).toBe(500);
-    expect(s.totalFees).toBe(10);
-    expect(s.totalTax).toBe(5);
-    expect(s.vwceQty).toBe(0);
+    expect(s).toEqual(before);
   });
 
   it("sell with valid quantity reduces holdings", () => {
@@ -137,8 +134,9 @@ describe("tx cash flow rules", () => {
     expect(s.cashBalance).toBe(160);
   });
 
-  it("sell when qty held is zero still credits cash, qty not negative", () => {
+  it("sell with zero holdings leaves state unchanged", () => {
     let s = emptyPortfolio();
+    const before = structuredClone(s);
     s = applyTransaction(s, {
       type: "sell_vwce",
       amount: 100,
@@ -146,9 +144,7 @@ describe("tx cash flow rules", () => {
       fee: 2,
       tax: 3,
     });
-    expect(s.vwceQty).toBe(0);
-    expect(s.cashBalance).toBe(95);
-    expect(s.totalSold).toBe(100);
+    expect(s).toEqual(before);
   });
 
   it("zero buy", () =>

@@ -34,6 +34,7 @@ vi.mock("../supabase", () => ({
 }));
 
 import { db } from "../db.m01a";
+import { replayTransactions } from "../calc";
 import { getSyncMeta, pullDelta } from "./engine";
 import type { Transaction } from "../types";
 
@@ -92,5 +93,29 @@ describe("sync transaction ingestion guard", () => {
     await expect(pullDelta(USER_ID)).rejects.toThrow(/Giao dịch không hợp lệ/);
     expect(await db.transactions.get("tx-1")).toMatchObject({ amount: 42, version: 1 });
     expect((await getSyncMeta(USER_ID)).lastPulledAt).toBe("");
+  });
+
+  it("preserves finite unsafe remote legacy evidence and canonical replay quarantines it", async () => {
+    const legacy = {
+      id: "tx-1",
+      date: "2026-08-13",
+      type: "sell_vwce",
+      amount: 100,
+      quantity: 10,
+      instrumentIsin: "IE00BK5BQT80",
+      notes: "legacy oversell",
+      createdAt: NOW,
+      updatedAt: NOW,
+    };
+    setRemoteTransaction(legacy);
+
+    await expect(pullDelta(USER_ID)).resolves.toMatchObject({ pulled: 1, conflicts: 0 });
+    const stored = await db.transactions.get("tx-1");
+    expect(stored).toMatchObject({ amount: 100, quantity: 10, type: "sell_vwce" });
+    expect(replayTransactions([stored!])).toMatchObject({
+      cashBalance: 0,
+      totalSold: 0,
+      vwceQty: 0,
+    });
   });
 });

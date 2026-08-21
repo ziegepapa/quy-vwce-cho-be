@@ -2,6 +2,11 @@
 
 import { resolveInstrumentIsin, isSecurityBuy, isSecuritySell, hasResolvableInstrumentIsin, isValidIsin } from "./instrument";
 import { VWCE_ISIN } from "./types";
+import type { Transaction } from "./types";
+import {
+  classifyTransactionAgainstHoldings,
+  compareTransactionReplayOrder,
+} from "./transactionValidation";
 
 export function monthlyRate(annualRate: number): number {
   if (!Number.isFinite(annualRate) || annualRate <= -1) return 0;
@@ -134,10 +139,12 @@ export type PortfolioState = {
 export type TxInput = {
   type: string;
   amount: number;
+  date?: string;
   unitPrice?: number;
   quantity?: number;
   fee?: number;
   tax?: number;
+  notes?: string;
   /** Multi-asset: ISIN for buy/sell security. */
   instrumentIsin?: string;
 };
@@ -188,31 +195,26 @@ export function applyTransaction(state: PortfolioState, tx: TxInput): PortfolioS
   const fee = isValidNumber(tx.fee) ? tx.fee : 0;
   const tax = isValidNumber(tx.tax) ? tx.tax : 0;
   const amount = isValidNumber(tx.amount) ? tx.amount : 0;
+  const hasSafeEconomics = amount > 0 && fee >= 0 && tax >= 0 && fee + tax <= amount;
 
   if (isSecurityBuy(tx.type)) {
-    // Fail-safe: missing/invalid instrument ISIN → no state change
-    if (!hasResolvableInstrumentIsin(tx)) {
-      return state;
-    }
+    if (!hasSafeEconomics || !hasResolvableInstrumentIsin(tx)) return state;
     const isin = resolveInstrumentIsin(tx);
-    if (!isin || !isValidIsin(isin)) {
-      return state;
-    }
+    if (!isin || !isValidIsin(isin)) return state;
     const unitPrice = tx.unitPrice ?? 0;
-    let qty =
+    const qty =
       tx.quantity != null && isValidNumber(tx.quantity) && tx.quantity > 0
         ? tx.quantity
         : calcQuantity(amount, unitPrice, fee, tax);
-    if (!isValidNumber(qty) || qty < 0) qty = 0;
-    const securitiesValue = Math.max(0, amount - fee - tax);
+    if (!isValidNumber(qty) || qty <= 0) return state;
+    const securitiesValue = amount - fee - tax;
     const prev = s.positions[isin] ?? emptyPosition();
-    const next: PositionState = {
+    s.positions[isin] = {
       qty: prev.qty + qty,
       costBasis: prev.costBasis + securitiesValue,
       totalBought: prev.totalBought + securitiesValue,
       totalSold: prev.totalSold,
     };
-    s.positions[isin] = next;
     s.totalFees += fee;
     s.totalTax += tax;
     s.cashBalance -= amount;
@@ -221,34 +223,21 @@ export function applyTransaction(state: PortfolioState, tx: TxInput): PortfolioS
   }
 
   if (isSecuritySell(tx.type)) {
-    // Fail-safe: missing/invalid instrument ISIN → no state change
-    if (!hasResolvableInstrumentIsin(tx)) {
-      return state;
-    }
+    if (!hasSafeEconomics || !hasResolvableInstrumentIsin(tx)) return state;
     const isin = resolveInstrumentIsin(tx);
-    if (!isin || !isValidIsin(isin)) {
-      return state;
-    }
-    let qty = tx.quantity ?? 0;
-    if (!isValidNumber(qty) || qty < 0) qty = 0;
+    if (!isin || !isValidIsin(isin)) return state;
+    const qty = tx.quantity;
+    if (!isValidNumber(qty) || qty <= 0) return state;
     const prev = s.positions[isin] ?? emptyPosition();
-    if (qty > prev.qty) qty = prev.qty;
-    if (qty > 0 && prev.qty > 0) {
-      const avg = prev.costBasis / prev.qty;
-      const next: PositionState = {
-        qty: Math.max(0, prev.qty - qty),
-        costBasis: Math.max(0, prev.costBasis - avg * qty),
-        totalBought: prev.totalBought,
-        totalSold: prev.totalSold + amount,
-      };
-      s.positions[isin] = next;
-    } else {
-      // Still credit cash only when ISIN is known; qty may be 0
-      s.positions[isin] = {
-        ...prev,
-        totalSold: prev.totalSold + amount,
-      };
-    }
+    // H2-B: never silently clamp an oversell and then credit the original proceeds.
+    if (prev.qty <= 0 || qty > prev.qty) return state;
+    const avg = prev.costBasis / prev.qty;
+    s.positions[isin] = {
+      qty: Math.max(0, prev.qty - qty),
+      costBasis: Math.max(0, prev.costBasis - avg * qty),
+      totalBought: prev.totalBought,
+      totalSold: prev.totalSold + amount,
+    };
     s.cashBalance += amount - fee - tax;
     s.totalFees += fee;
     s.totalTax += tax;
@@ -258,29 +247,56 @@ export function applyTransaction(state: PortfolioState, tx: TxInput): PortfolioS
 
   switch (tx.type) {
     case "cash_in":
+      if (amount <= 0) return state;
       s.cashBalance += amount;
       s.totalContributed += amount;
       break;
     case "cash_out":
+      if (amount <= 0) return state;
       s.cashBalance -= amount;
       s.totalWithdrawn += amount;
       break;
     case "tax":
+      if (amount <= 0) return state;
       s.cashBalance -= amount;
       s.totalTax += amount;
       break;
     case "fee":
+      if (amount <= 0) return state;
       s.cashBalance -= amount;
       s.totalFees += amount;
       break;
     case "safe_interest":
+      if (amount <= 0) return state;
       s.cashBalance += amount;
       break;
     case "adjust":
+      if (!isValidNumber(amount)) return state;
       s.cashBalance += amount;
       break;
   }
   return s;
+}
+
+/**
+ * Canonical H2-B replay: stable date → createdAt → id ordering and derived
+ * quarantine. Raw rows remain untouched; only accepted rows reach the ledger.
+ */
+export function replayTransactions(transactions: readonly Transaction[]): PortfolioState {
+  let state = emptyPortfolio();
+  const ordered = transactions
+    .filter((transaction) => !transaction.deletedAt)
+    .slice()
+    .sort(compareTransactionReplayOrder);
+
+  for (const transaction of ordered) {
+    const isin = resolveInstrumentIsin(transaction);
+    const held = isin ? getPosition(state, isin).qty : undefined;
+    const classification = classifyTransactionAgainstHoldings(transaction, held);
+    if (classification.status !== "accepted") continue;
+    state = applyTransaction(state, classification.normalized);
+  }
+  return state;
 }
 
 export function avgCost(state: PortfolioState, isin: string = VWCE_ISIN): number {
@@ -329,31 +345,47 @@ export function portfolioMarketValue(
 
 /** Build equity time series from chronological transactions + current price. */
 export function buildEquitySeries(
-  transactions: {
-    date: string;
-    type: string;
-    amount: number;
-    unitPrice?: number;
-    quantity?: number;
-    fee?: number;
-    tax?: number;
-    instrumentIsin?: string;
-  }[],
+  transactions: Array<
+    Pick<Transaction, "date" | "type" | "amount"> &
+      Partial<Pick<Transaction, "id" | "createdAt" | "notes" | "unitPrice" | "quantity" | "fee" | "tax" | "instrumentIsin" | "deletedAt">>
+  >,
   currentPrice: number,
   pricesByIsin?: Record<string, number>,
 ): { date: string; value: number }[] {
-  const sorted = [...transactions].sort((a, b) => (a.date < b.date ? -1 : 1));
-  if (sorted.length === 0) return [];
+  const ordered = transactions
+    .filter((transaction) => !transaction.deletedAt)
+    .map((transaction) => ({
+      transaction,
+      // Actual persisted rows always carry id/createdAt. The pure fallback keeps
+      // lightweight historical chart callers deterministic without array order.
+      id: transaction.id ?? JSON.stringify([
+        transaction.date, transaction.type, transaction.amount, transaction.unitPrice,
+        transaction.quantity, transaction.fee, transaction.tax, transaction.instrumentIsin,
+      ]),
+      createdAt: transaction.createdAt ?? "",
+    }))
+    .sort((left, right) => compareTransactionReplayOrder(
+      { date: left.transaction.date, createdAt: left.createdAt, id: left.id },
+      { date: right.transaction.date, createdAt: right.createdAt, id: right.id },
+    ));
+  if (ordered.length === 0) return [];
   let s = emptyPortfolio();
   const out: { date: string; value: number }[] = [];
-  for (const t of sorted) {
-    s = applyTransaction(s, t);
+  for (const { transaction, id, createdAt } of ordered) {
+    const isin = resolveInstrumentIsin(transaction);
+    const held = isin ? getPosition(s, isin).qty : undefined;
+    const classification = classifyTransactionAgainstHoldings(
+      { ...transaction, id, createdAt, updatedAt: createdAt },
+      held,
+    );
+    if (classification.status === "accepted") {
+      s = applyTransaction(s, classification.normalized);
+    }
     const prices: Record<string, number | undefined> = { ...(pricesByIsin ?? {}) };
     if (prices[VWCE_ISIN] == null && currentPrice > 0) prices[VWCE_ISIN] = currentPrice;
-    const isin = resolveInstrumentIsin(t);
-    if (isin && t.unitPrice && t.unitPrice > 0) prices[isin] = t.unitPrice;
+    if (isin && transaction.unitPrice && transaction.unitPrice > 0) prices[isin] = transaction.unitPrice;
     const mv = portfolioMarketValue(s, prices);
-    out.push({ date: t.date, value: round2(mv.total) });
+    out.push({ date: transaction.date, value: round2(mv.total) });
   }
   return out;
 }

@@ -2,6 +2,7 @@
 import type { Transaction, TxType } from "../types";
 import { ETF } from "../defaults";
 import { isValidIsin, normalizeIsin } from "../instrument";
+import { classifyTransaction } from "../transactionValidation";
 import type { TrExecution } from "./parseTr";
 
 export const TR_SOURCE = "trade_republic_pdf" as const;
@@ -36,7 +37,9 @@ export type TrImportDraft = {
   sourceVersion: number;
 };
 
-export type TrImportValidation = { ok: true } | { ok: false; error: string };
+export type TrImportValidation =
+  | { ok: true }
+  | { ok: false; error: string; reasonCode?: string };
 
 export function trExecutionToDraft(exec: TrExecution, tax = 0): TrImportDraft {
   const docNumber = exec.docNumber?.trim() ?? "";
@@ -73,6 +76,25 @@ export function validateTrImportDraft(draft: TrImportDraft): TrImportValidation 
   if (!(draft.unitPrice > 0)) return { ok: false, error: "Giá phải lớn hơn 0." };
   if (draft.fee < 0) return { ok: false, error: "Phí không được âm." };
   if (draft.tax < 0) return { ok: false, error: "Thuế không được âm." };
+
+  const semantic = classifyTransaction({
+    date: draft.date,
+    type: draft.type,
+    amount: draft.amount,
+    unitPrice: draft.unitPrice,
+    quantity: draft.quantity,
+    fee: draft.fee,
+    tax: draft.tax,
+    instrumentIsin: draft.isin,
+    notes: draft.notes,
+  });
+  if (semantic.status !== "accepted") {
+    return {
+      ok: false,
+      reasonCode: semantic.reasonCode,
+      error: `Giao dịch import chưa đạt kiểm tra tài chính: ${semantic.reasonCode}.`,
+    };
+  }
   return { ok: true };
 }
 

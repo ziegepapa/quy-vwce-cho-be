@@ -90,7 +90,7 @@ describe("validateBackupPayload", () => {
     });
   });
 
-  it("rejects non-finite and negative transaction numbers before import", () => {
+  it("rejects non-finite transaction numbers but preserves finite legacy semantic evidence", () => {
     const nonFinite = validateBackupPayload({
       ...VALID,
       transactions: [{ id: "tx-non-finite", amount: Number.NaN }],
@@ -98,12 +98,13 @@ describe("validateBackupPayload", () => {
     expect(nonFinite.ok).toBe(false);
     if (!nonFinite.ok) expect(nonFinite.error).toMatch(/transactions\[0\].*amount/);
 
+    // H2-B derived quarantine: a finite legacy negative quantity remains raw
+    // evidence in a readable backup; canonical replay decides its zero effect.
     const negativeQuantity = validateBackupPayload({
       ...VALID,
       transactions: [{ id: "tx-negative-quantity", amount: 10, quantity: -1 }],
     });
-    expect(negativeQuantity.ok).toBe(false);
-    if (!negativeQuantity.ok) expect(negativeQuantity.error).toMatch(/transactions\[0\].*quantity/);
+    expect(negativeQuantity.ok).toBe(true);
   });
 
   it("rejects duplicate live/deleted IDs before any import can begin", () => {

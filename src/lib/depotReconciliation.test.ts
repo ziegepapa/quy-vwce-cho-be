@@ -161,7 +161,7 @@ describe("buildDepotReconciliation", () => {
     expect(display.lines[0].ledgerQuantity).toBe(2);
   });
 
-  it("clamps an oversell exactly as the ledger clamps it", () => {
+  it("quarantines an oversell so reconciliation retains the accepted holding", () => {
     const display = build(
       [position({ quantity: 1 })],
       [
@@ -169,8 +169,8 @@ describe("buildDepotReconciliation", () => {
         entry({ type: "sell_security", quantity: 5, amount: 250, date: "2026-07-10" }),
       ],
     );
-    expect(display.lines[0].ledgerQuantity).toBe(0);
-    expect(display.lines[0].status).toBe("missing_in_ledger");
+    expect(display.lines[0].ledgerQuantity).toBe(1);
+    expect(display.lines[0].status).toBe("match");
   });
 
   it("derives a missing quantity from amount and unit price like the ledger does", () => {
