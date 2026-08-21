@@ -1,10 +1,9 @@
-import { getPlanPhase } from "../lib/planPhase";
+import { planDateYear, yearsUntil } from "../lib/planPhase";
 
 export type HouseholdHandoff = {
   planName: string;
   childName: string | null;
   targetUseDate: string | null;
-  planStatus: string | null;
   yearsLeft: number | null;
   emergency: {
     completeSections: number;
@@ -42,7 +41,8 @@ export function buildHouseholdHandoff(input: {
   today: Date;
 }): HouseholdHandoff {
   const target = input.planTarget;
-  const phase = target ? getPlanPhase(target, input.today) : null;
+  const planConfigured = Boolean(target?.targetUseDate && planDateYear(target.targetUseDate) != null);
+  const yearsLeft = planConfigured && target ? yearsUntil(target.targetUseDate, input.today) : null;
   const emergency = input.notfallmappe;
   const purposeReady = Boolean(emergency?.purpose.trim() || emergency?.custodyNote.trim());
   const contacts = (emergency?.contacts ?? []).filter((contact) => contact.name.trim() && (contact.phone.trim() || contact.email.trim()));
@@ -51,7 +51,7 @@ export function buildHouseholdHandoff(input: {
   const sections = [purposeReady, contacts.length > 0, documents.length > 0, wishesReady];
 
   const completeSections = sections.filter(Boolean).length;
-  const planReady = Boolean(target?.targetUseDate && phase?.status);
+  const planReady = planConfigured;
   const emergencyReady = completeSections === sections.length;
   const printedReady = Boolean(emergency?.lastPrintedAt);
   const readiness = [planReady, emergencyReady, printedReady];
@@ -60,8 +60,7 @@ export function buildHouseholdHandoff(input: {
     planName: input.planName.trim() || "VWCE Vault",
     childName: input.childName.trim() || null,
     targetUseDate: target?.targetUseDate ?? null,
-    planStatus: phase?.status ?? null,
-    yearsLeft: phase?.yearsLeft ?? null,
+    yearsLeft,
     emergency: {
       completeSections,
       totalSections: sections.length,

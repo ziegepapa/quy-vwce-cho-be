@@ -30,7 +30,7 @@ Các trường `tax` đã tồn tại trong historical transaction là **recorde
 
 ### A.3 Containment requirement
 
-Một PR UI-only độc lập phải loại hoặc ẩn production-facing tax toggle, after-tax headline, after-tax scenario result và copy cho thấy app tính tax. PR đó **không được thay bằng formula mới**, không được sửa raw `tax` field và không được thay đổi transaction/backup semantics. Trước khi PR containment được merge, release vẫn mang risk P0-04 đã ghi trong audit.
+Một PR UI-only độc lập phải loại hoặc ẩn production-facing tax toggle, after-tax headline, after-tax scenario result và copy cho thấy app tính tax. PR đó **không được thay bằng formula mới**, không được sửa raw `tax` field và không được thay đổi transaction/backup semantics. H0.1 chỉ ngắt import/caller và render surface của production UI; helper legacy không được sửa, mở rộng hoặc đưa vào decision path khác. Trước khi PR containment được merge, release vẫn mang risk P0-04 đã ghi trong audit.
 
 | Được phép giữ | Không được giữ sau containment |
 |---|---|

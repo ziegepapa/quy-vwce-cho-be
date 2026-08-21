@@ -43,7 +43,7 @@ describe("buildHouseholdHandoff", () => {
     expect(handoff.planName).toBe("VWCE Vault");
     expect(handoff.childName).toBeNull();
     expect(handoff.targetUseDate).toBeNull();
-    expect(handoff.planStatus).toBeNull();
+    expect("planStatus" in handoff).toBe(false);
     expect(handoff.yearsLeft).toBeNull();
     expect(handoff.readiness).toEqual({ complete: 0, total: 3, planReady: false, emergencyReady: false, printedReady: false });
   });

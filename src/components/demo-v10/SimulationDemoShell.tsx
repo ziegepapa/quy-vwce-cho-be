@@ -10,9 +10,9 @@ function formatMoneyRounded(n: number, locale: DisplayLocale): string {
 
 function simulationCopy(locale: DisplayLocale) {
   return locale === "de" ? {
-    aria: "Simulation", modeA: "Einzahlen → Erhalten", modeB: "Wunsch → Einzahlen", modeC: "Einzahlen → Wann", unavailable: "Keine umsetzbare Rate", unavailableNote: "Ziel / Rendite prüfen", afterYears: (years: number, monthly: string) => `nach ${years} Jahren · ${monthly}/Monat`, end: "Endwert", contributed: "Eingezahlt", gain: "Gewinn", chart: "Portfolioentwicklung", forecast: "Portfolio (Projektion)", monthly: "Monatlicher Beitrag (EUR)", target: "Zielbetrag (EUR)", duration: "Laufzeit", years: "Jahre", want: "Gewünschter Betrag (EUR)", inYear: "Im Jahr", aboutYears: (years: number, monthly: string) => `noch etwa ${years} Jahre · benötigt ca. ${monthly}/Monat`, annualReturn: "Rendite / Jahr (%)", around: "Spanne", year: "Jahr", forecastNav: "Prognostizierter NAV", current: "Heute", collapse: "Weniger anzeigen", showAll: "Alle Jahre anzeigen", disclaimer: "Schätzung — keine Anlageberatung", range: "Bandbreite ± (%)", contributionGrowth: "Beitrag ändert sich jährlich", perYear: "% / Jahr", initialLump: "Einmalbetrag zu Beginn", startingBalance: "Startguthaben", purchasingPower: "Kaufkraft von heute", inflation: "Inflation % / Jahr", germanTax: "DE-Steuern + TER", afterTax: "Aktuell: nach Steuern", beforeTax: "Aktuell: vor Steuern", presentValue: "Aktuell: heutige Kaufkraft", nominal: "Aktuell: nominal", goal: "Ziel", savePlan: "Beitrag und Basisrendite in den Plan übernehmen", noPlanChanges: "Der Plan stimmt bereits überein — nichts zu speichern.", undo: "Rückgängig", saveDialog: "Im Plan speichern", yearOne: "Jahr 1", fromYearTwo: "Ab Jahr 2", return: "Rendite", cancel: "Abbrechen",
+    aria: "Simulation", modeA: "Einzahlen → Erhalten", modeB: "Wunsch → Einzahlen", modeC: "Einzahlen → Wann", unavailable: "Keine umsetzbare Rate", unavailableNote: "Ziel / Rendite prüfen", afterYears: (years: number, monthly: string) => `nach ${years} Jahren · ${monthly}/Monat`, end: "Endwert", contributed: "Eingezahlt", gain: "Gewinn", chart: "Portfolioentwicklung", forecast: "Portfolio (Projektion)", monthly: "Monatlicher Beitrag (EUR)", target: "Zielbetrag (EUR)", duration: "Laufzeit", years: "Jahre", want: "Gewünschter Betrag (EUR)", inYear: "Im Jahr", aboutYears: (years: number, monthly: string) => `noch etwa ${years} Jahre · benötigt ca. ${monthly}/Monat`, annualReturn: "Rendite / Jahr (%)", around: "Spanne", year: "Jahr", forecastNav: "Prognostizierter NAV", current: "Heute", collapse: "Weniger anzeigen", showAll: "Alle Jahre anzeigen", disclaimer: "Schätzung — keine Anlageberatung", range: "Bandbreite ± (%)", contributionGrowth: "Beitrag ändert sich jährlich", perYear: "% / Jahr", initialLump: "Einmalbetrag zu Beginn", startingBalance: "Startguthaben", purchasingPower: "Kaufkraft von heute", inflation: "Inflation % / Jahr", presentValue: "Aktuell: heutige Kaufkraft", nominal: "Aktuell: nominal", goal: "Ziel", savePlan: "Beitrag und Basisrendite in den Plan übernehmen", noPlanChanges: "Der Plan stimmt bereits überein — nichts zu speichern.", undo: "Rückgängig", saveDialog: "Im Plan speichern", yearOne: "Jahr 1", fromYearTwo: "Ab Jahr 2", return: "Rendite", cancel: "Abbrechen",
   } : {
-    aria: "Mô phỏng", modeA: "Góp → Nhận", modeB: "Muốn → Góp", modeC: "Góp → Bao giờ", unavailable: "Chưa có mức góp khả thi", unavailableNote: "kiểm tra mục tiêu / lợi nhuận", afterYears: (years: number, monthly: string) => `sau ${years} năm · ${monthly}/tháng`, end: "Cuối kỳ", contributed: "Đã góp", gain: "Lãi", chart: "Tăng trưởng danh mục", forecast: "Danh mục (dự báo)", monthly: "Góp mỗi tháng (EUR)", target: "Mục tiêu (EUR)", duration: "Thời hạn", years: "năm", want: "Muốn có (EUR)", inYear: "Vào năm", aboutYears: (years: number, monthly: string) => `Còn khoảng ${years} năm · cần ~${monthly}/tháng`, annualReturn: "Lợi nhuận / năm (%)", around: "khoảng", year: "Năm", forecastNav: "NAV dự báo", current: "Hiện tại", collapse: "Thu gọn", showAll: "Hiện tất cả các năm", disclaimer: "Ước tính — không phải tư vấn đầu tư", range: "Biên độ ± (%)", contributionGrowth: "Góp thay đổi theo năm", perYear: "% / năm", initialLump: "Khoản lớn ban đầu", startingBalance: "Số dư xuất phát", purchasingPower: "Sức mua hôm nay", inflation: "Lạm phát %/năm", germanTax: "Thuế DE + TER", afterTax: "Đang: sau thuế", beforeTax: "Đang: trước thuế", presentValue: "Đang: giá hôm nay", nominal: "Đang: danh nghĩa", goal: "Mục tiêu", savePlan: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch", noPlanChanges: "Kế hoạch đã khớp — không có gì để lưu.", undo: "Hoàn tác", saveDialog: "Lưu vào kế hoạch", yearOne: "Năm 1", fromYearTwo: "Từ năm 2", return: "Lợi nhuận", cancel: "Hủy",
+    aria: "Mô phỏng", modeA: "Góp → Nhận", modeB: "Muốn → Góp", modeC: "Góp → Bao giờ", unavailable: "Chưa có mức góp khả thi", unavailableNote: "kiểm tra mục tiêu / lợi nhuận", afterYears: (years: number, monthly: string) => `sau ${years} năm · ${monthly}/tháng`, end: "Cuối kỳ", contributed: "Đã góp", gain: "Lãi", chart: "Tăng trưởng danh mục", forecast: "Danh mục (dự báo)", monthly: "Góp mỗi tháng (EUR)", target: "Mục tiêu (EUR)", duration: "Thời hạn", years: "năm", want: "Muốn có (EUR)", inYear: "Vào năm", aboutYears: (years: number, monthly: string) => `Còn khoảng ${years} năm · cần ~${monthly}/tháng`, annualReturn: "Lợi nhuận / năm (%)", around: "khoảng", year: "Năm", forecastNav: "NAV dự báo", current: "Hiện tại", collapse: "Thu gọn", showAll: "Hiện tất cả các năm", disclaimer: "Ước tính — không phải tư vấn đầu tư", range: "Biên độ ± (%)", contributionGrowth: "Góp thay đổi theo năm", perYear: "% / năm", initialLump: "Khoản lớn ban đầu", startingBalance: "Số dư xuất phát", purchasingPower: "Sức mua hôm nay", inflation: "Lạm phát %/năm", presentValue: "Đang: giá hôm nay", nominal: "Đang: danh nghĩa", goal: "Mục tiêu", savePlan: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch", noPlanChanges: "Kế hoạch đã khớp — không có gì để lưu.", undo: "Hoàn tác", saveDialog: "Lưu vào kế hoạch", yearOne: "Năm 1", fromYearTwo: "Từ năm 2", return: "Lợi nhuận", cancel: "Hủy",
   };
 }
 
@@ -25,7 +25,7 @@ export type SimulationDemoShellProps = {
   yearsForProject: number;
   monthlyForProject: number;
   headlineNote: string;
-  primary: { out: ProjectOutput; tax: { afterTax: number }; pp: number; ppAfter: number } | undefined;
+  primary: { out: ProjectOutput; pp: number } | undefined;
   initialBalance: number;
   shownInterest: number;
   results: { sc: Scenario; out: ProjectOutput }[];
@@ -65,10 +65,6 @@ export type SimulationDemoShellProps = {
   setInflationOn: (v: boolean) => void;
   inflationPct: string;
   setInflationPct: (v: string) => void;
-  taxOn: boolean;
-  setTaxOn: (v: boolean) => void;
-  showAfterTax: boolean;
-  setShowAfterTax: (v: boolean | ((x: boolean) => boolean)) => void;
   showPP: boolean;
   setShowPP: (v: boolean | ((x: boolean) => boolean)) => void;
   yearRows: number[];
@@ -115,8 +111,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
     yearsB, requiredMonthlyBase, yearsC, rateInput, setRateInput, bandPctLabel, readOnly, goals,
     applyYearsFromGoal, advSummary, bandInput, setBandInput, growthOn, setGrowthOn, growthPct,
     setGrowthPct, lumpSum, setLumpSum, balanceOverride, setBalanceOverride, realBalance,
-    inflationOn, setInflationOn, inflationPct, setInflationPct, taxOn, setTaxOn,
-    showAfterTax, setShowAfterTax, showPP, setShowPP, yearRows, baseMap, goalYearSet, goalNameByYear,
+    inflationOn, setInflationOn, inflationPct, setInflationPct, showPP, setShowPP, yearRows, baseMap, goalYearSet, goalNameByYear,
     nowY, showAllYears, setShowAllYears, openSaveConfirm, matchMsg, undoVisible, undoSnap, undoPersist,
     saveOpen, setSaveOpen, y1Diff, y2Diff, retDiff, writeY1, setWriteY1, writeY2, setWriteY2,
     writeReturn, setWriteReturn, monthlyForProjectRounded, baseRateNew, selectedCount, saveLabel,
@@ -401,15 +396,6 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
               <span className="inp-lbl">{text.inflation}</span>
               <input className="inp" value={inflationPct} onChange={(e) => setInflationPct(e.target.value)} disabled={readOnly} />
             </div>
-          ) : null}
-          <label className="inp-row">
-            <span className="inp-lbl">{text.germanTax}</span>
-            <input type="checkbox" checked={taxOn} onChange={(e) => setTaxOn(e.target.checked)} disabled={readOnly} />
-          </label>
-          {taxOn ? (
-            <button type="button" className="show-all-btn" onClick={() => setShowAfterTax((v) => !v)}>
-              {showAfterTax ? text.afterTax : text.beforeTax}
-            </button>
           ) : null}
           {inflationOn ? (
             <button type="button" className="show-all-btn" onClick={() => setShowPP((v) => !v)}>

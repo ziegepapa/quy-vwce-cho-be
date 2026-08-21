@@ -6,7 +6,6 @@ export type ContinuitySnapshotPrintLabels = {
   localOnly: string;
   plan: string;
   useDate: string;
-  planStatus: string;
   yearsLeft: string;
   readiness: string;
   sync: string;
@@ -77,7 +76,6 @@ export function printContinuitySnapshot(input: {
   const fields: Array<[string, string]> = [
     [input.labels.plan, input.snapshot.planName],
     [input.labels.useDate, input.formatted.useDate ?? input.labels.notConfigured],
-    [input.labels.planStatus, input.snapshot.planStatus ?? input.labels.notConfigured],
     [input.labels.yearsLeft, input.formatted.yearsLeft ?? input.labels.notConfigured],
     [input.labels.readiness, input.formatted.readiness],
     [input.labels.sync, input.formatted.sync],
