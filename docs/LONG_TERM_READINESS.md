@@ -4,7 +4,7 @@
 **Mốc đánh giá:** 21-08-2026.  
 **Phạm vi:** H0 đến H7, local-first VWCE Vault v1.6.0.
 
-> **Quyết định hiện tại: `NOT READY` cho nhãn “Long-Term Stable Baseline v1” đầy đủ.** Ứng dụng có một **operational baseline** đã được kiểm thử và có thể tiếp tục dùng theo mô hình local-first; tuy nhiên không được tuyên bố security-complete hoặc migration-complete cho đến khi các blocker dưới đây được xử lý bằng evidence độc lập.
+> **Quyết định baseline 23/08/2026: `CONDITIONAL — NOT READY` cho nhãn “Long-Term Stable Baseline v1” đầy đủ.** Ứng dụng có một **operational baseline** đã được kiểm thử và có thể tiếp tục dùng theo mô hình local-first; tuy nhiên không được tuyên bố security-complete hoặc migration-complete cho đến khi các blocker dưới đây được xử lý bằng evidence độc lập.
 
 ## Readiness matrix
 
