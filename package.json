@@ -10,7 +10,7 @@
     "prebuild": "npm run generate:pwa-icons",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run && npm run test:price && npm run test:locale-audit && npm run test:bundle && npm run test:external-boundary && npm run test:app-version && npm run test:financial-policy && npm run test:operational-posture",
+    "test": "vitest run && npm run test:price && npm run test:locale-audit && npm run test:bundle && npm run test:external-boundary && npm run test:client-security && npm run test:reproducible-install && npm run test:app-version && npm run test:financial-policy && npm run test:operational-posture",
     "benchmark:ledger": "vite-node scripts/benchmark-ledger.ts",
     "benchmark:ledger:check": "LEDGER_BENCHMARK_ASSERT_BUDGET=1 vite-node scripts/benchmark-ledger.ts",
     "audit:locale": "node scripts/audit-ui-localization.mjs",
@@ -24,6 +24,8 @@
     "test:edge-smoke": "node scripts/smoke-ai-edge.mjs",
     "check:external-boundary": "node scripts/check-external-boundary.mjs",
     "test:external-boundary": "node --test scripts/check-external-boundary.test.mjs",
+    "test:client-security": "node --test scripts/check-client-security-boundary.test.mjs",
+    "test:reproducible-install": "node --test scripts/check-reproducible-install.test.mjs",
     "check:app-version": "node scripts/check-app-version-contract.mjs",
     "test:app-version": "node --test scripts/app-release-version.test.mjs scripts/check-app-version-contract.test.mjs",
     "check:financial-policy": "node scripts/check-financial-policy-boundary.mjs",
@@ -43,7 +45,7 @@
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.54.2",
+    "@playwright/test": "1.62.1",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
