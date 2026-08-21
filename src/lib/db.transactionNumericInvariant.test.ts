@@ -120,6 +120,9 @@ describe("transaction numeric and semantic write boundary", () => {
 
   it("restores finite unsafe legacy evidence raw and quarantines it during canonical replay", async () => {
     const backup = await exportBackup();
+    // The fixture represents finite legacy evidence from before H3 metadata.
+    // A hand-edited payload must not retain an obsolete count manifest.
+    delete backup.metadata;
     backup.transactions = [
       transaction({
         id: "tx-legacy-negative-quantity",

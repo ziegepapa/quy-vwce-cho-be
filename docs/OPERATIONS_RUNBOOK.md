@@ -96,7 +96,7 @@ JSON hỏng, payload không đúng cấu trúc, schema không hỗ trợ, giá t
 
 | Tác vụ | Kiểm tra trước | Kết quả an toàn |
 |---|---|---|
-| Xuất JSON | Đảm bảo file được tải/xuất xong và lưu ở nơi owner kiểm soát. | Dữ liệu hiện tại được tạo bản sao; không làm thay đổi ledger. |
+| Xuất JSON | Đảm bảo file được tải/xuất xong và lưu ở nơi owner kiểm soát. | Dữ liệu hiện tại được tạo bản sao; không làm thay đổi ledger. File mới mô tả app/backup/Dexie version, domain và record count; các nhãn này không phải mật khẩu, chữ ký hay bằng chứng file không bị sửa. |
 | Nhập backup | Có bản backup dự phòng; đọc toàn bộ bước xác nhận. | Dữ liệu chỉ thay sau xác nhận rõ ràng, safety backup thành công và validate hợp lệ. |
 | Import bị từ chối | Đọc thông báo Việt/Đức và giữ file nguồn để owner xem lại. | Không gọi import, không reload, không leak payload và không thay dữ liệu hiện tại. |
 | Xóa dữ liệu local | Có backup hoặc chắc chắn không cần phục hồi; không còn blocker. | Yêu cầu xác nhận; không dùng để “sửa” lỗi sync. |
@@ -113,7 +113,7 @@ Recovery drill xác nhận hợp đồng **fail-closed**, không phải là thao
 | Thử fixture hợp lệ đã được xác nhận | Safety backup hoàn tất trước import; dữ liệu chỉ đổi sau xác nhận rõ ràng. | Chạy drill trên vault chính hay bỏ qua safety backup. |
 | Mô phỏng pending/recovery blocker | Sync/đăng xuất vẫn bị chặn hoặc đưa về recovery flow an toàn. | Xóa transaction/clear storage để ép trạng thái qua. |
 
-Chỉ ghi nhận ngày drill, phiên bản app, trạng thái pass/fail và người kiểm tra trong ghi chú vận hành riêng. Không đính kèm giao dịch, số tiền, file backup, credential hoặc snapshot chứa thông tin gia đình vào issue/PR.
+Chỉ ghi nhận ngày drill, phiên bản app, backup schema, trạng thái pass/fail và người kiểm tra trong ghi chú vận hành riêng. H3 regression đã chứng minh fixture tổng hợp qua export → wipe → import → reopen → canonical replay equivalence; điều này không thay thế việc owner giữ file backup thật an toàn. Không đính kèm giao dịch, số tiền, file backup, credential hoặc snapshot chứa thông tin gia đình vào issue/PR.
 
 ## 8. PWA, offline và cập nhật
 

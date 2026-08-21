@@ -107,7 +107,30 @@ describe("validateBackupPayload", () => {
     expect(negativeQuantity.ok).toBe(true);
   });
 
-  it("rejects duplicate live/deleted IDs before any import can begin", () => {
+  it("rejects duplicate or missing identities within a portable collection before restore", () => {
+    const duplicateLiveTransaction = validateBackupPayload({
+      ...VALID,
+      transactions: [
+        { id: "tx-same", amount: 10 },
+        { id: "tx-same", amount: 20 },
+      ] as unknown as import("./types").Transaction[],
+    });
+    expect(duplicateLiveTransaction).toEqual({
+      ok: false,
+      error: "Backup transactions: id trùng: tx-same",
+    });
+
+    const missingInstrumentIdentity = validateBackupPayload({
+      ...VALID,
+      instruments: [{ name: "Missing ISIN", currency: "EUR" }] as unknown as import("./types").Instrument[],
+    });
+    expect(missingInstrumentIdentity).toEqual({
+      ok: false,
+      error: "Backup instruments[0] thiếu isin",
+    });
+  });
+
+  it("rejects duplicate live/deleted IDs before any import can begin", async () => {
     const duplicateGoal = validateBackupPayload({
       ...VALID,
       goals: [{ id: "goal-duplicate" } as unknown as import("./types").Goal],
