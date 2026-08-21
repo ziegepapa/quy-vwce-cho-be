@@ -2,7 +2,7 @@
 
 **Baseline:** `main` tại `2271190` (P8 hoàn tất).  
 **Trạng thái:** Đặc tả/risk register; không bật AI/API, không thay đổi dữ liệu, không tính thuế và không deploy endpoint mới.  
-**Mục đích:** Biến đánh giá owner về độ bền 16 năm thành một chuỗi thay đổi nhỏ, có thể kiểm chứng và không làm suy yếu local-first.
+**Mục đích:** Biến đánh giá owner về độ bền vận hành dài hạn, vô thời hạn thành một chuỗi thay đổi nhỏ, có thể kiểm chứng và không làm suy yếu local-first.
 
 > **Quyết định P10:** Giá trị ưu tiên là khả năng tiếp quản, khôi phục, hiểu trạng thái và kiểm chứng boundary. P10 không biến tracker thành phần mềm kê khai thuế, broker, dịch vụ backup cloud hay AI assistant.
 

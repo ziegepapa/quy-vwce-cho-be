@@ -10,7 +10,7 @@
 
 VWCE Vault đã có một nền local-first đáng kể: IndexedDB có guard numeric tại physical table; tuyến sync có outbox, tombstone, conditional write, conflict record và browser lock; backup công khai chặn file sai và trạng thái pending sync trước restore; quote feed ghi provenance và từ chối dữ liệu lỗi. Test, build, release artifact và production smoke tại baseline đều xanh.
 
-Tuy nhiên, baseline **chưa đủ điều kiện để được xem là financial record duy nhất, dài hạn và authoritative cho giai đoạn 2026–2042**. Có bốn nhóm P0 cần được đóng trước: version truth bị phân mảnh; ledger hiện có thể ghi nhận cash/proceeds cho sale không có hoặc vượt quantity; transaction validation không khóa sign economics; và production UI đang có công thức tax/German-tax toggle cùng glide path prescriptive, trái với boundary không tax engine/không investment recommendation. Các tồn tại này là feature/semantics kế thừa đã có trước P11; Phase A không thêm hoặc thay đổi bất kỳ công thức tax/FIFO/Vorabpauschale nào.
+Tuy nhiên, baseline **chưa đủ điều kiện để được xem là financial record duy nhất, dài hạn và authoritative cho kế hoạch hiện tại có mốc mục tiêu 2042**; mốc này không phải ngày kết thúc phần mềm. Có bốn nhóm P0 cần được đóng trước: version truth bị phân mảnh; ledger hiện có thể ghi nhận cash/proceeds cho sale không có hoặc vượt quantity; transaction validation không khóa sign economics; và production UI đang có công thức tax/German-tax toggle cùng glide path prescriptive, trái với boundary không tax engine/không investment recommendation. Các tồn tại này là feature/semantics kế thừa đã có trước P11; Phase A không thêm hoặc thay đổi bất kỳ công thức tax/FIFO/Vorabpauschale nào.
 
 | Kết luận | Trạng thái |
 |---|---|
@@ -146,7 +146,7 @@ No feature may auto-correct a financial transaction, resolve a sync conflict, in
 
 ## Final readiness rating
 
-**Current rating: Conditional / not ready as sole long-term financial record.** The application is already valuable as a local-first tracker with strong recovery/sync/quote foundations. It is not yet safe to rely on as the only 2026–2042 financial history, because P0 ledger semantics can create unbacked cash, sign invariants are incomplete, and the active tax/recommendation surface conflicts with the stated safety policy.
+**Current rating: Conditional / not ready as sole long-term financial record.** The application is already valuable as a local-first tracker with strong recovery/sync/quote foundations. It is not yet safe to rely on as the only financial history for the current plan whose target date is 2042; the application lifecycle itself has no end date. P0 ledger semantics can create unbacked cash, sign invariants are incomplete, and the active tax/recommendation surface conflicts with the stated safety policy.
 
 > **Answer to the owner’s key question:** The system can be used now as a convenience tracker with independent broker statements and backups retained as the authoritative evidence. It should not be treated as the sole financial record or tax basis until the P0 issues are remediated, restore equivalence is automated, RLS is evidenced in the actual environment, and the final release gate is signed off.
 
