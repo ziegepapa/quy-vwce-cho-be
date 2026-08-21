@@ -39,7 +39,6 @@ vi.mock("../lib/theme", () => ({
   readTheme: () => "system",
 }));
 vi.mock("../lib/types", () => ({
-  APP_VERSION: "test",
   BACKUP_SCHEMA_VERSION: 4,
   SCHEMA_VERSION: 4,
 }));

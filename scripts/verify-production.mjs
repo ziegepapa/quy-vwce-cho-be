@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { assertVersionMatch, readAppReleaseVersion, readReleaseVersionFromHtml } from "./app-release-version.mjs";
 
 const defaultBaseUrl = "https://ziegepapa.github.io/quy-vwce-cho-be/";
 const baseUrl = new URL(process.env.BASE_URL ?? defaultBaseUrl);
@@ -35,7 +36,8 @@ function assertQuoteConsistency(quotes, legacy) {
   return current;
 }
 
-const [indexHtml, manifest, serviceWorker, quotes, legacy] = await Promise.all([
+const [expectedAppReleaseVersion, indexHtml, manifest, serviceWorker, quotes, legacy] = await Promise.all([
+  readAppReleaseVersion(),
   fetchResource("./"),
   fetchResource("manifest.webmanifest", "json"),
   fetchResource("sw.js"),
@@ -44,6 +46,7 @@ const [indexHtml, manifest, serviceWorker, quotes, legacy] = await Promise.all([
 ]);
 
 assert.match(indexHtml, /<title>Quỹ VWCE cho bé<\/title>/i, "Production shell title is missing");
+assertVersionMatch(expectedAppReleaseVersion, readReleaseVersionFromHtml(indexHtml), "Production artifact");
 assert.match(indexHtml, /id="root"/i, "Production root element is missing");
 assert.equal(manifest.start_url, "/quy-vwce-cho-be/");
 assert.equal(manifest.display, "standalone");
@@ -57,5 +60,5 @@ assert.match(serviceWorker, /data\/quotes\.json/, "Production service worker doe
 const current = assertQuoteConsistency(quotes, legacy);
 
 console.log(
-  `Production OK: shell, PWA and quote feeds; VWCE ${current.price} ${current.currency} (${current.asOf}).`,
+  `Production OK: app ${expectedAppReleaseVersion}, shell, PWA and quote feeds; VWCE ${current.price} ${current.currency} (${current.asOf}).`,
 );

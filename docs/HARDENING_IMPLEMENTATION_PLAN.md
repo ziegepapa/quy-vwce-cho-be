@@ -23,22 +23,24 @@ Audit P0 được xác nhận như baseline triển khai: version truth bị ph�
 | H7 | Reproducible dependencies, release/document policy and legacy-AI freeze/retire decision. | Không major upgrade without dedicated PR; no AI critical path. | Clean `npm ci`, security/dependency review, CI release gates, ADR evidence. |
 | Final | Verify all evidence and issue final readiness document. | Không label SAFE with any P0 open. | All required tests, restore/RLS evidence and production health pass. |
 
-## H1 — File plan
+## H1 — Application version contract (implemented)
 
-H1 is a version-contract PR. It should make the **app release** version deterministic without coupling it to storage schema versions.
+`package.json` is the sole source of truth for **APP_RELEASE_VERSION**. Vite reads that value at build time, injects it into `src/lib/appVersion.ts`, renders it in Settings, and emits it as `vwce-app-release-version` metadata in the release HTML artifact. No application release version is persisted in IndexedDB, backup, Supabase or user data.
 
-| File | Planned change | Financial / schema effect |
+| File / boundary | Implemented H1 contract | Financial / schema effect |
 |---|---|---|
-| `package.json` | Retain the canonical release-version source or explicitly document an imported/generated source selected by implementation. Add only version verification scripts. | No financial semantic change; no schema effect. |
-| `src/lib/types.ts` | Replace hard-coded `APP_VERSION` only if runtime can safely import generated/build version; keep `DEXIE_DB_VERSION` and `BACKUP_SCHEMA_VERSION` independent. | No ledger change. |
-| `scripts/check-version-contract.mjs` *(new)* | Read package/runtime/build metadata and fail on mismatch. | No runtime data mutation. |
-| `scripts/check-version-contract.test.mjs` *(new)* | Prove match/mismatch and schema-version non-coupling cases. | No schema change. |
-| `scripts/verify-release.mjs` | Assert release artifact exposes the same app release version only if there is a stable artifact location. | No PWA/quote semantic change. |
-| `scripts/verify-production.mjs` | Verify deployed release version only after deploy architecture provides a reliable location. | No data/sync change. |
-| `.github/workflows/deploy.yml` | Invoke version contract before build/deploy; move from `npm install` to `npm ci` only in H7, unless lockfile exists and H7 is explicitly split first. | No financial change. |
-| `docs/DESIGN_SYSTEM.md`, `README.md`, `docs/OPERATIONS_RUNBOOK.md` | Remove stale hard-coded app version; cite the canonical source. | Documentation-only. |
+| `package.json` | Canonical application release version source. | No financial semantic or schema effect. |
+| `vite.config.ts`, `src/lib/appVersion.ts` | Build-time injection and artifact metadata derive exclusively from `package.json`. | No database/runtime-data mutation. |
+| `src/pages/Settings.tsx` | Visible release marker reads `APP_RELEASE_VERSION`; no UI hard-code remains. | Layout and settings persistence unchanged. |
+| `scripts/app-release-version.mjs` | Package reader, exact-match assertion and artifact metadata parser. | No runtime data mutation. |
+| `scripts/check-app-version-contract.mjs` | Fail-closed source/runtime/UI/release-checker/doc contract; records namespace independence. | No schema change. |
+| `scripts/verify-release.mjs` | Asserts generated artifact metadata equals package release version. | PWA/quote behavior unchanged. |
+| `scripts/verify-production.mjs` | Asserts deployed artifact metadata equals local expected package release version. | No data/sync change. |
+| `docs/DESIGN_SYSTEM.md` | No hard-coded app version claim; documents canonical source. | Documentation-only. |
 
-**H1 tests:** exact-match, each mismatch failure, build artifact assertion, stale documentation scan if machine-checkable, and regression that `APP_RELEASE_VERSION`, `DEXIE_DB_VERSION`, `BACKUP_SCHEMA_VERSION` and an eventual Supabase migration version are distinct concepts.
+**H1 tests:** exact-match pass; runtime/artifact mismatch failure; missing metadata failure; artifact assertion; stale active UI/documentation claim scan; and regression that APP release, Dexie, backup and Supabase migration namespaces stay separate.
+
+**Namespace inventory:** `APP_RELEASE_VERSION` is package-driven; `DEXIE_DB_VERSION` remains 4; `BACKUP_SCHEMA_VERSION` remains 4; and the latest committed Supabase migration namespace remains 2. Equal numeric values never imply shared lifecycle or compatibility semantics.
 
 **H1 rollback:** revert only the source/version guard change; no data or schema rollback is needed.
 

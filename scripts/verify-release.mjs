@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
+import { assertVersionMatch, readAppReleaseVersion, readReleaseVersionFromHtml } from "./app-release-version.mjs";
 
 const distDir = path.resolve("dist");
 const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -39,7 +40,8 @@ function assertQuoteConsistency(quotes, legacy) {
   assert.ok(Number.isFinite(Date.parse(`${current.asOf}T00:00:00Z`)), "Quote date is invalid");
 }
 
-const [indexHtml, manifest, serviceWorker, quotes, legacy] = await Promise.all([
+const [expectedAppReleaseVersion, indexHtml, manifest, serviceWorker, quotes, legacy] = await Promise.all([
+  readAppReleaseVersion(),
   readText("index.html"),
   readJson("manifest.webmanifest"),
   readText("sw.js"),
@@ -48,6 +50,7 @@ const [indexHtml, manifest, serviceWorker, quotes, legacy] = await Promise.all([
 ]);
 
 assert.match(indexHtml, /<meta name="description"/i, "Description metadata is missing");
+assertVersionMatch(expectedAppReleaseVersion, readReleaseVersionFromHtml(indexHtml), "Release artifact");
 assert.match(indexHtml, /rel="manifest"/i, "Manifest link is missing");
 assert.match(indexHtml, /icons\/apple-touch-icon\.png/i, "Apple touch icon is missing");
 assert.equal(manifest.id, "/quy-vwce-cho-be/");
@@ -81,5 +84,5 @@ assert.match(serviceWorker, /icon-maskable-512\.png/, "Maskable icon is not prec
 assertQuoteConsistency(quotes, legacy);
 
 console.log(
-  `Release artifact OK: installable PWA, offline assets and VWCE ${legacy.price} ${legacy.currency} (${legacy.asOf}).`,
+  `Release artifact OK: app ${expectedAppReleaseVersion}, installable PWA, offline assets and VWCE ${legacy.price} ${legacy.currency} (${legacy.asOf}).`,
 );
