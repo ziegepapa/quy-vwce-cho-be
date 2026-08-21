@@ -193,3 +193,54 @@ AI/API tiếp tục ở trạng thái **deferred/legacy-retained**: không có U
 **Checklist P10.4:** chạy `npm run check:operational-posture`, `npm run test:operational-posture`, `npm run check:external-boundary`, hoàn tất recovery drill trên bản copy, xác nhận backup import fail-closed và kiểm tra runbook không chứa claim về RLS/secret production vượt quá bằng chứng source. Chỉ merge khi test-build, edge-smoke và preview-smoke của CI đều xanh.
 
 **Checklist bàn giao P10:** Owner biết Family Readiness Center chỉ là count/status local, biết Timeline có time/source lens nhưng không phải audit log, biết continuity snapshot là bản in do owner chủ động tạo và không phải backup, biết recovery read-only/fail-closed boundary, và biết AI legacy vẫn không có UI production.
+
+
+## 13. Post-baseline maintenance và emergency recovery
+
+> **Mục tiêu:** giữ baseline ổn định, có thể kiểm chứng và dễ bàn giao. Đây không phải phạm vi để thêm financial feature, đổi schema hoặc nâng readiness vượt evidence hiện có.
+
+### 13.1 Normal release
+
+Mỗi thay đổi bắt đầu từ một nhánh riêng và chỉ làm một việc có thể revert độc lập. Không gộp documentation, auth, backup/test, financial core hay database migration trong cùng PR. Trước khi mở PR, chạy theo thứ tự sau; nếu bất kỳ lệnh nào fail, dừng tại nhánh đó, giữ evidence lỗi và sửa tối thiểu.
+
+| Bước | Thao tác | Evidence tối thiểu |
+|---|---|---|
+| 1 | Tạo branch từ `main`, mô tả scope và non-goals. | Diff không đụng financial core/schema/sync nếu PR không được phê duyệt riêng. |
+| 2 | Thực hiện focused change. | Code/documentation có rollback rõ ràng. |
+| 3 | Chạy `npm ci`, `npm test`, `npm run benchmark:ledger:check`, `npm run audit:locale`. | Test, financial guard, recovery/operational contracts và locale audit pass. |
+| 4 | Chạy `npm run build`, `npm run check:bundle`, `npm run test:release`. | TypeScript/build/PWA/quote/release artifact pass. |
+| 5 | Chạy `npm run test:preview` và `npm run test:edge-smoke`. | Browser/PWA preview và isolated Edge smoke pass. |
+| 6 | Tạo PR, kiểm tra `test-build`, `preview-smoke`, `edge-smoke`. | Ba gate bắt buộc green. |
+| 7 | Merge vào `main`, theo dõi deploy rồi chạy `npm run verify:production`. | Public shell, PWA và quote feed được kiểm chứng sau deploy. |
+
+Không dùng `npm audit fix --force`. Dependency update luôn là PR riêng, có audit trước/sau và full matrix release. [1]
+
+### 13.2 Emergency recovery
+
+Khi có dấu hiệu import/restore/sync hoặc release có thể làm mất hoặc ghi đè evidence, ưu tiên **dừng destructive action** hơn khôi phục nhanh. Không xóa local storage, không tạo giao dịch thay thế, không chạy migration/destructive SQL trên production và không dùng file backup gia đình để thử lỗi.
+
+| Bước | Thao tác an toàn | Không được làm |
+|---|---|---|
+| 1 | Dừng thay đổi destructively; giữ app/vault hiện trạng nếu có thể. | Xóa IndexedDB, reset sync hoặc sửa raw evidence để “làm sạch”. |
+| 2 | Ghi nhận release version, commit/PR, thời điểm và trạng thái Sync Health/Diagnostics allowlist. | Đính kèm transaction, credential, token, email hoặc backup thật vào issue/PR. |
+| 3 | Xác nhận owner có backup và broker statement độc lập. | Coi PWA cache hoặc một lần sync là backup có thẩm quyền. |
+| 4 | Dùng browser profile/vault thử nghiệm, fixture synthetic và exact app version tương thích để thử restore. | Thử lỗi trên vault chính hoặc dữ liệu gia đình. |
+| 5 | Chạy export → baseline inventory/replay → wipe test vault → import → reopen → canonical replay → deterministic compare. | Chấp nhận partial import, auto-repair hoặc silent correction. |
+| 6 | Nếu corruption/validation bị từ chối, giữ source file, trạng thái vault và rejection evidence. | Bỏ qua safety backup hoặc ép import qua validation. |
+| 7 | Điều tra nguyên nhân trên branch/PR riêng; chỉ cân nhắc remediation sau khi evidence và rollback đã được review. | Đụng production schema, RLS, financial semantics hoặc sync conflict logic để chữa cháy. |
+
+Recovery drill hiện được chứng minh bằng fixture tổng hợp và có ranh giới fail-closed; nó không thay thế broker evidence hoặc chứng minh migration reproducibility/H4 behavioral RLS. [2] [3]
+
+### 13.3 Dependency update
+
+Dependency update là maintenance có kiểm soát, không phải auto-fix. Tạo một PR cho một coherent upgrade set, chạy `npm ci`, full test/build/release/preview/edge matrix, sau đó chạy `npm audit --json` để ghi nhận delta. Major upgrade chỉ được merge khi peer compatibility, PWA artifact, browser smoke và main production verification đều có evidence. Nếu upgrade cần đổi financial semantics, Dexie/schema, backup contract, sync, RLS hoặc production infrastructure, dừng workstream đó và yêu cầu quyết định kiến trúc riêng. [1]
+
+### 13.4 Handover status
+
+Release baseline hiện hành là `1.6.0`; lifecycle sản phẩm là **vô thời hạn** và không có application end date. `CONDITIONAL — NOT READY` vẫn là readiness chính thức cho sole authoritative financial-record role, do H4 chỉ có static policy evidence, H5 không có ordered migration/reproducibility proof, và P11.2 chờ independent German tax expert review. Người bảo trì phải đọc detailed status trong [`LONG_TERM_READINESS.md`](./LONG_TERM_READINESS.md) trước khi đổi bất kỳ ranh giới nào.
+
+## References
+
+[1]: ./LONG_TERM_READINESS.md "Current security, reproducibility and readiness evidence"
+[2]: ./adr/ADR-H3-backup-metadata-and-restore-drill.md "H3 backup metadata and restore-drill boundary"
+[3]: ./H4-RLS-EVIDENCE.md "H4 static-policy evidence and behavioral-proof limitation"
