@@ -1,0 +1,40 @@
+.lot-shell {
+  width: min(100% - 2rem, 58rem);
+  margin: 0 auto;
+  padding: 1.25rem 0 3rem;
+}
+.lot-head { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.lot-head p { margin: 0 0 .35rem; color: var(--muted, #78839a); font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.lot-head h1 { margin: 0; font-size: clamp(1.55rem, 5vw, 2.35rem); letter-spacing: -.03em; }
+.lot-head span, .lot-summary span, .lot-card-head span { color: var(--muted, #78839a); font-size: .8rem; font-weight: 700; }
+.lot-notice, .lot-card { border: 1px solid rgba(130, 145, 170, .22); border-radius: 1.1rem; background: var(--surface, #fff); box-shadow: 0 12px 34px rgba(27, 39, 61, .06); }
+.lot-notice { margin-bottom: 1rem; padding: 1rem 1.1rem; background: color-mix(in srgb, var(--surface, #fff) 90%, #dbeafe); }
+.lot-notice strong { display: block; line-height: 1.35; }
+.lot-notice p, .lot-summary p { margin: .45rem 0 0; color: var(--muted, #59657a); line-height: 1.5; }
+.lot-card { padding: 1rem; }
+.lot-summary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(15rem, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.lot-summary div { display: grid; gap: .35rem; }
+.lot-summary strong { font-size: 1.35rem; }
+.lot-card-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
+.lot-card-head h2 { margin: 0; font-size: 1.1rem; }
+.lot-list { display: grid; gap: .65rem; }
+.lot-row { display: grid; grid-template-columns: minmax(8rem, 1fr) auto minmax(13rem, 1.2fr); gap: .8rem; align-items: center; padding: .8rem; border: 1px solid rgba(130, 145, 170, .18); border-radius: .85rem; background: rgba(247, 249, 252, .7); }
+.lot-row.is-not_ready { border-color: rgba(196, 128, 37, .38); }
+.lot-row-main, .lot-row-status, .lot-row-detail { display: grid; gap: .25rem; min-width: 0; }
+.lot-row-main strong { overflow-wrap: anywhere; }
+.lot-row-main span, .lot-row-detail span, .lot-row-status small { color: var(--muted, #59657a); font-size: .82rem; line-height: 1.35; overflow-wrap: anywhere; }
+.lot-row-status { justify-items: start; }
+.lot-pill { display: inline-flex; border-radius: 999px; padding: .22rem .55rem; background: #dff5e8; color: #17633a; font-size: .75rem; font-weight: 800; }
+.lot-row.is-not_ready .lot-pill { background: #fff0d4; color: #85530d; }
+.lot-row-detail { align-content: center; }
+.lot-unknown-note { margin: .9rem .2rem; color: var(--muted, #59657a); font-size: .85rem; line-height: 1.5; }
+.lot-back { display: inline-flex; margin-top: .25rem; color: inherit; font-weight: 800; text-decoration: none; }
+.lot-back:focus-visible, .lot-row:focus-within { outline: 3px solid color-mix(in srgb, #3b82f6 35%, transparent); outline-offset: 3px; }
+@media (max-width: 700px) {
+  .lot-shell { width: min(100% - 1rem, 58rem); padding-top: .75rem; }
+  .lot-head { align-items: start; flex-direction: column; gap: .3rem; }
+  .lot-summary { grid-template-columns: 1fr; }
+  .lot-row { grid-template-columns: 1fr; gap: .55rem; }
+  .lot-row-status { display: flex; align-items: center; gap: .55rem; }
+  .lot-row-detail { gap: .15rem; }
+}
