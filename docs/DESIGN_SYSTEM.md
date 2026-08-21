@@ -39,4 +39,4 @@ Dark mode: first-class independent surfaces (not inverted light).
 - Forms: bottom sheet on mobile
 - Actions: OverflowMenu, not inline Sửa/Xóa
 - Touch ≥ 44px; input font ≥ 16px
-- Version: `APP_VERSION` in `types.ts` (currently 1.4.0)
+- Application release version: `package.json` is the sole source; Vite injects it into runtime/UI and release metadata. This is independent from Dexie, backup and Supabase schema versions.

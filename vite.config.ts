@@ -2,11 +2,26 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import appPackage from "./package.json";
+
+const appReleaseVersion = appPackage.version;
 
 export default defineConfig({
   base: "/quy-vwce-cho-be/",
+  define: {
+    __APP_RELEASE_VERSION__: JSON.stringify(appReleaseVersion),
+  },
   plugins: [
     react(),
+    {
+      name: "app-release-version-metadata",
+      transformIndexHtml(html) {
+        return html.replace(
+          "</head>",
+          `    <meta name="vwce-app-release-version" content="${appReleaseVersion}">\n  </head>`,
+        );
+      },
+    },
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["icons/*.svg", "icons/*.png"],

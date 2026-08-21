@@ -33,6 +33,8 @@ Audit đã đối chiếu implementation, unit/UI tests, workflows, release chec
 
 ### P0-01 — Version truth đang bị phân mảnh và CI không phát hiện mismatch
 
+> **Trạng thái H1: đã giải quyết.** Đoạn dưới là evidence tại thời điểm audit trước H1. Sau H1, `package.json` là source duy nhất cho `APP_RELEASE_VERSION`; runtime/UI, artifact metadata, release verification và production verification cùng dùng contract fail-closed. Dexie, backup và Supabase migration vẫn là các namespace độc lập.
+
 `package.json` công bố `1.6.0`, `APP_VERSION` runtime là `1.8.0`, trong khi design document còn ghi `1.4.0`. Release checker và production checker hiện không assert version runtime/package/release metadata cùng một giá trị. Vì vậy backup metadata, UI version và artifact verification chưa có một contract version duy nhất. [1] [2] [3] [4]
 
 | Rủi ro | Hành vi yêu cầu ở pha sửa |

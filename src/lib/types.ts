@@ -278,7 +278,4 @@ export type QuoteMigrationMeta = {
   lastError?: string;
 };
 
-/** Hien thi o Cai dat -- doi khi ship UI lon */
-export const APP_VERSION = "1.8.0";
-
 export const VWCE_ISIN = "IE00BK5BQT80";

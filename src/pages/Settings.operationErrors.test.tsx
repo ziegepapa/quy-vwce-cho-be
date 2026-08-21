@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { AppSettings } from "../lib/types";
+import { APP_RELEASE_VERSION } from "../lib/appVersion";
 import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
 
 const dbMocks = vi.hoisted(() => ({
@@ -124,7 +125,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(screen.getByText("Gerätediagnose")).toBeTruthy();
     expect(screen.getByText("Verwendungsplan")).toBeTruthy();
     expect(screen.getByText("Sicherung & lokale Daten")).toBeTruthy();
-    expect(screen.getByText("v1.8.1 · Online")).toBeTruthy();
+    expect(screen.getByText(`v${APP_RELEASE_VERSION} · Online`)).toBeTruthy();
     const groups = [...container.querySelectorAll("details.advanced-group")] as HTMLDetailsElement[];
     expect(groups).toHaveLength(5);
     expect(groups.every((group) => group.open === false)).toBe(true);
