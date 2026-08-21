@@ -89,6 +89,21 @@ describe("transactionsListWindow", () => {
     expect(visibleIds(localizedSearch).every((id) => Number(id.slice(3)) % 2 === 0)).toBe(true);
   });
 
+  it("filters instrument and canonical review status before sorting/windowing without mutating records", () => {
+    const transactions: Transaction[] = [
+      { id: "vwce", date: "2026-08-20", type: "buy_vwce", amount: 100, instrumentIsin: "IE00BK5BQT80", notes: "VWCE", createdAt: "2026-08-20T00:00:00.000Z", updatedAt: "2026-08-20T00:00:00.000Z" },
+      { id: "other-review", date: "2026-08-19", type: "buy_security", amount: 200, instrumentIsin: "US0378331005", notes: "Other", createdAt: "2026-08-19T00:00:00.000Z", updatedAt: "2026-08-19T00:00:00.000Z" },
+      { id: "cash-normal", date: "2026-08-18", type: "cash_in", amount: 50, notes: "Cash", createdAt: "2026-08-18T00:00:00.000Z", updatedAt: "2026-08-18T00:00:00.000Z" },
+    ];
+    const base = { query: "", year: "all", type: "all" as const };
+
+    expect(visibleIds(buildTransactionListWindow(transactions, { ...base, instrument: "vwce" }, 60))).toEqual(["vwce"]);
+    expect(visibleIds(buildTransactionListWindow(transactions, { ...base, instrument: "other" }, 60))).toEqual(["other-review"]);
+    expect(visibleIds(buildTransactionListWindow(transactions, { ...base, quality: "needs_review", qualityTransactionIds: new Set(["other-review"]) }, 60))).toEqual(["other-review"]);
+    expect(visibleIds(buildTransactionListWindow(transactions, { ...base, quality: "normal", qualityTransactionIds: new Set(["other-review"]) }, 60))).toEqual(["vwce", "cash-normal"]);
+    expect(transactions.map((transaction) => transaction.id)).toEqual(["vwce", "other-review", "cash-normal"]);
+  });
+
   it("applies Smart time lenses with inclusive, deterministic boundaries", () => {
     const transactions = [
       "2026-08-20", "2026-08-01", "2026-05-23", "2026-05-22", "2025-12-31",

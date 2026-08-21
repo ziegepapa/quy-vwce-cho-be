@@ -1,35 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocale } from "../lib/locale";
 import { syncHealthCopy, type SyncHealth } from "./syncHealth";
 import "../styles/visual-abc-shell.css";
-
-type BerlinClock = { iso: string; time: string };
-
-function readBerlinClock(): BerlinClock {
-  const now = new Date();
-  return {
-    iso: now.toISOString(),
-    time: new Intl.DateTimeFormat("de-DE", {
-      timeZone: "Europe/Berlin",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(now),
-  };
-}
-
-function TimeDate({ locale }: { locale: "vi" | "de" }) {
-  const [clock, setClock] = useState<BerlinClock>(() => readBerlinClock());
-  useEffect(() => {
-    const id = window.setInterval(() => setClock(readBerlinClock()), 1_000);
-    return () => window.clearInterval(id);
-  }, []);
-  return (
-    <time className="bar-clock" dateTime={clock.iso} aria-label={`${locale === "de" ? "Berliner Zeit" : "Giờ Berlin"} ${clock.time}`}>
-      {clock.time}
-    </time>
-  );
-}
 
 export default function CollapsingNavBar({
   onSyncNow,
@@ -82,7 +54,6 @@ export default function CollapsingNavBar({
             <span>{syncText}</span>
           </button>
         ) : null}
-        <TimeDate locale={locale} />
       </div>
     </header>
   );

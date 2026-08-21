@@ -48,6 +48,8 @@ import {
   buildTransactionListWindow,
   TRANSACTION_WINDOW_SIZE,
   type TransactionActivity,
+  type TransactionInstrumentLens,
+  type TransactionQualityLens,
   type TransactionSort,
   type TransactionTimeLens,
 } from "./transactionsListWindow";
@@ -179,9 +181,9 @@ export default function Transactions() {
   const { locale } = useLocale();
   const types = useMemo(() => transactionTypes(locale), [locale]);
   const text = locale === "de" ? {
-    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Werkzeuge ausblenden", tools: "Filter / PDF", search: "Suchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", journal: "Transaktionsjournal", quickFilter: "Schnellfilter", buysQuick: "VWCE-Käufe", contributionsQuick: "Einzahlungen", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", editTransaction: "Transaktion bearbeiten", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen", deleteConfirm: "Diese Transaktion löschen?", activity: "Aktivität", tradeActivity: "Wertpapiere", fundingActivity: "Einzahlungen", outflowActivity: "Ausgaben", newest: "Neueste zuerst", oldest: "Älteste zuerst", amountDesc: "Höchster Betrag", sort: "Sortierung", activeFilters: "{count} aktiv", clearFilters: "Zurücksetzen", quickBuy: "VWCE kaufen", quickFunding: "Geld einzahlen", rowMenu: "Aktionen für Transaktion", timeLens: "Zeitraum", timeAll: "Gesamt", thisMonth: "Dieser Monat", last90Days: "90 Tage", thisYear: "Dieses Jahr", lastYear: "Letztes Jahr", qualityInbox: "Datenqualität", qualityClean: "Alle Transaktionen sind vollständig.", qualityCount: "{count} prüfen", qualityMore: "{count} weitere zeigen", qualityOpen: "Öffnen und prüfen", qualityAction: "Aktion erforderlich", qualityReview: "Prüfen", qualityTip: "Hinweis", qualityMissingIsin: "ISIN fehlt", qualityInvalidIsin: "ISIN ist ungültig", qualityInvalidAmount: "Betrag fehlt oder ist ungültig", qualityMissingQuantity: "Menge oder Stückpreis fehlt", qualityMissingUnitPrice: "Stückpreis fehlt", qualityMissingNote: "Notiz fehlt", qualitySourceReplay: "Finanzielle Prüfung", qualitySourceCompleteness: "Vollständigkeitsprüfung", qualityRecordManual: "Manuell", qualityRecordTradeRepublic: "Trade Republic PDF", qualityRecordLegacy: "Legacy / unbekannt", savedViews: "Gespeicherte Ansichten", saveView: "Ansicht speichern", savedViewName: "Name der Ansicht", savedViewNamePlaceholder: "z. B. Käufe dieses Jahr", saveCurrentView: "Aktuelle Ansicht speichern", savedViewEmpty: "Noch keine gespeicherte Ansicht.", savedViewLimit: "Maximal {count} Ansichten. Löschen Sie eine Ansicht, um fortzufahren.", savedViewNameRequired: "Geben Sie einen Namen für die Ansicht ein.", savedViewStorageError: "Diese Ansicht konnte auf diesem Gerät nicht gespeichert werden.", savedViewNoFilters: "Wählen Sie mindestens einen Filter oder eine Sortierung aus.", removeSavedView: "Ansicht {name} löschen", dateAmountRequired: "Datum und Betrag sind erforderlich.", adjustmentNoteRequired: "Für eine Anpassung ist eine Notiz erforderlich.", invalidIsinChecksum: "ISIN ist ungültig oder die Prüfsumme stimmt nicht.", sellQuantityRequired: "Für einen Verkauf ist eine Wertpapiermenge erforderlich.", priceOrQuantityRequired: "Preis oder Menge ist erforderlich.", invalidQuantity: "Die Menge ist ungültig.",
+    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", transactionCount: "Buchungen", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Filter schließen", tools: "Filter", filterSheet: "Filter", applyFilters: "Anwenden", search: "Suchen", searchLedger: "Transaktionen durchsuchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", instrument: "Wertpapier", instrumentVwce: "VWCE", instrumentOther: "Andere Wertpapiere", status: "Status", statusNormal: "Unauffällig", statusReview: "Prüfen", activeFilterChips: "Aktive Filter", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", journal: "Transaktionsjournal", quickFilter: "Schnellfilter", buysQuick: "VWCE-Käufe", contributionsQuick: "Einzahlungen", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", editTransaction: "Transaktion bearbeiten", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen", deleteConfirm: "Diese Transaktion löschen?", activity: "Aktivität", tradeActivity: "Wertpapiere", fundingActivity: "Einzahlungen", outflowActivity: "Ausgaben", newest: "Neueste zuerst", oldest: "Älteste zuerst", amountDesc: "Höchster Betrag", sort: "Sortierung", activeFilters: "{count} aktiv", clearFilters: "Zurücksetzen", quickBuy: "VWCE kaufen", quickFunding: "Geld einzahlen", rowMenu: "Aktionen für Transaktion", timeLens: "Zeitraum", timeAll: "Gesamt", thisMonth: "Dieser Monat", last90Days: "90 Tage", thisYear: "Dieses Jahr", lastYear: "Letztes Jahr", qualityInbox: "Datenqualität", qualityClean: "Alle Transaktionen sind vollständig.", qualityCount: "{count} prüfen", qualityMore: "{count} weitere zeigen", qualityOpen: "Öffnen und prüfen", qualityAction: "Aktion erforderlich", qualityReview: "Prüfen", qualityTip: "Hinweis", qualityMissingIsin: "ISIN fehlt", qualityInvalidIsin: "ISIN ist ungültig", qualityInvalidAmount: "Betrag fehlt oder ist ungültig", qualityMissingQuantity: "Menge oder Stückpreis fehlt", qualityMissingUnitPrice: "Stückpreis fehlt", qualityMissingNote: "Notiz fehlt", qualitySourceReplay: "Finanzielle Prüfung", qualitySourceCompleteness: "Vollständigkeitsprüfung", qualityRecordManual: "Manuell", qualityRecordTradeRepublic: "Trade Republic PDF", qualityRecordLegacy: "Legacy / unbekannt", savedViews: "Gespeicherte Ansichten", saveView: "Ansicht speichern", savedViewName: "Name der Ansicht", savedViewNamePlaceholder: "z. B. Käufe dieses Jahr", saveCurrentView: "Aktuelle Ansicht speichern", savedViewEmpty: "Noch keine gespeicherte Ansicht.", savedViewLimit: "Maximal {count} Ansichten. Löschen Sie eine Ansicht, um fortzufahren.", savedViewNameRequired: "Geben Sie einen Namen für die Ansicht ein.", savedViewStorageError: "Diese Ansicht konnte auf diesem Gerät nicht gespeichert werden.", savedViewNoFilters: "Wählen Sie mindestens einen Filter oder eine Sortierung aus.", removeSavedView: "Ansicht {name} löschen", dateAmountRequired: "Datum und Betrag sind erforderlich.", adjustmentNoteRequired: "Für eine Anpassung ist eine Notiz erforderlich.", invalidIsinChecksum: "ISIN ist ungültig oder die Prüfsumme stimmt nicht.", sellQuantityRequired: "Für einen Verkauf ist eine Wertpapiermenge erforderlich.", priceOrQuantityRequired: "Preis oder Menge ist erforderlich.", invalidQuantity: "Die Menge ist ungültig.",
   } : {
-    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Ẩn công cụ", tools: "Lọc / PDF", search: "Tìm", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", editTransaction: "Sửa giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước", qualityInbox: "Dữ liệu cần rà soát", qualityClean: "Tất cả giao dịch đang có đủ thông tin.", qualityCount: "{count} cần rà soát", qualityMore: "Xem thêm {count}", qualityOpen: "Mở để rà soát", qualityAction: "Cần xử lý", qualityReview: "Cần kiểm tra", qualityTip: "Gợi ý", qualityMissingIsin: "Thiếu ISIN", qualityInvalidIsin: "ISIN không hợp lệ", qualityInvalidAmount: "Số tiền thiếu hoặc không hợp lệ", qualityMissingQuantity: "Thiếu số lượng hoặc giá đơn vị", qualityMissingUnitPrice: "Thiếu giá đơn vị", qualityMissingNote: "Thiếu ghi chú", qualitySourceReplay: "Kiểm tra tài chính", qualitySourceCompleteness: "Kiểm tra độ đầy đủ", qualityRecordManual: "Nhập thủ công", qualityRecordTradeRepublic: "PDF Trade Republic", qualityRecordLegacy: "Legacy / không rõ nguồn", savedViews: "Góc xem đã lưu", saveView: "Lưu view", savedViewName: "Tên góc xem", savedViewNamePlaceholder: "Ví dụ: Mua trong năm nay", saveCurrentView: "Lưu góc xem hiện tại", savedViewEmpty: "Chưa có góc xem nào được lưu.", savedViewLimit: "Tối đa {count} góc xem. Hãy xóa một góc xem để tiếp tục.", savedViewNameRequired: "Hãy nhập tên cho góc xem.", savedViewStorageError: "Không thể lưu góc xem trên thiết bị này.", savedViewNoFilters: "Hãy chọn ít nhất một bộ lọc hoặc sắp xếp trước.", removeSavedView: "Xóa góc xem {name}", dateAmountRequired: "Ngày và số tiền bắt buộc", adjustmentNoteRequired: "Điều chỉnh bắt buộc có ghi chú", invalidIsinChecksum: "ISIN không hợp lệ hoặc sai checksum.", sellQuantityRequired: "Giao dịch bán cần số lượng chứng khoán.", priceOrQuantityRequired: "Cần giá hoặc số lượng", invalidQuantity: "Số lượng không hợp lệ",
+    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", transactionCount: "Giao dịch", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Đóng bộ lọc", tools: "Lọc", filterSheet: "Bộ lọc", applyFilters: "Áp dụng", search: "Tìm", searchLedger: "Tìm kiếm giao dịch", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", instrument: "Công cụ", instrumentVwce: "VWCE", instrumentOther: "Chứng khoán khác", status: "Trạng thái", statusNormal: "Bình thường", statusReview: "Cần rà soát", activeFilterChips: "Bộ lọc đang dùng", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", editTransaction: "Sửa giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước", qualityInbox: "Dữ liệu cần rà soát", qualityClean: "Tất cả giao dịch đang có đủ thông tin.", qualityCount: "{count} cần rà soát", qualityMore: "Xem thêm {count}", qualityOpen: "Mở để rà soát", qualityAction: "Cần xử lý", qualityReview: "Cần kiểm tra", qualityTip: "Gợi ý", qualityMissingIsin: "Thiếu ISIN", qualityInvalidIsin: "ISIN không hợp lệ", qualityInvalidAmount: "Số tiền thiếu hoặc không hợp lệ", qualityMissingQuantity: "Thiếu số lượng hoặc giá đơn vị", qualityMissingUnitPrice: "Thiếu giá đơn vị", qualityMissingNote: "Thiếu ghi chú", qualitySourceReplay: "Kiểm tra tài chính", qualitySourceCompleteness: "Kiểm tra độ đầy đủ", qualityRecordManual: "Nhập thủ công", qualityRecordTradeRepublic: "PDF Trade Republic", qualityRecordLegacy: "Legacy / không rõ nguồn", savedViews: "Góc xem đã lưu", saveView: "Lưu view", savedViewName: "Tên góc xem", savedViewNamePlaceholder: "Ví dụ: Mua trong năm nay", saveCurrentView: "Lưu góc xem hiện tại", savedViewEmpty: "Chưa có góc xem nào được lưu.", savedViewLimit: "Tối đa {count} góc xem. Hãy xóa một góc xem để tiếp tục.", savedViewNameRequired: "Hãy nhập tên cho góc xem.", savedViewStorageError: "Không thể lưu góc xem trên thiết bị này.", savedViewNoFilters: "Hãy chọn ít nhất một bộ lọc hoặc sắp xếp trước.", removeSavedView: "Xóa góc xem {name}", dateAmountRequired: "Ngày và số tiền bắt buộc", adjustmentNoteRequired: "Điều chỉnh bắt buộc có ghi chú", invalidIsinChecksum: "ISIN không hợp lệ hoặc sai checksum.", sellQuantityRequired: "Giao dịch bán cần số lượng chứng khoán.", priceOrQuantityRequired: "Cần giá hoặc số lượng", invalidQuantity: "Số lượng không hợp lệ",
   };
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -192,12 +194,15 @@ export default function Transactions() {
   const [show, setShow] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [editId, setEditId] = useState<string | null>(null);
-  const [toolsOpen, setToolsOpen] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [pdfToolsOpen, setPdfToolsOpen] = useState(false);
   const [q, setQ] = useState("");
   const [yearFilter, setYearFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState<"all" | TxType>("all");
   const [activityFilter, setActivityFilter] = useState<TransactionActivity>("all");
   const [timeLens, setTimeLens] = useState<TransactionTimeLens>("all");
+  const [instrumentFilter, setInstrumentFilter] = useState<TransactionInstrumentLens>("all");
+  const [qualityFilter, setQualityFilter] = useState<TransactionQualityLens>("all");
   const [sort, setSort] = useState<TransactionSort>("newest");
   const [qualityVisibleLimit, setQualityVisibleLimit] = useState(3);
   const [savedViews, setSavedViews] = useState<SavedTransactionView[]>(() => readTransactionSavedViews());
@@ -247,9 +252,12 @@ export default function Transactions() {
   );
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
+  const qualityIssues = useMemo(() => findTransactionQualityIssues(txs), [txs]);
+  const qualityTransactionIds = useMemo(() => new Set(qualityIssues.map((issue) => issue.transactionId)), [qualityIssues]);
+
   useEffect(() => {
     setVisibleLimit(TRANSACTION_WINDOW_SIZE);
-  }, [activityFilter, deferredQuery, sort, timeLens, typeFilter, yearFilter]);
+  }, [activityFilter, deferredQuery, instrumentFilter, qualityFilter, sort, timeLens, typeFilter, yearFilter]);
 
   const listWindow = useMemo(
     () => buildTransactionListWindow(txs, {
@@ -257,19 +265,24 @@ export default function Transactions() {
       year: yearFilter,
       type: typeFilter,
       activity: activityFilter,
+      instrument: instrumentFilter,
+      quality: qualityFilter,
+      qualityTransactionIds,
       sort,
       timeLens,
       today,
       typeSearchTerms,
     }, visibleLimit),
-    [activityFilter, deferredQuery, sort, timeLens, today, txs, typeFilter, typeSearchTerms, visibleLimit, yearFilter],
+    [activityFilter, deferredQuery, instrumentFilter, qualityFilter, qualityTransactionIds, sort, timeLens, today, txs, typeFilter, typeSearchTerms, visibleLimit, yearFilter],
   );
 
-  const activeFilterCount = Number(Boolean(q.trim())) + Number(yearFilter !== "all") + Number(typeFilter !== "all") + Number(activityFilter !== "all") + Number(timeLens !== "all") + Number(sort !== "newest");
+  const activeFilterCount = Number(Boolean(q.trim())) + Number(yearFilter !== "all") + Number(typeFilter !== "all") + Number(activityFilter !== "all") + Number(timeLens !== "all") + Number(instrumentFilter !== "all") + Number(qualityFilter !== "all") + Number(sort !== "newest");
   const currentViewFilters: TransactionViewFilters = { query: q, year: yearFilter, type: typeFilter, activity: activityFilter, timeLens, sort };
-  const activeSavedViewId = savedViews.find((view) => sameTransactionViewFilters(view.filters, currentViewFilters))?.id ?? null;
+  const savedViewCompatible = instrumentFilter === "all" && qualityFilter === "all";
+  const activeSavedViewId = savedViewCompatible
+    ? savedViews.find((view) => sameTransactionViewFilters(view.filters, currentViewFilters))?.id ?? null
+    : null;
 
-  const qualityIssues = useMemo(() => findTransactionQualityIssues(txs), [txs]);
   const transactionsById = useMemo(() => new Map(txs.map((tx) => [tx.id, tx])), [txs]);
   const visibleQualityIssues = qualityIssues.slice(0, qualityVisibleLimit);
 
@@ -436,6 +449,8 @@ export default function Transactions() {
     setTypeFilter("all");
     setActivityFilter("all");
     setTimeLens("all");
+    setInstrumentFilter("all");
+    setQualityFilter("all");
     setSort("newest");
   }
 
@@ -445,6 +460,8 @@ export default function Transactions() {
     setTypeFilter(view.filters.type);
     setActivityFilter(view.filters.activity);
     setTimeLens(view.filters.timeLens);
+    setInstrumentFilter("all");
+    setQualityFilter("all");
     setSort(view.filters.sort);
     setSavedViewError("");
   }
@@ -564,73 +581,28 @@ export default function Transactions() {
           <div className={`sum-val${analysis.totalPnl == null ? "" : analysis.totalPnl >= 0 ? " pos" : " neg"}`}>{analysis.totalPnl == null ? "—" : formatDisplayMoney(analysis.totalPnl, locale)}</div>
         </div>
         <div className="gl sum-c">
-          <div className="sum-lbl">{text.buys}</div>
-          <div className="sum-val">{analysis.buyCount}</div>
+          <div className="sum-lbl">{text.transactionCount}</div>
+          <div className="sum-val">{txs.length}</div>
         </div>
       </div>
 
-      <section className="gl tx-analysis" aria-label={text.analysis}>
-        <div className="tx-analysis-head">
-          <div>
-            <div className="sum-lbl">{text.analysis}</div>
-            <strong>{analysis.openPositions} {text.positions}</strong>
-          </div>
-          <span className={analysisIsEmpty ? "analysis-state neutral" : analysis.totalPnl == null ? "analysis-state warn" : "analysis-state ok"}>
-            {analysisIsEmpty ? text.noPositions : analysis.totalPnl == null ? text.missingPrices : text.valued}
-          </span>
+      <section className="demo-v10-gl tx-quality-summary" aria-label={text.qualityInbox}>
+        <div>
+          <div className="sum-lbl">{text.qualityInbox}</div>
+          <strong>{qualityIssues.length ? text.qualityCount.replace("{count}", String(qualityIssues.length)) : text.qualityClean}</strong>
         </div>
-        <div className="tx-analysis-grid">
-          <div><span>{text.holdings}</span><strong>{analysis.holdingsValue == null ? "—" : formatDisplayMoney(analysis.holdingsValue, locale)}</strong></div>
-          <div><span>{text.realized}</span><strong className={analysis.realizedPnl >= 0 ? "pos" : "neg"}>{formatDisplayMoney(analysis.realizedPnl, locale)}</strong></div>
-          <div><span>{text.unrealized}</span><strong className={analysis.unrealizedPnl == null ? "" : analysis.unrealizedPnl >= 0 ? "pos" : "neg"}>{analysis.unrealizedPnl == null ? "—" : formatDisplayMoney(analysis.unrealizedPnl, locale)}</strong></div>
-          <div><span>{text.feesTax}</span><strong>{formatDisplayMoney(analysis.feesAndTax, locale)}</strong></div>
-        </div>
-        {analysis.missingQuotes.length || analysis.incompleteLots.length ? (
-          <p className="tx-analysis-note">{text.analysisNote.replace("{reason}", analysis.missingQuotes.length ? text.missingQuote.replace("{isins}", analysis.missingQuotes.join(", ")) : text.missingLots)}</p>
-        ) : null}
-      </section>
-
-      <section className="demo-v10-gl tx-quality-inbox" aria-label={text.qualityInbox}>
-        <div className="tx-quality-head">
-          <div>
-            <div className="sum-lbl">{text.qualityInbox}</div>
-            <strong>{qualityIssues.length ? text.qualityCount.replace("{count}", String(qualityIssues.length)) : text.qualityClean}</strong>
-          </div>
-          <span className={qualityIssues.length ? "tx-quality-state needs-review" : "tx-quality-state clean"}>
-            {qualityIssues.length ? qualityIssues.length : "✓"}
-          </span>
-        </div>
-        {qualityIssues.length === 0 ? null : (
-          <div className="tx-quality-list">
-            {visibleQualityIssues.map((issue) => {
-              const tx = transactionsById.get(issue.transactionId);
-              if (!tx) return null;
-              const meta = types.find((type) => type.value === tx.type);
-              const isin = resolveInstrumentIsin(tx);
-              return (
-                <button
-                  type="button"
-                  key={`${issue.transactionId}-${issue.code}`}
-                  className="tx-quality-item"
-                  onClick={() => openEdit(tx)}
-                  aria-label={`${qualityIssueLabel(issue.code)} · ${qualitySourceLabel(issue.source)} · ${formatDisplayDate(tx.date, locale)} · ${text.qualityOpen}`}
-                >
-                  <span className={`tx-quality-dot ${issue.severity}`} aria-hidden />
-                  <span className="tx-quality-copy">
-                    <strong>{qualityIssueLabel(issue.code)}</strong>
-                    <span>{meta?.label ?? tx.type} · {formatDisplayDate(tx.date, locale)}{isin ? ` · ${isin}` : ""} · {qualitySourceLabel(issue.source)} · {qualityRecordSourceLabel(issue.recordSource)}</span>
-                  </span>
-                  <span className={`tx-quality-severity ${issue.severity}`}>{qualitySeverityLabel(issue.severity)}</span>
-                </button>
-              );
-            })}
-            {qualityIssues.length > visibleQualityIssues.length ? (
-              <button type="button" className="tx-quality-more" onClick={() => setQualityVisibleLimit((limit) => limit + 3)}>
-                {text.qualityMore.replace("{count}", String(qualityIssues.length - visibleQualityIssues.length))}
-              </button>
-            ) : null}
-          </div>
-        )}
+        {qualityIssues.length ? (
+          <button
+            type="button"
+            className="tx-quality-open"
+            onClick={() => {
+              setQualityFilter("needs_review");
+              setFilterSheetOpen(false);
+            }}
+          >
+            {text.qualityOpen} ›
+          </button>
+        ) : <span className="tx-quality-state clean" aria-hidden>✓</span>}
       </section>
 
       <section className="tx-journal" aria-label={text.journal}>
@@ -644,108 +616,74 @@ export default function Transactions() {
                   : text.allVisible.replace("{total}", String(listWindow.total))}
               </p>
             </div>
-            <button type="button" className="tx-tool-trigger" aria-expanded={toolsOpen} onClick={() => setToolsOpen((v) => !v)}>
-              {toolsOpen ? text.hideTools : text.tools}{activeFilterCount ? ` · ${text.activeFilters.replace("{count}", String(activeFilterCount))}` : ""}
+          </div>
+          <div className="tx-ledger-tools">
+            <label className="tx-search-field">
+              <span className="sr-only">{text.searchLedger}</span>
+              <input value={q} onChange={(event) => setQ(event.target.value)} placeholder={text.searchPlaceholder} aria-label={text.searchLedger} />
+            </label>
+            <button type="button" className="tx-tool-trigger" aria-expanded={filterSheetOpen} aria-controls="tx-filter-sheet" onClick={() => setFilterSheetOpen((open) => !open)}>
+              {filterSheetOpen ? text.hideTools : text.tools}{activeFilterCount ? " · " + text.activeFilters.replace("{count}", String(activeFilterCount)) : ""}
             </button>
           </div>
-
-          <div className="tx-quick-create" aria-label={text.addTransaction}>
-            <button type="button" onClick={() => openCreate("buy_vwce")}>+ {text.quickBuy}</button>
-            <button type="button" onClick={() => openCreate("cash_in")}>+ {text.quickFunding}</button>
-          </div>
-
-          <div className="tx-time-lenses" role="group" aria-label={text.timeLens}>
-            <span className="tx-lens-label">{text.timeLens}</span>
-            <div className="tx-lens-options">
-              <button type="button" className={timeLens === "all" ? "active" : ""} aria-pressed={timeLens === "all"} onClick={() => selectTimeLens("all")}>{text.timeAll}</button>
-              <button type="button" className={timeLens === "this_month" ? "active" : ""} aria-pressed={timeLens === "this_month"} onClick={() => selectTimeLens("this_month")}>{text.thisMonth}</button>
-              <button type="button" className={timeLens === "last_90_days" ? "active" : ""} aria-pressed={timeLens === "last_90_days"} onClick={() => selectTimeLens("last_90_days")}>{text.last90Days}</button>
-              <button type="button" className={timeLens === "this_year" ? "active" : ""} aria-pressed={timeLens === "this_year"} onClick={() => selectTimeLens("this_year")}>{text.thisYear}</button>
-              <button type="button" className={timeLens === "last_year" ? "active" : ""} aria-pressed={timeLens === "last_year"} onClick={() => selectTimeLens("last_year")}>{text.lastYear}</button>
+          {activeFilterCount ? (
+            <div className="tx-active-filter-chips" aria-label={text.activeFilterChips}>
+              {q.trim() ? <button type="button" onClick={() => setQ("")}>{q.trim()} ×</button> : null}
+              {timeLens !== "all" ? <button type="button" onClick={() => setTimeLens("all")}>{timeLens === "this_month" ? text.thisMonth : timeLens === "last_90_days" ? text.last90Days : timeLens === "this_year" ? text.thisYear : text.lastYear} ×</button> : null}
+              {yearFilter !== "all" ? <button type="button" onClick={() => setYearFilter("all")}>{yearFilter} ×</button> : null}
+              {typeFilter !== "all" ? <button type="button" onClick={() => setTypeFilter("all")}>{types.find((type) => type.value === typeFilter)?.label ?? typeFilter} ×</button> : null}
+              {activityFilter !== "all" ? <button type="button" onClick={() => setActivityFilter("all")}>{activityFilter === "trade" ? text.tradeActivity : activityFilter === "funding" ? text.fundingActivity : text.outflowActivity} ×</button> : null}
+              {instrumentFilter !== "all" ? <button type="button" onClick={() => setInstrumentFilter("all")}>{instrumentFilter === "vwce" ? text.instrumentVwce : text.instrumentOther} ×</button> : null}
+              {qualityFilter !== "all" ? <button type="button" onClick={() => setQualityFilter("all")}>{qualityFilter === "normal" ? text.statusNormal : text.statusReview} ×</button> : null}
+              {sort !== "newest" ? <button type="button" onClick={() => setSort("newest")}>{sort === "oldest" ? text.oldest : text.amountDesc} ×</button> : null}
             </div>
-          </div>
-
-          <div className="tx-saved-views" role="group" aria-label={text.savedViews}>
-            <span className="tx-lens-label">{text.savedViews}</span>
-            <div className="tx-saved-view-options">
-              {savedViews.map((view) => (
-                <span key={view.id} className="tx-saved-view-chip">
-                  <button type="button" className={activeSavedViewId === view.id ? "active" : ""} aria-pressed={activeSavedViewId === view.id} onClick={() => applySavedView(view)}>{view.name}</button>
-                  <button type="button" className="tx-saved-view-remove" aria-label={text.removeSavedView.replace("{name}", view.name)} onClick={() => removeSavedView(view.id)}>×</button>
-                </span>
-              ))}
-              <button type="button" className="tx-saved-view-add" onClick={() => setToolsOpen(true)}>+ {text.saveView}</button>
-            </div>
-          </div>
-
-          <div className="tx-quick-types" role="group" aria-label={text.quickFilter}>
-            <button type="button" className={activityFilter === "all" ? "active" : ""} aria-pressed={activityFilter === "all"} onClick={() => { setActivityFilter("all"); setTypeFilter("all"); }}>{text.all}</button>
-            <button type="button" className={activityFilter === "trade" ? "active" : ""} aria-pressed={activityFilter === "trade"} onClick={() => { setActivityFilter("trade"); setTypeFilter("all"); }}>{text.tradeActivity}</button>
-            <button type="button" className={activityFilter === "funding" ? "active" : ""} aria-pressed={activityFilter === "funding"} onClick={() => { setActivityFilter("funding"); setTypeFilter("all"); }}>{text.fundingActivity}</button>
-            <button type="button" className={activityFilter === "outflow" ? "active" : ""} aria-pressed={activityFilter === "outflow"} onClick={() => { setActivityFilter("outflow"); setTypeFilter("all"); }}>{text.outflowActivity}</button>
-          </div>
+          ) : null}
         </div>
 
-      {toolsOpen ? (
-        <section className="demo-v10-gl tx-tool-panel">
-          {!readOnly ? (
-            <Suspense fallback={<p className="tx-tool-loading" role="status">{text.loading}</p>}>
-              <TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} />
-            </Suspense>
-          ) : null}
-          <section className="tx-saved-view-editor" aria-label={text.saveView}>
-            <div className="tx-saved-view-editor-head">
-              <span>{text.savedViews}</span>
-              <small>{savedViews.length}/{MAX_SAVED_TRANSACTION_VIEWS}</small>
+      {filterSheetOpen ? (
+        <div className="tx-filter-backdrop" role="presentation" onMouseDown={() => setFilterSheetOpen(false)}>
+          <section id="tx-filter-sheet" className="tx-filter-sheet" role="dialog" aria-modal="true" aria-label={text.filterSheet} onMouseDown={(event) => event.stopPropagation()}>
+            <div className="sheet-handle" aria-hidden />
+            <div className="tx-filter-sheet-head">
+              <h2>{text.filterSheet}</h2>
+              <button type="button" className="tx-filter-close" onClick={() => setFilterSheetOpen(false)} aria-label={text.hideTools}>×</button>
             </div>
-            <div className="tx-saved-view-form">
-              <input id="tx-saved-view-name" aria-label={text.savedViewName} value={savedViewName} maxLength={28} onChange={(event) => setSavedViewName(event.target.value)} placeholder={text.savedViewNamePlaceholder} />
-              <button type="button" disabled={!activeFilterCount} onClick={saveCurrentView}>{text.saveCurrentView}</button>
+            <div className="tx-filter-section" role="group" aria-label={text.timeLens}>
+              <span>{text.timeLens}</span>
+              <div className="tx-filter-options">
+                <button type="button" className={timeLens === "all" ? "active" : ""} aria-pressed={timeLens === "all"} onClick={() => selectTimeLens("all")}>{text.timeAll}</button>
+                <button type="button" className={timeLens === "this_month" ? "active" : ""} aria-pressed={timeLens === "this_month"} onClick={() => selectTimeLens("this_month")}>{text.thisMonth}</button>
+                <button type="button" className={timeLens === "last_90_days" ? "active" : ""} aria-pressed={timeLens === "last_90_days"} onClick={() => selectTimeLens("last_90_days")}>{text.last90Days}</button>
+                <button type="button" className={timeLens === "this_year" ? "active" : ""} aria-pressed={timeLens === "this_year"} onClick={() => selectTimeLens("this_year")}>{text.thisYear}</button>
+                <button type="button" className={timeLens === "last_year" ? "active" : ""} aria-pressed={timeLens === "last_year"} onClick={() => selectTimeLens("last_year")}>{text.lastYear}</button>
+              </div>
             </div>
-            {savedViews.length === 0 ? <p className="tx-saved-view-empty">{text.savedViewEmpty}</p> : null}
-            {savedViewError ? <p className="tx-saved-view-error" role="alert">{savedViewError}</p> : null}
+            <div className="tx-filter-grid">
+              <label className="field"><span>{text.year}</span><select value={yearFilter} onChange={(event) => { setTimeLens("all"); setYearFilter(event.target.value); }}><option value="all">{text.all}</option>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select></label>
+              <label className="field"><span>{text.type}</span><select value={typeFilter} onChange={(event) => { setActivityFilter("all"); setTypeFilter(event.target.value as "all" | TxType); }}><option value="all">{text.all}</option>{types.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select></label>
+              <label className="field"><span>{text.activity}</span><select value={activityFilter} onChange={(event) => { setTypeFilter("all"); setActivityFilter(event.target.value as TransactionActivity); }}><option value="all">{text.all}</option><option value="trade">{text.tradeActivity}</option><option value="funding">{text.fundingActivity}</option><option value="outflow">{text.outflowActivity}</option></select></label>
+              <label className="field"><span>{text.instrument}</span><select value={instrumentFilter} onChange={(event) => setInstrumentFilter(event.target.value as TransactionInstrumentLens)}><option value="all">{text.all}</option><option value="vwce">{text.instrumentVwce}</option><option value="other">{text.instrumentOther}</option></select></label>
+              <label className="field"><span>{text.status}</span><select value={qualityFilter} onChange={(event) => setQualityFilter(event.target.value as TransactionQualityLens)}><option value="all">{text.all}</option><option value="normal">{text.statusNormal}</option><option value="needs_review">{text.statusReview}</option></select></label>
+              <label className="field"><span>{text.sort}</span><select value={sort} onChange={(event) => setSort(event.target.value as TransactionSort)}><option value="newest">{text.newest}</option><option value="oldest">{text.oldest}</option><option value="amount_desc">{text.amountDesc}</option></select></label>
+            </div>
+            <details className="tx-filter-support">
+              <summary>{text.savedViews}</summary>
+              <div className="tx-saved-view-options">
+                {savedViews.map((view) => (
+                  <span key={view.id} className="tx-saved-view-chip"><button type="button" className={activeSavedViewId === view.id ? "active" : ""} aria-pressed={activeSavedViewId === view.id} onClick={() => applySavedView(view)}>{view.name}</button><button type="button" className="tx-saved-view-remove" aria-label={text.removeSavedView.replace("{name}", view.name)} onClick={() => removeSavedView(view.id)}>×</button></span>
+                ))}
+              </div>
+              <section className="tx-saved-view-editor" aria-label={text.saveView}>
+                <div className="tx-saved-view-editor-head"><span>{text.savedViews}</span><small>{savedViews.length}/{MAX_SAVED_TRANSACTION_VIEWS}</small></div>
+                <div className="tx-saved-view-form"><input aria-label={text.savedViewName} value={savedViewName} maxLength={28} onChange={(event) => setSavedViewName(event.target.value)} placeholder={text.savedViewNamePlaceholder} /><button type="button" disabled={!activeFilterCount || !savedViewCompatible} onClick={saveCurrentView}>{text.saveCurrentView}</button></div>
+                {savedViews.length === 0 ? <p className="tx-saved-view-empty">{text.savedViewEmpty}</p> : null}
+                {savedViewError ? <p className="tx-saved-view-error" role="alert">{savedViewError}</p> : null}
+              </section>
+            </details>
+            {!readOnly ? <details className="tx-filter-support" onToggle={(event) => setPdfToolsOpen(event.currentTarget.open)}><summary>PDF</summary>{pdfToolsOpen ? <Suspense fallback={<p className="tx-tool-loading" role="status">{text.loading}</p>}><TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /></Suspense> : null}</details> : null}
+            <div className="tx-filter-actions"><button type="button" className="secondary" disabled={!activeFilterCount} onClick={resetJournal}>{text.clearFilters}</button><button type="button" onClick={() => setFilterSheetOpen(false)}>{text.applyFilters}</button></div>
           </section>
-          <div className="field" style={{ marginTop: 8 }}>
-            <label htmlFor="tx-search">{text.search}</label>
-            <input id="tx-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={text.searchPlaceholder} />
-          </div>
-          <div className="tx-tool-grid">
-            <div className="field">
-              <label htmlFor="tx-year">{text.year}</label>
-              <select id="tx-year" value={yearFilter} onChange={(e) => { setTimeLens("all"); setYearFilter(e.target.value); }}>
-                <option value="all">{text.all}</option>
-                {years.map((year) => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="tx-type">{text.type}</label>
-              <select
-                id="tx-type"
-                value={typeFilter}
-                onChange={(e) => { setActivityFilter("all"); setTypeFilter(e.target.value as "all" | TxType); }}
-              >
-                <option value="all">{text.all}</option>
-                {types.map((type) => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="tx-sort">{text.sort}</label>
-              <select id="tx-sort" value={sort} onChange={(e) => setSort(e.target.value as TransactionSort)}>
-                <option value="newest">{text.newest}</option>
-                <option value="oldest">{text.oldest}</option>
-                <option value="amount_desc">{text.amountDesc}</option>
-              </select>
-            </div>
-            <div className="field tx-tool-reset">
-              <label>{text.quickFilter}</label>
-              <button type="button" className="secondary" disabled={!activeFilterCount} onClick={resetJournal}>{text.clearFilters}</button>
-            </div>
-          </div>
-        </section>
+        </div>
       ) : null}
 
       {listWindow.total === 0 ? (
