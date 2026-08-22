@@ -27,11 +27,15 @@ const syncMocks = vi.hoisted(() => ({
   pushOutbox: vi.fn(),
   reviveDeadOutbox: vi.fn(),
 }));
+const authMocks = vi.hoisted(() => ({
+  user: null as { id: string; email: string; last_sign_in_at?: string } | null,
+  resetPassword: vi.fn(),
+}));
 
 vi.mock("../lib/db", () => dbMocks);
 vi.mock("../lib/sync/engine", () => syncMocks);
 vi.mock("../lib/auth", () => ({
-  useAuth: () => ({ user: null, mfaEnrolled: false }),
+  useAuth: () => ({ user: authMocks.user, mfaEnrolled: false, resetPassword: authMocks.resetPassword }),
 }));
 vi.mock("../lib/recoveryReadOnly", () => ({
   useRecoveryReadOnly: () => ({ readOnly: false, showBlocked: vi.fn() }),
@@ -84,6 +88,7 @@ function renderGermanSettings(path = "/settings?tab=advanced") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  authMocks.user = null;
   dbMocks.getSettings.mockResolvedValue(loadedSettings());
   dbMocks.countLocalData.mockResolvedValue({ settings: 1, goals: 0, transactions: 0, annualChecklists: 0, monthlySnapshots: 0, quotes: 0 });
   dbMocks.db.appMetadata.get.mockResolvedValue({ lastBackupAt: "" });
@@ -120,12 +125,15 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
     const { container } = renderGermanSettings();
 
-    await screen.findByText("Konto & Sicherheit");
+    await screen.findByText("Konto");
     expect(screen.getByRole("heading", { name: "Einstellungen" })).toBeTruthy();
     expect(container.querySelector(".set-page-head")).toBeTruthy();
     expect(screen.getByText("Auf diesem Gerät gespeichert")).toBeTruthy();
     expect(screen.getByText("Aktuelle E-Mail-Adresse")).toBeTruthy();
     expect(screen.getByText("Letzte Anmeldung")).toBeTruthy();
+    expect(screen.getByText("Sicherheit")).toBeTruthy();
+    expect(screen.getByText("Passwort")).toBeTruthy();
+    expect(screen.getByText("Passwort vergessen")).toBeTruthy();
     expect(screen.queryByText("Berlin · aktuelle Zeit")).toBeNull();
     expect(screen.getByRole("button", { name: "Vietnamesisch Verfügbar" })).toBeTruthy();
     expect(screen.getByText("Erscheinungsbild")).toBeTruthy();
@@ -156,6 +164,21 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     fireEvent.click(screen.getByRole("button", { name: /JSON exportieren/ }));
     expect(await screen.findByText("JSON-Sicherung konnte nicht exportiert werden. Ihre Daten wurden nicht verändert.")).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/Không|Dữ liệu|Cài đặt|Đồng bộ|Giá/);
+  });
+
+  it("sends a password link only after explicit confirmation and never renders token material", async () => {
+    authMocks.user = { id: "security-test", email: "security-test@example.invalid", last_sign_in_at: "2026-08-22T09:00:00Z" };
+    authMocks.resetPassword.mockResolvedValue({});
+    renderSettings();
+
+    fireEvent.click(await screen.findByRole("button", { name: /^Mật khẩu/ }));
+    const dialog = screen.getByRole("dialog", { name: "Gửi link mật khẩu?" });
+    expect(dialog.textContent).toContain("security-test@example.invalid");
+    fireEvent.click(screen.getByRole("button", { name: "Gửi link" }));
+
+    await waitFor(() => expect(authMocks.resetPassword).toHaveBeenCalledWith("security-test@example.invalid"));
+    expect(screen.getByText("Đã gửi link mật khẩu.")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/access_token|refresh_token|code=/i);
   });
 
   it("keeps malformed and unsupported German backup imports fail-closed", async () => {
