@@ -99,7 +99,12 @@ type SettingsText = {
   passwordLinkBody: string;
   passwordLinkSent: string;
   passwordLinkEmailUnavailable: string;
+  passwordLinkError: string;
   passwordActionCancel: string;
+  passwordLinkSending: string;
+  exportSuccess: string;
+  themeSaved: string;
+  languageSaved: string;
 };
 
 function settingsStrings(locale: AppLocale): SettingsText {
@@ -169,7 +174,12 @@ function settingsStrings(locale: AppLocale): SettingsText {
     passwordLinkBody: "Ein sicherer Link wird an {email} gesendet. Token und Passwort werden hier nicht angezeigt.",
     passwordLinkSent: "Ein Passwort-Link wurde gesendet.",
     passwordLinkEmailUnavailable: "Für dieses Konto ist keine E-Mail-Adresse verfügbar.",
+    passwordLinkError: "Passwort-Link konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
     passwordActionCancel: "Abbrechen",
+    passwordLinkSending: "Link wird gesendet…",
+    exportSuccess: "JSON-Sicherung wurde heruntergeladen.",
+    themeSaved: "Erscheinungsbild wurde auf diesem Gerät gespeichert.",
+    languageSaved: "Sprache wurde auf diesem Gerät gespeichert.",
   } : {
     saveError: "Không lưu được Cài đặt. Bản đang chỉnh vẫn còn trên màn hình.",
     pendingPushError: "Không đẩy được các thay đổi đang chờ. Dữ liệu trên thiết bị vẫn được giữ nguyên.",
@@ -236,7 +246,12 @@ function settingsStrings(locale: AppLocale): SettingsText {
     passwordLinkBody: "Một link bảo mật sẽ được gửi tới {email}. Token và mật khẩu không hiển thị tại đây.",
     passwordLinkSent: "Đã gửi link mật khẩu.",
     passwordLinkEmailUnavailable: "Tài khoản này chưa có email để gửi link.",
+    passwordLinkError: "Không gửi được link mật khẩu. Vui lòng thử lại.",
     passwordActionCancel: "Hủy",
+    passwordLinkSending: "Đang gửi link…",
+    exportSuccess: "Đã tải xuống bản sao JSON.",
+    themeSaved: "Đã lưu giao diện trên thiết bị này.",
+    languageSaved: "Đã lưu ngôn ngữ trên thiết bị này.",
   };
 }
 
@@ -320,6 +335,7 @@ export default function SettingsPage({
   const [saveState, setSaveState] = useState<"saved" | "dirty" | "saving" | "error">("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
   const [metaBackup, setMetaBackup] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -341,7 +357,6 @@ export default function SettingsPage({
   const [passwordActionBusy, setPasswordActionBusy] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaBusy, setMfaBusy] = useState(false);
-  const [mfaMessage, setMfaMessage] = useState<string | null>(null);
   const [mfaSetupError, setMfaSetupError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -491,6 +506,8 @@ export default function SettingsPage({
   function pickTheme(next: ThemeChoice) {
     setTheme(next);
     persistTheme(next);
+    setActionError(null);
+    setActionFeedback(text.themeSaved);
   }
 
   async function sendPasswordLink() {
@@ -502,10 +519,11 @@ export default function SettingsPage({
     }
     setPasswordActionBusy(true);
     setActionError(null);
+    setActionFeedback(null);
     try {
       const result = await auth.resetPassword(email);
-      if (result.error) setActionError(result.error);
-      else setMfaMessage(text.passwordLinkSent);
+      if (result.error) setActionError(text.passwordLinkError);
+      else setActionFeedback(text.passwordLinkSent);
     } finally {
       setPasswordActionBusy(false);
       setPasswordAction(null);
@@ -515,6 +533,7 @@ export default function SettingsPage({
   async function runVisibleSync() {
     if (syncingNow) return;
     setActionError(null);
+    setActionFeedback(null);
     if (!onSyncNow) {
       setActionError(t("syncNeedsSignIn"));
       return;
@@ -523,7 +542,7 @@ export default function SettingsPage({
     try {
       const result = await onSyncNow();
       if (result.tone === "error") setActionError(result.message);
-      else setMfaMessage(result.message);
+      else setActionFeedback(result.message);
       setDead(auth.user?.id ? await listDeadOutbox() : []);
       if (auth.user?.id) {
         const meta = await getSyncMeta(auth.user.id);
@@ -545,10 +564,12 @@ export default function SettingsPage({
 
   async function doExport() {
     setActionError(null);
+    setActionFeedback(null);
     try {
       const payload = await exportBackup();
       downloadJson(payload, `vwce-backup-${payload.exportedAt.slice(0, 10)}.json`);
       setMetaBackup(payload.exportedAt);
+      setActionFeedback(text.exportSuccess);
     } catch {
       setActionError(text.exportError);
     }
@@ -732,6 +753,12 @@ export default function SettingsPage({
           )}
         </div>
       ) : null}
+      {actionFeedback ? (
+        <div className="set-action-feedback" role="status" aria-live="polite">
+          <span>{actionFeedback}</span>
+          <button type="button" onClick={() => setActionFeedback(null)} aria-label={t("close")}>×</button>
+        </div>
+      ) : null}
 
       <header className="set-section-head">
         <div><span>{text.account}</span><small>{text.accountSubtitle}</small></div>
@@ -889,10 +916,10 @@ export default function SettingsPage({
         </div>
         <div className="set-preference-head language"><span>{text.language}</span><small>{text.languageSubtitle}</small></div>
         <div className="lang-options">
-          <button type="button" className={`lang-opt${locale === "vi" ? " selected" : ""}`} onClick={() => setLocale("vi")}>
+          <button type="button" className={`lang-opt${locale === "vi" ? " selected" : ""}`} onClick={() => { setLocale("vi"); setActionError(null); setActionFeedback("Đã lưu ngôn ngữ trên thiết bị này."); }}>
             {t("vietnamese")}<small>{locale === "vi" ? t("using") : t("available")}</small>
           </button>
-          <button type="button" className={`lang-opt${locale === "de" ? " selected" : ""}`} onClick={() => setLocale("de")}>
+          <button type="button" className={`lang-opt${locale === "de" ? " selected" : ""}`} onClick={() => { setLocale("de"); setActionError(null); setActionFeedback("Sprache wurde auf diesem Gerät gespeichert."); }}>
             {t("german")}<small>{locale === "de" ? t("active") : t("available")}</small>
           </button>
         </div>
@@ -904,7 +931,7 @@ export default function SettingsPage({
           <p>{text.passwordLinkBody.replace("{email}", auth.user?.email ?? "—")}</p>
           <div className="set-password-confirm-actions">
             <button type="button" className="secondary" disabled={passwordActionBusy} onClick={() => setPasswordAction(null)}>{text.passwordActionCancel}</button>
-            <button type="button" disabled={passwordActionBusy} onClick={() => void sendPasswordLink()}>{passwordActionBusy ? t("syncing") : text.sendResetLink}</button>
+            <button type="button" disabled={passwordActionBusy} onClick={() => void sendPasswordLink()}>{passwordActionBusy ? text.passwordLinkSending : text.sendResetLink}</button>
           </div>
         </section>
       ) : null}
@@ -933,7 +960,7 @@ export default function SettingsPage({
                   else {
                     setMfaEnrollment(null);
                     setMfaCode("");
-                    setMfaMessage(text.mfaVerified);
+                    setActionFeedback(text.mfaVerified);
                   }
                 } finally {
                   setMfaBusy(false);
@@ -946,7 +973,6 @@ export default function SettingsPage({
           {mfaSetupError ? <p role="alert">{mfaSetupError}</p> : null}
         </section>
       ) : null}
-      {mfaMessage ? <p className="ver">{mfaMessage}</p> : null}
 
       {pendingFile ? (
         <section className="gl" style={{ padding: 16 }} role="alertdialog">
@@ -1002,7 +1028,7 @@ export default function SettingsPage({
               onSyncNow={onSyncNow ? async () => {
                 const result = await onSyncNow();
                 if (result.tone === "error") setActionError(result.message);
-                else setMfaMessage(result.message);
+                else setActionFeedback(result.message);
                 await onConflictResolved?.();
               } : undefined}
             />
