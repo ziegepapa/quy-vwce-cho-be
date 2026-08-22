@@ -20,13 +20,23 @@ describe("tx filter sheet safe-area regression", () => {
     expect(css).toMatch(/\.tx-filter-sheet-body\s*\{[^}]*overflow-y:\s*auto/);
     expect(tx).toMatch(/data-testid="tx-filter-actions"/);
   });
-  it("hides the bottom navigation while the filter sheet is open", () => {
+  it("makes the bottom navigation inert and visually hidden while the filter sheet is open", () => {
     expect(tx).toMatch(/tx-filter-open/);
     expect(tx).toMatch(/classList\.add\("is-hidden"\)/);
     expect(dock).toMatch(/\.bottom-dock\.is-hidden/);
+    expect(css).toMatch(/html\.tx-filter-open \.bottom-dock[\s\S]*visibility:\s*hidden/);
+    expect(css).toMatch(/body\.tx-filter-open\s*\{\s*overflow:\s*hidden/);
   });
-  it("does not leave the sheet under the dock height", () => {
-    expect(css).toMatch(/max-height:\s*min\(86dvh/);
+  it("uses a bounded dynamic viewport sheet with a sticky safe-area footer", () => {
+    expect(css).toMatch(/max-height:\s*min\(80dvh/);
+    expect(css).toMatch(/\.tx-filter-actions\s*\{[\s\S]*safe-area-inset-bottom/);
+  });
+  it("keeps saved views and PDF import outside the primary filter sheet", () => {
+    const filterMarkup = tx.slice(tx.indexOf('id="tx-filter-sheet"'), tx.indexOf('data-testid="tx-filter-actions"'));
+    expect(filterMarkup).not.toContain("tx-saved-views-entry");
+    expect(filterMarkup).not.toContain("TradeRepublicPdfImport");
+    expect(tx).toMatch(/tx-saved-views-entry/);
+    expect(tx).toMatch(/tx-import-tools/);
   });
 });
 

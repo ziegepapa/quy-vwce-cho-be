@@ -186,6 +186,8 @@ export default function Transactions() {
   } : {
     loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", transactionCount: "Giao dịch", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Đóng bộ lọc", tools: "Lọc", filterSheet: "Bộ lọc", applyFilters: "Áp dụng", search: "Tìm", searchLedger: "Tìm kiếm giao dịch", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", instrument: "Công cụ", instrumentVwce: "VWCE", instrumentOther: "Chứng khoán khác", status: "Trạng thái", statusNormal: "Bình thường", statusReview: "Cần rà soát", activeFilterChips: "Bộ lọc đang dùng", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", editTransaction: "Sửa giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước", qualityInbox: "Dữ liệu cần rà soát", qualityClean: "Tất cả giao dịch đang có đủ thông tin.", qualityCount: "{count} cần rà soát", qualityMore: "Xem thêm {count}", qualityOpen: "Mở để rà soát", qualityAction: "Cần xử lý", qualityReview: "Cần kiểm tra", qualityTip: "Gợi ý", qualityMissingIsin: "Thiếu ISIN", qualityInvalidIsin: "ISIN không hợp lệ", qualityInvalidAmount: "Số tiền thiếu hoặc không hợp lệ", qualityMissingQuantity: "Thiếu số lượng hoặc giá đơn vị", qualityMissingUnitPrice: "Thiếu giá đơn vị", qualityMissingNote: "Thiếu ghi chú", qualitySourceReplay: "Kiểm tra tài chính", qualitySourceCompleteness: "Kiểm tra độ đầy đủ", qualityRecordManual: "Nhập thủ công", qualityRecordTradeRepublic: "PDF Trade Republic", qualityRecordLegacy: "Legacy / không rõ nguồn", savedViews: "Góc xem đã lưu", saveView: "Lưu view", savedViewName: "Tên góc xem", savedViewNamePlaceholder: "Ví dụ: Mua trong năm nay", saveCurrentView: "Lưu góc xem hiện tại", savedViewEmpty: "Chưa có góc xem nào được lưu.", savedViewLimit: "Tối đa {count} góc xem. Hãy xóa một góc xem để tiếp tục.", savedViewNameRequired: "Hãy nhập tên cho góc xem.", savedViewStorageError: "Không thể lưu góc xem trên thiết bị này.", savedViewNoFilters: "Hãy chọn ít nhất một bộ lọc hoặc sắp xếp trước.", removeSavedView: "Xóa góc xem {name}", dateAmountRequired: "Ngày và số tiền bắt buộc", adjustmentNoteRequired: "Điều chỉnh bắt buộc có ghi chú", invalidIsinChecksum: "ISIN không hợp lệ hoặc sai checksum.", sellQuantityRequired: "Giao dịch bán cần số lượng chứng khoán.", priceOrQuantityRequired: "Cần giá hoặc số lượng", invalidQuantity: "Số lượng không hợp lệ",
   };
+  const pdfImportLabel = locale === "de" ? "PDF importieren" : "Nhập PDF";
+
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [trackInAppCash, setTrackInAppCash] = useState<boolean | undefined>(undefined);
@@ -204,6 +206,15 @@ export default function Transactions() {
   const [timeLens, setTimeLens] = useState<TransactionTimeLens>("all");
   const [instrumentFilter, setInstrumentFilter] = useState<TransactionInstrumentLens>("all");
   const [qualityFilter, setQualityFilter] = useState<TransactionQualityLens>("all");
+  const [filterDraft, setFilterDraft] = useState<{
+    year: string;
+    type: "all" | TxType;
+    activity: TransactionActivity;
+    timeLens: TransactionTimeLens;
+    instrument: TransactionInstrumentLens;
+    quality: TransactionQualityLens;
+    sort: TransactionSort;
+  }>({ year: "all", type: "all", activity: "all", timeLens: "all", instrument: "all", quality: "all", sort: "newest" });
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
@@ -216,12 +227,14 @@ export default function Transactions() {
   useEffect(() => {
     const dock = document.querySelector(".bottom-dock");
     document.documentElement.classList.toggle("tx-filter-open", filterSheetOpen);
+    document.body.classList.toggle("tx-filter-open", filterSheetOpen);
     if (dock) {
       if (filterSheetOpen) dock.classList.add("is-hidden");
       else dock.classList.remove("is-hidden");
     }
     return () => {
       document.documentElement.classList.remove("tx-filter-open");
+      document.body.classList.remove("tx-filter-open");
       document.querySelector(".bottom-dock")?.classList.remove("is-hidden");
     };
   }, [filterSheetOpen]);
@@ -477,6 +490,34 @@ export default function Transactions() {
     setSort("newest");
   }
 
+  function openFilterSheet() {
+    setFilterDraft({
+      year: yearFilter,
+      type: typeFilter,
+      activity: activityFilter,
+      timeLens,
+      instrument: instrumentFilter,
+      quality: qualityFilter,
+      sort,
+    });
+    setFilterSheetOpen(true);
+  }
+
+  function resetFilterDraft() {
+    setFilterDraft({ year: "all", type: "all", activity: "all", timeLens: "all", instrument: "all", quality: "all", sort: "newest" });
+  }
+
+  function applyFilterDraft() {
+    setYearFilter(filterDraft.year);
+    setTypeFilter(filterDraft.type);
+    setActivityFilter(filterDraft.activity);
+    setTimeLens(filterDraft.timeLens);
+    setInstrumentFilter(filterDraft.instrument);
+    setQualityFilter(filterDraft.quality);
+    setSort(filterDraft.sort);
+    setFilterSheetOpen(false);
+  }
+
   function applySavedView(view: SavedTransactionView) {
     setQ(view.filters.query);
     setYearFilter(view.filters.year);
@@ -523,9 +564,8 @@ export default function Transactions() {
     setSavedViewError("");
   }
 
-  function selectTimeLens(lens: TransactionTimeLens) {
-    setTimeLens(lens);
-    if (lens !== "all") setYearFilter("all");
+  function selectDraftTimeLens(lens: TransactionTimeLens) {
+    setFilterDraft((current) => ({ ...current, timeLens: lens, year: lens === "all" ? current.year : "all" }));
   }
 
   function qualityIssueLabel(code: TransactionQualityCode) {
@@ -589,9 +629,17 @@ export default function Transactions() {
       <div className="tx-wrap">
       <div className="s-head">
         <h1 className="s-title">{text.title}</h1>
-        <button type="button" className="add-btn" onClick={() => openCreate()}>
-          + {text.add}
-        </button>
+        <div className="tx-head-actions">
+          {!readOnly ? (
+            <details className="tx-import-tools" onToggle={(event) => setPdfToolsOpen(event.currentTarget.open)}>
+              <summary>{pdfImportLabel}</summary>
+              {pdfToolsOpen ? <Suspense fallback={<p className="tx-tool-loading" role="status">{text.loading}</p>}><TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /></Suspense> : null}
+            </details>
+          ) : null}
+          <button type="button" className="add-btn" onClick={() => openCreate()}>
+            + {text.add}
+          </button>
+        </div>
       </div>
 
       <div className="sum3">
@@ -645,7 +693,7 @@ export default function Transactions() {
               <span className="sr-only">{text.searchLedger}</span>
               <input value={q} onChange={(event) => setQ(event.target.value)} placeholder={text.searchPlaceholder} aria-label={text.searchLedger} />
             </label>
-            <button type="button" className="tx-tool-trigger" aria-expanded={filterSheetOpen} aria-controls="tx-filter-sheet" onClick={() => setFilterSheetOpen((open) => !open)}>
+            <button type="button" className="tx-tool-trigger" aria-expanded={filterSheetOpen} aria-controls="tx-filter-sheet" onClick={openFilterSheet}>
               {filterSheetOpen ? text.hideTools : text.tools}{activeFilterCount ? " · " + text.activeFilters.replace("{count}", String(activeFilterCount)) : ""}
             </button>
           </div>
@@ -661,54 +709,111 @@ export default function Transactions() {
               {sort !== "newest" ? <button type="button" onClick={() => setSort("newest")}>{sort === "oldest" ? text.oldest : text.amountDesc} ×</button> : null}
             </div>
           ) : null}
+          <details className="tx-saved-views-entry">
+            <summary>{text.savedViews}</summary>
+            <div className="tx-saved-view-options">
+              {savedViews.map((view) => (
+                <span key={view.id} className="tx-saved-view-chip"><button type="button" className={activeSavedViewId === view.id ? "active" : ""} aria-pressed={activeSavedViewId === view.id} onClick={() => applySavedView(view)}>{view.name}</button><button type="button" className="tx-saved-view-remove" aria-label={text.removeSavedView.replace("{name}", view.name)} onClick={() => removeSavedView(view.id)}>×</button></span>
+              ))}
+            </div>
+            <section className="tx-saved-view-editor" aria-label={text.saveView}>
+              <div className="tx-saved-view-editor-head"><span>{text.savedViews}</span><small>{savedViews.length}/{MAX_SAVED_TRANSACTION_VIEWS}</small></div>
+              <div className="tx-saved-view-form"><input aria-label={text.savedViewName} value={savedViewName} maxLength={28} onChange={(event) => setSavedViewName(event.target.value)} placeholder={text.savedViewNamePlaceholder} /><button type="button" disabled={!activeFilterCount || !savedViewCompatible} onClick={saveCurrentView}>{text.saveCurrentView}</button></div>
+              {savedViews.length === 0 ? <p className="tx-saved-view-empty">{text.savedViewEmpty}</p> : null}
+              {savedViewError ? <p className="tx-saved-view-error" role="alert">{savedViewError}</p> : null}
+            </section>
+          </details>
         </div>
 
       {filterSheetOpen ? (
         <div className="tx-filter-backdrop" role="presentation" onMouseDown={() => setFilterSheetOpen(false)}>
-          <section id="tx-filter-sheet" className="tx-filter-sheet" data-testid="tx-filter-sheet" role="dialog" aria-modal="true" aria-label={text.filterSheet} onMouseDown={(event) => event.stopPropagation()}>
+          <section
+            id="tx-filter-sheet"
+            className="tx-filter-sheet"
+            data-testid="tx-filter-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={text.filterSheet}
+            onKeyDown={(event) => { if (event.key === "Escape") setFilterSheetOpen(false); }}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <div className="sheet-handle" aria-hidden />
             <div className="tx-filter-sheet-head">
               <h2>{text.filterSheet}</h2>
               <button type="button" className="tx-filter-close" onClick={() => setFilterSheetOpen(false)} aria-label={text.hideTools}>×</button>
             </div>
             <div className="tx-filter-sheet-body">
-            <div className="tx-filter-section" role="group" aria-label={text.timeLens}>
-              <span>{text.timeLens}</span>
-              <div className="tx-filter-options">
-                <button type="button" className={timeLens === "all" ? "active" : ""} aria-pressed={timeLens === "all"} onClick={() => selectTimeLens("all")}>{text.timeAll}</button>
-                <button type="button" className={timeLens === "this_month" ? "active" : ""} aria-pressed={timeLens === "this_month"} onClick={() => selectTimeLens("this_month")}>{text.thisMonth}</button>
-                <button type="button" className={timeLens === "last_90_days" ? "active" : ""} aria-pressed={timeLens === "last_90_days"} onClick={() => selectTimeLens("last_90_days")}>{text.last90Days}</button>
-                <button type="button" className={timeLens === "this_year" ? "active" : ""} aria-pressed={timeLens === "this_year"} onClick={() => selectTimeLens("this_year")}>{text.thisYear}</button>
-                <button type="button" className={timeLens === "last_year" ? "active" : ""} aria-pressed={timeLens === "last_year"} onClick={() => selectTimeLens("last_year")}>{text.lastYear}</button>
+              <div className="tx-filter-section" role="group" aria-label={text.timeLens}>
+                <span>{text.timeLens}</span>
+                <div className="tx-filter-options">
+                  {(["all", "this_month", "last_90_days", "this_year", "last_year"] as TransactionTimeLens[]).map((lens) => (
+                    <button key={lens} type="button" className={filterDraft.timeLens === lens ? "active" : ""} aria-pressed={filterDraft.timeLens === lens} onClick={() => selectDraftTimeLens(lens)}>
+                      {lens === "all" ? text.timeAll : lens === "this_month" ? text.thisMonth : lens === "last_90_days" ? text.last90Days : lens === "this_year" ? text.thisYear : text.lastYear}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="tx-filter-grid">
-              <label className="field"><span>{text.year}</span><select value={yearFilter} onChange={(event) => { setTimeLens("all"); setYearFilter(event.target.value); }}><option value="all">{text.all}</option>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select></label>
-              <label className="field"><span>{text.type}</span><select value={typeFilter} onChange={(event) => { setActivityFilter("all"); setTypeFilter(event.target.value as "all" | TxType); }}><option value="all">{text.all}</option>{types.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select></label>
-              <label className="field"><span>{text.activity}</span><select value={activityFilter} onChange={(event) => { setTypeFilter("all"); setActivityFilter(event.target.value as TransactionActivity); }}><option value="all">{text.all}</option><option value="trade">{text.tradeActivity}</option><option value="funding">{text.fundingActivity}</option><option value="outflow">{text.outflowActivity}</option></select></label>
-              <label className="field"><span>{text.instrument}</span><select value={instrumentFilter} onChange={(event) => setInstrumentFilter(event.target.value as TransactionInstrumentLens)}><option value="all">{text.all}</option><option value="vwce">{text.instrumentVwce}</option><option value="other">{text.instrumentOther}</option></select></label>
-              <label className="field"><span>{text.status}</span><select value={qualityFilter} onChange={(event) => setQualityFilter(event.target.value as TransactionQualityLens)}><option value="all">{text.all}</option><option value="normal">{text.statusNormal}</option><option value="needs_review">{text.statusReview}</option></select></label>
-              <label className="field"><span>{text.sort}</span><select value={sort} onChange={(event) => setSort(event.target.value as TransactionSort)}><option value="newest">{text.newest}</option><option value="oldest">{text.oldest}</option><option value="amount_desc">{text.amountDesc}</option></select></label>
-            </div>
-            <details className="tx-filter-support">
-              <summary>{text.savedViews}</summary>
-              <div className="tx-saved-view-options">
-                {savedViews.map((view) => (
-                  <span key={view.id} className="tx-saved-view-chip"><button type="button" className={activeSavedViewId === view.id ? "active" : ""} aria-pressed={activeSavedViewId === view.id} onClick={() => applySavedView(view)}>{view.name}</button><button type="button" className="tx-saved-view-remove" aria-label={text.removeSavedView.replace("{name}", view.name)} onClick={() => removeSavedView(view.id)}>×</button></span>
-                ))}
+              <div className="tx-filter-section" role="group" aria-label={text.activity}>
+                <span>{text.activity}</span>
+                <div className="tx-filter-options tx-filter-options-grid">
+                  {(["all", "trade", "funding", "outflow"] as TransactionActivity[]).map((activity) => (
+                    <button key={activity} type="button" className={filterDraft.activity === activity ? "active" : ""} aria-pressed={filterDraft.activity === activity} onClick={() => setFilterDraft((current) => ({ ...current, activity, type: activity === "all" ? current.type : "all" }))}>
+                      {activity === "all" ? text.all : activity === "trade" ? text.tradeActivity : activity === "funding" ? text.fundingActivity : text.outflowActivity}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <section className="tx-saved-view-editor" aria-label={text.saveView}>
-                <div className="tx-saved-view-editor-head"><span>{text.savedViews}</span><small>{savedViews.length}/{MAX_SAVED_TRANSACTION_VIEWS}</small></div>
-                <div className="tx-saved-view-form"><input aria-label={text.savedViewName} value={savedViewName} maxLength={28} onChange={(event) => setSavedViewName(event.target.value)} placeholder={text.savedViewNamePlaceholder} /><button type="button" disabled={!activeFilterCount || !savedViewCompatible} onClick={saveCurrentView}>{text.saveCurrentView}</button></div>
-                {savedViews.length === 0 ? <p className="tx-saved-view-empty">{text.savedViewEmpty}</p> : null}
-                {savedViewError ? <p className="tx-saved-view-error" role="alert">{savedViewError}</p> : null}
-              </section>
-            </details>
-            {!readOnly ? <details className="tx-filter-support" onToggle={(event) => setPdfToolsOpen(event.currentTarget.open)}><summary>PDF</summary>{pdfToolsOpen ? <Suspense fallback={<p className="tx-tool-loading" role="status">{text.loading}</p>}><TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /></Suspense> : null}</details> : null}
+              <div className="tx-filter-section" role="group" aria-label={text.instrument}>
+                <span>{text.instrument}</span>
+                <div className="tx-filter-options">
+                  {(["all", "vwce", "other"] as TransactionInstrumentLens[]).map((instrument) => (
+                    <button key={instrument} type="button" className={filterDraft.instrument === instrument ? "active" : ""} aria-pressed={filterDraft.instrument === instrument} onClick={() => setFilterDraft((current) => ({ ...current, instrument }))}>
+                      {instrument === "all" ? text.all : instrument === "vwce" ? text.instrumentVwce : text.instrumentOther}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="tx-filter-section" role="group" aria-label={text.status}>
+                <span>{text.status}</span>
+                <div className="tx-filter-options">
+                  {(["all", "normal", "needs_review"] as TransactionQualityLens[]).map((quality) => (
+                    <button key={quality} type="button" className={filterDraft.quality === quality ? "active" : ""} aria-pressed={filterDraft.quality === quality} onClick={() => setFilterDraft((current) => ({ ...current, quality }))}>
+                      {quality === "all" ? text.all : quality === "normal" ? text.statusNormal : text.statusReview}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="tx-filter-section" role="group" aria-label={text.sort}>
+                <span>{text.sort}</span>
+                <div className="tx-filter-options">
+                  {(["newest", "oldest", "amount_desc"] as TransactionSort[]).map((nextSort) => (
+                    <button key={nextSort} type="button" className={filterDraft.sort === nextSort ? "active" : ""} aria-pressed={filterDraft.sort === nextSort} onClick={() => setFilterDraft((current) => ({ ...current, sort: nextSort }))}>
+                      {nextSort === "newest" ? text.newest : nextSort === "oldest" ? text.oldest : text.amountDesc}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <details className="tx-filter-more">
+                <summary>{locale === "de" ? "Weitere Filter" : "Bộ lọc khác"}</summary>
+                <div className="tx-filter-section" role="group" aria-label={text.year}>
+                  <span>{text.year}</span>
+                  <div className="tx-filter-options">
+                    <button type="button" className={filterDraft.year === "all" ? "active" : ""} aria-pressed={filterDraft.year === "all"} onClick={() => setFilterDraft((current) => ({ ...current, year: "all" }))}>{text.all}</button>
+                    {years.map((year) => <button key={year} type="button" className={filterDraft.year === year ? "active" : ""} aria-pressed={filterDraft.year === year} onClick={() => setFilterDraft((current) => ({ ...current, year, timeLens: "all" }))}>{year}</button>)}
+                  </div>
+                </div>
+                <div className="tx-filter-section" role="group" aria-label={text.type}>
+                  <span>{text.type}</span>
+                  <div className="tx-filter-options">
+                    <button type="button" className={filterDraft.type === "all" ? "active" : ""} aria-pressed={filterDraft.type === "all"} onClick={() => setFilterDraft((current) => ({ ...current, type: "all" }))}>{text.all}</button>
+                    {types.map((type) => <button key={type.value} type="button" className={filterDraft.type === type.value ? "active" : ""} aria-pressed={filterDraft.type === type.value} onClick={() => setFilterDraft((current) => ({ ...current, type: type.value, activity: "all" }))}>{type.label}</button>)}
+                  </div>
+                </div>
+              </details>
             </div>
             <div className="tx-filter-actions" data-testid="tx-filter-actions">
-              <button type="button" className="secondary" disabled={!activeFilterCount} onClick={resetJournal}>{text.clearFilters}</button>
-              <button type="button" data-testid="tx-filter-apply" onClick={() => setFilterSheetOpen(false)}>{text.applyFilters}</button>
+              <button type="button" className="secondary" onClick={resetFilterDraft}>{text.clearFilters}</button>
+              <button type="button" data-testid="tx-filter-apply" onClick={applyFilterDraft}>{text.applyFilters}</button>
             </div>
           </section>
         </div>

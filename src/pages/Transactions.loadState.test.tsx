@@ -63,21 +63,22 @@ describe("Transactions load and empty states", () => {
     fireEvent.click(screen.getByRole("button", { name: "Filter" }));
     expect(screen.getByRole("dialog", { name: "Filter" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Zeitraum" })).toBeTruthy();
-    expect(screen.getByText("Wertpapier")).toBeTruthy();
     expect(screen.getByText("Status")).toBeTruthy();
+    fireEvent.click(screen.getByText("Weitere Filter"));
+    expect(screen.getByText("Wertpapier")).toBeTruthy();
     expect(document.body.textContent).not.toContain("Nhật ký giao dịch");
     expect(document.body.textContent).not.toContain("Tháng này");
   });
 
-  it("loads the optional PDF importer only after opening the Filter sheet support section", async () => {
+  it("loads the optional PDF importer only from its separate transaction-tool entry", async () => {
     dbMocks.listTransactions.mockResolvedValue([]);
     render(createElement(Transactions));
 
     await screen.findByText("Chưa có giao dịch.");
     expect(screen.queryByText("pdf-import-loaded")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
-    fireEvent.click(screen.getByText("PDF"));
+    expect(screen.queryByText("pdf-import-loaded")).toBeNull();
+    fireEvent.click(screen.getByText("Nhập PDF"));
     expect(await screen.findByText("pdf-import-loaded")).toBeTruthy();
   });
 
@@ -157,7 +158,8 @@ describe("Transactions load and empty states", () => {
 
     await screen.findByText("Nhật ký giao dịch");
     fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
-    fireEvent.change(screen.getByLabelText("Dòng tiền"), { target: { value: "trade" } });
+    fireEvent.click(screen.getByRole("button", { name: "Đầu tư" }));
+    expect(document.querySelectorAll(".tx-item")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
 
     expect(document.querySelectorAll(".tx-item")).toHaveLength(1);
@@ -166,7 +168,7 @@ describe("Transactions load and empty states", () => {
     expect(screen.getByRole("button", { name: "Đầu tư ×" })).toBeTruthy();
   });
 
-  it("saves, reapplies and removes a local Saved view from the Filter sheet without changing the ledger", async () => {
+  it("saves, reapplies and removes a local Saved view from its entry outside the filter sheet without changing the ledger", async () => {
     dbMocks.listTransactions.mockResolvedValue([
       { id: "tx-buy", date: "2026-08-20", type: "buy_vwce", amount: 100, notes: "VWCE", createdAt: "2026-08-20T00:00:00Z", updatedAt: "2026-08-20T00:00:00Z", source: "manual" },
     ]);
@@ -175,7 +177,8 @@ describe("Transactions load and empty states", () => {
     await screen.findByText("Nhật ký giao dịch");
     fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
     fireEvent.click(screen.getByRole("button", { name: "Tháng này" }));
-    fireEvent.click(document.querySelector(".tx-filter-support summary") as Element);
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
+    fireEvent.click(document.querySelector(".tx-saved-views-entry summary") as Element);
     fireEvent.change(screen.getByLabelText("Tên góc xem"), { target: { value: "Mua gần đây" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu góc xem hiện tại" }));
 
@@ -183,10 +186,13 @@ describe("Transactions load and empty states", () => {
     expect(saved.getAttribute("aria-pressed")).toBe("true");
     expect(JSON.parse(window.localStorage.getItem(TRANSACTION_SAVED_VIEWS_KEY) ?? "[]")).toHaveLength(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "Toàn bộ" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Lọc/ }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Toàn bộ" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
     expect(saved.getAttribute("aria-pressed")).toBe("false");
     fireEvent.click(saved);
-    expect(screen.getByRole("button", { name: "Tháng này" }).getAttribute("aria-pressed")).toBe("true");
+    expect(saved.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Tháng này ×" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Xóa góc xem Mua gần đây" }));
     expect(screen.queryByRole("button", { name: "Mua gần đây" })).toBeNull();
@@ -227,14 +233,15 @@ describe("Transactions load and empty states", () => {
     expect(screen.queryByRole("heading", { name: "Sửa giao dịch" })).toBeNull();
   });
 
-  it("offers time lenses in the Filter sheet and resets them together with journal filters", async () => {
+  it("keeps time-lens choices as draft state until Apply and resets only the draft", async () => {
     dbMocks.listTransactions.mockResolvedValue([]);
     render(createElement(Transactions));
 
     await screen.findByText("Nhật ký giao dịch");
     fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
     fireEvent.click(screen.getByRole("button", { name: "Tháng này" }));
-    expect(screen.getByRole("button", { name: "Đóng bộ lọc · 1 bộ lọc" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Tháng này" }).getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelectorAll(".tx-active-filter-chips button")).toHaveLength(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Xóa lọc" }));
     expect(screen.getByRole("button", { name: "Toàn bộ" }).getAttribute("aria-pressed")).toBe("true");
