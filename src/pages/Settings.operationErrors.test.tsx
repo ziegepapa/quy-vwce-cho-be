@@ -77,7 +77,7 @@ function renderSettings(path = "/settings") {
   );
 }
 
-function renderGermanSettings(path = "/settings?tab=advanced") {
+function renderGermanSettings(path = "/settings") {
   window.localStorage.setItem(LOCALE_KEY, "de");
   return render(
     createElement(
@@ -123,59 +123,46 @@ afterEach(() => {
 });
 
 describe("German Settings and mobile Advanced hierarchy", () => {
-  it("uses the redesigned German hierarchy, localized preference labels and compact sync diagnostics", async () => {
-    const { container } = renderGermanSettings();
+  it("uses the CBO German hierarchy, localized preference labels and stable tabs", async () => {
+    renderGermanSettings();
 
-    await screen.findByText("Konto");
-    expect(screen.getByRole("heading", { name: "Einstellungen" })).toBeTruthy();
-    expect(container.querySelector(".set-page-head")).toBeTruthy();
-    expect(screen.getByText("Auf diesem Gerät gespeichert")).toBeTruthy();
-    expect(container.querySelector(".set-identity")).toBeTruthy();
-    expect(container.querySelector(".set-identity-copy")?.textContent).toContain("Letzte Anmeldung");
-    expect(screen.getByText("Sicherheit")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Einstellungen" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Allgemein" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByText("Familienprofil")).toBeTruthy();
+    expect(screen.getByText("Konto & Sicherheit")).toBeTruthy();
     expect(screen.getByText("Passwort ändern")).toBeTruthy();
-    expect(screen.getByText("Passwort vergessen")).toBeTruthy();
-    expect(screen.queryByText("Berlin · aktuelle Zeit")).toBeNull();
-    expect(screen.getByRole("button", { name: "Vietnamesisch Verfügbar" })).toBeTruthy();
+    expect(screen.getByText("Passwort zurücksetzen")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Vietnamesisch" })).toBeTruthy();
     expect(screen.getByText("Erscheinungsbild")).toBeTruthy();
     expect(screen.getByText("Sprache")).toBeTruthy();
     expect(screen.getByText("Ozean")).toBeTruthy();
     expect(screen.queryByText("Ocean")).toBeNull();
-    expect(container.querySelector("button.set-sync-primary")).toBeTruthy();
-    expect(screen.getByText("Kurse & Marktdaten")).toBeTruthy();
-    expect(screen.getByText("Synchronisierung & Datenkonflikte")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Details/ })).toBeTruthy();
-    expect(screen.getByText("Verwendungsplan")).toBeTruthy();
-    expect(screen.getByText("Sicherung & lokale Daten")).toBeTruthy();
-    expect(screen.getByText(`v${APP_RELEASE_VERSION} · Online`)).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
-    const groups = [...container.querySelectorAll("details.advanced-group")] as HTMLDetailsElement[];
-    expect(groups).toHaveLength(4);
-    expect(groups.every((group) => group.open === false)).toBe(true);
 
-    fireEvent.click(screen.getByText("Kurse & Marktdaten"));
-    expect(groups[0]?.open).toBe(true);
-    fireEvent.click(screen.getByText("Synchronisierung & Datenkonflikte"));
-    await waitFor(() => {
-      expect(groups[0]?.open).toBe(false);
-      expect(groups[1]?.open).toBe(true);
-    });
+    fireEvent.click(screen.getByRole("tab", { name: "Daten" }));
+    await waitFor(() => expect(screen.getByRole("tab", { name: "Daten" }).getAttribute("aria-selected")).toBe("true"));
+    expect(screen.getAllByText("Daten & Betrieb").length).toBeGreaterThan(0);
 
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
     fireEvent.click(screen.getByRole("button", { name: /Datensicherung/ }));
-    fireEvent.click(await screen.findByRole("button", { name: /JSON exportieren/ }));
-    expect(await screen.findByText("JSON-Sicherung konnte nicht exportiert werden. Ihre Daten wurden nicht verändert.")).toBeTruthy();
+    const germanBackupSheet = await screen.findByRole("dialog", { name: "Datensicherung" });
+    fireEvent.click(germanBackupSheet.querySelector("button.settings-child-primary") as HTMLButtonElement);
+    await waitFor(() => expect(dbMocks.exportBackup).toHaveBeenCalledTimes(1));
+    const exportAlert = await screen.findByRole("alert");
+    expect(exportAlert.textContent).toContain("JSON-Sicherung konnte nicht exportiert werden");
     expect(document.body.textContent).not.toMatch(/Không|Dữ liệu|Cài đặt|Đồng bộ|Giá/);
   });
 
   it("renders immediate localized feedback for successful JSON export", async () => {
-    renderSettings();
+    renderSettings("/settings?tab=data");
 
     fireEvent.click(await screen.findByRole("button", { name: /Sao lưu dữ liệu/ }));
-    fireEvent.click(await screen.findByRole("button", { name: /Xuất JSON/ }));
+    const vietnameseBackupSheet = await screen.findByRole("dialog", { name: "Sao lưu dữ liệu" });
+    fireEvent.click(vietnameseBackupSheet.querySelector("button.settings-child-primary") as HTMLButtonElement);
 
-    expect((await screen.findAllByText("Đã tải xuống bản sao JSON.")).length).toBeGreaterThan(0);
+    await waitFor(() => expect(dbMocks.exportBackup).toHaveBeenCalledTimes(1));
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+    expect(document.body.textContent).toContain("Đã tải xuống bản sao JSON.");
   });
 
   it("sends a password link only after explicit confirmation and never renders token material", async () => {
@@ -271,7 +258,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
 
   it("calls real Sync callback with loading and success feedback", async () => {
     const onSyncNow = vi.fn().mockResolvedValue({ tone: "success", message: "Đã đồng bộ" });
-    render(createElement(MemoryRouter, { initialEntries: ["/settings"] }, createElement(SettingsPage, { onReload: vi.fn(), onSyncNow })));
+    render(createElement(MemoryRouter, { initialEntries: ["/settings?tab=data"] }, createElement(SettingsPage, { onReload: vi.fn(), onSyncNow })));
     const button = await screen.findByRole("button", { name: /Đồng bộ ngay/ });
     fireEvent.click(button);
     expect((button as HTMLButtonElement).disabled).toBe(true);
@@ -279,13 +266,11 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(onSyncNow).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps Advanced collapsed by default and starts MFA through its child view", async () => {
+  it("starts MFA from the stable General tab through its child view", async () => {
     authMocks.startMfaEnrollment.mockResolvedValue({ error: "MFA_FAIL" });
-    const { container } = renderSettings();
-    await screen.findByText("Nâng cao");
-    const advanced = container.querySelector("details.set-advanced") as HTMLDetailsElement;
-    expect(advanced).toBeTruthy();
-    expect(advanced.open).toBe(false);
+    renderSettings();
+    const generalTab = await screen.findByRole("tab", { name: "Chung" });
+    expect(generalTab.getAttribute("aria-selected")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: /MFA \/ TOTP/ }));
     const mfaDialog = await screen.findByRole("dialog", { name: "MFA / TOTP" });
     expect(mfaDialog).toBeTruthy();
@@ -294,11 +279,11 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(await screen.findByRole("alert")).toBeTruthy();
   });
 
-  it("opens Advanced for the legacy tab=data deep link used by Sync conflict navigation", async () => {
-    const { container } = renderGermanSettings("/settings?tab=data");
-    await screen.findByText("Erweitert");
-    const advanced = container.querySelector("details.set-advanced") as HTMLDetailsElement;
-    expect(advanced.open).toBe(true);
+  it("opens the durable Data tab for the legacy tab=data deep link used by Sync conflict navigation", async () => {
+    renderGermanSettings("/settings?tab=data");
+    const dataTab = await screen.findByRole("tab", { name: "Daten" });
+    expect(dataTab.getAttribute("aria-selected")).toBe("true");
+    expect(screen.getAllByText("Daten & Betrieb").length).toBeGreaterThan(0);
   });
 });
 
@@ -307,8 +292,8 @@ describe("Settings operation errors", () => {
     dbMocks.saveSettings
       .mockRejectedValueOnce(new Error("SETTINGS_SECRET_CANARY"))
       .mockResolvedValueOnce(undefined);
-    renderSettings("/settings?tab=advanced");
-    const input = await screen.findByLabelText("Ngày cần tiền (mốc sử dụng)") as HTMLInputElement;
+    renderSettings();
+    const input = await screen.findByLabelText("Mốc sử dụng tiền") as HTMLInputElement;
 
     fireEvent.change(input, { target: { value: "2043-12-31" } });
 
@@ -339,7 +324,7 @@ describe("Settings operation errors", () => {
 
   it("aborts import when the mandatory pre-import backup cannot be created", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("PREBACKUP_SECRET_CANARY"));
-    const { container } = renderSettings();
+    const { container } = renderSettings("/settings?tab=data");
     fireEvent.click(await screen.findByRole("button", { name: /Khôi phục dữ liệu/ }));
     await screen.findByText("Nhập sao lưu");
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -359,8 +344,8 @@ describe("Settings operation errors", () => {
 
   it("keeps data when deletion fails and leaves the confirmation available", async () => {
     dbMocks.clearAllData.mockRejectedValueOnce(new Error("DELETE_SECRET_CANARY"));
-    renderSettings("/settings?tab=advanced");
-    await screen.findByText("Sao lưu & dữ liệu trên thiết bị");
+    renderSettings("/settings?tab=data");
+    expect((await screen.findAllByText("Dữ liệu & vận hành")).length).toBeGreaterThan(0);
     const deleteButton = await waitFor(() => {
       const button = [...document.querySelectorAll("button")].find((candidate) => candidate.textContent?.includes("Xóa toàn bộ dữ liệu local"));
       expect(button).toBeTruthy();
