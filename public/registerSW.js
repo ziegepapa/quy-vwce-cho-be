@@ -6,6 +6,9 @@
   const NOTICE_ID = "vwce-pwa-update-notice";
   let registration = null;
   let activationRequested = false;
+  // "Later" applies only to this exact waiting worker in this document.
+  // A reopened app or a newly waiting worker must surface the safe update path again.
+  let dismissedWaitingWorker = null;
 
   const copy = {
     vi: {
@@ -45,7 +48,8 @@
   }
 
   function renderNotice() {
-    if (!registration?.waiting || !navigator.serviceWorker.controller || document.getElementById(NOTICE_ID)) return;
+    const waiting = registration?.waiting;
+    if (!waiting || !navigator.serviceWorker.controller || document.getElementById(NOTICE_ID) || waiting === dismissedWaitingWorker) return;
 
     const text = copy[locale()];
     const notice = document.createElement("aside");
@@ -72,7 +76,10 @@
     later.className = "ghost";
     later.textContent = text.later;
 
-    later.addEventListener("click", removeNotice);
+    later.addEventListener("click", () => {
+      dismissedWaitingWorker = waiting;
+      removeNotice();
+    });
     update.addEventListener("click", () => {
       const waiting = registration?.waiting;
       if (!waiting || activationRequested) return;
@@ -82,6 +89,7 @@
       }
 
       activationRequested = true;
+      dismissedWaitingWorker = null;
       update.disabled = true;
       update.textContent = text.activating;
       navigator.serviceWorker.addEventListener(
@@ -99,22 +107,40 @@
 
   function inspectUpdate(nextRegistration) {
     registration = nextRegistration;
-    if (registration.waiting) renderNotice();
+    if (!registration.waiting) dismissedWaitingWorker = null;
+    renderNotice();
+  }
+
+  function inspectAgain(nextRegistration) {
+    // Some browsers expose `waiting` just after register()/update() resolves,
+    // without a useful updatefound event for this document.
+    setTimeout(() => inspectUpdate(nextRegistration), 800);
   }
 
   function bindRegistration(nextRegistration) {
     inspectUpdate(nextRegistration);
+    inspectAgain(nextRegistration);
     nextRegistration.addEventListener("updatefound", () => {
       const installing = nextRegistration.installing;
       if (!installing) return;
       installing.addEventListener("statechange", () => {
-        if (installing.state === "installed") inspectUpdate(nextRegistration);
+        if (installing.state === "installed") {
+          inspectUpdate(nextRegistration);
+          inspectAgain(nextRegistration);
+        }
       });
     });
   }
 
-  function checkForUpdate() {
-    if (document.visibilityState === "visible") void registration?.update?.().catch(() => undefined);
+  async function checkForUpdate() {
+    if (document.visibilityState !== "visible" || !registration) return;
+    try {
+      await registration.update?.();
+    } catch {
+      // Update checks are opportunistic; the active offline experience stays usable.
+    }
+    inspectUpdate(registration);
+    inspectAgain(registration);
   }
 
   function start() {
@@ -125,6 +151,7 @@
     }).then(bindRegistration).catch(() => undefined);
 
     window.addEventListener("focus", checkForUpdate);
+    window.addEventListener("pageshow", checkForUpdate);
     document.addEventListener("visibilitychange", checkForUpdate);
   }
 

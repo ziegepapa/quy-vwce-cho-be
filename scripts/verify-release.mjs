@@ -92,6 +92,9 @@ assert.match(registerBridge, /updateViaCache:\s*"none"/, "Bridge must refresh th
 assert.match(registerBridge, /SKIP_WAITING/, "Bridge must request explicit worker activation");
 assert.match(registerBridge, /Đã có phiên bản mới/, "Vietnamese update copy is missing");
 assert.match(registerBridge, /Neue App-Version verfügbar/, "German update copy is missing");
+assert.match(registerBridge, /pageshow/, "Bridge must recheck pending updates when an app page returns");
+assert.match(registerBridge, /dismissedWaitingWorker/, "Bridge must scope a temporary dismissal to a single waiting worker");
+assert.match(registerBridge, /inspectAgain/, "Bridge must re-inspect delayed waiting-worker state");
 assert.match(recoveryHook, /04b919dfdb8554a9d303a9d535f7839f/, "Recovery hook must remain limited to the P25 legacy cache revision");
 assert.match(recoveryHook, /self\.skipWaiting\(\)/, "Recovery hook must activate only the documented legacy controller");
 assert.match(finalRecoveryHook, /__pwa-update-migration-v1__/, "P27 recovery must depend on the prior bounded migration marker");

@@ -282,3 +282,25 @@ test("P27 final recovery leaves all routes untouched when the P25 marker is abse
   assert.deepEqual(result.navigated, []);
   assert.equal(result.storedFinalMarker, false);
 });
+
+test("Later dismisses only the current waiting worker and a later worker is surfaced again", async () => {
+  const firstWaiting = createWorker();
+  const harness = await startRegisterBridge({ waiting: firstWaiting });
+  const firstNotice = harness.document.getElementById("vwce-pwa-update-notice");
+  findElement(firstNotice, (node) => node.tagName === "button" && node.textContent === "Để sau").click();
+  assert.equal(harness.document.getElementById("vwce-pwa-update-notice"), null);
+
+  harness.registration.waiting = createWorker();
+  harness.eventListeners.get("focus")?.();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.ok(harness.document.getElementById("vwce-pwa-update-notice"));
+  assert.equal(harness.reload.count, 0);
+});
+
+test("bridge rechecks pending updates on pageshow and retains explicit activation", async () => {
+  const harness = await startRegisterBridge();
+  assert.ok(harness.eventListeners.get("pageshow"));
+  assert.match(registerSource, /inspectAgain\(registration\)/);
+  assert.match(registerSource, /dismissedWaitingWorker/);
+  assert.doesNotMatch(registerSource, /skipWaiting\(\)/);
+});
