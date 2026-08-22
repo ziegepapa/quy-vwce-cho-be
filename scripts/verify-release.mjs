@@ -40,7 +40,7 @@ function assertQuoteConsistency(quotes, legacy) {
   assert.ok(Number.isFinite(Date.parse(`${current.asOf}T00:00:00Z`)), "Quote date is invalid");
 }
 
-const [expectedAppReleaseVersion, indexHtml, manifest, serviceWorker, registerBridge, recoveryHook, finalRecoveryHook, quotes, legacy] = await Promise.all([
+const [expectedAppReleaseVersion, indexHtml, manifest, serviceWorker, registerBridge, recoveryHook, finalRecoveryHook, p34RecoveryHook, quotes, legacy] = await Promise.all([
   readAppReleaseVersion(),
   readText("index.html"),
   readJson("manifest.webmanifest"),
@@ -48,6 +48,7 @@ const [expectedAppReleaseVersion, indexHtml, manifest, serviceWorker, registerBr
   readText("registerSW.js"),
   readText("pwa-update-recovery.js"),
   readText("pwa-final-runtime-recovery.js"),
+  readText("pwa-p34-update-recovery.js"),
   readJson("data/quotes.json"),
   readJson("data/vwce-price.json"),
 ]);
@@ -87,6 +88,7 @@ assert.match(serviceWorker, /data\/quotes\.json/, "Quote feed is not precached")
 assert.match(serviceWorker, /icon-maskable-512\.png/, "Maskable icon is not precached");
 assert.match(serviceWorker, /pwa-update-recovery\.js/, "P26 recovery hook is not imported by the worker");
 assert.match(serviceWorker, /pwa-final-runtime-recovery\.js/, "P27 final runtime recovery hook is not imported by the worker");
+assert.match(serviceWorker, /pwa-p34-update-recovery\.js/, "P35 bounded P33 bootstrap is not imported by the worker");
 assert.match(serviceWorker, /SKIP_WAITING/, "Explicit update activation protocol is missing");
 assert.match(registerBridge, /updateViaCache:\s*"none"/, "Bridge must refresh the service-worker script without HTTP-cache reuse");
 assert.match(registerBridge, /SKIP_WAITING/, "Bridge must request explicit worker activation");
@@ -100,6 +102,9 @@ assert.match(recoveryHook, /self\.skipWaiting\(\)/, "Recovery hook must activate
 assert.match(finalRecoveryHook, /__pwa-update-migration-v1__/, "P27 recovery must depend on the prior bounded migration marker");
 assert.match(finalRecoveryHook, /#\/overview/, "P27 recovery must limit automatic navigation to the safe Overview route");
 assert.match(finalRecoveryHook, /client\.navigate/, "P27 recovery must navigate only selected safe legacy clients");
+assert.match(p34RecoveryHook, /0a19d4c3d2fdcddc9ad27bd6a1b88215/, "P35 bootstrap must remain limited to the documented P33 bridge revision");
+assert.match(p34RecoveryHook, /self\.skipWaiting\(\)/, "P35 bootstrap must activate only the documented P33 worker");
+assert.doesNotMatch(p34RecoveryHook, /clients\.navigate|clients\.claim|caches\.delete/, "P35 bootstrap must not navigate clients, claim them or delete caches");
 assert.doesNotMatch(indexHtml, /index-j-lylgkQ\.js/, "Retired P25 app asset remains referenced by index.html");
 assert.doesNotMatch(serviceWorker, /index-j-lylgkQ\.js/, "Retired P25 app asset remains referenced by sw.js");
 assertQuoteConsistency(quotes, legacy);
