@@ -139,42 +139,53 @@ test("mobile local-vault routes keep primary controls reachable without horizont
 
 });
 
-test("mobile Settings gives the annual Horizon answer before optional mechanics without overflow", async ({ page }) => {
+test("mobile Settings keeps P40 plan mechanics in a sheet and all tab actions reachable without overflow", async ({ page }) => {
   await page.setViewportSize(iphone13Viewport);
   const { localVaultEntry } = await openPrivateVaultEntry(page);
   test.skip(!(await localVaultEntry.isVisible()), "requires the local-only preview entry");
 
   await page.goto("./#/settings", { waitUntil: "networkidle" });
-  await expect(page.locator(".settings-cbo")).toHaveCount(1);
+  await expect(page.locator(".settings-cbo.p40-settings")).toHaveCount(1);
   await expect(page.getByRole("tab", { name: "Chung" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("Mẫu minh họa, không phải dữ liệu Quỹ")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Năm nay · 2026" })).toBeVisible();
-  await expect(page.getByText(/50\.000/)).toBeVisible();
-  await expect(page.getByText("Không cần")).toBeVisible();
-  await expect(page.getByText("Chỉ hiển thị · không tạo giao dịch.")).toBeVisible();
-  await expect(page.getByRole("button", { name: /2032/ })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Kế hoạch" })).toBeVisible();
+  await expect(page.locator(".p40-plan")).toBeVisible();
+  await expect(page.locator(".p40-plan input, .p40-plan select")).toHaveCount(0);
+  await expect(page.locator(".p40-plan")).not.toContainText("0.05");
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
   const tabHeights = await page.getByRole("tab").evaluateAll((tabs) => tabs.map((tab) => Math.round(tab.getBoundingClientRect().height)));
   expect(tabHeights).toEqual([44, 44, 44]);
 
-  const options = page.locator("details.cbo-horizon-options");
-  await expect(options).not.toHaveAttribute("open", "");
-  await page.getByRole("button", { name: "Gần hạn (ví dụ)" }).click();
-  await expect(page.locator('[data-horizon-phase="transition"]')).toBeVisible();
-  await expect(page.getByText(/3\.360/)).toBeVisible();
-  await page.getByText("Tùy chỉnh Horizon").click();
-  await expect(options).toHaveAttribute("open", "");
-  await expect(page.getByText("€ VWCE góp = 300 € × 50%")).toBeVisible();
-  await expect(page.getByText("Hôm nay")).toBeVisible();
-  await expect(page.getByText("Bắt đầu an toàn")).toBeVisible();
-  await expect(page.getByText("Năm cần tiền")).toBeVisible();
+  const planAction = page.getByRole("button", { name: /Thêm mục tiêu|Tùy chỉnh kế hoạch/ }).first();
+  await planAction.click();
+  await expect(page.getByRole("dialog", { name: "Kế hoạch" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "3 năm" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "5 năm" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "7 năm" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "8%" })).toBeAttached();
+  await expect(page.getByRole("option", { name: "12%" })).toBeAttached();
+  await expect(page.getByRole("option", { name: "16%" })).toBeAttached();
+  await page.getByRole("button", { name: /Nâng cao cho mô phỏng/ }).click();
+  await expect(page.getByRole("dialog", { name: "Giả định mô phỏng" })).toBeVisible();
+  await expect(page.getByText("%/năm")).toHaveCount(3);
+  await page.getByRole("button", { name: "Đóng" }).click();
+  await expect(page.getByRole("dialog", { name: "Kế hoạch" })).toBeVisible();
+  await page.getByRole("button", { name: "Đóng" }).click();
+
+  await page.getByRole("tab", { name: "Giá" }).click();
+  await expect(page.getByRole("tab", { name: "Giá" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "Giá", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cập nhật giá bây giờ" })).toBeVisible();
+  await expect(page.getByText("Thông tin nguồn giá")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
   await page.getByRole("tab", { name: "Dữ liệu" }).click();
   await expect(page.getByRole("tab", { name: "Dữ liệu" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("button", { name: /Sao lưu dữ liệu/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sao lưu JSON/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Khôi phục dữ liệu/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Đồng bộ ngay/ })).toBeVisible();
+  const dataActionHeights = await page.locator(".p40-transfer-grid button, .p40-sync-button").evaluateAll((buttons) => buttons.map((button) => Math.round(button.getBoundingClientRect().height)));
+  expect(dataActionHeights.every((height) => height >= 44)).toBe(true);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 

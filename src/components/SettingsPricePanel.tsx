@@ -192,7 +192,7 @@ export default function SettingsPricePanel({
   const working = busy !== "idle";
 
   return (
-    <div className="settings-panel" role="tabpanel" aria-label={text.aria}>
+    <div className="p40-price-panel" role="tabpanel" aria-label={text.aria}>
       <QuoteFeedRefresh
         onUpdated={async () => {
           await load();
@@ -200,26 +200,24 @@ export default function SettingsPricePanel({
         }}
       />
 
-      <section className="settings-card">
-        <div className="settings-card-head">
+      <section className="p40-price-inventory">
+        <div className="p40-price-inventory-head">
           <div>
-            <p className="settings-card-eyebrow">{text.eyebrow}</p>
             <h3>{text.title}</h3>
             <p>{text.description}</p>
           </div>
-          <span className="settings-icon-bubble" aria-hidden>€</span>
         </div>
 
         {note ? (
-          <p className="settings-inline-status success" role="status" aria-live="polite">
+          <p className="p40-price-status" role="status" aria-live="polite">
             {note}
           </p>
         ) : null}
 
         {states.length === 0 ? (
-          <p className="settings-empty-note">{text.empty}</p>
+          <p className="p40-price-empty">{text.empty}</p>
         ) : (
-          <div className="asset-price-list">
+          <div className="p40-price-list">
             {states.map((state) => {
               const open = openKey === state.key;
               const name = displayName(state);
@@ -236,18 +234,18 @@ export default function SettingsPricePanel({
               const typedSomething = draft.price.trim() !== "";
 
               return (
-                <div className={`asset-price-item${open ? " open" : ""}`} key={state.key}>
+                <div className={`p40-price-item${open ? " open" : ""}`} key={state.key}>
                   <button
                     type="button"
-                    className={`asset-price-row${open ? " selected" : ""}`}
+                    className={`p40-price-row${open ? " selected" : ""}`}
                     aria-expanded={open}
                     onClick={() => toggleEditor(state)}
                   >
-                    <span className="asset-price-name">
+                    <span className="p40-price-name">
                       <strong>{name}</strong>
                       <small>{state.instrumentIsin}</small>
                     </span>
-                    <span className="asset-price-value">
+                    <span className="p40-price-value">
                       <strong>
                         {effective ? formatMoney(effective.price, state.currency) : text.missing}
                       </strong>
@@ -260,20 +258,20 @@ export default function SettingsPricePanel({
                   </button>
 
                   {open ? (
-                    <div className="asset-price-editor">
-                      <div className="price-source-meta">
-                        <span className={state.isStale ? "source-chip warning" : "source-chip"}>
+                    <div className="p40-price-editor">
+                      <div className="p40-price-source-meta">
+                        <span className={state.isStale ? "p40-price-source-chip warning" : "p40-price-source-chip"}>
                           {text.automatic}: {candidateStatusLabel(state.autoStatus)}
                         </span>
-                        <span className={state.manual ? "source-chip" : "source-chip muted-chip"}>
+                        <span className={state.manual ? "p40-price-source-chip" : "p40-price-source-chip muted"}>
                           {text.manual}: {state.manual ? formatDateVN(state.manual.asOf) : text.notAvailable}
                         </span>
                       </div>
 
-                      <div className="seg-control" role="group" aria-label={`${text.source} ${name}`}>
+                      <div className="p40-price-mode" role="group" aria-label={`${text.source} ${name}`}>
                         <button
                           type="button"
-                          className={state.mode === "auto" ? "seg-opt active" : "seg-opt"}
+                          className={state.mode === "auto" ? "active" : ""}
                           disabled={working}
                           onClick={() => void switchMode(state, "auto")}
                         >
@@ -281,7 +279,7 @@ export default function SettingsPricePanel({
                         </button>
                         <button
                           type="button"
-                          className={state.mode === "manual" ? "seg-opt active" : "seg-opt"}
+                          className={state.mode === "manual" ? "active" : ""}
                           disabled={working || !state.manual}
                           title={state.manual ? undefined : text.manualHint}
                           onClick={() => void switchMode(state, "manual")}
@@ -290,8 +288,8 @@ export default function SettingsPricePanel({
                         </button>
                       </div>
 
-                      <div className="settings-field-grid quote-editor-grid">
-                        <label className="setting-field">
+                      <div className="p40-price-fields">
+                        <label className="p40-price-field">
                           <span>{text.manualPrice}</span>
                           <input
                             inputMode="decimal"
@@ -303,7 +301,7 @@ export default function SettingsPricePanel({
                             }}
                           />
                         </label>
-                        <label className="setting-field">
+                        <label className="p40-price-field">
                           <span>{text.priceDate}</span>
                           <input
                             type="date"
@@ -318,18 +316,18 @@ export default function SettingsPricePanel({
                       </div>
 
                       {error ? (
-                        <p className="settings-error" role="alert">
+                        <p className="p40-price-error" role="alert">
                           {error}
                         </p>
                       ) : null}
                       {!error && typedSomething && !checkedDraft.ok ? (
-                        <p className="settings-form-note">{checkedDraft.message}</p>
+                        <p className="p40-price-form-note">{checkedDraft.message}</p>
                       ) : null}
 
-                      <div className="editor-actions">
+                      <div className="p40-price-editor-actions">
                         <button
                           type="button"
-                          className="settings-primary-action"
+                          className="p40-price-primary"
                           disabled={working || !checkedDraft.ok}
                           onClick={() => void saveManual(state)}
                         >
@@ -337,7 +335,7 @@ export default function SettingsPricePanel({
                         </button>
                         <button
                           type="button"
-                          className="settings-secondary-action"
+                          className="p40-price-secondary"
                           disabled={working}
                           onClick={closeEditor}
                         >
@@ -346,7 +344,7 @@ export default function SettingsPricePanel({
                         {state.manual ? (
                           <button
                             type="button"
-                            className="danger-link"
+                            className="p40-price-danger"
                             disabled={working}
                             onClick={() => void clearManual(state)}
                           >
@@ -357,7 +355,7 @@ export default function SettingsPricePanel({
                           confirmRemoveKey === state.key ? (
                             <button
                               type="button"
-                              className="danger-link"
+                              className="p40-price-danger"
                               disabled={working}
                               onClick={() => void removeRow(state)}
                             >
@@ -366,7 +364,7 @@ export default function SettingsPricePanel({
                           ) : (
                             <button
                               type="button"
-                              className="danger-link"
+                              className="p40-price-danger"
                               disabled={working}
                               onClick={() => setConfirmRemoveKey(state.key)}
                             >
@@ -376,7 +374,7 @@ export default function SettingsPricePanel({
                         ) : null}
                       </div>
 
-                      <p className="editor-hint">
+                      <p className="p40-price-hint">
                         {removal.ok
                           ? text.removableHint
                           : removal.message}
