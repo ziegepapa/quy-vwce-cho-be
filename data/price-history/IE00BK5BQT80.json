@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "isin": "IE00BK5BQT80",
+  "currency": "EUR",
+  "points": [
+    {
+      "date": "2026-08-03",
+      "price": 164.36,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-10",
+      "price": 168.48,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-11",
+      "price": 168.48,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-12",
+      "price": 168.8,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-13",
+      "price": 169.62,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-14",
+      "price": 168.88,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-17",
+      "price": 169.06,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-18",
+      "price": 166.9,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-19",
+      "price": 166.5,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-20",
+      "price": 165.66,
+      "source": "cron"
+    },
+    {
+      "date": "2026-08-21",
+      "price": 166.3,
+      "source": "cron"
+    }
+  ]
+}
