@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolve } from "node:path";
 
 const css = readFileSync(resolve("src/styles/demo-v10-transactions.css"), "utf8");
-const dock = readFileSync(resolve("src/styles/dock.css"), "utf8");
+const dockComponent = readFileSync(resolve("src/components/BottomDock.tsx"), "utf8");
 const tokens = readFileSync(resolve("src/styles/tokens.css"), "utf8");
 const tx = readFileSync(resolve("src/pages/Transactions.tsx"), "utf8");
 const overview = readFileSync(resolve("src/components/demo-v10/OverviewFrame.tsx"), "utf8");
@@ -22,8 +22,9 @@ describe("tx filter sheet safe-area regression", () => {
   });
   it("makes the bottom navigation inert and visually hidden while the filter sheet is open", () => {
     expect(tx).toMatch(/tx-filter-open/);
-    expect(tx).toMatch(/classList\.add\("is-hidden"\)/);
-    expect(dock).toMatch(/\.bottom-dock\.is-hidden/);
+    expect(tx).toMatch(/classList\.toggle\("is-hidden", filterSheetOpen\)/);
+    expect(tx).toMatch(/toggleAttribute\("inert", filterSheetOpen\)/);
+    expect(dockComponent).toMatch(/className="pill bottom-dock"/);
     expect(css).toMatch(/html\.tx-filter-open \.bottom-dock[\s\S]*visibility:\s*hidden/);
     expect(css).toMatch(/body\.tx-filter-open\s*\{\s*overflow:\s*hidden/);
   });

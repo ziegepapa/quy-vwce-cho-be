@@ -16,7 +16,7 @@ export default function BottomDock({ items }: { items: DockItem[] }) {
   const primaryItems = items.slice(0, PRIMARY_DOCK_ITEMS);
 
   return (
-    <nav className="pill" aria-label={locale === "de" ? "Hauptnavigation" : "Điều hướng chính"}>
+    <nav className="pill bottom-dock" aria-label={locale === "de" ? "Hauptnavigation" : "Điều hướng chính"}>
       {primaryItems.map(({ to, label }) => (
         <NavLink
           key={to}

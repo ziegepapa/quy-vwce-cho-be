@@ -198,6 +198,7 @@ export default function Transactions() {
   const [form, setForm] = useState(emptyForm());
   const [editId, setEditId] = useState<string | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const filterSheetRef = useRef<HTMLElement | null>(null);
   const [pdfToolsOpen, setPdfToolsOpen] = useState(false);
   const [q, setQ] = useState("");
   const [yearFilter, setYearFilter] = useState("all");
@@ -229,13 +230,18 @@ export default function Transactions() {
     document.documentElement.classList.toggle("tx-filter-open", filterSheetOpen);
     document.body.classList.toggle("tx-filter-open", filterSheetOpen);
     if (dock) {
-      if (filterSheetOpen) dock.classList.add("is-hidden");
-      else dock.classList.remove("is-hidden");
+      dock.classList.toggle("is-hidden", filterSheetOpen);
+      dock.toggleAttribute("inert", filterSheetOpen);
+      dock.setAttribute("aria-hidden", String(filterSheetOpen));
     }
+    if (filterSheetOpen) requestAnimationFrame(() => filterSheetRef.current?.focus());
     return () => {
       document.documentElement.classList.remove("tx-filter-open");
       document.body.classList.remove("tx-filter-open");
-      document.querySelector(".bottom-dock")?.classList.remove("is-hidden");
+      const currentDock = document.querySelector(".bottom-dock");
+      currentDock?.classList.remove("is-hidden");
+      currentDock?.removeAttribute("inert");
+      currentDock?.removeAttribute("aria-hidden");
     };
   }, [filterSheetOpen]);
 
@@ -503,6 +509,11 @@ export default function Transactions() {
     setFilterSheetOpen(true);
   }
 
+  function closeFilterSheet() {
+    // Applied filters remain untouched. The next open copies them into a fresh draft.
+    setFilterSheetOpen(false);
+  }
+
   function resetFilterDraft() {
     setFilterDraft({ year: "all", type: "all", activity: "all", timeLens: "all", instrument: "all", quality: "all", sort: "newest" });
   }
@@ -726,7 +737,7 @@ export default function Transactions() {
         </div>
 
       {filterSheetOpen ? (
-        <div className="tx-filter-backdrop" role="presentation" onMouseDown={() => setFilterSheetOpen(false)}>
+        <div className="tx-filter-backdrop" role="presentation" onMouseDown={closeFilterSheet}>
           <section
             id="tx-filter-sheet"
             className="tx-filter-sheet"
@@ -734,13 +745,15 @@ export default function Transactions() {
             role="dialog"
             aria-modal="true"
             aria-label={text.filterSheet}
-            onKeyDown={(event) => { if (event.key === "Escape") setFilterSheetOpen(false); }}
+            ref={filterSheetRef}
+            tabIndex={-1}
+            onKeyDown={(event) => { if (event.key === "Escape") closeFilterSheet(); }}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="sheet-handle" aria-hidden />
             <div className="tx-filter-sheet-head">
               <h2>{text.filterSheet}</h2>
-              <button type="button" className="tx-filter-close" onClick={() => setFilterSheetOpen(false)} aria-label={text.hideTools}>×</button>
+              <button type="button" className="tx-filter-close" onClick={closeFilterSheet} aria-label={text.hideTools}>×</button>
             </div>
             <div className="tx-filter-sheet-body">
               <div className="tx-filter-section" role="group" aria-label={text.timeLens}>
@@ -753,8 +766,8 @@ export default function Transactions() {
                   ))}
                 </div>
               </div>
-              <div className="tx-filter-section" role="group" aria-label={text.activity}>
-                <span>{text.activity}</span>
+              <div className="tx-filter-section" role="group" aria-label={text.type}>
+                <span>{text.type}</span>
                 <div className="tx-filter-options tx-filter-options-grid">
                   {(["all", "trade", "funding", "outflow"] as TransactionActivity[]).map((activity) => (
                     <button key={activity} type="button" className={filterDraft.activity === activity ? "active" : ""} aria-pressed={filterDraft.activity === activity} onClick={() => setFilterDraft((current) => ({ ...current, activity, type: activity === "all" ? current.type : "all" }))}>
@@ -802,8 +815,8 @@ export default function Transactions() {
                     {years.map((year) => <button key={year} type="button" className={filterDraft.year === year ? "active" : ""} aria-pressed={filterDraft.year === year} onClick={() => setFilterDraft((current) => ({ ...current, year, timeLens: "all" }))}>{year}</button>)}
                   </div>
                 </div>
-                <div className="tx-filter-section" role="group" aria-label={text.type}>
-                  <span>{text.type}</span>
+                <div className="tx-filter-section" role="group" aria-label={locale === "de" ? "Details" : "Chi tiết"}>
+                  <span>{locale === "de" ? "Details" : "Chi tiết"}</span>
                   <div className="tx-filter-options">
                     <button type="button" className={filterDraft.type === "all" ? "active" : ""} aria-pressed={filterDraft.type === "all"} onClick={() => setFilterDraft((current) => ({ ...current, type: "all" }))}>{text.all}</button>
                     {types.map((type) => <button key={type.value} type="button" className={filterDraft.type === type.value ? "active" : ""} aria-pressed={filterDraft.type === type.value} onClick={() => setFilterDraft((current) => ({ ...current, type: type.value, activity: "all" }))}>{type.label}</button>)}
