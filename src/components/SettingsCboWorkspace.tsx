@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { AppLocale } from "../lib/locale";
 import type { AppSettings, PlanTarget } from "../lib/types";
 import type { ThemeChoice } from "../lib/theme";
@@ -213,59 +213,57 @@ function HorizonCard({ settings, locale, copy, onChangeTarget }: { settings: App
   const isIllustrative = parsedYears === null || configuredTarget === null || configuredContribution === null;
   const goalYear = isIllustrative ? 2036 : currentYear + (parsedYears ?? 10);
   const goalAmount = isIllustrative ? 50000 : configuredTarget ?? 50000;
-  // When the target inputs are incomplete, the whole card is the disclosed brief
-  // mock. Do not blend a real saved monthly contribution into its illustrative € rows.
   const contribution = isIllustrative ? 300 : configuredContribution ?? 300;
   const [deRiskYears, setDeRiskYears] = useState(5);
   const [transferPct, setTransferPct] = useState(12);
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const deRiskStart = Math.max(currentYear, goalYear - deRiskYears);
-  const protectYear = Math.max(deRiskStart + 1, goalYear - 2);
-  const timelineYears = [...new Set([currentYear, Math.min(goalYear, deRiskStart + 1), protectYear, goalYear])].sort((a, b) => a - b);
-  const selected = timelineYears.includes(selectedYear) ? selectedYear : currentYear;
-  const scenario = previewFor(selected, goalYear, deRiskYears, transferPct / 100, isIllustrative);
-  const phaseCopy = copy.phase[scenario.phase];
-  const transferEuro = scenario.vwceValue > 0 ? scenario.vwceValue * scenario.transferPct : null;
+  const [preview, setPreview] = useState<"now" | "near">("now");
+  const activeScenario = previewFor(currentYear, goalYear, deRiskYears, transferPct / 100, isIllustrative);
+  const nearYear = Math.max(currentYear, goalYear - 4);
+  const previewYear = preview === "near" ? nearYear : currentYear;
+  const annualScenario = previewFor(previewYear, goalYear, deRiskYears, transferPct / 100, isIllustrative);
+  const annualPhase = copy.phase[annualScenario.phase];
+  const transferEuro = annualScenario.vwceValue > 0 ? annualScenario.vwceValue * annualScenario.transferPct : null;
+  const yearsLeft = Math.max(0, goalYear - currentYear);
+  const safetyStart = Math.max(currentYear, goalYear - deRiskYears);
   const labels = locale === "de" ? {
-    mock: "Beispiel, keine Vault-Daten", scenarioYear: "Jahr", chooseWindow: "Sicherheitszeitraum", transferRate: "Transfer-Vorschau/Jahr", target: "Ziel", existing: "VWCE / sicher", formula: "Formel", need: "Bedarf im Zieljahr", critical: "Fehlbetrag prüfen, bevor Geld benötigt wird.", noTrade: "Nur Anzeige · keine Transaktion wird ausgelöst.", use: "Verwenden", safeMoney: "Sicherer Teil", perMonth: "/Monat", noTransfer: "0 €", noSource: "Nicht verfügbar – kein bestätigter VWCE-Wert", selector: "Jahr für die Vorschau auswählen",
+    mock: "Beispiel, keine Vault-Daten", target: "Ziel", safeMoney: "Sicherer Teil", perMonth: "/Monat", now: "In diesem Jahr", near: "Näher am Ziel (Beispiel)", annual: "In diesem Jahr", options: "Horizon anpassen", optionsHelp: "Ziel, Zeitraum und Berechnung anzeigen", chooseWindow: "Sicherheitszeitraum", transferRate: "Transfer-Vorschau/Jahr", today: "Heute", safetyStart: "Sicherheit beginnt", targetYear: "Zieljahr", formula: "So wird die Vorschau gezeigt", noTrade: "Nur Anzeige · keine Transaktion wird ausgelöst.", noTransfer: "Nicht nötig", noSource: "Nicht verfügbar – kein bestätigter VWCE-Wert", years: "Jahre", amount: "Betrag", statusMock: "Beispiel", current: "Aktuell",
   } : {
-    mock: "Mẫu minh họa, không phải dữ liệu Quỹ", scenarioYear: "Năm", chooseWindow: "Cửa sổ an toàn", transferRate: "Preview chuyển đổi/năm", target: "Mục tiêu", existing: "VWCE / an toàn", formula: "Công thức", need: "Khoản cần dùng năm mục tiêu", critical: "Kiểm tra phần thiếu trước khi cần tiền.", noTrade: "Chỉ hiển thị · không tạo giao dịch.", use: "Dùng tiền", safeMoney: "Phần an toàn", perMonth: "/tháng", noTransfer: "0 €", noSource: "Chưa có – không có giá trị VWCE đã xác nhận", selector: "Chọn năm để xem preview",
+    mock: "Mẫu minh họa, không phải dữ liệu Quỹ", target: "Mục tiêu", safeMoney: "Phần an toàn", perMonth: "/tháng", now: "Năm nay", near: "Gần hạn (ví dụ)", annual: "Năm nay", options: "Tùy chỉnh Horizon", optionsHelp: "Mốc, cửa sổ an toàn và cách tính", chooseWindow: "Cửa sổ an toàn", transferRate: "Preview chuyển đổi/năm", today: "Hôm nay", safetyStart: "Bắt đầu an toàn", targetYear: "Năm cần tiền", formula: "Cách hiển thị preview", noTrade: "Chỉ hiển thị · không tạo giao dịch.", noTransfer: "Không cần", noSource: "Chưa có – không có giá trị VWCE đã xác nhận", years: "năm", amount: "Số tiền", statusMock: "Minh họa", current: "Hiện tại",
   };
+  const statusLabel = `${isIllustrative ? labels.statusMock : labels.target} · ${money(goalAmount, locale)} · ${goalYear} · ${yearsLeft} ${labels.years} · ${copy.phase[activeScenario.phase].label}`;
 
-  return <SectionCard eyebrow={copy.window} title={copy.horizon} help={copy.horizonHelp} tone="horizon">
-    <div className="cbo-horizon-summary">
-      <label className="cbo-field"><span>{copy.goalDate}</span><input type="date" value={target.targetUseDate} onChange={(event) => onChangeTarget({ ...target, targetUseDate: event.target.value })} /></label>
-      <label className="cbo-toggle"><input type="checkbox" checked={target.needFullAmount} onChange={(event) => onChangeTarget({ ...target, needFullAmount: event.target.checked, partialNeedEuro: event.target.checked ? undefined : target.partialNeedEuro })} /><span>{copy.fullAmount}</span></label>
-      {!target.needFullAmount ? <label className="cbo-field"><span>{copy.targetAmount}</span><input inputMode="decimal" type="number" min="0" value={target.partialNeedEuro ?? ""} onChange={(event) => onChangeTarget({ ...target, partialNeedEuro: parseNumber(event.target.value) })} /></label> : null}
-    </div>
+  return <SectionCard title={copy.horizon} help={copy.horizonHelp} tone="horizon">
+    <div className="cbo-horizon-status" role="status"><span>{statusLabel}</span>{isIllustrative ? <small>{labels.mock}</small> : null}</div>
 
-    {isIllustrative ? <aside className="cbo-horizon-mock" role="note"><strong>{labels.mock}</strong><span>{labels.target}: {money(goalAmount, locale)} · {goalYear} · VWCE {money(18000, locale)} · {labels.safeMoney.toLowerCase()} {money(1200, locale)} · {money(300, locale)}{labels.perMonth}</span></aside> : null}
-
-    <div className="cbo-preview-controls" aria-label={copy.horizon}>
-      <span>{labels.chooseWindow}</span><div role="group">{[3, 5, 7].map((value) => <button type="button" key={value} className={deRiskYears === value ? "selected" : ""} onClick={() => setDeRiskYears(value)}>{value} {locale === "de" ? "J." : "năm"}</button>)}</div>
-      <label><span>{labels.transferRate}</span><select value={transferPct} onChange={(event) => setTransferPct(Number(event.target.value))}><option value={8}>8%</option><option value={12}>12%</option><option value={16}>16%</option></select></label>
-    </div>
-
-    <div className="cbo-timeline" role="group" aria-label={labels.selector}>
-      {timelineYears.map((year, index) => {
-        const phase = previewFor(year, goalYear, deRiskYears, transferPct / 100, isIllustrative).phase;
-        return <Fragment key={year}>{index > 0 ? <i aria-hidden /> : null}<button type="button" className={selected === year ? "selected" : ""} onClick={() => setSelectedYear(year)}><span>{year}</span><strong>{copy.phase[phase].label}</strong></button></Fragment>;
-      })}
-    </div>
-
-    <article className={`cbo-scenario cbo-scenario-${scenario.phase}`} data-horizon-phase={scenario.phase}>
-      <header><span className="cbo-phase-badge">{phaseCopy.label}</span><div><span className="cbo-eyebrow">{copy.scenario}</span><h3>{labels.scenarioYear} {selected}</h3></div></header>
-      <p>{phaseCopy.copy}</p>
+    <article className={`cbo-annual-answer cbo-scenario-${annualScenario.phase}`} data-horizon-phase={annualScenario.phase}>
+      <header><div><span className="cbo-eyebrow">{labels.annual}</span><h3>{preview === "near" ? `${labels.near} · ${previewYear}` : `${labels.now} · ${currentYear}`}</h3></div><span className="cbo-phase-badge">{annualPhase.label}</span></header>
+      <p>{annualPhase.copy}</p>
       <div className="cbo-money-pairs">
-        <div><span>{copy.vwce}</span><strong>{percent(scenario.vwceShare, locale)}</strong><small>{money(contribution * scenario.vwceShare, locale)}{labels.perMonth}</small></div>
-        <div><span>{copy.safe}</span><strong>{percent(scenario.safeShare, locale)}</strong><small>{money(contribution * scenario.safeShare, locale)}{labels.perMonth}</small></div>
+        <div><span>{copy.vwce}</span><strong>{percent(annualScenario.vwceShare, locale)}</strong><small>{money(contribution * annualScenario.vwceShare, locale)}{labels.perMonth}</small></div>
+        <div><span>{copy.safe}</span><strong>{percent(annualScenario.safeShare, locale)}</strong><small>{money(contribution * annualScenario.safeShare, locale)}{labels.perMonth}</small></div>
       </div>
-      <div className="cbo-transfer"><span>{copy.transfer}</span><strong>{scenario.phase === "transition" && transferEuro !== null ? `${percent(scenario.transferPct, locale)} · ${money(transferEuro, locale)}` : scenario.phase === "accumulate" ? labels.noTransfer : labels.noSource}</strong></div>
-      {scenario.phase === "use" ? <div className="cbo-critical-note"><strong>{labels.need}: {money(goalAmount, locale)}</strong><span>{labels.critical}</span></div> : null}
-      <dl className="cbo-formula"><dt>{labels.formula}</dt><dd>€ VWCE góp = {money(contribution, locale)} × {percent(scenario.vwceShare, locale)}</dd><dd>€ an toàn góp = {money(contribution, locale)} − € VWCE góp</dd><dd>€ chuyển = giá trị VWCE × {percent(scenario.transferPct, locale)}</dd></dl>
+      <div className="cbo-transfer"><span>{copy.transfer}</span><strong>{annualScenario.phase === "transition" && transferEuro !== null ? `${percent(annualScenario.transferPct, locale)} · ${money(transferEuro, locale)}` : annualScenario.phase === "accumulate" ? labels.noTransfer : labels.noSource}</strong></div>
+      <div className="cbo-answer-actions"><button type="button" className={preview === "now" ? "selected" : ""} onClick={() => setPreview("now")}>{labels.now}</button><button type="button" className={preview === "near" ? "selected" : ""} onClick={() => setPreview("near")}>{labels.near}</button></div>
       <button type="button" className="cbo-secondary" onClick={() => { window.location.hash = "#/simulation"; }}>{copy.viewSimulation}<IconChevronRight aria-hidden /></button>
       <small className="cbo-disclaimer">{copy.disclaimer} {labels.noTrade}</small>
     </article>
+
+    <details className="cbo-horizon-options">
+      <summary><span><strong>{labels.options}</strong><small>{labels.optionsHelp}</small></span><IconChevronRight aria-hidden /></summary>
+      <div className="cbo-horizon-options-body">
+        <div className="cbo-horizon-summary">
+          <label className="cbo-field"><span>{copy.goalDate}</span><input type="date" value={target.targetUseDate} onChange={(event) => onChangeTarget({ ...target, targetUseDate: event.target.value })} /></label>
+          <label className="cbo-toggle"><input type="checkbox" checked={target.needFullAmount} onChange={(event) => onChangeTarget({ ...target, needFullAmount: event.target.checked, partialNeedEuro: event.target.checked ? undefined : target.partialNeedEuro })} /><span>{copy.fullAmount}</span></label>
+          {!target.needFullAmount ? <label className="cbo-field"><span>{copy.targetAmount}</span><input inputMode="decimal" type="number" min="0" value={target.partialNeedEuro ?? ""} onChange={(event) => onChangeTarget({ ...target, partialNeedEuro: parseNumber(event.target.value) })} /></label> : null}
+        </div>
+        <div className="cbo-preview-controls" aria-label={labels.options}>
+          <span>{labels.chooseWindow}</span><div role="group">{[3, 5, 7].map((value) => <button type="button" key={value} className={deRiskYears === value ? "selected" : ""} onClick={() => setDeRiskYears(value)}>{value} {labels.years}</button>)}</div>
+          <label><span>{labels.transferRate}</span><select value={transferPct} onChange={(event) => setTransferPct(Number(event.target.value))}><option value={8}>8%</option><option value={12}>12%</option><option value={16}>16%</option></select></label>
+        </div>
+        <div className="cbo-horizon-milestones" aria-label={copy.horizon}><div><span>{labels.today}</span><strong>{currentYear}</strong><small>{copy.phase[activeScenario.phase].label}</small></div><div><span>{labels.safetyStart}</span><strong>{safetyStart}</strong><small>{copy.phase.transition.label}</small></div><div><span>{labels.targetYear}</span><strong>{goalYear}</strong><small>{copy.phase.use.label}</small></div></div>
+        <dl className="cbo-formula"><dt>{labels.formula}</dt><dd>€ VWCE góp = {money(contribution, locale)} × {percent(annualScenario.vwceShare, locale)}</dd><dd>€ an toàn góp = {money(contribution, locale)} − € VWCE góp</dd><dd>€ chuyển = giá trị VWCE × {percent(annualScenario.transferPct, locale)}</dd></dl>
+      </div>
+    </details>
   </SectionCard>;
 }
 
@@ -277,7 +275,7 @@ export default function SettingsCboWorkspace(props: Props) {
     : [{ value: "premium", label: "Vault" }, { value: "dark", label: "Ocean" }, { value: "light", label: "Ember" }];
 
   return <div className="settings-cbo">
-    <header className="cbo-header"><div><span className="cbo-eyebrow">VWCE VAULT · 2026</span><h1>{copy.screenTitle}</h1><p>{props.settings.planName || copy.screenSubtitle}{props.settings.childName ? ` · ${props.settings.childName}` : ""}</p></div><span className="cbo-save" role="status">{props.saveLabel || copy.saved}</span></header>
+    <header className="cbo-header"><div><h1>{copy.screenTitle}</h1><p>{props.settings.planName || copy.screenSubtitle}{props.settings.childName ? ` · ${props.settings.childName}` : ""}</p></div><span className="cbo-save" role="status">{props.saveLabel || copy.saved}</span></header>
     <div className="cbo-tabs" role="tablist" aria-label={copy.screenTitle}>{(["general", "prices", "data"] as CboTab[]).map((tab) => <button key={tab} type="button" role="tab" aria-selected={props.activeTab === tab} className={props.activeTab === tab ? "selected" : ""} onClick={() => props.onSelectTab(tab)}>{copy.tabs[tab]}</button>)}</div>
 
     {props.activeTab === "general" ? <div className="cbo-tab-panel" role="tabpanel">
