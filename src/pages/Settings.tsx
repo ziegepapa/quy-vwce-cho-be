@@ -69,6 +69,22 @@ type SettingsText = {
   data: string;
   app: string;
   supportHandover: string;
+  pageTitle: string;
+  pageSubtitle: string;
+  savedLocal: string;
+  savingLocal: string;
+  changesPending: string;
+  accountSubtitle: string;
+  syncSubtitle: string;
+  dataSubtitle: string;
+  preferences: string;
+  appearance: string;
+  appearanceSubtitle: string;
+  language: string;
+  languageSubtitle: string;
+  premiumTheme: string;
+  darkTheme: string;
+  lightTheme: string;
 };
 
 function settingsStrings(locale: AppLocale): SettingsText {
@@ -108,6 +124,22 @@ function settingsStrings(locale: AppLocale): SettingsText {
     data: "Daten",
     app: "App",
     supportHandover: "Notfallmappe & Übergabe",
+    pageTitle: "Einstellungen",
+    pageSubtitle: "Konto, lokale Daten und Gerätezugriff übersichtlich verwalten.",
+    savedLocal: "Auf diesem Gerät gespeichert",
+    savingLocal: "Wird auf diesem Gerät gespeichert…",
+    changesPending: "Änderungen warten auf Speicherung",
+    accountSubtitle: "Anmeldung und Schutz dieses Familien-Vaults.",
+    syncSubtitle: "Status und bewusste Synchronisierung zwischen Ihren Geräten.",
+    dataSubtitle: "Sicherung und Wiederherstellung bleiben owner-gesteuert.",
+    preferences: "Darstellung & Sprache",
+    appearance: "Erscheinungsbild",
+    appearanceSubtitle: "Nur die Darstellung dieser App ändern.",
+    language: "Sprache",
+    languageSubtitle: "Die Auswahl wird auf diesem Gerät gespeichert.",
+    premiumTheme: "Vault",
+    darkTheme: "Ozean",
+    lightTheme: "Ember",
   } : {
     saveError: "Không lưu được Cài đặt. Bản đang chỉnh vẫn còn trên màn hình.",
     pendingPushError: "Không đẩy được các thay đổi đang chờ. Dữ liệu trên thiết bị vẫn được giữ nguyên.",
@@ -144,6 +176,22 @@ function settingsStrings(locale: AppLocale): SettingsText {
     data: "Dữ liệu",
     app: "Ứng dụng",
     supportHandover: "Hồ sơ khẩn cấp & bàn giao",
+    pageTitle: "Cài đặt",
+    pageSubtitle: "Quản lý rõ ràng tài khoản, dữ liệu local và quyền truy cập thiết bị.",
+    savedLocal: "Đã lưu trên thiết bị này",
+    savingLocal: "Đang lưu trên thiết bị này…",
+    changesPending: "Thay đổi đang chờ lưu",
+    accountSubtitle: "Đăng nhập và bảo vệ kho gia đình này.",
+    syncSubtitle: "Trạng thái và đồng bộ có chủ đích giữa các thiết bị.",
+    dataSubtitle: "Sao lưu và khôi phục luôn do owner chủ động kiểm soát.",
+    preferences: "Giao diện & ngôn ngữ",
+    appearance: "Giao diện",
+    appearanceSubtitle: "Chỉ thay đổi cách ứng dụng hiển thị.",
+    language: "Ngôn ngữ",
+    languageSubtitle: "Lựa chọn được lưu trên thiết bị này.",
+    premiumTheme: "Kho",
+    darkTheme: "Đại dương",
+    lightTheme: "Hổ phách",
   };
 }
 
@@ -181,11 +229,13 @@ function pendingSyncDetails(summary: PendingSyncSummary, locale: AppLocale): str
   return details.join(" ");
 }
 
-const DEMO_THEME_OPTIONS: Array<{ value: ThemeChoice; label: string; dot: "vault" | "ocean" | "ember" }> = [
-  { value: "premium", label: "Vault", dot: "vault" },
-  { value: "dark", label: "Ocean", dot: "ocean" },
-  { value: "light", label: "Ember", dot: "ember" },
-];
+function themeOptions(text: SettingsText): Array<{ value: ThemeChoice; label: string; dot: "vault" | "ocean" | "ember" }> {
+  return [
+    { value: "premium", label: text.premiumTheme, dot: "vault" },
+    { value: "dark", label: text.darkTheme, dot: "ocean" },
+    { value: "light", label: text.lightTheme, dot: "ember" },
+  ];
+}
 
 export default function SettingsPage({
   onReload,
@@ -592,6 +642,16 @@ export default function SettingsPage({
   return (
     <main className="demo-v10-screen" aria-label={t("settingsAria")}>
       <div className="set-wrap">
+      <header className="set-page-head">
+        <div>
+          <p className="set-page-kicker">{text.pageTitle}</p>
+          <h1>{text.pageTitle}</h1>
+          <p>{text.pageSubtitle}</p>
+        </div>
+        <span className={`set-save-state ${saveState}`} role="status" aria-live="polite">
+          {saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}
+        </span>
+      </header>
       {saveError || actionError ? (
         <div className="gl" style={{ padding: 12 }} role="alert">
           <span>{saveError ?? actionError}</span>
@@ -607,7 +667,9 @@ export default function SettingsPage({
         </div>
       ) : null}
 
-      <div className="set-sec">{text.accountSecurity}</div>
+      <header className="set-section-head">
+        <div><span>{text.accountSecurity}</span><small>{text.accountSubtitle}</small></div>
+      </header>
       <section className="gl set-block">
         <div className="set-row set-row-static">
           <span className="si-ico v" aria-hidden>@</span>
@@ -661,7 +723,9 @@ export default function SettingsPage({
         </button>
       </section>
 
-      <div className="set-sec">{t("sync")}</div>
+      <header className="set-section-head">
+        <div><span>{t("sync")}</span><small>{text.syncSubtitle}</small></div>
+      </header>
       <section className="gl set-block">
         {syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
         <div className="set-row set-row-static">
@@ -671,7 +735,7 @@ export default function SettingsPage({
             <span className="sr-sub">{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : text.lastLocalSyncUnavailable}</span>
           </span>
         </div>
-        <button type="button" className="set-row" disabled={syncingNow} onClick={() => void runVisibleSync()}>
+        <button type="button" className="set-row set-sync-primary" disabled={syncingNow} onClick={() => void runVisibleSync()}>
           <span className="si-ico e" aria-hidden>↻</span>
           <span className="sr-body">
             <span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span>
@@ -685,7 +749,9 @@ export default function SettingsPage({
         </details>
       </section>
 
-      <div className="set-sec">{text.data}</div>
+      <header className="set-section-head">
+        <div><span>{text.data}</span><small>{text.dataSubtitle}</small></div>
+      </header>
       <section className="gl set-block">
         <button type="button" className="set-row" onClick={() => void doExport()}>
           <span className="si-ico v" aria-hidden>↥</span>
@@ -715,16 +781,20 @@ export default function SettingsPage({
         </label>
       </section>
 
-      <div className="set-sec">{text.app}</div>
-      <section className="gl set-block">
+      <header className="set-section-head">
+        <div><span>{text.preferences}</span><small>{text.app}</small></div>
+      </header>
+      <section className="gl set-block set-preferences">
+        <div className="set-preference-head"><span>{text.appearance}</span><small>{text.appearanceSubtitle}</small></div>
         <div className="theme-picker">
-          {DEMO_THEME_OPTIONS.map((opt) => (
+          {themeOptions(text).map((opt) => (
             <button key={opt.value} type="button" className={"th-opt" + (theme === opt.value ? " sel" : "")} onClick={() => pickTheme(opt.value)}>
               <span className={`th-dot ${opt.dot}`} aria-hidden />
               <span className="th-name">{opt.label}</span>
             </button>
           ))}
         </div>
+        <div className="set-preference-head language"><span>{text.language}</span><small>{text.languageSubtitle}</small></div>
         <div className="lang-options">
           <button type="button" className={`lang-opt${locale === "vi" ? " selected" : ""}`} onClick={() => setLocale("vi")}>
             {t("vietnamese")}<small>{locale === "vi" ? t("using") : t("available")}</small>
@@ -744,7 +814,7 @@ export default function SettingsPage({
       </section>
 
       {mfaEnrollment ? (
-        <section className="gl" style={{ padding: 16 }}>
+        <section className="gl set-security-setup" style={{ padding: 16 }}>
           <img src={mfaEnrollment.qrCode} alt={text.qrAlt} style={{ width: 180, borderRadius: 12 }} />
           <code style={{ display: "block", marginTop: 8, overflowWrap: "anywhere" }}>{mfaEnrollment.secret}</code>
           <input
