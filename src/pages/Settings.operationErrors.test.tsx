@@ -30,12 +30,14 @@ const syncMocks = vi.hoisted(() => ({
 const authMocks = vi.hoisted(() => ({
   user: null as { id: string; email: string; last_sign_in_at?: string } | null,
   resetPassword: vi.fn(),
+  startMfaEnrollment: vi.fn(),
+  verifyMfaEnrollment: vi.fn(),
 }));
 
 vi.mock("../lib/db", () => dbMocks);
 vi.mock("../lib/sync/engine", () => syncMocks);
 vi.mock("../lib/auth", () => ({
-  useAuth: () => ({ user: authMocks.user, mfaEnrolled: false, resetPassword: authMocks.resetPassword }),
+  useAuth: () => ({ user: authMocks.user, mfaEnrolled: false, resetPassword: authMocks.resetPassword, startMfaEnrollment: authMocks.startMfaEnrollment, verifyMfaEnrollment: authMocks.verifyMfaEnrollment }),
 }));
 vi.mock("../lib/recoveryReadOnly", () => ({
   useRecoveryReadOnly: () => ({ readOnly: false, showBlocked: vi.fn() }),
@@ -122,17 +124,16 @@ afterEach(() => {
 
 describe("German Settings and mobile Advanced hierarchy", () => {
   it("uses the redesigned German hierarchy, localized preference labels and compact sync diagnostics", async () => {
-    dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
     const { container } = renderGermanSettings();
 
     await screen.findByText("Konto");
     expect(screen.getByRole("heading", { name: "Einstellungen" })).toBeTruthy();
     expect(container.querySelector(".set-page-head")).toBeTruthy();
     expect(screen.getByText("Auf diesem Gerät gespeichert")).toBeTruthy();
-    expect(screen.getByText("Aktuelle E-Mail-Adresse")).toBeTruthy();
-    expect(screen.getByText("Letzte Anmeldung")).toBeTruthy();
+    expect(container.querySelector(".set-identity")).toBeTruthy();
+    expect(container.querySelector(".set-identity-copy")?.textContent).toContain("Letzte Anmeldung");
     expect(screen.getByText("Sicherheit")).toBeTruthy();
-    expect(screen.getByText("Passwort")).toBeTruthy();
+    expect(screen.getByText("Passwort ändern")).toBeTruthy();
     expect(screen.getByText("Passwort vergessen")).toBeTruthy();
     expect(screen.queryByText("Berlin · aktuelle Zeit")).toBeNull();
     expect(screen.getByRole("button", { name: "Vietnamesisch Verfügbar" })).toBeTruthy();
@@ -143,25 +144,26 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(container.querySelector("button.set-sync-primary")).toBeTruthy();
     expect(screen.getByText("Kurse & Marktdaten")).toBeTruthy();
     expect(screen.getByText("Synchronisierung & Datenkonflikte")).toBeTruthy();
-    expect(screen.getByText("Gerätediagnose")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Details/ })).toBeTruthy();
     expect(screen.getByText("Verwendungsplan")).toBeTruthy();
     expect(screen.getByText("Sicherung & lokale Daten")).toBeTruthy();
     expect(screen.getByText(`v${APP_RELEASE_VERSION} · Online`)).toBeTruthy();
-    const syncDetails = container.querySelector("details.set-sync-details") as HTMLDetailsElement;
-    expect(syncDetails.open).toBe(false);
+    expect(screen.queryByRole("dialog")).toBeNull();
     const groups = [...container.querySelectorAll("details.advanced-group")] as HTMLDetailsElement[];
-    expect(groups).toHaveLength(5);
+    expect(groups).toHaveLength(4);
     expect(groups.every((group) => group.open === false)).toBe(true);
 
     fireEvent.click(screen.getByText("Kurse & Marktdaten"));
-    expect(groups[1]?.open).toBe(true);
+    expect(groups[0]?.open).toBe(true);
     fireEvent.click(screen.getByText("Synchronisierung & Datenkonflikte"));
     await waitFor(() => {
-      expect(groups[1]?.open).toBe(false);
-      expect(groups[2]?.open).toBe(true);
+      expect(groups[0]?.open).toBe(false);
+      expect(groups[1]?.open).toBe(true);
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /JSON exportieren/ }));
+    dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
+    fireEvent.click(screen.getByRole("button", { name: /Datensicherung/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /JSON exportieren/ }));
     expect(await screen.findByText("JSON-Sicherung konnte nicht exportiert werden. Ihre Daten wurden nicht verändert.")).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/Không|Dữ liệu|Cài đặt|Đồng bộ|Giá/);
   });
@@ -169,9 +171,10 @@ describe("German Settings and mobile Advanced hierarchy", () => {
   it("renders immediate localized feedback for successful JSON export", async () => {
     renderSettings();
 
+    fireEvent.click(await screen.findByRole("button", { name: /Sao lưu dữ liệu/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Xuất JSON/ }));
 
-    expect(await screen.findByText("Đã tải xuống bản sao JSON.")).toBeTruthy();
+    expect((await screen.findAllByText("Đã tải xuống bản sao JSON.")).length).toBeGreaterThan(0);
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
   });
 
@@ -180,8 +183,8 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     authMocks.resetPassword.mockResolvedValue({});
     renderSettings();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Mật khẩu/ }));
-    const dialog = screen.getByRole("dialog", { name: "Gửi link mật khẩu?" });
+    fireEvent.click(await screen.findByRole("button", { name: /^Đổi mật khẩu/ }));
+    const dialog = screen.getByRole("dialog", { name: "Đổi mật khẩu" });
     expect(dialog.textContent).toContain("security-test@example.invalid");
     fireEvent.click(screen.getByRole("button", { name: "Gửi link" }));
 
@@ -195,7 +198,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     authMocks.resetPassword.mockResolvedValue({ error: "PROVIDER_SECRET_CANARY" });
     renderSettings();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Mật khẩu/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Đổi mật khẩu/ }));
     fireEvent.click(screen.getByRole("button", { name: "Gửi link" }));
 
     const alert = await screen.findByRole("alert");
@@ -205,8 +208,9 @@ describe("German Settings and mobile Advanced hierarchy", () => {
 
   it("keeps malformed and unsupported German backup imports fail-closed", async () => {
     const { container } = renderGermanSettings("/settings?tab=data");
-    await screen.findByText("Sicherung importieren");
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.click(await screen.findByRole("button", { name: /Daten wiederherstellen/ }));
+    await screen.findByRole("dialog", { name: "Daten wiederherstellen" });
+    let input = container.querySelector('input[type="file"]') as HTMLInputElement;
 
     const malformed = new File(["not-json"], "kaputt.json", { type: "application/json" });
     Object.defineProperty(malformed, "text", { value: () => Promise.resolve("not-json") });
@@ -215,6 +219,8 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     await waitFor(() => expect(window.alert).toHaveBeenCalledWith("Ungültige JSON-Datei."));
     expect(dbMocks.importBackup).not.toHaveBeenCalled();
 
+    fireEvent.click(await screen.findByRole("button", { name: /Daten wiederherstellen/ }));
+    input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const unsupportedJson = JSON.stringify({ schemaVersion: 999, exportedAt: "2026-08-14T06:00:00Z" });
     const unsupported = new File([unsupportedJson], "alt.json", { type: "application/json" });
     Object.defineProperty(unsupported, "text", { value: () => Promise.resolve(unsupportedJson) });
@@ -229,7 +235,8 @@ describe("German Settings and mobile Advanced hierarchy", () => {
   it("aborts German import when the mandatory pre-import backup cannot be created", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("PREBACKUP_SECRET_CANARY"));
     const { container } = renderGermanSettings("/settings?tab=data");
-    await screen.findByText("Sicherung importieren");
+    fireEvent.click(await screen.findByRole("button", { name: /Daten wiederherstellen/ }));
+    await screen.findByRole("dialog", { name: "Daten wiederherstellen" });
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const validJson = JSON.stringify({ schemaVersion: 3, exportedAt: "2026-08-14T06:00:00Z" });
     const backup = new File([validJson], "backup.json", { type: "application/json" });
@@ -242,6 +249,49 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     ));
     expect(dbMocks.importBackup).not.toHaveBeenCalled();
     expect(document.body.innerHTML).not.toContain("PREBACKUP_SECRET_CANARY");
+  });
+
+  it("uses one accessible child sheet, locks the actual dock and restores it on Escape", async () => {
+    const dock = document.createElement("nav");
+    dock.className = "bottom-dock";
+    document.body.append(dock);
+    renderSettings();
+
+    fireEvent.click(await screen.findByRole("button", { name: /^Đổi mật khẩu/ }));
+    expect(screen.getByRole("dialog", { name: "Đổi mật khẩu" })).toBeTruthy();
+    expect(dock.classList.contains("is-hidden")).toBe(true);
+    expect(dock.hasAttribute("inert")).toBe(true);
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(dock.classList.contains("is-hidden")).toBe(false);
+    expect(dock.hasAttribute("inert")).toBe(false);
+    dock.remove();
+  });
+
+  it("calls real Sync callback with loading and success feedback", async () => {
+    const onSyncNow = vi.fn().mockResolvedValue({ tone: "success", message: "Đã đồng bộ" });
+    render(createElement(MemoryRouter, { initialEntries: ["/settings"] }, createElement(SettingsPage, { onReload: vi.fn(), onSyncNow })));
+    const button = await screen.findByRole("button", { name: /Đồng bộ ngay/ });
+    fireEvent.click(button);
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect((await screen.findAllByText("Đã đồng bộ")).length).toBeGreaterThan(0);
+    expect(onSyncNow).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps Advanced collapsed by default and starts MFA through its child view", async () => {
+    authMocks.startMfaEnrollment.mockResolvedValue({ error: "MFA_FAIL" });
+    const { container } = renderSettings();
+    await screen.findByText("Nâng cao");
+    const advanced = container.querySelector("details.set-advanced") as HTMLDetailsElement;
+    expect(advanced).toBeTruthy();
+    expect(advanced.open).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: /MFA \/ TOTP/ }));
+    const mfaDialog = await screen.findByRole("dialog", { name: "MFA / TOTP" });
+    expect(mfaDialog).toBeTruthy();
+    fireEvent.click(mfaDialog.querySelector("button.settings-child-primary") as HTMLButtonElement);
+    await waitFor(() => expect(authMocks.startMfaEnrollment).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("alert")).toBeTruthy();
   });
 
   it("opens Advanced for the legacy tab=data deep link used by Sync conflict navigation", async () => {
@@ -279,6 +329,7 @@ describe("Settings operation errors", () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
     renderSettings("/settings?tab=data");
 
+    fireEvent.click(await screen.findByRole("button", { name: /Sao lưu dữ liệu/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Xuất JSON/ }));
 
     const alert = await screen.findByRole("alert");
@@ -289,6 +340,7 @@ describe("Settings operation errors", () => {
   it("aborts import when the mandatory pre-import backup cannot be created", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("PREBACKUP_SECRET_CANARY"));
     const { container } = renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: /Khôi phục dữ liệu/ }));
     await screen.findByText("Nhập sao lưu");
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File([JSON.stringify({ schemaVersion: 3, exportedAt: "2026-08-14T06:00:00Z" })], "backup.json", { type: "application/json" });
