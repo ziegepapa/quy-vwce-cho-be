@@ -56,9 +56,8 @@ export default defineConfig({
         navigateFallback: "/quy-vwce-cho-be/index.html",
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        // P26: one-time hook for the documented P25 legacy registration cache.
-        // It does not alter the normal owner-confirmed policy below.
-        importScripts: ["pwa-update-recovery.js"],
+        // P26/P27 bounded recovery hooks. Normal updates remain explicitly owner-confirmed.
+        importScripts: ["pwa-update-recovery.js", "pwa-final-runtime-recovery.js"],
         // Normal updates wait until the bridge posts explicit SKIP_WAITING.
         skipWaiting: false,
       },
