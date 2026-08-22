@@ -25,6 +25,10 @@
 .tx-wrap .s-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
 .tx-wrap .s-title { margin: 0; color: var(--demo-text); font-size: 20px; font-weight: 900; letter-spacing: -.02em; }
 .tx-wrap .add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 6px 14px;
   color: var(--demo-vi);
   font: inherit;
@@ -106,7 +110,7 @@
 .tx-wrap .tx-journal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 2px; }
 .tx-wrap .tx-journal-head > div { min-width: 0; }
 .tx-wrap .tx-journal .tx-visible-count { margin: 3px 0 0; }
-.tx-wrap .tx-tool-trigger { flex: 0 0 auto; min-height: 38px; padding: 0 12px; color: var(--demo-text); font: inherit; font-size: 11px; font-weight: 800; background: color-mix(in srgb, var(--demo-vi) 10%, var(--demo-g)); border: 1px solid color-mix(in srgb, var(--demo-vi) 28%, var(--demo-gb)); border-radius: 11px; cursor: pointer; }
+.tx-wrap .tx-tool-trigger { flex: 0 0 auto; min-height: 44px; padding: 0 14px; color: var(--demo-text); font: inherit; font-size: 11px; font-weight: 800; background: color-mix(in srgb, var(--demo-vi) 10%, var(--demo-g)); border: 1px solid color-mix(in srgb, var(--demo-vi) 28%, var(--demo-gb)); border-radius: 11px; cursor: pointer; transition: transform 150ms cubic-bezier(.23, 1, .32, 1), background 150ms cubic-bezier(.23, 1, .32, 1); }
 .tx-wrap .tx-quick-types { display: flex; gap: 7px; overflow-x: auto; padding: 1px 1px 4px; scrollbar-width: none; }
 .tx-wrap .tx-quick-types::-webkit-scrollbar { display: none; }
 .tx-wrap .tx-quick-types button { flex: 0 0 auto; min-height: 34px; padding: 0 11px; color: var(--demo-dim); font: inherit; font-size: 11px; font-weight: 800; background: color-mix(in srgb, var(--demo-g) 86%, transparent); border: 1px solid var(--demo-gb); border-radius: 999px; cursor: pointer; }
@@ -155,6 +159,7 @@
   background: color-mix(in srgb, var(--demo-em) 10%, var(--demo-g));
   border-color: color-mix(in srgb, var(--demo-em) 28%, var(--demo-gb));
 }
+.tx-wrap .add-btn:active,
 .tx-wrap .tx-quick-create button:active,
 .tx-wrap .tx-tool-trigger:active,
 .tx-wrap .tx-quick-types button:active { transform: scale(.97); }

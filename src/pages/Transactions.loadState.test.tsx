@@ -47,6 +47,7 @@ afterEach(() => {
   cleanup();
   window.localStorage.removeItem(LOCALE_KEY);
   window.localStorage.removeItem(TRANSACTION_SAVED_VIEWS_KEY);
+  document.querySelector(".bottom-dock")?.remove();
 });
 
 describe("Transactions load and empty states", () => {
@@ -244,6 +245,30 @@ describe("Transactions load and empty states", () => {
     expect(document.querySelectorAll(".tx-active-filter-chips button")).toHaveLength(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Xóa lọc" }));
+    expect(screen.getByRole("button", { name: "Toàn bộ" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("hides and inerts the actual bottom dock while the filter sheet is open, then discards draft on close", async () => {
+    dbMocks.listTransactions.mockResolvedValue([]);
+    const dock = document.createElement("nav");
+    dock.className = "pill bottom-dock";
+    document.body.append(dock);
+    render(createElement(Transactions));
+
+    await screen.findByText("Nhật ký giao dịch");
+    fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
+    expect(dock.classList.contains("is-hidden")).toBe(true);
+    expect(dock.hasAttribute("inert")).toBe(true);
+    expect(dock.getAttribute("aria-hidden")).toBe("true");
+    expect(document.body.classList.contains("tx-filter-open")).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tháng này" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Đóng bộ lọc" })[1]);
+    expect(dock.classList.contains("is-hidden")).toBe(false);
+    expect(dock.hasAttribute("inert")).toBe(false);
+    expect(document.body.classList.contains("tx-filter-open")).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
     expect(screen.getByRole("button", { name: "Toàn bộ" }).getAttribute("aria-pressed")).toBe("true");
   });
 
