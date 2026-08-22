@@ -5,6 +5,7 @@ import vm from "node:vm";
 
 const registerSource = await readFile(new URL("../public/registerSW.js", import.meta.url), "utf8");
 const recoverySource = await readFile(new URL("../public/pwa-update-recovery.js", import.meta.url), "utf8");
+const finalRecoverySource = await readFile(new URL("../public/pwa-final-runtime-recovery.js", import.meta.url), "utf8");
 const accessibilitySource = await readFile(new URL("../src/styles/accessibility-foundations.css", import.meta.url), "utf8");
 
 class FakeElement {
@@ -222,4 +223,62 @@ test("recovery does not skip waiting for a normal cache", async () => {
   const result = await runRecovery({ legacy: false });
   assert.equal(result.skipWaitingCalls, 0);
   assert.equal(result.markerPresent, false);
+});
+
+async function runFinalRuntimeRecovery({ previousMarker = true, finalMarker = false, urls = [] } = {}) {
+  let activateHandler = null;
+  let storedFinalMarker = finalMarker;
+  const navigated = [];
+  const previousCache = {
+    async match() { return previousMarker ? {} : undefined; },
+  };
+  const finalCache = {
+    async match() { return storedFinalMarker ? {} : undefined; },
+    async put() { storedFinalMarker = true; },
+  };
+  const clients = urls.map((url) => ({
+    url,
+    async navigate(nextUrl) { navigated.push(nextUrl); },
+  }));
+  const caches = {
+    async open(name) {
+      return name === "vwce-pwa-update-migration-v1" ? previousCache : finalCache;
+    },
+  };
+  const self = {
+    addEventListener(type, listener) { if (type === "activate") activateHandler = listener; },
+    clients: { async matchAll() { return clients; } },
+  };
+  vm.runInNewContext(finalRecoverySource, {
+    self,
+    caches,
+    URL,
+    Response: class Response { constructor(body) { this.body = body; } },
+    Promise,
+  });
+  let pending = null;
+  activateHandler({ waitUntil: (promise) => { pending = promise; } });
+  await pending;
+  return { navigated, storedFinalMarker };
+}
+
+test("P27 final recovery refreshes only safe Overview legacy clients once", async () => {
+  const overview = "https://ziegepapa.github.io/quy-vwce-cho-be/#/overview";
+  const root = "https://ziegepapa.github.io/quy-vwce-cho-be/#/";
+  const tx = "https://ziegepapa.github.io/quy-vwce-cho-be/#/transactions";
+  const settings = "https://ziegepapa.github.io/quy-vwce-cho-be/#/settings";
+  const result = await runFinalRuntimeRecovery({ urls: [overview, root, tx, settings] });
+  assert.deepEqual(result.navigated, [overview, root]);
+  assert.equal(result.storedFinalMarker, true);
+  const repeated = await runFinalRuntimeRecovery({ finalMarker: true, urls: [overview] });
+  assert.deepEqual(repeated.navigated, []);
+});
+
+test("P27 final recovery leaves all routes untouched when the P25 marker is absent", async () => {
+  const result = await runFinalRuntimeRecovery({
+    previousMarker: false,
+    urls: ["https://ziegepapa.github.io/quy-vwce-cho-be/#/overview"],
+  });
+  assert.deepEqual(result.navigated, []);
+  assert.equal(result.storedFinalMarker, false);
 });
