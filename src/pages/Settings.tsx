@@ -28,10 +28,27 @@ import { syncHealthCopy, type SyncHealth } from "../components/syncHealth";
 import PlanRoadmapSection from "../components/PlanRoadmapSection";
 import LocalDiagnosticsPanel from "../components/LocalDiagnosticsPanel";
 import LocalDataInventoryPanel from "../components/LocalDataInventoryPanel";
+import {
+  IconArchive,
+  IconChevronLeft,
+  IconChevronRight,
+  IconClose,
+  IconDownload,
+  IconLanguage,
+  IconLifebuoy,
+  IconLock,
+  IconSettings,
+  IconShield,
+  IconSliders,
+  IconSync,
+  IconUpload,
+  IconUser,
+} from "../components/Icons";
 import "../styles/settings-operation-errors.css";
 import "../styles/demo-v10-settings.css";
 
 const SETTINGS_AUTOSAVE_MS = 650;
+type SettingsChildView = "password" | "mfa" | "diagnostics" | "backup" | "restore" | null;
 
 type SettingsText = {
   saveError: string;
@@ -361,6 +378,8 @@ export default function SettingsPage({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [settingsChild, setSettingsChild] = useState<SettingsChildView>(null);
+  const childBackRef = useRef<HTMLButtonElement | null>(null);
   const [openAdvancedGroup, setOpenAdvancedGroup] = useState<"prices" | "sync" | "plan" | "data" | null>(() =>
     focusConflictRequest ? "sync" : null,
   );
@@ -387,6 +406,32 @@ export default function SettingsPage({
   const toggleAdvancedGroup = (group: "prices" | "sync" | "plan" | "data") => {
     setOpenAdvancedGroup((current) => current === group ? null : group);
   };
+
+  function closeSettingsChild() {
+    setSettingsChild(null);
+    setPasswordAction(null);
+    setMfaSetupError(null);
+  }
+
+  useEffect(() => {
+    const dock = document.querySelector(".bottom-dock");
+    document.documentElement.classList.toggle("settings-child-open", Boolean(settingsChild));
+    document.body.classList.toggle("settings-child-open", Boolean(settingsChild));
+    dock?.classList.toggle("is-hidden", Boolean(settingsChild));
+    dock?.toggleAttribute("inert", Boolean(settingsChild));
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && settingsChild) closeSettingsChild();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    if (settingsChild) requestAnimationFrame(() => childBackRef.current?.focus());
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.documentElement.classList.remove("settings-child-open");
+      document.body.classList.remove("settings-child-open");
+      dock?.classList.remove("is-hidden");
+      dock?.removeAttribute("inert");
+    };
+  }, [settingsChild]);
 
   useEffect(() => {
     mounted.current = true;
@@ -510,6 +555,23 @@ export default function SettingsPage({
     setActionFeedback(text.themeSaved);
   }
 
+  async function startMfaSetup() {
+    if (readOnly) {
+      showBlocked();
+      return;
+    }
+    if (auth.mfaEnrolled || mfaEnrollment) return;
+    setMfaBusy(true);
+    setMfaSetupError(null);
+    try {
+      const result = await auth.startMfaEnrollment();
+      if (result.error || !result.data) setMfaSetupError(text.mfaStartError);
+      else setMfaEnrollment(result.data);
+    } finally {
+      setMfaBusy(false);
+    }
+  }
+
   async function sendPasswordLink() {
     const email = auth.user?.email;
     if (!email) {
@@ -576,6 +638,7 @@ export default function SettingsPage({
   }
 
   function doImport(file: File) {
+    closeSettingsChild();
     if (readOnly) {
       showBlocked();
       return;
@@ -731,9 +794,8 @@ export default function SettingsPage({
       <div className="set-wrap">
       <header className="set-page-head">
         <div>
-          <p className="set-page-kicker">{text.pageTitle}</p>
           <h1>{text.pageTitle}</h1>
-          <p>{text.pageSubtitle}</p>
+          <p>{locale === "de" ? "Vault und Sicherheit verwalten" : "Quản lý Vault và bảo mật"}</p>
         </div>
         <span className={`set-save-state ${saveState}`} role="status" aria-live="polite">
           {saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}
@@ -760,152 +822,36 @@ export default function SettingsPage({
         </div>
       ) : null}
 
-      <header className="set-section-head">
-        <div><span>{text.account}</span><small>{text.accountSubtitle}</small></div>
-      </header>
-      <section className="gl set-block">
-        <div className="set-account-summary">
-          <strong>{text.vaultName}</strong>
-          <span>{auth.user?.email ?? t("syncNeedsSignIn")}</span>
-        </div>
-        <div className="set-row set-row-static">
-          <span className="si-ico v" aria-hidden>@</span>
-          <span className="sr-body">
-            <span className="sr-name">{text.currentEmail}</span>
-            <span className="sr-sub">{auth.user?.email ?? t("syncNeedsSignIn")}</span>
-          </span>
-        </div>
-        <div className="set-row set-row-static">
-          <span className="si-ico e" aria-hidden>◷</span>
-          <span className="sr-body">
-            <span className="sr-name">{text.lastLogin}</span>
-            <span className="sr-sub">{auth.user?.last_sign_in_at ? localDateTime(auth.user.last_sign_in_at, locale) : text.lastLoginUnavailable}</span>
-          </span>
-        </div>
+      <header className="set-section-head"><span>{text.account}</span></header>
+      <section className="set-group set-identity" aria-label={text.account}>
+        <div className="set-avatar" aria-hidden><IconUser /></div>
+        <div className="set-identity-copy"><strong>{text.vaultName}</strong><span>{auth.user?.email ?? t("syncNeedsSignIn")}</span><small>{text.lastLogin} · {auth.user?.last_sign_in_at ? localDateTime(auth.user.last_sign_in_at, locale) : text.lastLoginUnavailable}</small></div>
       </section>
 
-      <header className="set-section-head">
-        <div><span>{text.security}</span><small>{text.securitySubtitle}</small></div>
-      </header>
-      <section className="gl set-block">
-        <button type="button" className="set-row" onClick={() => setPasswordAction("change")}>
-          <span className="si-ico v" aria-hidden>⌁</span>
-          <span className="sr-body">
-            <span className="sr-name">{text.password}</span>
-            <span className="sr-sub">{text.changePasswordSub}</span>
-          </span>
-          <span className="sr-arr">›</span>
-        </button>
-        <button type="button" className="set-row" onClick={() => setPasswordAction("reset")}>
-          <span className="si-ico e" aria-hidden>↗</span>
-          <span className="sr-body">
-            <span className="sr-name">{text.forgotPassword}</span>
-            <span className="sr-sub">{text.forgotPasswordSub}</span>
-          </span>
-          <span className="sr-arr">›</span>
-        </button>
-        <button
-          type="button"
-          className="set-row"
-          onClick={() =>
-            void (async () => {
-              if (readOnly) {
-                showBlocked();
-                return;
-              }
-              if (auth.mfaEnrolled || mfaEnrollment) return;
-              setMfaBusy(true);
-              setMfaSetupError(null);
-              try {
-                const result = await auth.startMfaEnrollment();
-                if (result.error || !result.data) setMfaSetupError(text.mfaStartError);
-                else setMfaEnrollment(result.data);
-              } finally {
-                setMfaBusy(false);
-              }
-            })()
-          }
-        >
-          <span className="si-ico e" aria-hidden>⍁</span>
-          <span className="sr-body">
-            <span className="sr-name">{t("mfaState")}</span>
-            <span className="sr-sub">{auth.mfaEnrolled ? t("mfaEnabled") : mfaBusy ? t("mfaCreating") : t("mfaSetup")}</span>
-          </span>
-          <span className="sr-arr">›</span>
-        </button>
+      <header className="set-section-head"><span>{text.security}</span><small>{text.securitySubtitle}</small></header>
+      <section className="set-group" aria-label={text.security}>
+        <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => { setPasswordAction("change"); setSettingsChild("password"); }}><span className="set-row-icon security"><IconLock /></span><span className="sr-body"><span className="sr-name">{text.changePassword}</span><span className="sr-sub">{text.changePasswordSub}</span></span><IconChevronRight /></button>
+        <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => { setPasswordAction("reset"); setSettingsChild("password"); }}><span className="set-row-icon"><IconLock /></span><span className="sr-body"><span className="sr-name">{text.forgotPassword}</span><span className="sr-sub">{text.forgotPasswordSub}</span></span><IconChevronRight /></button>
+        <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => setSettingsChild("mfa")}><span className="set-row-icon teal"><IconShield /></span><span className="sr-body"><span className="sr-name">{t("mfaState")}</span><span className="sr-sub">{auth.mfaEnrolled ? t("mfaEnabled") : t("mfaSetup")}</span></span><IconChevronRight /></button>
       </section>
 
-      <header className="set-section-head">
-        <div><span>{t("sync")}</span><small>{text.syncSubtitle}</small></div>
-      </header>
-      <section className="gl set-block">
+      <header className="set-section-head"><span>{t("sync")}</span><small>{text.syncSubtitle}</small></header>
+      <section className="set-group" aria-label={t("sync")}>
         {syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
-        <div className="set-row set-row-static">
-          <span className="si-ico e" aria-hidden>↻</span>
-          <span className="sr-body">
-            <span className="sr-name">{syncingNow ? t("syncing") : syncLabel}</span>
-            <span className="sr-sub">{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : text.lastLocalSyncUnavailable}</span>
-          </span>
-        </div>
-        <button type="button" className="set-row set-sync-primary" disabled={syncingNow} onClick={() => void runVisibleSync()}>
-          <span className="si-ico e" aria-hidden>↻</span>
-          <span className="sr-body">
-            <span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span>
-            <span className="sr-sub">{auth.user?.id ? syncLabel : t("syncNeedsSignIn")}</span>
-          </span>
-          <span className="sr-arr">›</span>
-        </button>
-        <details className="set-sync-details">
-          <summary>{text.syncDetails}</summary>
-          <LocalDiagnosticsPanel />
-        </details>
+        <button type="button" className="set-row set-sync-primary" disabled={syncingNow} onClick={() => void runVisibleSync()}><span className="set-row-icon teal"><IconSync /></span><span className="sr-body"><span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span><span className="sr-sub">{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : auth.user?.id ? syncLabel : t("syncNeedsSignIn")}</span></span><span className="set-row-status">{syncingNow ? "…" : syncLabel}</span></button>
+        <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => setSettingsChild("diagnostics")}><span className="set-row-icon"><IconSliders /></span><span className="sr-body"><span className="sr-name">{text.syncDetails}</span><span className="sr-sub">{locale === "de" ? "Status und lokale Diagnose" : "Trạng thái và chẩn đoán trên thiết bị"}</span></span><IconChevronRight /></button>
       </section>
 
-      <header className="set-section-head">
-        <div><span>{text.data}</span><small>{text.dataSubtitle}</small></div>
-      </header>
-      <section className="gl set-block">
-        <button type="button" className="set-row" onClick={() => void doExport()}>
-          <span className="si-ico v" aria-hidden>↥</span>
-          <span className="sr-body">
-            <span className="sr-name">{t("exportJson")}</span>
-            <span className="sr-sub">{metaBackup ? t("backupOn").replace("{date}", localDate(metaBackup.slice(0, 10), locale)) : t("noBackup")}</span>
-          </span>
-          <span className="sr-arr">›</span>
-        </button>
-        <label className="set-row">
-          <span className="si-ico a" aria-hidden>↧</span>
-          <span className="sr-body">
-            <span className="sr-name">{t("importBackup")}</span>
-            <span className="sr-sub">{text.jsonBackup}</span>
-          </span>
-          <span className="sr-arr">›</span>
-          <input
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) doImport(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
-        <Link to="/notfallmappe" className="set-row" style={{ textDecoration: "none" }}>
-          <span className="si-ico v" aria-hidden>🛡</span>
-          <span className="sr-body">
-            <span className="sr-name">{text.supportHandover}</span>
-            <span className="sr-sub">{text.emergencySub}</span>
-          </span>
-          <span className="sr-arr">›</span>
-        </Link>
+      <header className="set-section-head"><span>{text.data}</span><small>{text.dataSubtitle}</small></header>
+      <section className="set-group" aria-label={text.data}>
+        <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => setSettingsChild("backup")}><span className="set-row-icon teal"><IconArchive /></span><span className="sr-body"><span className="sr-name">{locale === "de" ? "Datensicherung" : "Sao lưu dữ liệu"}</span><span className="sr-sub">{locale === "de" ? "Sicherung exportieren" : "Xuất bản sao lưu"}</span></span><IconChevronRight /></button>
+        <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => setSettingsChild("restore")}><span className="set-row-icon"><IconArchive /></span><span className="sr-body"><span className="sr-name">{locale === "de" ? "Daten wiederherstellen" : "Khôi phục dữ liệu"}</span><span className="sr-sub">{locale === "de" ? "Sicherung importieren" : "Nhập bản sao lưu"}</span></span><IconChevronRight /></button>
+        <Link to="/notfallmappe" className="set-row" style={{ textDecoration: "none" }}><span className="set-row-icon"><IconLifebuoy /></span><span className="sr-body"><span className="sr-name">{text.supportHandover}</span><span className="sr-sub">{text.emergencySub}</span></span><IconChevronRight /></Link>
       </section>
 
-      <header className="set-section-head">
-        <div><span>{text.app}</span><small>{text.preferences}</small></div>
-      </header>
-      <section className="gl set-block set-preferences">
-        <div className="set-preference-head"><span>{text.appearance}</span><small>{text.appearanceSubtitle}</small></div>
+      <header className="set-section-head"><span>{text.app}</span><small>{text.preferences}</small></header>
+      <section className="set-group set-preferences" aria-label={text.app}>
+        <div className="set-preference-head"><span className="set-row-icon"><IconSettings /></span><div><span>{text.appearance}</span><small>{text.appearanceSubtitle}</small></div></div>
         <div className="theme-picker">
           {themeOptions(text).map((opt) => (
             <button key={opt.value} type="button" className={"th-opt" + (theme === opt.value ? " sel" : "")} onClick={() => pickTheme(opt.value)}>
@@ -914,7 +860,7 @@ export default function SettingsPage({
             </button>
           ))}
         </div>
-        <div className="set-preference-head language"><span>{text.language}</span><small>{text.languageSubtitle}</small></div>
+        <div className="set-preference-head language"><span className="set-row-icon"><IconLanguage /></span><div><span>{text.language}</span><small>{text.languageSubtitle}</small></div></div>
         <div className="lang-options">
           <button type="button" className={`lang-opt${locale === "vi" ? " selected" : ""}`} onClick={() => { setLocale("vi"); setActionError(null); setActionFeedback("Đã lưu ngôn ngữ trên thiết bị này."); }}>
             {t("vietnamese")}<small>{locale === "vi" ? t("using") : t("available")}</small>
@@ -925,53 +871,20 @@ export default function SettingsPage({
         </div>
       </section>
 
-      {passwordAction ? (
-        <section className="gl set-password-confirm" role="dialog" aria-modal="true" aria-label={text.passwordLinkTitle}>
-          <strong>{passwordAction === "change" ? text.changePassword : text.passwordLinkTitle}</strong>
-          <p>{text.passwordLinkBody.replace("{email}", auth.user?.email ?? "—")}</p>
-          <div className="set-password-confirm-actions">
-            <button type="button" className="secondary" disabled={passwordActionBusy} onClick={() => setPasswordAction(null)}>{text.passwordActionCancel}</button>
-            <button type="button" disabled={passwordActionBusy} onClick={() => void sendPasswordLink()}>{passwordActionBusy ? text.passwordLinkSending : text.sendResetLink}</button>
-          </div>
-        </section>
-      ) : null}
-
-      {mfaEnrollment ? (
-        <section className="gl set-security-setup" style={{ padding: 16 }}>
-          <img src={mfaEnrollment.qrCode} alt={text.qrAlt} style={{ width: 180, borderRadius: 12 }} />
-          <code style={{ display: "block", marginTop: 8, overflowWrap: "anywhere" }}>{mfaEnrollment.secret}</code>
-          <input
-            value={mfaCode}
-            onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
-            maxLength={6}
-            inputMode="numeric"
-            placeholder={t("totpCode")}
-            style={{ marginTop: 8, width: "100%" }}
-          />
-          <button
-            type="button"
-            disabled={mfaBusy || mfaCode.length !== 6}
-            onClick={() =>
-              void (async () => {
-                setMfaBusy(true);
-                try {
-                  const result = await auth.verifyMfaEnrollment(mfaEnrollment.factorId, mfaCode);
-                  if (result.error) setMfaSetupError(text.mfaVerifyError);
-                  else {
-                    setMfaEnrollment(null);
-                    setMfaCode("");
-                    setActionFeedback(text.mfaVerified);
-                  }
-                } finally {
-                  setMfaBusy(false);
-                }
-              })()
-            }
-          >
-            {t("verifyTotp")}
-          </button>
-          {mfaSetupError ? <p role="alert">{mfaSetupError}</p> : null}
-        </section>
+      {settingsChild ? (
+        <div className="settings-child-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSettingsChild(); }}>
+          <section className="settings-child-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-child-title">
+            <div className="settings-child-grabber" aria-hidden />
+            <header className="settings-child-head"><button ref={childBackRef} type="button" onClick={closeSettingsChild}><IconChevronLeft />{locale === "de" ? "Zurück" : "Quay lại"}</button><strong id="settings-child-title">{settingsChild === "password" ? (passwordAction === "change" ? text.changePassword : text.forgotPassword) : settingsChild === "mfa" ? t("mfaState") : settingsChild === "diagnostics" ? text.syncDetails : settingsChild === "backup" ? (locale === "de" ? "Datensicherung" : "Sao lưu dữ liệu") : (locale === "de" ? "Daten wiederherstellen" : "Khôi phục dữ liệu")}</strong><button type="button" aria-label={t("close")} onClick={closeSettingsChild}><IconClose /></button></header>
+            <div className="settings-child-body">
+              {settingsChild === "password" ? <><p>{text.passwordLinkBody.replace("{email}", auth.user?.email ?? "—")}</p><button className="settings-child-primary" type="button" disabled={passwordActionBusy} onClick={() => void sendPasswordLink()}>{passwordActionBusy ? text.passwordLinkSending : text.sendResetLink}</button></> : null}
+              {settingsChild === "mfa" ? <>{auth.mfaEnrolled ? <p className="settings-child-success">{t("mfaEnabled")}</p> : mfaEnrollment ? <><img className="settings-mfa-qr" src={mfaEnrollment.qrCode} alt={text.qrAlt} /><code>{mfaEnrollment.secret}</code><input aria-label={t("totpCode")} value={mfaCode} onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))} maxLength={6} inputMode="numeric" placeholder={t("totpCode")} /><button className="settings-child-primary" type="button" disabled={mfaBusy || mfaCode.length !== 6} onClick={() => void (async () => { setMfaBusy(true); try { const result = await auth.verifyMfaEnrollment(mfaEnrollment.factorId, mfaCode); if (result.error) setMfaSetupError(text.mfaVerifyError); else { setMfaEnrollment(null); setMfaCode(""); setActionFeedback(text.mfaVerified); closeSettingsChild(); } } finally { setMfaBusy(false); } })()}>{mfaBusy ? t("syncing") : t("verifyTotp")}</button></> : <><p>{locale === "de" ? "Schützen Sie dieses Konto mit einem zeitbasierten Einmalcode." : "Bảo vệ tài khoản này bằng mã xác thực dùng một lần."}</p><button className="settings-child-primary" type="button" disabled={mfaBusy} onClick={() => void startMfaSetup()}>{mfaBusy ? t("mfaCreating") : t("mfaSetup")}</button></>}{mfaSetupError ? <p role="alert">{mfaSetupError}</p> : null}</> : null}
+              {settingsChild === "diagnostics" ? <LocalDiagnosticsPanel /> : null}
+              {settingsChild === "backup" ? <><p>{actionFeedback ?? (metaBackup ? t("backupOn").replace("{date}", localDate(metaBackup.slice(0, 10), locale)) : t("noBackup"))}</p><button className="settings-child-primary" type="button" onClick={() => void doExport()}><IconDownload />{t("exportJson")}</button></> : null}
+              {settingsChild === "restore" ? <><p>{locale === "de" ? "Wählen Sie eine JSON-Sicherung. Die vorhandenen Sicherheitsprüfungen bleiben aktiv." : "Chọn bản sao JSON. Các bước bảo vệ dữ liệu hiện có vẫn được áp dụng."}</p><label className="settings-child-primary settings-file-action"><IconUpload />{t("importBackup")}<input type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = ""; }} /></label></> : null}
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {pendingFile ? (

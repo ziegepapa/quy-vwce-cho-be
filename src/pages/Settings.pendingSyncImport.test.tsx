@@ -100,6 +100,8 @@ function renderSettings(onReload = vi.fn()) {
 }
 
 async function selectBackupFile(container: HTMLElement) {
+  fireEvent.click(await screen.findByRole("button", { name: /Khôi phục dữ liệu/ }));
+  await screen.findByRole("dialog", { name: "Khôi phục dữ liệu" });
   const input = container.querySelector('input[type="file"]') as HTMLInputElement;
   const file = new File([FILE_JSON], "backup.json", { type: "application/json" });
   Object.defineProperty(file, "text", { value: () => Promise.resolve(FILE_JSON) });
@@ -141,7 +143,6 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
   it("hiện cảnh báo ngay trong hộp xác nhận và không nhập im lặng", async () => {
     dbMocks.importBackup.mockRejectedValueOnce(blocked(2, 1, 0));
     const { container, onReload } = renderSettings();
-    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
@@ -162,7 +163,6 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
   it("hiện đúng cảnh báo khi việc còn treo chỉ là một upsert bình thường (PR3)", async () => {
     dbMocks.importBackup.mockRejectedValueOnce(blocked(1, 0, 0));
     const { container } = renderSettings();
-    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
@@ -176,7 +176,6 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
   it("đổi nút xác nhận thành nhãn chấp nhận rủi ro và truyền đúng cờ, không tải sao lưu hai lần", async () => {
     dbMocks.importBackup.mockRejectedValueOnce(blocked(1, 1, 0));
     const { container, onReload } = renderSettings();
-    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
@@ -197,7 +196,6 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
   it("đẩy đồng bộ trước: gọi đúng engine, xoá cảnh báo và không nhập gì", async () => {
     dbMocks.importBackup.mockRejectedValueOnce(blocked(1, 1, 0));
     const { container, onReload } = renderSettings();
-    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
@@ -217,7 +215,6 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
     dbMocks.importBackup.mockRejectedValueOnce(blocked(1, 1, 0));
     syncMocks.pushOutbox.mockRejectedValueOnce(new Error("PUSH_SECRET_CANARY"));
     const { container } = renderSettings();
-    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
@@ -236,7 +233,6 @@ describe("cảnh báo nhập sao lưu khi còn việc đồng bộ chưa xong", 
 
   it("luồng bình thường không đổi khi không còn việc đồng bộ treo", async () => {
     const { container, onReload } = renderSettings();
-    await screen.findByText("Nhập sao lưu");
     await selectBackupFile(container);
 
     fireEvent.click(screen.getByRole("button", { name: CONFIRM_LABEL }));
