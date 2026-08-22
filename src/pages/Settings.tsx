@@ -27,6 +27,7 @@ import { SyncHealthSummary } from "../components/SyncHealthSummary";
 import { syncHealthCopy, type SyncHealth } from "../components/syncHealth";
 import PlanRoadmapSection from "../components/PlanRoadmapSection";
 import SettingsPlanStudio from "../components/SettingsPlanStudio";
+import AnnualPlanStudio from "../components/AnnualPlanStudio";
 import LocalDiagnosticsPanel from "../components/LocalDiagnosticsPanel";
 import LocalDataInventoryPanel from "../components/LocalDataInventoryPanel";
 import {
@@ -47,6 +48,7 @@ import {
 } from "../components/Icons";
 import "../styles/settings-operation-errors.css";
 import "../styles/demo-v10-settings.css";
+import "../styles/settings-horizon.css";
 
 const SETTINGS_AUTOSAVE_MS = 650;
 type SettingsChildView = "password" | "mfa" | "diagnostics" | "backup" | "restore" | null;
@@ -343,6 +345,7 @@ export default function SettingsPage({
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab");
   const comparisonMode = searchParams.get("view") === "next";
+  const horizonMode = searchParams.get("view") === "horizon";
   // `tab=data` is the existing deep link used by conflict/recovery flows; retain it
   // while the Settings UI stores manual toggles under the clearer `tab=advanced`.
   const showAdvanced = requestedTab === "advanced" || requestedTab === "data";
@@ -367,6 +370,7 @@ export default function SettingsPage({
   const text = useMemo(() => settingsStrings(locale), [locale]);
   const [dead, setDead] = useState<OutboxItem[]>([]);
   const [lastLocalSyncAt, setLastLocalSyncAt] = useState("");
+  const [planTransactions, setPlanTransactions] = useState<Awaited<ReturnType<typeof listTransactions>>>([]);
   const [mfaEnrollment, setMfaEnrollment] = useState<{
     factorId: string;
     qrCode: string;
@@ -442,8 +446,12 @@ export default function SettingsPage({
     setSettingsLoadError(false);
     void (async () => {
       try {
-        const nextSettings = await getSettings();
-        const nextMetaBackup = (await db.appMetadata.get("meta"))?.lastBackupAt ?? "";
+        const [nextSettings, meta, nextTransactions] = await Promise.all([
+          getSettings(),
+          db.appMetadata.get("meta"),
+          listTransactions(),
+        ]);
+        const nextMetaBackup = meta?.lastBackupAt ?? "";
         const [nextDead, syncMeta] = auth.user?.id
           ? await Promise.all([listDeadOutbox(), getSyncMeta(auth.user.id)])
           : [[] as OutboxItem[], null] as const;
@@ -452,6 +460,7 @@ export default function SettingsPage({
         setMetaBackup(nextMetaBackup);
         setDead(nextDead);
         setLastLocalSyncAt(syncMeta ? [syncMeta.lastPulledAt, syncMeta.lastPushedAt].filter(Boolean).sort().at(-1) ?? "" : "");
+        setPlanTransactions(nextTransactions);
       } catch {
         if (!cancelled) setSettingsLoadError(true);
       } finally {
@@ -793,8 +802,20 @@ export default function SettingsPage({
 
   return (
     <main className="demo-v10-screen" aria-label={t("settingsAria")}>
-      <div className={`set-wrap ${comparisonMode ? "settings-next" : "vault-atelier"}`}>
-      {comparisonMode ? (
+      <div className={`set-wrap ${horizonMode ? "settings-horizon" : comparisonMode ? "settings-next" : "vault-atelier"}`}>
+      {horizonMode ? (
+        <header className="settings-horizon-head">
+          <div>
+            <span className="settings-horizon-kicker">VWCE / HORIZON <i aria-hidden>2026</i></span>
+            <h1>{locale === "de" ? "Der Familienplan, der mitgeht." : "Kế hoạch gia đình, nhìn rõ từng năm."}</h1>
+            <p>{locale === "de" ? "Ein Steuerraum für Jahresbeiträge, Schutz und Gerätevertrauen." : "Không gian điều hành cho mức góp từng năm, bảo mật và niềm tin giữa các thiết bị."}</p>
+          </div>
+          <div className="settings-horizon-actions">
+            <span className={`set-save-state ${saveState}`} role="status" aria-live="polite">{saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}</span>
+            <button type="button" className="settings-horizon-compare" onClick={() => setSearchParams(showAdvanced ? { tab: "advanced" } : {}, { replace: true })}>{locale === "de" ? "P29 öffnen" : "Mở P29"}</button>
+          </div>
+        </header>
+      ) : comparisonMode ? (
         <header className="settings-next-head">
           <div>
             <span className="settings-next-kicker">VWCE VAULT <i aria-hidden>01</i></span>
@@ -821,8 +842,8 @@ export default function SettingsPage({
             <span className={`set-save-state ${saveState}`} role="status" aria-live="polite">
               {saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}
             </span>
-            <button type="button" className="set-compare-link" onClick={() => setSearchParams({ ...(showAdvanced ? { tab: "advanced" } : {}), view: "next" }, { replace: true })}>
-              {locale === "de" ? "Neue Ansicht" : "Xem bản mới"}
+            <button type="button" className="set-compare-link" onClick={() => setSearchParams({ ...(showAdvanced ? { tab: "advanced" } : {}), view: "horizon" }, { replace: true })}>
+              {locale === "de" ? "Horizon ansehen" : "Xem HORIZON"}
             </button>
           </div>
         </header>
@@ -848,7 +869,14 @@ export default function SettingsPage({
         </div>
       ) : null}
 
-      {comparisonMode ? (
+      {horizonMode ? (
+        <section className="settings-horizon-console" aria-label={text.account}>
+          <div className="settings-horizon-console-orbit" aria-hidden><i /><i /><i /></div>
+          <div className="settings-horizon-console-copy"><span>{locale === "de" ? "Familien-Vault" : "Family Vault"}</span><strong>{text.vaultName}</strong><small>{auth.user?.email ?? t("syncNeedsSignIn")}</small></div>
+          <div className="settings-horizon-sync-state" aria-live="polite"><span className={`settings-horizon-sync-dot ${syncHealth?.tone ?? "info"}`} aria-hidden /><strong>{syncingNow ? t("syncing") : syncLabel}</strong><small>{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : auth.user?.id ? text.syncSubtitle : t("syncNeedsSignIn")}</small></div>
+          <button type="button" className="settings-horizon-sync" disabled={syncingNow} onClick={() => void runVisibleSync()}><IconSync /><span>{syncingNow ? t("syncing") : t("syncNow")}</span></button>
+        </section>
+      ) : comparisonMode ? (
         <section className="settings-next-console" aria-label={text.account}>
           <div className="settings-next-console-copy">
             <span className="settings-next-console-label">{locale === "de" ? "Vault-Status" : "Trạng thái Vault"}</span>
@@ -877,6 +905,18 @@ export default function SettingsPage({
           </button>
         </section>
       )}
+
+      {horizonMode ? (
+        <AnnualPlanStudio
+          target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
+          startDate={settings.startDate}
+          contributionY1={settings.contributionY1}
+          contributionY2={settings.contributionY2}
+          trackInAppCash={settings.trackInAppCash}
+          transactions={planTransactions}
+          onChangeTarget={(next) => patchSettings({ planTarget: next })}
+        />
+      ) : null}
 
       <section className="set-atelier-cluster set-security-cluster" aria-label={text.security}>
       <header className="set-section-head"><span>{text.security}</span><small>{text.securitySubtitle}</small></header>
@@ -978,7 +1018,7 @@ export default function SettingsPage({
           setSearchParams(open ? { tab: "advanced" } : {}, { replace: true });
         }}
       >
-        <summary>{comparisonMode ? (locale === "de" ? "Vertiefen & prüfen" : "Mở rộng & kiểm tra") : t("advanced")}</summary>
+        <summary>{horizonMode ? (locale === "de" ? "Systemwerkstatt" : "Xưởng hệ thống") : comparisonMode ? (locale === "de" ? "Vertiefen & prüfen" : "Mở rộng & kiểm tra") : t("advanced")}</summary>
         <p className="advanced-intro">{t("advancedIntro")}</p>
 
         <details className="advanced-group" open={openAdvancedGroup === "prices"}>
@@ -1005,9 +1045,19 @@ export default function SettingsPage({
           ) : <p className="advanced-empty">{t("syncConflictsSignIn")}</p>}
         </details>
 
-        <details className="advanced-group" open={openAdvancedGroup === "plan"}>
+        <details className="advanced-group" open={openAdvancedGroup === "plan"} hidden={horizonMode}>
           <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("plan"); }}>{t("plan")}</summary>
-          {comparisonMode ? (
+          {horizonMode ? (
+            <AnnualPlanStudio
+              target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
+              startDate={settings.startDate}
+              contributionY1={settings.contributionY1}
+              contributionY2={settings.contributionY2}
+              trackInAppCash={settings.trackInAppCash}
+              transactions={planTransactions}
+              onChangeTarget={(next) => patchSettings({ planTarget: next })}
+            />
+          ) : comparisonMode ? (
             <SettingsPlanStudio
               target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
               onChangeTarget={(next) => patchSettings({ planTarget: next })}
