@@ -1,18 +1,14 @@
-/* P33 CLARITY: workspace-first settings, intentionally separate from Vault Atelier/Horizon. */
 .settings-clarity {
   --clarity-ink: #17201e;
   --clarity-muted: #68706d;
   --clarity-paper: #f4f7f1;
-  --clarity-panel: #ffffff;
   --clarity-line: #d8ded7;
   --clarity-green: #0b6354;
   --clarity-lime: #c9fa8d;
   --clarity-signal: #ff5e3d;
   max-width: 760px;
   padding: 0 18px 108px;
-  background:
-    linear-gradient(90deg, transparent 0, transparent calc(100% - 1px), rgba(23, 32, 30, .05) calc(100% - 1px)),
-    var(--clarity-paper);
+  background: var(--clarity-paper);
   color: var(--clarity-ink);
 }
 
@@ -31,15 +27,15 @@
 .clarity-save i { width: 7px; height: 7px; border-radius: 50%; background: var(--clarity-green); box-shadow: 0 0 0 4px rgba(11, 99, 84, .11); }
 
 .clarity-tabs { position: sticky; z-index: 5; top: 0; display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 -18px; padding: 12px 18px 9px; border-bottom: 1px solid var(--clarity-line); background: rgba(244, 247, 241, .92); backdrop-filter: blur(18px); }
-.clarity-tabs button { min-height: 44px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--clarity-muted); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; transition: color 150ms ease-out, border-color 150ms ease-out; }
+.clarity-tabs button { min-height: 44px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--clarity-muted); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .clarity-tabs button.active { border-color: var(--clarity-ink); color: var(--clarity-ink); }
 .clarity-tabs button:focus-visible, .clarity-workspace button:focus-visible, .clarity-workspace input:focus-visible, .clarity-workspace summary:focus-visible { outline: 3px solid var(--clarity-signal); outline-offset: 2px; }
 
-.clarity-page { padding: 31px 0 22px; animation: clarity-enter 220ms cubic-bezier(.23, 1, .32, 1) both; }
+.clarity-page { padding: 31px 0 22px; }
 .clarity-eyebrow { margin: 0 0 9px; color: var(--clarity-green); font-size: 10px; font-weight: 900; letter-spacing: .14em; }
 .settings-clarity .clarity-page h1 { max-width: 620px; margin: 0; color: var(--clarity-ink) !important; font-size: clamp(32px, 8vw, 54px); letter-spacing: -.065em; line-height: .93; }
 
-.clarity-focus { position: relative; display: grid; gap: 9px; margin: 34px 0 36px; padding: 22px 0 0; border-top: 2px solid var(--clarity-ink); }
+.clarity-focus { display: grid; gap: 9px; margin: 34px 0 36px; padding: 22px 0 0; border-top: 2px solid var(--clarity-ink); }
 .clarity-focus > span { color: var(--clarity-muted); font-size: 11px; font-weight: 800; letter-spacing: .04em; }
 .clarity-focus strong { max-width: 480px; font-size: 21px; letter-spacing: -.035em; line-height: 1.08; }
 .clarity-focus button { display: inline-flex; width: fit-content; min-height: 42px; align-items: center; gap: 4px; margin-top: 6px; padding: 0 13px; border: 1px solid var(--clarity-ink); background: var(--clarity-ink); color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; transition: transform 150ms ease-out, background 150ms ease-out; }
@@ -113,6 +109,4 @@
 .clarity-preferences button { min-height: 37px; padding: 0 10px; border: 1px solid var(--clarity-line); border-radius: 0; background: #fff; color: var(--clarity-ink); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .clarity-preferences button.selected { border-color: var(--clarity-ink); background: var(--clarity-ink); color: var(--clarity-lime); }
 
-@keyframes clarity-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (min-width: 680px) { .settings-clarity { padding-left: 32px; padding-right: 32px; } .clarity-tabs { margin-left: -32px; margin-right: -32px; padding-left: 32px; padding-right: 32px; } .clarity-year-switcher { margin-left: -32px; margin-right: -32px; padding-left: 32px; padding-right: 32px; } .clarity-status-list > div { grid-template-columns: 150px minmax(0, 1fr) 160px; } }
-@media (prefers-reduced-motion: reduce) { .clarity-page { animation: none; } .clarity-workspace * { transition-duration: .01ms !important; } }
