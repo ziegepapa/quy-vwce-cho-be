@@ -116,15 +116,23 @@ afterEach(() => {
 });
 
 describe("German Settings and mobile Advanced hierarchy", () => {
-  it("uses German copy, removes the large clock and keeps sync diagnostics behind a compact disclosure", async () => {
+  it("uses the redesigned German hierarchy, localized preference labels and compact sync diagnostics", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
     const { container } = renderGermanSettings();
 
     await screen.findByText("Konto & Sicherheit");
+    expect(screen.getByRole("heading", { name: "Einstellungen" })).toBeTruthy();
+    expect(container.querySelector(".set-page-head")).toBeTruthy();
+    expect(screen.getByText("Auf diesem Gerät gespeichert")).toBeTruthy();
     expect(screen.getByText("Aktuelle E-Mail-Adresse")).toBeTruthy();
     expect(screen.getByText("Letzte Anmeldung")).toBeTruthy();
     expect(screen.queryByText("Berlin · aktuelle Zeit")).toBeNull();
     expect(screen.getByRole("button", { name: "Vietnamesisch Verfügbar" })).toBeTruthy();
+    expect(screen.getByText("Erscheinungsbild")).toBeTruthy();
+    expect(screen.getByText("Sprache")).toBeTruthy();
+    expect(screen.getByText("Ozean")).toBeTruthy();
+    expect(screen.queryByText("Ocean")).toBeNull();
+    expect(container.querySelector("button.set-sync-primary")).toBeTruthy();
     expect(screen.getByText("Kurse & Marktdaten")).toBeTruthy();
     expect(screen.getByText("Synchronisierung & Datenkonflikte")).toBeTruthy();
     expect(screen.getByText("Gerätediagnose")).toBeTruthy();
