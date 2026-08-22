@@ -113,22 +113,33 @@ describe("Settings initial load state", () => {
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
   });
 
-  it("renders the required illustrative Horizon scenario with traceable percent, euro and disclaimer", async () => {
+  it("answers this year first and keeps illustrative Horizon mechanics collapsed", async () => {
     dbMocks.getSettings.mockResolvedValue(loadedSettings());
     renderSettings();
 
     expect(await screen.findByText("Mẫu minh họa, không phải dữ liệu Quỹ")).toBeTruthy();
     expect(document.body.textContent).toContain("50.000");
-    expect(document.body.textContent).toContain("18.000");
-    expect(document.body.textContent).toContain("1.200");
     expect(document.body.textContent).toContain("300");
+    expect(screen.getByRole("heading", { name: "Năm nay · 2026" })).toBeTruthy();
+    expect(document.querySelector('[data-horizon-phase="accumulate"]')).toBeTruthy();
+    expect(document.body.textContent).toContain("100%");
+    expect(document.body.textContent).toContain("Không cần");
     expect(document.body.textContent).toContain("Chỉ hiển thị · không tạo giao dịch.");
 
-    fireEvent.click(screen.getByRole("button", { name: /2032.*Chuyển dần/ }));
+    const options = document.querySelector("details.cbo-horizon-options") as HTMLDetailsElement;
+    expect(options.open).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Gần hạn (ví dụ)" }));
     expect(document.querySelector('[data-horizon-phase="transition"]')).toBeTruthy();
     expect(document.body.textContent).toContain("50%");
     expect(document.body.textContent).toContain("3.360");
-    expect(document.body.textContent).toContain("€ VWCE góp");
+
+    fireEvent.click(screen.getByText("Tùy chỉnh Horizon"));
+    expect(options.open).toBe(true);
+    expect(document.body.textContent).toContain("€ VWCE góp =");
+    expect(screen.getByText("Hôm nay")).toBeTruthy();
+    expect(screen.getByText("Bắt đầu an toàn")).toBeTruthy();
+    expect(screen.getByText("Năm cần tiền")).toBeTruthy();
   });
 
   it("routes Settings sign-out through the app-shell callback", async () => {

@@ -129,7 +129,7 @@ test("mobile local-vault routes keep primary controls reachable without horizont
   const { localVaultEntry } = await openPrivateVaultEntry(page);
   test.skip(!(await localVaultEntry.isVisible()), "requires the local-only preview entry");
 
-  for (const route of ["./", "./#/transactions", "./#/settings?view=clarity", "./#/settings?view=horizon"]) {
+  for (const route of ["./", "./#/transactions", "./#/settings"]) {
     await page.goto(route, { waitUntil: "networkidle" });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     const dockHeights = await page.locator(".bottom-dock a").evaluateAll((links) => links.map((link) => Math.round(link.getBoundingClientRect().height)));
@@ -137,12 +137,9 @@ test("mobile local-vault routes keep primary controls reachable without horizont
     expect(dockHeights.every((height) => height >= 44)).toBe(true);
   }
 
-  await expect(page.locator(".settings-horizon")).toHaveCount(1);
-  await expect(page.locator(".settings-horizon .annual-plan-studio")).toHaveCount(1);
-  await expect.poll(() => page.locator(".settings-horizon").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 });
 
-test("mobile CBO Settings retains three tabs and the Horizon illustrative scenario without overflow", async ({ page }) => {
+test("mobile Settings gives the annual Horizon answer before optional mechanics without overflow", async ({ page }) => {
   await page.setViewportSize(iphone13Viewport);
   const { localVaultEntry } = await openPrivateVaultEntry(page);
   test.skip(!(await localVaultEntry.isVisible()), "requires the local-only preview entry");
@@ -151,17 +148,27 @@ test("mobile CBO Settings retains three tabs and the Horizon illustrative scenar
   await expect(page.locator(".settings-cbo")).toHaveCount(1);
   await expect(page.getByRole("tab", { name: "Chung" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("Mẫu minh họa, không phải dữ liệu Quỹ")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Năm nay · 2026" })).toBeVisible();
   await expect(page.getByText(/50\.000/)).toBeVisible();
-  await expect(page.getByText(/18\.000/)).toBeVisible();
+  await expect(page.getByText("Không cần")).toBeVisible();
+  await expect(page.getByText("Chỉ hiển thị · không tạo giao dịch.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /2032/ })).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
   const tabHeights = await page.getByRole("tab").evaluateAll((tabs) => tabs.map((tab) => Math.round(tab.getBoundingClientRect().height)));
   expect(tabHeights).toEqual([44, 44, 44]);
 
-  await page.getByRole("button", { name: /2032.*Chuyển dần/ }).click();
+  const options = page.locator("details.cbo-horizon-options");
+  await expect(options).not.toHaveAttribute("open", "");
+  await page.getByRole("button", { name: "Gần hạn (ví dụ)" }).click();
   await expect(page.locator('[data-horizon-phase="transition"]')).toBeVisible();
   await expect(page.getByText(/3\.360/)).toBeVisible();
-  await expect(page.getByText("Chỉ hiển thị · không tạo giao dịch.")).toBeVisible();
+  await page.getByText("Tùy chỉnh Horizon").click();
+  await expect(options).toHaveAttribute("open", "");
+  await expect(page.getByText("€ VWCE góp = 300 € × 50%")).toBeVisible();
+  await expect(page.getByText("Hôm nay")).toBeVisible();
+  await expect(page.getByText("Bắt đầu an toàn")).toBeVisible();
+  await expect(page.getByText("Năm cần tiền")).toBeVisible();
 
   await page.getByRole("tab", { name: "Dữ liệu" }).click();
   await expect(page.getByRole("tab", { name: "Dữ liệu" })).toHaveAttribute("aria-selected", "true");
