@@ -791,11 +791,12 @@ export default function SettingsPage({
 
   return (
     <main className="demo-v10-screen" aria-label={t("settingsAria")}>
-      <div className="set-wrap">
-      <header className="set-page-head">
+      <div className="set-wrap vault-atelier">
+      <header className="set-page-head set-atelier-topbar">
         <div>
+          <span className="set-atelier-eyebrow"><span>VWCE VAULT <i aria-hidden>•</i></span><span className="set-atelier-account-label">{text.account}</span></span>
           <h1>{text.pageTitle}</h1>
-          <p>{locale === "de" ? "Vault und Sicherheit verwalten" : "Quản lý Vault và bảo mật"}</p>
+          <p>{locale === "de" ? "Ihr privater Finanzraum" : "Không gian tài chính riêng của bạn"}</p>
         </div>
         <span className={`set-save-state ${saveState}`} role="status" aria-live="polite">
           {saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}
@@ -822,35 +823,46 @@ export default function SettingsPage({
         </div>
       ) : null}
 
-      <header className="set-section-head"><span>{text.account}</span></header>
-      <section className="set-group set-identity" aria-label={text.account}>
-        <div className="set-avatar" aria-hidden><IconUser /></div>
-        <div className="set-identity-copy"><strong>{text.vaultName}</strong><span>{auth.user?.email ?? t("syncNeedsSignIn")}</span><small>{text.lastLogin} · {auth.user?.last_sign_in_at ? localDateTime(auth.user.last_sign_in_at, locale) : text.lastLoginUnavailable}</small></div>
+      <section className="set-atelier-hero" aria-label={text.account}>
+        <div className="set-atelier-orbit" aria-hidden><span /><span /><span /></div>
+        <div className="set-identity set-atelier-identity">
+          <div className="set-avatar" aria-hidden><IconUser /></div>
+          <div className="set-identity-copy"><strong>{text.vaultName}</strong><span>{auth.user?.email ?? t("syncNeedsSignIn")}</span><small>{text.lastLogin} · {auth.user?.last_sign_in_at ? localDateTime(auth.user.last_sign_in_at, locale) : text.lastLoginUnavailable}</small></div>
+        </div>
+        <button type="button" className="set-sync-primary set-atelier-sync" disabled={syncingNow} onClick={() => void runVisibleSync()}>
+          <span className="set-row-icon teal"><IconSync /></span><span className="sr-body"><span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span><span className="sr-sub">{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : auth.user?.id ? syncLabel : t("syncNeedsSignIn")}</span></span><span className="set-row-status">{syncingNow ? "…" : syncLabel}</span>
+        </button>
       </section>
 
+      <section className="set-atelier-cluster set-security-cluster" aria-label={text.security}>
       <header className="set-section-head"><span>{text.security}</span><small>{text.securitySubtitle}</small></header>
-      <section className="set-group" aria-label={text.security}>
+      <section className="set-group">
         <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => { setPasswordAction("change"); setSettingsChild("password"); }}><span className="set-row-icon security"><IconLock /></span><span className="sr-body"><span className="sr-name">{text.changePassword}</span><span className="sr-sub">{text.changePasswordSub}</span></span><IconChevronRight /></button>
         <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => { setPasswordAction("reset"); setSettingsChild("password"); }}><span className="set-row-icon"><IconLock /></span><span className="sr-body"><span className="sr-name">{text.forgotPassword}</span><span className="sr-sub">{text.forgotPasswordSub}</span></span><IconChevronRight /></button>
         <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => setSettingsChild("mfa")}><span className="set-row-icon teal"><IconShield /></span><span className="sr-body"><span className="sr-name">{t("mfaState")}</span><span className="sr-sub">{auth.mfaEnrolled ? t("mfaEnabled") : t("mfaSetup")}</span></span><IconChevronRight /></button>
       </section>
-
-      <header className="set-section-head"><span>{t("sync")}</span><small>{text.syncSubtitle}</small></header>
-      <section className="set-group" aria-label={t("sync")}>
-        {syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
-        <button type="button" className="set-row set-sync-primary" disabled={syncingNow} onClick={() => void runVisibleSync()}><span className="set-row-icon teal"><IconSync /></span><span className="sr-body"><span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span><span className="sr-sub">{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : auth.user?.id ? syncLabel : t("syncNeedsSignIn")}</span></span><span className="set-row-status">{syncingNow ? "…" : syncLabel}</span></button>
-        <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => setSettingsChild("diagnostics")}><span className="set-row-icon"><IconSliders /></span><span className="sr-body"><span className="sr-name">{text.syncDetails}</span><span className="sr-sub">{locale === "de" ? "Status und lokale Diagnose" : "Trạng thái và chẩn đoán trên thiết bị"}</span></span><IconChevronRight /></button>
       </section>
 
+      <section className="set-atelier-cluster set-sync-cluster" aria-label={t("sync")}>
+      <header className="set-section-head"><span>{t("sync")}</span><small>{text.syncSubtitle}</small></header>
+      <section className="set-group">
+        {syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
+        <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => setSettingsChild("diagnostics")}><span className="set-row-icon"><IconSliders /></span><span className="sr-body"><span className="sr-name">{text.syncDetails}</span><span className="sr-sub">{locale === "de" ? "Status und lokale Diagnose" : "Trạng thái và chẩn đoán trên thiết bị"}</span></span><IconChevronRight /></button>
+      </section>
+      </section>
+
+      <section className="set-atelier-cluster set-data-cluster" aria-label={text.data}>
       <header className="set-section-head"><span>{text.data}</span><small>{text.dataSubtitle}</small></header>
-      <section className="set-group" aria-label={text.data}>
+      <section className="set-group">
         <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => setSettingsChild("backup")}><span className="set-row-icon teal"><IconArchive /></span><span className="sr-body"><span className="sr-name">{locale === "de" ? "Datensicherung" : "Sao lưu dữ liệu"}</span><span className="sr-sub">{locale === "de" ? "Sicherung exportieren" : "Xuất bản sao lưu"}</span></span><IconChevronRight /></button>
         <button type="button" className="set-row" aria-haspopup="dialog" onClick={() => setSettingsChild("restore")}><span className="set-row-icon"><IconArchive /></span><span className="sr-body"><span className="sr-name">{locale === "de" ? "Daten wiederherstellen" : "Khôi phục dữ liệu"}</span><span className="sr-sub">{locale === "de" ? "Sicherung importieren" : "Nhập bản sao lưu"}</span></span><IconChevronRight /></button>
         <Link to="/notfallmappe" className="set-row" style={{ textDecoration: "none" }}><span className="set-row-icon"><IconLifebuoy /></span><span className="sr-body"><span className="sr-name">{text.supportHandover}</span><span className="sr-sub">{text.emergencySub}</span></span><IconChevronRight /></Link>
       </section>
+      </section>
 
+      <section className="set-atelier-cluster set-personalize-cluster" aria-label={text.app}>
       <header className="set-section-head"><span>{text.app}</span><small>{text.preferences}</small></header>
-      <section className="set-group set-preferences" aria-label={text.app}>
+      <section className="set-group set-preferences">
         <div className="set-preference-head"><span className="set-row-icon"><IconSettings /></span><div><span>{text.appearance}</span><small>{text.appearanceSubtitle}</small></div></div>
         <div className="theme-picker">
           {themeOptions(text).map((opt) => (
@@ -869,6 +881,7 @@ export default function SettingsPage({
             {t("german")}<small>{locale === "de" ? t("active") : t("available")}</small>
           </button>
         </div>
+      </section>
       </section>
 
       {settingsChild ? (

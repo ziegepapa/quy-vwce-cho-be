@@ -21,6 +21,16 @@ describe("demo v10 visual regression contracts", () => {
     expect(overviewCss).toContain(".ov .pp-val.loss { color: var(--perf-loss); }");
   });
 
+  it("keeps Vault Atelier’s premium hero, distinct task clusters and reduced-motion safety", () => {
+    expect(settingsCss).toContain(".set-wrap.vault-atelier");
+    expect(settingsCss).toContain(".set-atelier-hero");
+    expect(settingsCss).toContain(".set-atelier-sync");
+    expect(settingsCss).toContain(".set-security-cluster .set-group");
+    expect(settingsCss).toContain(".set-data-cluster .set-group");
+    expect(settingsCss).toContain("min-height: 50px");
+    expect(settingsCss).toContain("@media (prefers-reduced-motion:reduce)");
+  });
+
   it("keeps nested advanced price metadata within the card at narrow widths", () => {
     expect(settingsCss).toContain(".set-wrap .advanced-group .settings-card { padding: 16px !important; }");
     expect(settingsCss).toContain(".set-wrap .advanced-group .asset-price-list { margin: 0 -16px -16px; }");
