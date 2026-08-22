@@ -166,6 +166,15 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(document.body.textContent).not.toMatch(/Không|Dữ liệu|Cài đặt|Đồng bộ|Giá/);
   });
 
+  it("renders immediate localized feedback for successful JSON export", async () => {
+    renderSettings();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Xuất JSON/ }));
+
+    expect(await screen.findByText("Đã tải xuống bản sao JSON.")).toBeTruthy();
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+  });
+
   it("sends a password link only after explicit confirmation and never renders token material", async () => {
     authMocks.user = { id: "security-test", email: "security-test@example.invalid", last_sign_in_at: "2026-08-22T09:00:00Z" };
     authMocks.resetPassword.mockResolvedValue({});
@@ -179,6 +188,19 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     await waitFor(() => expect(authMocks.resetPassword).toHaveBeenCalledWith("security-test@example.invalid"));
     expect(screen.getByText("Đã gửi link mật khẩu.")).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/access_token|refresh_token|code=/i);
+  });
+
+  it("keeps password-link provider failures localized and retryable", async () => {
+    authMocks.user = { id: "security-error", email: "security-error@example.invalid" };
+    authMocks.resetPassword.mockResolvedValue({ error: "PROVIDER_SECRET_CANARY" });
+    renderSettings();
+
+    fireEvent.click(await screen.findByRole("button", { name: /^Mật khẩu/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Gửi link" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Không gửi được link mật khẩu. Vui lòng thử lại.");
+    expect(document.body.textContent).not.toContain("PROVIDER_SECRET_CANARY");
   });
 
   it("keeps malformed and unsupported German backup imports fail-closed", async () => {
