@@ -186,6 +186,10 @@ body,
 
 .pb {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 8px 15px;
   border: none;
   border-radius: 100px;
@@ -209,7 +213,7 @@ body,
 }
 
 @media (max-width: 360px) {
-  .pb { padding: 8px 11px; font-size: 10px; }
+  .pb { min-height: 44px; padding: 8px 11px; font-size: 10px; }
 }
 
 @media (min-width: 900px) {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { signOutBeforeLocalClear, useAuth } from "./lib/auth";
 import { clearUserBusinessData, countLocalData, ensureInitialized, getSettings, ingestQuotesFeed, runPendingMigrations } from "./lib/db";
@@ -23,22 +23,26 @@ import { IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
 import { conflictCtaLabel, hasLogoutBlockers, openSyncConflictSection, readSyncConflictFocusToken, reconcileVisibleLogoutBlockers, type LogoutBlockerCounts } from "./components/SyncConflictSection";
 import { buildSyncHealth } from "./components/syncHealth";
 import { recordLocalDiagnostic } from "./components/localDiagnostics";
-import Overview from "./pages/Overview";
-import Transactions from "./pages/Transactions";
-import Goals from "./pages/Goals";
-import Simulation from "./pages/SimulationRoute";
-import SettingsPage from "./pages/Settings";
-import Notfallmappe from "./pages/Notfallmappe";
-import HouseholdHandoff from "./pages/HouseholdHandoff";
-import ConfidenceTimeline from "./pages/ConfidenceTimeline";
-import LotEvidence from "./pages/LotEvidence";
-import Onboarding from "./pages/Onboarding";
+const Overview = lazy(() => import("./pages/Overview"));
+const Transactions = lazy(() => import("./pages/Transactions"));
+const Goals = lazy(() => import("./pages/Goals"));
+const Simulation = lazy(() => import("./pages/SimulationRoute"));
+const SettingsPage = lazy(() => import("./pages/Settings"));
+const Notfallmappe = lazy(() => import("./pages/Notfallmappe"));
+const HouseholdHandoff = lazy(() => import("./pages/HouseholdHandoff"));
+const ConfidenceTimeline = lazy(() => import("./pages/ConfidenceTimeline"));
+const LotEvidence = lazy(() => import("./pages/LotEvidence"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
 import AuthPage from "./pages/Auth";
-import MigrateWizard from "./pages/MigrateWizard";
+const MigrateWizard = lazy(() => import("./pages/MigrateWizard"));
 import "./styles/premium-command-layout.css";
 import "./styles/recovery-banner.css";
 
 const LOGOUT_CLEANUP_PENDING_KEY = "vwce:logout-cleanup-pending";
+
+function RouteLoading({ label }: { label: string }) {
+  return <div className="app-shell" aria-busy="true" aria-live="polite"><p className="muted">{label}</p></div>;
+}
 
 function appStrings(locale: AppLocale) {
   return locale === "de" ? {
@@ -405,7 +409,7 @@ export default function App() {
 
   if (auth.user && showWizard) {
     const recoveryUserId = auth.user.id;
-    return <MigrateWizard userId={recoveryUserId} onDone={async () => {
+    return <Suspense fallback={<RouteLoading label={text.loading} />}><MigrateWizard userId={recoveryUserId} onDone={async () => {
       const [meta, refreshedCounts] = await Promise.all([getSyncMeta(recoveryUserId), countLocalData()]);
       if (!hasLocalBusinessData(refreshedCounts) || meta.migrateWizardDone !== true || meta.recoveryState !== "complete") throw new Error("Recovery incomplete");
       navigate("/settings?tab=data", { replace: true });
@@ -414,10 +418,10 @@ export default function App() {
       if (safety.readFailed || hasLogoutBlockers(safety.blockers)) { setLogoutBlockers(safety.blockers); setLogoutNoticeKind("info"); setLogoutNotice(text.recoverySyncPending); }
       else { setLogoutBlockers(null); setLogoutNotice(null); }
       await reload();
-    }} onBack={() => setShowWizard(false)} />;
+    }} onBack={() => setShowWizard(false)} /></Suspense>;
   }
 
-  if (!recoveryActive && !settings?.onboardingDone) return <Onboarding onDone={async () => { await ensureInitialized(false); await reload(); }} />;
+  if (!recoveryActive && !settings?.onboardingDone) return <Suspense fallback={<RouteLoading label={text.loading} />}><Onboarding onDone={async () => { await ensureInitialized(false); await reload(); }} /></Suspense>;
   if (!settings) return <div className="app-shell"><p className="muted">{text.loading}</p></div>;
 
   const displayName = (auth.user?.user_metadata?.display_name as string) || auth.user?.email?.split("@")[0] || settings.planName;
@@ -455,7 +459,7 @@ export default function App() {
       {logoutNotice && !logoutBlockers && !recoveryActive ? <div className={logoutNoticeKind === "error" ? "banner error" : "banner"} role="status">{logoutNotice}</div> : null}
       {syncFeedback ? <div className={syncFeedback.tone === "error" ? "banner error" : "banner"} role="status"><span>{syncFeedback.message}</span><button type="button" className="ghost" onClick={() => setSyncFeedback(null)}>{text.close}</button></div> : null}
 
-      <NavActionsProvider api={navActionsApi}><main className={`premium-screen premium-screen-${screenName}`}><RecoveryReadOnlyProvider readOnly={recoveryActive}><Routes>
+      <NavActionsProvider api={navActionsApi}><main className={`premium-screen premium-screen-${screenName}`}><RecoveryReadOnlyProvider readOnly={recoveryActive}><Suspense fallback={<RouteLoading label={text.loading} />}><Routes>
         <Route path="/" element={<Overview key={quoteRefreshVersion} />} />
         <Route path="/transactions" element={<Transactions />} />
         <Route path="/goals" element={<Goals />} />
@@ -465,7 +469,7 @@ export default function App() {
         <Route path="/timeline" element={<ConfidenceTimeline syncStatus={syncStatus} pending={pending} />} />
         <Route path="/lot-evidence" element={<LotEvidence />} />
         <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} onSyncNow={auth.user ? handleSyncNow : undefined} syncHealth={syncHealth} onSyncHealthAction={handleSyncHealthAction} onRequestSignOut={auth.user ? handleSignOut : undefined} />} />
-      </Routes></RecoveryReadOnlyProvider></main></NavActionsProvider>
+      </Routes></Suspense></RecoveryReadOnlyProvider></main></NavActionsProvider>
     </div><BottomDock items={primaryNav} />
 
     {showSkipConfirm ? (
