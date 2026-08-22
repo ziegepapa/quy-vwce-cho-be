@@ -68,6 +68,7 @@ export default defineConfig({
       // safe invalid-link state must run under jsdom in the normal release gate.
       "src/lib/auth.recovery.test.ts",
       "src/pages/Auth.recovery.test.tsx",
+      "src/App.recoveryGate.test.tsx",
       // Giữ contract thị giác demo (màu hiệu suất và card Giá) ngoài TS build.
       "src/styles/demoV10VisualRegression.test.js",
       // PR0: bat dan tung file .test.tsx da doc toan bo source.
