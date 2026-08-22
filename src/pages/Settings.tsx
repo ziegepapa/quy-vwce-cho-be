@@ -26,6 +26,7 @@ import SyncConflictSection from "../components/SyncConflictSection";
 import { SyncHealthSummary } from "../components/SyncHealthSummary";
 import { syncHealthCopy, type SyncHealth } from "../components/syncHealth";
 import PlanRoadmapSection from "../components/PlanRoadmapSection";
+import SettingsPlanStudio from "../components/SettingsPlanStudio";
 import LocalDiagnosticsPanel from "../components/LocalDiagnosticsPanel";
 import LocalDataInventoryPanel from "../components/LocalDataInventoryPanel";
 import {
@@ -341,6 +342,7 @@ export default function SettingsPage({
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab");
+  const comparisonMode = searchParams.get("view") === "next";
   // `tab=data` is the existing deep link used by conflict/recovery flows; retain it
   // while the Settings UI stores manual toggles under the clearer `tab=advanced`.
   const showAdvanced = requestedTab === "advanced" || requestedTab === "data";
@@ -791,17 +793,40 @@ export default function SettingsPage({
 
   return (
     <main className="demo-v10-screen" aria-label={t("settingsAria")}>
-      <div className="set-wrap vault-atelier">
-      <header className="set-page-head set-atelier-topbar">
-        <div>
-          <span className="set-atelier-eyebrow"><span>VWCE VAULT <i aria-hidden>•</i></span><span className="set-atelier-account-label">{text.account}</span></span>
-          <h1>{text.pageTitle}</h1>
-          <p>{locale === "de" ? "Ihr privater Finanzraum" : "Không gian tài chính riêng của bạn"}</p>
-        </div>
-        <span className={`set-save-state ${saveState}`} role="status" aria-live="polite">
-          {saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}
-        </span>
-      </header>
+      <div className={`set-wrap ${comparisonMode ? "settings-next" : "vault-atelier"}`}>
+      {comparisonMode ? (
+        <header className="settings-next-head">
+          <div>
+            <span className="settings-next-kicker">VWCE VAULT <i aria-hidden>01</i></span>
+            <h1>{locale === "de" ? "Ihr Vault, auf einen Blick." : "Vault của bạn, rõ ràng trong một nhịp nhìn."}</h1>
+            <p>{locale === "de" ? "Ein ruhiger Steuerraum für Schutz, Synchronisierung und Ihre Zielzeit." : "Không gian điều hành gọn gàng cho bảo mật, đồng bộ và mốc sử dụng tiền."}</p>
+          </div>
+          <div className="settings-next-head-actions">
+            <span className={`set-save-state ${saveState}`} role="status" aria-live="polite">
+              {saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}
+            </span>
+            <button type="button" className="settings-next-compare" onClick={() => setSearchParams(showAdvanced ? { tab: "advanced" } : {}, { replace: true })}>
+              {locale === "de" ? "P29 vergleichen" : "So sánh P29"}
+            </button>
+          </div>
+        </header>
+      ) : (
+        <header className="set-page-head set-atelier-topbar">
+          <div>
+            <span className="set-atelier-eyebrow"><span>VWCE VAULT <i aria-hidden>•</i></span><span className="set-atelier-account-label">{text.account}</span></span>
+            <h1>{text.pageTitle}</h1>
+            <p>{locale === "de" ? "Ihr privater Finanzraum" : "Không gian tài chính riêng của bạn"}</p>
+          </div>
+          <div className="set-atelier-head-actions">
+            <span className={`set-save-state ${saveState}`} role="status" aria-live="polite">
+              {saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}
+            </span>
+            <button type="button" className="set-compare-link" onClick={() => setSearchParams({ ...(showAdvanced ? { tab: "advanced" } : {}), view: "next" }, { replace: true })}>
+              {locale === "de" ? "Neue Ansicht" : "Xem bản mới"}
+            </button>
+          </div>
+        </header>
+      )}
       {saveError || actionError ? (
         <div className="gl" style={{ padding: 12 }} role="alert">
           <span>{saveError ?? actionError}</span>
@@ -823,16 +848,35 @@ export default function SettingsPage({
         </div>
       ) : null}
 
-      <section className="set-atelier-hero" aria-label={text.account}>
-        <div className="set-atelier-orbit" aria-hidden><span /><span /><span /></div>
-        <div className="set-identity set-atelier-identity">
-          <div className="set-avatar" aria-hidden><IconUser /></div>
-          <div className="set-identity-copy"><strong>{text.vaultName}</strong><span>{auth.user?.email ?? t("syncNeedsSignIn")}</span><small>{text.lastLogin} · {auth.user?.last_sign_in_at ? localDateTime(auth.user.last_sign_in_at, locale) : text.lastLoginUnavailable}</small></div>
-        </div>
-        <button type="button" className="set-sync-primary set-atelier-sync" disabled={syncingNow} onClick={() => void runVisibleSync()}>
-          <span className="set-row-icon teal"><IconSync /></span><span className="sr-body"><span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span><span className="sr-sub">{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : auth.user?.id ? syncLabel : t("syncNeedsSignIn")}</span></span><span className="set-row-status">{syncingNow ? "…" : syncLabel}</span>
-        </button>
-      </section>
+      {comparisonMode ? (
+        <section className="settings-next-console" aria-label={text.account}>
+          <div className="settings-next-console-copy">
+            <span className="settings-next-console-label">{locale === "de" ? "Vault-Status" : "Trạng thái Vault"}</span>
+            <strong>{text.vaultName}</strong>
+            <span>{auth.user?.email ?? t("syncNeedsSignIn")}</span>
+          </div>
+          <div className="settings-next-signal" aria-live="polite">
+            <span className={`settings-next-signal-dot ${syncHealth?.tone ?? "info"}`} aria-hidden />
+            <span>{syncingNow ? t("syncing") : syncLabel}</span>
+            <small>{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : auth.user?.id ? text.syncSubtitle : t("syncNeedsSignIn")}</small>
+          </div>
+          <button type="button" className="settings-next-sync" disabled={syncingNow} onClick={() => void runVisibleSync()}>
+            <IconSync /> <span>{syncingNow ? t("syncing") : t("syncNow")}</span>
+          </button>
+          <p className="settings-next-console-foot">{locale === "de" ? "Kein automatischer Eingriff in Ihr Depot." : "Không tự động can thiệp vào danh mục của bạn."}</p>
+        </section>
+      ) : (
+        <section className="set-atelier-hero" aria-label={text.account}>
+          <div className="set-atelier-orbit" aria-hidden><span /><span /><span /></div>
+          <div className="set-identity set-atelier-identity">
+            <div className="set-avatar" aria-hidden><IconUser /></div>
+            <div className="set-identity-copy"><strong>{text.vaultName}</strong><span>{auth.user?.email ?? t("syncNeedsSignIn")}</span><small>{text.lastLogin} · {auth.user?.last_sign_in_at ? localDateTime(auth.user.last_sign_in_at, locale) : text.lastLoginUnavailable}</small></div>
+          </div>
+          <button type="button" className="set-sync-primary set-atelier-sync" disabled={syncingNow} onClick={() => void runVisibleSync()}>
+            <span className="set-row-icon teal"><IconSync /></span><span className="sr-body"><span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span><span className="sr-sub">{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : auth.user?.id ? syncLabel : t("syncNeedsSignIn")}</span></span><span className="set-row-status">{syncingNow ? "…" : syncLabel}</span>
+          </button>
+        </section>
+      )}
 
       <section className="set-atelier-cluster set-security-cluster" aria-label={text.security}>
       <header className="set-section-head"><span>{text.security}</span><small>{text.securitySubtitle}</small></header>
@@ -934,7 +978,7 @@ export default function SettingsPage({
           setSearchParams(open ? { tab: "advanced" } : {}, { replace: true });
         }}
       >
-        <summary>{t("advanced")}</summary>
+        <summary>{comparisonMode ? (locale === "de" ? "Vertiefen & prüfen" : "Mở rộng & kiểm tra") : t("advanced")}</summary>
         <p className="advanced-intro">{t("advancedIntro")}</p>
 
         <details className="advanced-group" open={openAdvancedGroup === "prices"}>
@@ -963,10 +1007,17 @@ export default function SettingsPage({
 
         <details className="advanced-group" open={openAdvancedGroup === "plan"}>
           <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("plan"); }}>{t("plan")}</summary>
-          <PlanRoadmapSection
-            target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
-            onChangeTarget={(next) => patchSettings({ planTarget: next })}
-          />
+          {comparisonMode ? (
+            <SettingsPlanStudio
+              target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
+              onChangeTarget={(next) => patchSettings({ planTarget: next })}
+            />
+          ) : (
+            <PlanRoadmapSection
+              target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
+              onChangeTarget={(next) => patchSettings({ planTarget: next })}
+            />
+          )}
         </details>
 
         <details className="advanced-group" open={openAdvancedGroup === "data"}>
