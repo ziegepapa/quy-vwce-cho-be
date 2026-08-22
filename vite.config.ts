@@ -57,7 +57,11 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         // P26/P27 bounded recovery hooks. Normal updates remain explicitly owner-confirmed.
-        importScripts: ["pwa-update-recovery.js", "pwa-final-runtime-recovery.js"],
+        importScripts: [
+          "pwa-update-recovery.js",
+          "pwa-final-runtime-recovery.js",
+          "pwa-p34-update-recovery.js",
+        ],
         // Normal updates wait until the bridge posts explicit SKIP_WAITING.
         skipWaiting: false,
       },

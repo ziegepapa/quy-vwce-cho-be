@@ -6,6 +6,7 @@ import vm from "node:vm";
 const registerSource = await readFile(new URL("../public/registerSW.js", import.meta.url), "utf8");
 const recoverySource = await readFile(new URL("../public/pwa-update-recovery.js", import.meta.url), "utf8");
 const finalRecoverySource = await readFile(new URL("../public/pwa-final-runtime-recovery.js", import.meta.url), "utf8");
+const p34RecoverySource = await readFile(new URL("../public/pwa-p34-update-recovery.js", import.meta.url), "utf8");
 const accessibilitySource = await readFile(new URL("../src/styles/accessibility-foundations.css", import.meta.url), "utf8");
 
 class FakeElement {
@@ -261,6 +262,47 @@ async function runFinalRuntimeRecovery({ previousMarker = true, finalMarker = fa
   await pending;
   return { navigated, storedFinalMarker };
 }
+
+async function runP34Bootstrap({ p33 = false, marker = false } = {}) {
+  let installHandler = null;
+  let markerPresent = marker;
+  let skipWaitingCalls = 0;
+  const markerCache = {
+    async match() { return markerPresent ? {} : undefined; },
+    async put() { markerPresent = true; },
+  };
+  const bridgeCache = {
+    async keys() {
+      return p33
+        ? [{ url: "https://ziegepapa.github.io/quy-vwce-cho-be/registerSW.js?__WB_REVISION__=0a19d4c3d2fdcddc9ad27bd6a1b88215" }]
+        : [{ url: "https://ziegepapa.github.io/quy-vwce-cho-be/registerSW.js?__WB_REVISION__=not-p33" }];
+    },
+  };
+  const caches = {
+    async keys() { return ["workbox-precache-v2-https://ziegepapa.github.io/quy-vwce-cho-be/"]; },
+    async open(name) { return name === "vwce-pwa-p34-update-migration-v1" ? markerCache : bridgeCache; },
+  };
+  const self = {
+    addEventListener(type, listener) { if (type === "install") installHandler = listener; },
+    async skipWaiting() { skipWaitingCalls += 1; },
+  };
+  vm.runInNewContext(p34RecoverySource, { self, caches, Response: class Response { constructor(body) { this.body = body; } }, Promise });
+  let pending = null;
+  installHandler({ waitUntil: (promise) => { pending = promise; } });
+  await pending;
+  return { skipWaitingCalls, markerPresent };
+}
+
+test("P35 bootstrap advances only the exact P33 bridge cache once", async () => {
+  const first = await runP34Bootstrap({ p33: true });
+  assert.equal(first.skipWaitingCalls, 1);
+  assert.equal(first.markerPresent, true);
+  const repeated = await runP34Bootstrap({ p33: true, marker: true });
+  assert.equal(repeated.skipWaitingCalls, 0);
+  const unrelated = await runP34Bootstrap({ p33: false });
+  assert.equal(unrelated.skipWaitingCalls, 0);
+  assert.equal(unrelated.markerPresent, false);
+});
 
 test("P27 final recovery refreshes only safe Overview legacy clients once", async () => {
   const overview = "https://ziegepapa.github.io/quy-vwce-cho-be/#/overview";
