@@ -109,8 +109,26 @@ describe("Settings initial load state", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
 
-    expect(await screen.findByText("Tài khoản")).toBeTruthy();
+    expect(await screen.findByText("Hồ sơ gia đình")).toBeTruthy();
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
+  });
+
+  it("renders the required illustrative Horizon scenario with traceable percent, euro and disclaimer", async () => {
+    dbMocks.getSettings.mockResolvedValue(loadedSettings());
+    renderSettings();
+
+    expect(await screen.findByText("Mẫu minh họa, không phải dữ liệu Quỹ")).toBeTruthy();
+    expect(document.body.textContent).toContain("50.000");
+    expect(document.body.textContent).toContain("18.000");
+    expect(document.body.textContent).toContain("1.200");
+    expect(document.body.textContent).toContain("300");
+    expect(document.body.textContent).toContain("Chỉ hiển thị · không tạo giao dịch.");
+
+    fireEvent.click(screen.getByRole("button", { name: /2032.*Chuyển dần/ }));
+    expect(document.querySelector('[data-horizon-phase="transition"]')).toBeTruthy();
+    expect(document.body.textContent).toContain("50%");
+    expect(document.body.textContent).toContain("3.360");
+    expect(document.body.textContent).toContain("€ VWCE góp");
   });
 
   it("routes Settings sign-out through the app-shell callback", async () => {
@@ -118,6 +136,7 @@ describe("Settings initial load state", () => {
     const onRequestSignOut = vi.fn();
     renderSettings({ onRequestSignOut });
 
+    fireEvent.click(await screen.findByRole("tab", { name: "Dữ liệu" }));
     fireEvent.click(await screen.findByRole("button", { name: /Đăng xuất/i }));
 
     expect(onRequestSignOut).toHaveBeenCalledTimes(1);
@@ -132,7 +151,8 @@ describe("Settings initial load state", () => {
       },
     });
 
-    expect((await screen.findAllByText("2 xung đột dữ liệu")).length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(await screen.findByRole("tab", { name: "Dữ liệu" }));
+    expect((await screen.findAllByText("2 xung đột dữ liệu")).length).toBe(1);
     expect(document.querySelector('[data-sync-health="conflict"]')).toBeTruthy();
   });
 });

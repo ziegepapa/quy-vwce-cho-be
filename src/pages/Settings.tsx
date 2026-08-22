@@ -29,6 +29,7 @@ import PlanRoadmapSection from "../components/PlanRoadmapSection";
 import SettingsPlanStudio from "../components/SettingsPlanStudio";
 import AnnualPlanStudio from "../components/AnnualPlanStudio";
 import SettingsClarityWorkspace from "../components/SettingsClarityWorkspace";
+import SettingsCboWorkspace from "../components/SettingsCboWorkspace";
 import LocalDiagnosticsPanel from "../components/LocalDiagnosticsPanel";
 import LocalDataInventoryPanel from "../components/LocalDataInventoryPanel";
 import {
@@ -349,8 +350,10 @@ export default function SettingsPage({
   const comparisonMode = searchParams.get("view") === "next";
   const horizonMode = searchParams.get("view") === "horizon";
   const clarityMode = searchParams.get("view") === "clarity";
-  // `tab=data` is the existing deep link used by conflict/recovery flows; retain it
-  // while the Settings UI stores manual toggles under the clearer `tab=advanced`.
+  const cboMode = !comparisonMode && !horizonMode && !clarityMode;
+  // Keep the existing recovery/conflict deep link. The CBO surface turns it into
+  // the durable Data tab rather than a hidden Advanced disclosure.
+  const cboTab = requestedTab === "prices" ? "prices" : requestedTab === "data" || requestedTab === "advanced" ? "data" : "general";
   const showAdvanced = requestedTab === "advanced" || requestedTab === "data";
 
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -799,6 +802,85 @@ export default function SettingsPage({
             {t("retry")}
           </button>
         </section>
+      </main>
+    );
+  }
+
+  if (cboMode) {
+    const conflictPanel = auth.user?.id ? (
+      <SyncConflictSection
+        userId={auth.user.id}
+        focusRequest={focusConflictRequest}
+        onResolved={async () => { await onConflictResolved?.(); }}
+        onSyncNow={onSyncNow ? async () => {
+          const result = await onSyncNow();
+          if (result.tone === "error") setActionError(result.message);
+          else setActionFeedback(result.message);
+          await onConflictResolved?.();
+        } : undefined}
+      />
+    ) : <p className="advanced-empty">{t("syncConflictsSignIn")}</p>;
+
+    return (
+      <main className="demo-v10-screen" aria-label={t("settingsAria")}>
+        {saveError || actionError ? (
+          <div className="gl" style={{ padding: 12 }} role="alert">
+            <span>{saveError ?? actionError}</span>
+            {saveError ? <button type="button" onClick={() => void flushRef.current()}>{t("retrySave")}</button> : <button type="button" onClick={() => setActionError(null)}>{t("close")}</button>}
+          </div>
+        ) : null}
+        {actionFeedback ? <div className="set-action-feedback" role="status" aria-live="polite"><span>{actionFeedback}</span><button type="button" onClick={() => setActionFeedback(null)} aria-label={t("close")}>×</button></div> : null}
+        <SettingsCboWorkspace
+          activeTab={cboTab}
+          settings={settings}
+          locale={locale}
+          theme={theme}
+          saveLabel={saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}
+          syncLabel={syncLabel}
+          syncing={syncingNow}
+          lastSync={lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : null}
+          pricesPanel={<SettingsPricePanel refreshKey={refreshKey} onQuotesChanged={onQuotesChanged} />}
+          dataHealthPanel={<LocalDataInventoryPanel />}
+          syncHealthPanel={syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
+          syncConflictPanel={conflictPanel}
+          onSelectTab={(tab) => setSearchParams(tab === "general" ? {} : { tab }, { replace: true })}
+          onPatchSettings={patchSettings}
+          onChangeTarget={(next) => patchSettings({ planTarget: next })}
+          onTheme={pickTheme}
+          onLocale={(next) => { setLocale(next); setActionError(null); setActionFeedback(next === "vi" ? "Đã lưu ngôn ngữ trên thiết bị này." : "Sprache wurde auf diesem Gerät gespeichert."); }}
+          onOpenChild={(action) => {
+            if (action === "password-change") { setPasswordAction("change"); setSettingsChild("password"); return; }
+            if (action === "password-reset") { setPasswordAction("reset"); setSettingsChild("password"); return; }
+            setSettingsChild(action);
+          }}
+          onSync={() => void runVisibleSync()}
+          onExportCsv={() => void exportCsv()}
+          onOpenMigrate={onOpenMigrate}
+          onSignOut={onRequestSignOut ? () => void onRequestSignOut() : undefined}
+          operationsExtra={<>
+            <Link to="/notfallmappe" className="cbo-action-row" style={{ textDecoration: "none" }}><span className="cbo-action-icon"><IconLifebuoy /></span><span><strong>{text.supportHandover}</strong><small>{text.emergencySub}</small></span><IconChevronRight /></Link>
+            <button type="button" className="cbo-action-row danger" onClick={() => setDeleteOpen(true)}><span className="cbo-action-icon"><IconClose /></span><span><strong>{t("clearLocalData")}</strong><small>{t("clearLocalDataSub")}</small></span><IconChevronRight /></button>
+            {deleteOpen ? <div className="advanced-delete"><p>{locale === "de" ? `Geben Sie ${text.deleteToken} zur Bestätigung ein. Dieser Vorgang kann auf diesem Gerät nicht rückgängig gemacht werden.` : t("deleteConfirmText")}</p><input placeholder={text.deleteToken} value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} /><button type="button" disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken} onClick={() => void (async () => { if (readOnly) { showBlocked(); return; } setDeleteBusy(true); try { await clearAllData(); window.location.reload(); } catch { setActionError(text.deleteError); } finally { setDeleteBusy(false); } })()}>{t("confirmDelete")}</button></div> : null}
+          </>}
+        />
+        {settingsChild ? (
+          <div className="settings-child-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSettingsChild(); }}>
+            <section className="settings-child-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-child-title">
+              <div className="settings-child-grabber" aria-hidden />
+              <header className="settings-child-head"><button ref={childBackRef} type="button" onClick={closeSettingsChild}><IconChevronLeft />{locale === "de" ? "Zurück" : "Quay lại"}</button><strong id="settings-child-title">{settingsChild === "password" ? (passwordAction === "change" ? text.changePassword : text.forgotPassword) : settingsChild === "mfa" ? t("mfaState") : settingsChild === "diagnostics" ? text.syncDetails : settingsChild === "backup" ? (locale === "de" ? "Datensicherung" : "Sao lưu dữ liệu") : (locale === "de" ? "Daten wiederherstellen" : "Khôi phục dữ liệu")}</strong><button type="button" aria-label={t("close")} onClick={closeSettingsChild}><IconClose /></button></header>
+              <div className="settings-child-body">
+                {settingsChild === "password" ? <><p>{text.passwordLinkBody.replace("{email}", auth.user?.email ?? "—")}</p><button className="settings-child-primary" type="button" disabled={passwordActionBusy} onClick={() => void sendPasswordLink()}>{passwordActionBusy ? text.passwordLinkSending : text.sendResetLink}</button></> : null}
+                {settingsChild === "mfa" ? <>{auth.mfaEnrolled ? <p className="settings-child-success">{t("mfaEnabled")}</p> : mfaEnrollment ? <><img className="settings-mfa-qr" src={mfaEnrollment.qrCode} alt={text.qrAlt} /><code>{mfaEnrollment.secret}</code><input aria-label={t("totpCode")} value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, ""))} maxLength={6} inputMode="numeric" placeholder={t("totpCode")} /><button className="settings-child-primary" type="button" disabled={mfaBusy || mfaCode.length !== 6} onClick={() => void (async () => { setMfaBusy(true); try { const result = await auth.verifyMfaEnrollment(mfaEnrollment.factorId, mfaCode); if (result.error) setMfaSetupError(text.mfaVerifyError); else { setMfaEnrollment(null); setMfaCode(""); setActionFeedback(text.mfaVerified); closeSettingsChild(); } } finally { setMfaBusy(false); } })()}>{mfaBusy ? t("syncing") : t("verifyTotp")}</button></> : <><p>{locale === "de" ? "Schützen Sie dieses Konto mit einem zeitbasierten Einmalcode." : "Bảo vệ tài khoản này bằng mã xác thực dùng một lần."}</p><button className="settings-child-primary" type="button" disabled={mfaBusy} onClick={() => void startMfaSetup()}>{mfaBusy ? t("mfaCreating") : t("mfaSetup")}</button></>}{mfaSetupError ? <p role="alert">{mfaSetupError}</p> : null}</> : null}
+                {settingsChild === "diagnostics" ? <LocalDiagnosticsPanel /> : null}
+                {settingsChild === "backup" ? <><p>{actionFeedback ?? (metaBackup ? t("backupOn").replace("{date}", localDate(metaBackup.slice(0, 10), locale)) : t("noBackup"))}</p><button className="settings-child-primary" type="button" onClick={() => void doExport()}><IconDownload />{t("exportJson")}</button></> : null}
+                {settingsChild === "restore" ? <><p>{locale === "de" ? "Wählen Sie eine JSON-Sicherung. Die vorhandenen Sicherheitsprüfungen bleiben aktiv." : "Chọn bản sao JSON. Các bước bảo vệ dữ liệu hiện có vẫn được áp dụng."}</p><label className="settings-child-primary settings-file-action"><IconUpload />{t("importBackup")}<input type="file" accept="application/json,.json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) doImport(file); event.target.value = ""; }} /></label></> : null}
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {pendingFile ? (
+          <section className="gl" style={{ padding: 16 }} role="alertdialog"><strong>{t("replaceData").replace("{file}", pendingFile.name)}</strong>{pendingSync ? <div role="alert"><p>{text.pendingImportTitle}</p><p>{pendingSyncDetails(pendingSync, locale)}</p><p>{text.pendingImportRisk}</p></div> : null}<div className="stack" style={{ marginTop: 12 }}>{pendingSync && auth.user?.id ? <button type="button" disabled={importing || pendingSyncPushing} onClick={() => void pushPendingSyncBeforeImport()}>{pendingSyncPushing ? t("syncing") : text.pendingPushFirst}</button> : null}<button type="button" disabled={importing || pendingSyncPushing} onClick={() => void confirmImport()}>{importing ? t("importing") : pendingSync ? text.pendingAcceptRisk : t("confirmImport")}</button><button type="button" className="secondary" disabled={importing} onClick={closeImport}>{t("cancel")}</button></div></section>
+        ) : null}
       </main>
     );
   }

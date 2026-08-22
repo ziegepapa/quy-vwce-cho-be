@@ -142,6 +142,35 @@ test("mobile local-vault routes keep primary controls reachable without horizont
   await expect.poll(() => page.locator(".settings-horizon").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 });
 
+test("mobile CBO Settings retains three tabs and the Horizon illustrative scenario without overflow", async ({ page }) => {
+  await page.setViewportSize(iphone13Viewport);
+  const { localVaultEntry } = await openPrivateVaultEntry(page);
+  test.skip(!(await localVaultEntry.isVisible()), "requires the local-only preview entry");
+
+  await page.goto("./#/settings", { waitUntil: "networkidle" });
+  await expect(page.locator(".settings-cbo")).toHaveCount(1);
+  await expect(page.getByRole("tab", { name: "Chung" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText("Mẫu minh họa, không phải dữ liệu Quỹ")).toBeVisible();
+  await expect(page.getByText(/50\.000/)).toBeVisible();
+  await expect(page.getByText(/18\.000/)).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+  const tabHeights = await page.getByRole("tab").evaluateAll((tabs) => tabs.map((tab) => Math.round(tab.getBoundingClientRect().height)));
+  expect(tabHeights).toEqual([44, 44, 44]);
+
+  await page.getByRole("button", { name: /2032.*Chuyển dần/ }).click();
+  await expect(page.locator('[data-horizon-phase="transition"]')).toBeVisible();
+  await expect(page.getByText(/3\.360/)).toBeVisible();
+  await expect(page.getByText("Chỉ hiển thị · không tạo giao dịch.")).toBeVisible();
+
+  await page.getByRole("tab", { name: "Dữ liệu" }).click();
+  await expect(page.getByRole("tab", { name: "Dữ liệu" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("button", { name: /Sao lưu dữ liệu/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Khôi phục dữ liệu/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Đồng bộ ngay/ })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
 test.describe("retained visual evidence", () => {
   test("captures the desktop authentication entry", async ({ page }, testInfo) => {
     await captureVisualEvidence(page, testInfo, "visual-evidence-auth-desktop.png");
