@@ -85,6 +85,21 @@ type SettingsText = {
   premiumTheme: string;
   darkTheme: string;
   lightTheme: string;
+  account: string;
+  security: string;
+  securitySubtitle: string;
+  vaultName: string;
+  password: string;
+  changePassword: string;
+  changePasswordSub: string;
+  forgotPassword: string;
+  forgotPasswordSub: string;
+  sendResetLink: string;
+  passwordLinkTitle: string;
+  passwordLinkBody: string;
+  passwordLinkSent: string;
+  passwordLinkEmailUnavailable: string;
+  passwordActionCancel: string;
 };
 
 function settingsStrings(locale: AppLocale): SettingsText {
@@ -140,6 +155,21 @@ function settingsStrings(locale: AppLocale): SettingsText {
     premiumTheme: "Vault",
     darkTheme: "Ozean",
     lightTheme: "Ember",
+    account: "Konto",
+    security: "Sicherheit",
+    securitySubtitle: "Passwort und Mehrfaktor-Schutz dieses Kontos.",
+    vaultName: "VWCE Vault",
+    password: "Passwort",
+    changePassword: "Passwort ändern",
+    changePasswordSub: "Sicheren Link zum Ändern anfordern.",
+    forgotPassword: "Passwort vergessen",
+    forgotPasswordSub: "Neuen Wiederherstellungslink senden.",
+    sendResetLink: "Link senden",
+    passwordLinkTitle: "Passwort-Link senden?",
+    passwordLinkBody: "Ein sicherer Link wird an {email} gesendet. Token und Passwort werden hier nicht angezeigt.",
+    passwordLinkSent: "Ein Passwort-Link wurde gesendet.",
+    passwordLinkEmailUnavailable: "Für dieses Konto ist keine E-Mail-Adresse verfügbar.",
+    passwordActionCancel: "Abbrechen",
   } : {
     saveError: "Không lưu được Cài đặt. Bản đang chỉnh vẫn còn trên màn hình.",
     pendingPushError: "Không đẩy được các thay đổi đang chờ. Dữ liệu trên thiết bị vẫn được giữ nguyên.",
@@ -192,6 +222,21 @@ function settingsStrings(locale: AppLocale): SettingsText {
     premiumTheme: "Kho",
     darkTheme: "Đại dương",
     lightTheme: "Hổ phách",
+    account: "Tài khoản",
+    security: "Bảo mật",
+    securitySubtitle: "Mật khẩu và xác thực đa yếu tố cho tài khoản này.",
+    vaultName: "VWCE Vault",
+    password: "Mật khẩu",
+    changePassword: "Đổi mật khẩu",
+    changePasswordSub: "Yêu cầu link bảo mật để đổi mật khẩu.",
+    forgotPassword: "Quên mật khẩu",
+    forgotPasswordSub: "Gửi một link khôi phục mới.",
+    sendResetLink: "Gửi link",
+    passwordLinkTitle: "Gửi link mật khẩu?",
+    passwordLinkBody: "Một link bảo mật sẽ được gửi tới {email}. Token và mật khẩu không hiển thị tại đây.",
+    passwordLinkSent: "Đã gửi link mật khẩu.",
+    passwordLinkEmailUnavailable: "Tài khoản này chưa có email để gửi link.",
+    passwordActionCancel: "Hủy",
   };
 }
 
@@ -292,6 +337,8 @@ export default function SettingsPage({
     qrCode: string;
     secret: string;
   } | null>(null);
+  const [passwordAction, setPasswordAction] = useState<"change" | "reset" | null>(null);
+  const [passwordActionBusy, setPasswordActionBusy] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaBusy, setMfaBusy] = useState(false);
   const [mfaMessage, setMfaMessage] = useState<string | null>(null);
@@ -444,6 +491,25 @@ export default function SettingsPage({
   function pickTheme(next: ThemeChoice) {
     setTheme(next);
     persistTheme(next);
+  }
+
+  async function sendPasswordLink() {
+    const email = auth.user?.email;
+    if (!email) {
+      setActionError(text.passwordLinkEmailUnavailable);
+      setPasswordAction(null);
+      return;
+    }
+    setPasswordActionBusy(true);
+    setActionError(null);
+    try {
+      const result = await auth.resetPassword(email);
+      if (result.error) setActionError(result.error);
+      else setMfaMessage(text.passwordLinkSent);
+    } finally {
+      setPasswordActionBusy(false);
+      setPasswordAction(null);
+    }
   }
 
   async function runVisibleSync() {
@@ -668,9 +734,13 @@ export default function SettingsPage({
       ) : null}
 
       <header className="set-section-head">
-        <div><span>{text.accountSecurity}</span><small>{text.accountSubtitle}</small></div>
+        <div><span>{text.account}</span><small>{text.accountSubtitle}</small></div>
       </header>
       <section className="gl set-block">
+        <div className="set-account-summary">
+          <strong>{text.vaultName}</strong>
+          <span>{auth.user?.email ?? t("syncNeedsSignIn")}</span>
+        </div>
         <div className="set-row set-row-static">
           <span className="si-ico v" aria-hidden>@</span>
           <span className="sr-body">
@@ -685,13 +755,28 @@ export default function SettingsPage({
             <span className="sr-sub">{auth.user?.last_sign_in_at ? localDateTime(auth.user.last_sign_in_at, locale) : text.lastLoginUnavailable}</span>
           </span>
         </div>
-        <div className="set-row set-row-static">
+      </section>
+
+      <header className="set-section-head">
+        <div><span>{text.security}</span><small>{text.securitySubtitle}</small></div>
+      </header>
+      <section className="gl set-block">
+        <button type="button" className="set-row" onClick={() => setPasswordAction("change")}>
           <span className="si-ico v" aria-hidden>⌁</span>
           <span className="sr-body">
-            <span className="sr-name">{text.passwordRecovery}</span>
-            <span className="sr-sub">{text.passwordRecoverySub}</span>
+            <span className="sr-name">{text.password}</span>
+            <span className="sr-sub">{text.changePasswordSub}</span>
           </span>
-        </div>
+          <span className="sr-arr">›</span>
+        </button>
+        <button type="button" className="set-row" onClick={() => setPasswordAction("reset")}>
+          <span className="si-ico e" aria-hidden>↗</span>
+          <span className="sr-body">
+            <span className="sr-name">{text.forgotPassword}</span>
+            <span className="sr-sub">{text.forgotPasswordSub}</span>
+          </span>
+          <span className="sr-arr">›</span>
+        </button>
         <button
           type="button"
           className="set-row"
@@ -779,10 +864,18 @@ export default function SettingsPage({
             }}
           />
         </label>
+        <Link to="/notfallmappe" className="set-row" style={{ textDecoration: "none" }}>
+          <span className="si-ico v" aria-hidden>🛡</span>
+          <span className="sr-body">
+            <span className="sr-name">{text.supportHandover}</span>
+            <span className="sr-sub">{text.emergencySub}</span>
+          </span>
+          <span className="sr-arr">›</span>
+        </Link>
       </section>
 
       <header className="set-section-head">
-        <div><span>{text.preferences}</span><small>{text.app}</small></div>
+        <div><span>{text.app}</span><small>{text.preferences}</small></div>
       </header>
       <section className="gl set-block set-preferences">
         <div className="set-preference-head"><span>{text.appearance}</span><small>{text.appearanceSubtitle}</small></div>
@@ -803,15 +896,18 @@ export default function SettingsPage({
             {t("german")}<small>{locale === "de" ? t("active") : t("available")}</small>
           </button>
         </div>
-        <Link to="/notfallmappe" className="set-row" style={{ textDecoration: "none" }}>
-          <span className="si-ico v" aria-hidden>🛡</span>
-          <span className="sr-body">
-            <span className="sr-name">{text.supportHandover}</span>
-            <span className="sr-sub">{text.emergencySub}</span>
-          </span>
-          <span className="sr-arr">›</span>
-        </Link>
       </section>
+
+      {passwordAction ? (
+        <section className="gl set-password-confirm" role="dialog" aria-modal="true" aria-label={text.passwordLinkTitle}>
+          <strong>{passwordAction === "change" ? text.changePassword : text.passwordLinkTitle}</strong>
+          <p>{text.passwordLinkBody.replace("{email}", auth.user?.email ?? "—")}</p>
+          <div className="set-password-confirm-actions">
+            <button type="button" className="secondary" disabled={passwordActionBusy} onClick={() => setPasswordAction(null)}>{text.passwordActionCancel}</button>
+            <button type="button" disabled={passwordActionBusy} onClick={() => void sendPasswordLink()}>{passwordActionBusy ? t("syncing") : text.sendResetLink}</button>
+          </div>
+        </section>
+      ) : null}
 
       {mfaEnrollment ? (
         <section className="gl set-security-setup" style={{ padding: 16 }}>
