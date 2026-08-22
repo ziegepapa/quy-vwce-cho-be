@@ -48,8 +48,8 @@ export default function QuoteFeedRefresh({
 }) {
   const { locale } = useLocale();
   const text = locale === "de"
-    ? { eyebrow: "Automatisch", title: "Marktpreise", description: "Es werden nur Kennungen aus dem Preis-Feed auf GitHub aktualisiert, derzeit VWCE. Andere Werte benötigen unten einen manuellen Kurs. Bei Netzwerkfehlern verwendet die App weiterhin lokale Daten.", refreshing: "Wird aktualisiert…", refresh: "Kurse jetzt aktualisieren" }
-    : { eyebrow: "Tự động", title: "Giá thị trường", description: "Chỉ làm mới những mã có trong feed giá trên GitHub, hiện tại là VWCE. Mã khác cần nhập giá thủ công ở danh sách bên dưới. Khi mạng lỗi, ứng dụng tiếp tục dùng dữ liệu local.", refreshing: "Đang cập nhật…", refresh: "Cập nhật giá bây giờ" };
+    ? { eyebrow: "Automatisch", title: "Marktpreise", summary: "VWCE wird aus dem hinterlegten Kurs-Feed aktualisiert.", info: "Informationen zur Kursquelle", description: "Es werden nur Kennungen aus dem Kurs-Feed aktualisiert, derzeit VWCE. Andere Werte benötigen einen unten erfassten manuellen Kurs. Bei Netzwerkfehlern verwendet die App weiterhin lokale Daten.", refreshing: "Wird aktualisiert…", refresh: "Kurse jetzt aktualisieren" }
+    : { eyebrow: "Tự động", title: "Giá thị trường", summary: "VWCE được cập nhật từ feed giá đã cấu hình.", info: "Thông tin nguồn giá", description: "Chỉ những mã có trong feed giá mới được cập nhật, hiện tại là VWCE. Mã khác cần có giá thủ công trong danh sách bên dưới. Khi mạng lỗi, ứng dụng tiếp tục dùng dữ liệu local.", refreshing: "Đang cập nhật…", refresh: "Cập nhật giá bây giờ" };
   const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState<RefreshStatus | null>(null);
 
@@ -74,30 +74,23 @@ export default function QuoteFeedRefresh({
   }
 
   return (
-    <section className="settings-card quote-feed-card">
-      <div className="settings-card-head">
+    <section className="p40-price-feed">
+      <div className="p40-price-feed-head">
         <div>
-          <p className="settings-card-eyebrow">{text.eyebrow}</p>
+          <span>{text.eyebrow}</span>
           <h3>{text.title}</h3>
-          <p>{text.description}</p>
+          <p>{text.summary}</p>
         </div>
-        <span className="settings-icon-bubble" aria-hidden>↻</span>
+        <button type="button" className="p40-price-refresh" disabled={refreshing} onClick={() => void refresh()}>
+          {refreshing ? text.refreshing : text.refresh}
+        </button>
       </div>
-      <button
-        type="button"
-        className="settings-primary-action"
-        disabled={refreshing}
-        onClick={() => void refresh()}
-      >
-        {refreshing ? text.refreshing : text.refresh}
-      </button>
+      <details className="p40-price-feed-info">
+        <summary>{text.info}</summary>
+        <p>{text.description}</p>
+      </details>
       {status ? (
-        <p
-          className="settings-inline-status"
-          data-freshness={status.level}
-          role="status"
-          aria-live="polite"
-        >
+        <p className="p40-price-feed-status" data-freshness={status.level} role="status" aria-live="polite">
           {status.message}
         </p>
       ) : null}

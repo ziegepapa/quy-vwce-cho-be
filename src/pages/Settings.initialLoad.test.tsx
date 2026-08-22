@@ -56,6 +56,8 @@ function loadedSettings(): AppSettings {
     safeReturn: 0.025,
     endMode: "hard",
     endDate: "2042-12-31",
+    contributionY2: 300,
+    planTarget: { targetUseDate: "2036-12-31", needFullAmount: false, partialNeedEuro: 50000 },
   } as unknown as AppSettings;
 }
 
@@ -109,37 +111,38 @@ describe("Settings initial load state", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
 
-    expect(await screen.findByText("Hồ sơ gia đình")).toBeTruthy();
+    expect(await screen.findByText("Tùy chọn hằng ngày")).toBeTruthy();
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
   });
 
-  it("answers this year first and keeps illustrative Horizon mechanics collapsed", async () => {
+  it("answers this year first and keeps plan mechanics inside the P40 sheet", async () => {
     dbMocks.getSettings.mockResolvedValue(loadedSettings());
     renderSettings();
 
-    expect(await screen.findByText("Mẫu minh họa, không phải dữ liệu Quỹ")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Kế hoạch" })).toBeTruthy();
     expect(document.body.textContent).toContain("50.000");
     expect(document.body.textContent).toContain("300");
-    expect(screen.getByRole("heading", { name: "Năm nay · 2026" })).toBeTruthy();
-    expect(document.querySelector('[data-horizon-phase="accumulate"]')).toBeTruthy();
-    expect(document.body.textContent).toContain("100%");
-    expect(document.body.textContent).toContain("Không cần");
-    expect(document.body.textContent).toContain("Chỉ hiển thị · không tạo giao dịch.");
+    expect(screen.getByText("NĂM NAY")).toBeTruthy();
+    expect(document.querySelector(".p40-plan-accumulate")).toBeTruthy();
+    expect(document.body.textContent).toContain("Gợi ý minh họa · không thay đổi giao dịch đã ghi.");
+    expect(document.body.textContent).not.toContain("0.06");
+    expect(screen.queryByText("Cửa sổ an toàn (preview)")).toBeNull();
 
-    const options = document.querySelector("details.cbo-horizon-options") as HTMLDetailsElement;
-    expect(options.open).toBe(false);
-
-    fireEvent.click(screen.getByRole("button", { name: "Gần hạn (ví dụ)" }));
-    expect(document.querySelector('[data-horizon-phase="transition"]')).toBeTruthy();
-    expect(document.body.textContent).toContain("50%");
-    expect(document.body.textContent).toContain("3.360");
-
-    fireEvent.click(screen.getByText("Tùy chỉnh Horizon"));
-    expect(options.open).toBe(true);
-    expect(document.body.textContent).toContain("€ VWCE góp =");
+    fireEvent.click(screen.getByRole("button", { name: "Tùy chỉnh kế hoạch" }));
+    expect(screen.getByRole("dialog", { name: "Kế hoạch" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "3 năm" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "5 năm" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "7 năm" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "8%" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "12%" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "16%" })).toBeTruthy();
     expect(screen.getByText("Hôm nay")).toBeTruthy();
     expect(screen.getByText("Bắt đầu an toàn")).toBeTruthy();
     expect(screen.getByText("Năm cần tiền")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Nâng cao cho mô phỏng/ }));
+    expect(screen.getByRole("dialog", { name: "Giả định mô phỏng" })).toBeTruthy();
+    expect(screen.getAllByText("%/năm")).toHaveLength(3);
   });
 
   it("routes Settings sign-out through the app-shell callback", async () => {
@@ -147,7 +150,6 @@ describe("Settings initial load state", () => {
     const onRequestSignOut = vi.fn();
     renderSettings({ onRequestSignOut });
 
-    fireEvent.click(await screen.findByRole("tab", { name: "Dữ liệu" }));
     fireEvent.click(await screen.findByRole("button", { name: /Đăng xuất/i }));
 
     expect(onRequestSignOut).toHaveBeenCalledTimes(1);

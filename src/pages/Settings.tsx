@@ -840,7 +840,7 @@ export default function SettingsPage({
           syncing={syncingNow}
           lastSync={lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : null}
           pricesPanel={<SettingsPricePanel refreshKey={refreshKey} onQuotesChanged={onQuotesChanged} />}
-          dataHealthPanel={<LocalDataInventoryPanel />}
+          dataHealthPanel={<LocalDataInventoryPanel localeOverride={locale} />}
           syncHealthPanel={syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
           syncConflictPanel={conflictPanel}
           onSelectTab={(tab) => setSearchParams(tab === "general" ? {} : { tab }, { replace: true })}
@@ -857,8 +857,8 @@ export default function SettingsPage({
           onExportCsv={() => void exportCsv()}
           onOpenMigrate={onOpenMigrate}
           onSignOut={onRequestSignOut ? () => void onRequestSignOut() : undefined}
-          operationsExtra={<>
-            <Link to="/notfallmappe" className="cbo-action-row" style={{ textDecoration: "none" }}><span className="cbo-action-icon"><IconLifebuoy /></span><span><strong>{text.supportHandover}</strong><small>{text.emergencySub}</small></span><IconChevronRight /></Link>
+          handoffAction={<Link to="/notfallmappe" className="cbo-action-row" style={{ textDecoration: "none" }}><span className="cbo-action-icon"><IconLifebuoy /></span><span><strong>{text.supportHandover}</strong><small>{text.emergencySub}</small></span><IconChevronRight /></Link>}
+          dangerAction={<>
             <button type="button" className="cbo-action-row danger" onClick={() => setDeleteOpen(true)}><span className="cbo-action-icon"><IconClose /></span><span><strong>{t("clearLocalData")}</strong><small>{t("clearLocalDataSub")}</small></span><IconChevronRight /></button>
             {deleteOpen ? <div className="advanced-delete"><p>{locale === "de" ? `Geben Sie ${text.deleteToken} zur Bestätigung ein. Dieser Vorgang kann auf diesem Gerät nicht rückgängig gemacht werden.` : t("deleteConfirmText")}</p><input placeholder={text.deleteToken} value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} /><button type="button" disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken} onClick={() => void (async () => { if (readOnly) { showBlocked(); return; } setDeleteBusy(true); try { await clearAllData(); window.location.reload(); } catch { setActionError(text.deleteError); } finally { setDeleteBusy(false); } })()}>{t("confirmDelete")}</button></div> : null}
           </>}

@@ -64,6 +64,8 @@ function loadedSettings(): AppSettings {
     safeReturn: 0.025,
     endMode: "hard",
     endDate: "2042-12-31",
+    contributionY2: 300,
+    planTarget: { targetUseDate: "2036-12-31", needFullAmount: false, partialNeedEuro: 50000 },
   } as unknown as AppSettings;
 }
 
@@ -128,12 +130,12 @@ describe("German Settings and mobile Advanced hierarchy", () => {
 
     expect(await screen.findByRole("heading", { name: "Einstellungen" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Allgemein" }).getAttribute("aria-selected")).toBe("true");
-    expect(screen.getByText("Familienprofil")).toBeTruthy();
-    expect(screen.getByText("Konto & Sicherheit")).toBeTruthy();
-    expect(screen.getByText("Passwort ändern")).toBeTruthy();
-    expect(screen.getByText("Passwort zurücksetzen")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Vietnamesisch" })).toBeTruthy();
-    expect(screen.getByText("Erscheinungsbild")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Plan" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Sicherheit" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Passwort" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Wiederherstellungslink" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "VI" })).toBeTruthy();
+    expect(screen.getByText("Darstellung")).toBeTruthy();
     expect(screen.getByText("Sprache")).toBeTruthy();
     expect(screen.getByText("Ozean")).toBeTruthy();
     expect(screen.queryByText("Ocean")).toBeNull();
@@ -144,7 +146,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(screen.getAllByText("Daten & Betrieb").length).toBeGreaterThan(0);
 
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
-    fireEvent.click(screen.getByRole("button", { name: /Datensicherung/ }));
+    fireEvent.click(screen.getByRole("button", { name: /JSON sichern/ }));
     const germanBackupSheet = await screen.findByRole("dialog", { name: "Datensicherung" });
     fireEvent.click(germanBackupSheet.querySelector("button.settings-child-primary") as HTMLButtonElement);
     await waitFor(() => expect(dbMocks.exportBackup).toHaveBeenCalledTimes(1));
@@ -156,7 +158,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
   it("renders immediate localized feedback for successful JSON export", async () => {
     renderSettings("/settings?tab=data");
 
-    fireEvent.click(await screen.findByRole("button", { name: /Sao lưu dữ liệu/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Sao lưu JSON/ }));
     const vietnameseBackupSheet = await screen.findByRole("dialog", { name: "Sao lưu dữ liệu" });
     fireEvent.click(vietnameseBackupSheet.querySelector("button.settings-child-primary") as HTMLButtonElement);
 
@@ -293,7 +295,8 @@ describe("Settings operation errors", () => {
       .mockRejectedValueOnce(new Error("SETTINGS_SECRET_CANARY"))
       .mockResolvedValueOnce(undefined);
     renderSettings();
-    const input = await screen.findByLabelText("Mốc sử dụng tiền") as HTMLInputElement;
+    fireEvent.click(await screen.findByRole("button", { name: "Tùy chỉnh kế hoạch" }));
+    const input = await screen.findByLabelText("Năm / ngày cần tiền") as HTMLInputElement;
 
     fireEvent.change(input, { target: { value: "2043-12-31" } });
 
@@ -314,7 +317,7 @@ describe("Settings operation errors", () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
     renderSettings("/settings?tab=data");
 
-    fireEvent.click(await screen.findByRole("button", { name: /Sao lưu dữ liệu/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Sao lưu JSON/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Xuất JSON/ }));
 
     const alert = await screen.findByRole("alert");

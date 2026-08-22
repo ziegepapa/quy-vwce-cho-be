@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { countLocalData } from "../lib/db";
-import { useLocale } from "../lib/locale";
+import { useLocale, type AppLocale } from "../lib/locale";
 import { getLocalDiagnostics } from "./localDiagnostics";
 
 type LocalDataCounts = Awaited<ReturnType<typeof countLocalData>>;
@@ -62,8 +62,9 @@ function copyFor(locale: "vi" | "de"): InventoryCopy {
   };
 }
 
-export default function LocalDataInventoryPanel() {
-  const { locale } = useLocale();
+export default function LocalDataInventoryPanel({ localeOverride }: { localeOverride?: AppLocale }) {
+  const { locale: contextLocale } = useLocale();
+  const locale = localeOverride ?? contextLocale;
   const text = copyFor(locale);
   const [counts, setCounts] = useState<LocalDataCounts | null>(null);
   const [diagnosticCount, setDiagnosticCount] = useState(0);
