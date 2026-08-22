@@ -124,6 +124,24 @@ test("German private-vault entry remains locale-pure and keyboard reachable", as
   }
 });
 
+test("mobile local-vault routes keep primary controls reachable without horizontal overflow", async ({ page }) => {
+  await page.setViewportSize(iphone13Viewport);
+  const { localVaultEntry } = await openPrivateVaultEntry(page);
+  test.skip(!(await localVaultEntry.isVisible()), "requires the local-only preview entry");
+
+  for (const route of ["./", "./#/transactions", "./#/settings?view=clarity", "./#/settings?view=horizon"]) {
+    await page.goto(route, { waitUntil: "networkidle" });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    const dockHeights = await page.locator(".bottom-dock a").evaluateAll((links) => links.map((link) => Math.round(link.getBoundingClientRect().height)));
+    expect(dockHeights).toHaveLength(4);
+    expect(dockHeights.every((height) => height >= 44)).toBe(true);
+  }
+
+  await expect(page.locator(".settings-horizon")).toHaveCount(1);
+  await expect(page.locator(".settings-horizon .annual-plan-studio")).toHaveCount(1);
+  await expect.poll(() => page.locator(".settings-horizon").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
 test.describe("retained visual evidence", () => {
   test("captures the desktop authentication entry", async ({ page }, testInfo) => {
     await captureVisualEvidence(page, testInfo, "visual-evidence-auth-desktop.png");

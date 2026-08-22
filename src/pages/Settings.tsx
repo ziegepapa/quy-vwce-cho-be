@@ -1068,30 +1068,22 @@ export default function SettingsPage({
           ) : <p className="advanced-empty">{t("syncConflictsSignIn")}</p>}
         </details>
 
-        <details className="advanced-group" open={openAdvancedGroup === "plan"} hidden={horizonMode}>
-          <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("plan"); }}>{t("plan")}</summary>
-          {horizonMode ? (
-            <AnnualPlanStudio
-              target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
-              startDate={settings.startDate}
-              contributionY1={settings.contributionY1}
-              contributionY2={settings.contributionY2}
-              trackInAppCash={settings.trackInAppCash}
-              transactions={planTransactions}
-              onChangeTarget={(next) => patchSettings({ planTarget: next })}
-            />
-          ) : comparisonMode ? (
-            <SettingsPlanStudio
-              target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
-              onChangeTarget={(next) => patchSettings({ planTarget: next })}
-            />
-          ) : (
-            <PlanRoadmapSection
-              target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
-              onChangeTarget={(next) => patchSettings({ planTarget: next })}
-            />
-          )}
-        </details>
+        {!horizonMode ? (
+          <details className="advanced-group" open={openAdvancedGroup === "plan"}>
+            <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("plan"); }}>{t("plan")}</summary>
+            {comparisonMode ? (
+              <SettingsPlanStudio
+                target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
+                onChangeTarget={(next) => patchSettings({ planTarget: next })}
+              />
+            ) : (
+              <PlanRoadmapSection
+                target={settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }}
+                onChangeTarget={(next) => patchSettings({ planTarget: next })}
+              />
+            )}
+          </details>
+        ) : null}
 
         <details className="advanced-group" open={openAdvancedGroup === "data"}>
           <summary onClick={(event) => { event.preventDefault(); toggleAdvancedGroup("data"); }}>{t("dataTools")}</summary>
