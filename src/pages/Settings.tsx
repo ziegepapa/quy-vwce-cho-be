@@ -28,6 +28,7 @@ import { syncHealthCopy, type SyncHealth } from "../components/syncHealth";
 import PlanRoadmapSection from "../components/PlanRoadmapSection";
 import SettingsPlanStudio from "../components/SettingsPlanStudio";
 import AnnualPlanStudio from "../components/AnnualPlanStudio";
+import SettingsClarityWorkspace from "../components/SettingsClarityWorkspace";
 import LocalDiagnosticsPanel from "../components/LocalDiagnosticsPanel";
 import LocalDataInventoryPanel from "../components/LocalDataInventoryPanel";
 import {
@@ -49,6 +50,7 @@ import {
 import "../styles/settings-operation-errors.css";
 import "../styles/demo-v10-settings.css";
 import "../styles/settings-horizon.css";
+import "../styles/settings-clarity.css";
 
 const SETTINGS_AUTOSAVE_MS = 650;
 type SettingsChildView = "password" | "mfa" | "diagnostics" | "backup" | "restore" | null;
@@ -346,6 +348,7 @@ export default function SettingsPage({
   const requestedTab = searchParams.get("tab");
   const comparisonMode = searchParams.get("view") === "next";
   const horizonMode = searchParams.get("view") === "horizon";
+  const clarityMode = searchParams.get("view") === "clarity";
   // `tab=data` is the existing deep link used by conflict/recovery flows; retain it
   // while the Settings UI stores manual toggles under the clearer `tab=advanced`.
   const showAdvanced = requestedTab === "advanced" || requestedTab === "data";
@@ -802,8 +805,8 @@ export default function SettingsPage({
 
   return (
     <main className="demo-v10-screen" aria-label={t("settingsAria")}>
-      <div className={`set-wrap ${horizonMode ? "settings-horizon" : comparisonMode ? "settings-next" : "vault-atelier"}`}>
-      {horizonMode ? (
+      <div className={`set-wrap ${clarityMode ? "settings-clarity" : horizonMode ? "settings-horizon" : comparisonMode ? "settings-next" : "vault-atelier"}`}>
+      {clarityMode ? null : horizonMode ? (
         <header className="settings-horizon-head">
           <div>
             <span className="settings-horizon-kicker">VWCE / HORIZON <i aria-hidden>2026</i></span>
@@ -869,7 +872,27 @@ export default function SettingsPage({
         </div>
       ) : null}
 
-      {horizonMode ? (
+      {clarityMode && settings ? (
+        <SettingsClarityWorkspace
+          settings={settings}
+          transactions={planTransactions}
+          locale={locale}
+          saveLabel={saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}
+          syncLabel={syncLabel}
+          syncing={syncingNow}
+          lastSync={lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : null}
+          onSync={() => void runVisibleSync()}
+          onChangeTarget={(next) => patchSettings({ planTarget: next })}
+          onOpenVaultAction={(action) => {
+            if (action === "password") { setPasswordAction("change"); setSettingsChild("password"); }
+            else setSettingsChild(action);
+          }}
+          onTheme={pickTheme}
+          onLocale={(next) => { setLocale(next); setActionError(null); setActionFeedback(next === "vi" ? "Đã lưu ngôn ngữ trên thiết bị này." : "Sprache wurde auf diesem Gerät gespeichert."); }}
+        />
+      ) : null}
+
+      {clarityMode ? null : horizonMode ? (
         <section className="settings-horizon-console" aria-label={text.account}>
           <div className="settings-horizon-console-orbit" aria-hidden><i /><i /><i /></div>
           <div className="settings-horizon-console-copy"><span>{locale === "de" ? "Familien-Vault" : "Family Vault"}</span><strong>{text.vaultName}</strong><small>{auth.user?.email ?? t("syncNeedsSignIn")}</small></div>
