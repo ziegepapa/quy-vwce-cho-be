@@ -221,3 +221,21 @@ test("preview exposes an installable PWA and consistent quote feeds", async ({ r
   expect(current?.venue).toBe(legacy.venue);
   expect(current?.asOf).toBe(legacy.asOf);
 });
+
+
+test("stable PWA update bridge registers without showing a notice when no worker is waiting", async ({ page, request }) => {
+  const bridgeResponse = await request.get("./registerSW.js");
+  expect(bridgeResponse.ok()).toBe(true);
+  expect(await bridgeResponse.text()).toContain("SKIP_WAITING");
+
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await expect.poll(() => page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    return Boolean(
+      navigator.serviceWorker.controller
+      && registration.active
+      && !registration.waiting,
+    );
+  })).toBe(true);
+  await expect(page.locator("[data-testid=pwa-update-notice]")).toHaveCount(0);
+});

@@ -40,11 +40,13 @@ function assertQuoteConsistency(quotes, legacy) {
   assert.ok(Number.isFinite(Date.parse(`${current.asOf}T00:00:00Z`)), "Quote date is invalid");
 }
 
-const [expectedAppReleaseVersion, indexHtml, manifest, serviceWorker, quotes, legacy] = await Promise.all([
+const [expectedAppReleaseVersion, indexHtml, manifest, serviceWorker, registerBridge, recoveryHook, quotes, legacy] = await Promise.all([
   readAppReleaseVersion(),
   readText("index.html"),
   readJson("manifest.webmanifest"),
   readText("sw.js"),
+  readText("registerSW.js"),
+  readText("pwa-update-recovery.js"),
   readJson("data/quotes.json"),
   readJson("data/vwce-price.json"),
 ]);
@@ -52,6 +54,7 @@ const [expectedAppReleaseVersion, indexHtml, manifest, serviceWorker, quotes, le
 assert.match(indexHtml, /<meta name="description"/i, "Description metadata is missing");
 assertVersionMatch(expectedAppReleaseVersion, readReleaseVersionFromHtml(indexHtml), "Release artifact");
 assert.match(indexHtml, /rel="manifest"/i, "Manifest link is missing");
+assert.match(indexHtml, /registerSW\.js/i, "Stable PWA registration bridge is missing");
 assert.match(indexHtml, /icons\/apple-touch-icon\.png/i, "Apple touch icon is missing");
 assert.equal(manifest.id, "/quy-vwce-cho-be/");
 assert.equal(manifest.start_url, "/quy-vwce-cho-be/");
@@ -81,6 +84,16 @@ await Promise.all([
 assert.match(serviceWorker, /index\.html/, "App shell is not precached");
 assert.match(serviceWorker, /data\/quotes\.json/, "Quote feed is not precached");
 assert.match(serviceWorker, /icon-maskable-512\.png/, "Maskable icon is not precached");
+assert.match(serviceWorker, /pwa-update-recovery\.js/, "P26 recovery hook is not imported by the worker");
+assert.match(serviceWorker, /SKIP_WAITING/, "Explicit update activation protocol is missing");
+assert.match(registerBridge, /updateViaCache:\s*"none"/, "Bridge must refresh the service-worker script without HTTP-cache reuse");
+assert.match(registerBridge, /SKIP_WAITING/, "Bridge must request explicit worker activation");
+assert.match(registerBridge, /Đã có phiên bản mới/, "Vietnamese update copy is missing");
+assert.match(registerBridge, /Neue App-Version verfügbar/, "German update copy is missing");
+assert.match(recoveryHook, /04b919dfdb8554a9d303a9d535f7839f/, "Recovery hook must remain limited to the P25 legacy cache revision");
+assert.match(recoveryHook, /self\.skipWaiting\(\)/, "Recovery hook must activate only the documented legacy controller");
+assert.doesNotMatch(indexHtml, /index-j-lylgkQ\.js/, "Retired P25 app asset remains referenced by index.html");
+assert.doesNotMatch(serviceWorker, /index-j-lylgkQ\.js/, "Retired P25 app asset remains referenced by sw.js");
 assertQuoteConsistency(quotes, legacy);
 
 console.log(
