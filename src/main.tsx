@@ -6,6 +6,7 @@ import { LocaleProvider } from "./lib/locale";
 import App from "./App";
 import AppFailureBoundary from "./components/AppFailureBoundary";
 import ModalAccessibilityManager from "./components/ModalAccessibilityManager";
+import PwaUpdatePrompt from "./components/PwaUpdatePrompt";
 import "./index.css";
 import "./styles/goals.css";
 import "./styles/settings-v9.css";
@@ -22,6 +23,7 @@ createRoot(document.getElementById("root")!).render(
       <HashRouter>
         <AuthProvider>
           <LocaleProvider>
+            <PwaUpdatePrompt />
             <ModalAccessibilityManager />
             <App />
           </LocaleProvider>
