@@ -32,6 +32,9 @@ export type YearInReview = {
   qualityIssueCount: number;
   actionIssueCount: number;
   reviewIssueCount: number;
+  /** True when every quality issue in this year is `missing_note` only. */
+  missingNotesOnly: boolean;
+  missingNoteCount: number;
   priceSnapshot: { price: number; asOf: string } | null;
   priceHistoryAvailable: false;
 };
@@ -129,6 +132,9 @@ export function buildYearInReview(input: {
     qualityIssueCount: issues.length,
     actionIssueCount: issues.filter((issue) => issue.severity === "action").length,
     reviewIssueCount: issues.filter((issue) => issue.severity === "review").length,
+    missingNotesOnly:
+      issues.length > 0 && issues.every((issue) => issue.code === "missing_note"),
+    missingNoteCount: issues.filter((issue) => issue.code === "missing_note").length,
     priceSnapshot,
     priceHistoryAvailable: false,
   };

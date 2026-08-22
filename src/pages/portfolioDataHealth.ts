@@ -13,13 +13,15 @@ export type PortfolioDataHealthSource =
 
 export type PortfolioDataHealthSeverity = "action" | "review" | "tip";
 
+/** Deep-link into the Transactions quality lens; never mutates ledger data. */
+export const TRANSACTIONS_QUALITY_REVIEW_HREF = "#/transactions?quality=needs_review" as const;
+
 export type PortfolioDataHealthIssue = {
   code: PortfolioDataHealthCode;
   source: PortfolioDataHealthSource;
   severity: PortfolioDataHealthSeverity;
   count: number;
-  /** Route to the existing owner-controlled review surface; never an auto-fix. */
-  href: "#/transactions" | "#/settings";
+  href: typeof TRANSACTIONS_QUALITY_REVIEW_HREF | "#/settings";
 };
 
 export type PortfolioDataHealth = {
@@ -27,6 +29,8 @@ export type PortfolioDataHealth = {
   actionCount: number;
   reviewCount: number;
   tipCount: number;
+  missingNotesOnly: boolean;
+  missingNoteCount: number;
 };
 
 const severityRank: Record<PortfolioDataHealthSeverity, number> = {
@@ -37,18 +41,14 @@ const severityRank: Record<PortfolioDataHealthSeverity, number> = {
 
 function countBySeverity(
   transactionIssues: readonly TransactionQualityIssue[],
-  severity: TransactionQualitySeverity,
+  severity: TransactionQualityIssue["severity"],
 ): number {
   return transactionIssues.filter((issue) => issue.severity === severity).length;
 }
 
-type TransactionQualitySeverity = TransactionQualityIssue["severity"];
-
 /**
- * Local factual health summary. The model groups existing signals for display but
- * never computes a score, changes sync state, imports data or repairs records.
- * `lastBackupAt: null` means metadata was unavailable and deliberately produces
- * no claim; an empty string is a recorded fact that no backup export exists yet.
+ * Local factual health summary. Groups existing signals for display; never scores,
+ * mutates sync, imports, or repairs records.
  */
 export function buildPortfolioDataHealth(input: {
   transactionIssues: readonly TransactionQualityIssue[];
@@ -57,30 +57,68 @@ export function buildPortfolioDataHealth(input: {
   lastBackupAt: string | null;
 }): PortfolioDataHealth {
   const issues: PortfolioDataHealthIssue[] = [];
-  const actionTransactions = countBySeverity(input.transactionIssues, "action");
-  const reviewTransactions = countBySeverity(input.transactionIssues, "review");
-  const tipTransactions = countBySeverity(input.transactionIssues, "tip");
+  const transactionIssues = input.transactionIssues ?? [];
+  const actionTransactions = countBySeverity(transactionIssues, "action");
+  const reviewTransactions = countBySeverity(transactionIssues, "review");
+  const tipTransactions = countBySeverity(transactionIssues, "tip");
+  const missingNoteCount = transactionIssues.filter((i) => i.code === "missing_note").length;
 
   if (actionTransactions > 0) {
-    issues.push({ code: "transaction_quality", source: "transaction_ledger", severity: "action", count: actionTransactions, href: "#/transactions" });
+    issues.push({
+      code: "transaction_quality",
+      source: "transaction_ledger",
+      severity: "action",
+      count: actionTransactions,
+      href: TRANSACTIONS_QUALITY_REVIEW_HREF,
+    });
   } else if (reviewTransactions > 0) {
-    issues.push({ code: "transaction_quality", source: "transaction_ledger", severity: "review", count: reviewTransactions, href: "#/transactions" });
+    issues.push({
+      code: "transaction_quality",
+      source: "transaction_ledger",
+      severity: "review",
+      count: reviewTransactions,
+      href: TRANSACTIONS_QUALITY_REVIEW_HREF,
+    });
   } else if (tipTransactions > 0) {
-    issues.push({ code: "transaction_quality", source: "transaction_ledger", severity: "tip", count: tipTransactions, href: "#/transactions" });
+    issues.push({
+      code: "transaction_quality",
+      source: "transaction_ledger",
+      severity: "tip",
+      count: tipTransactions,
+      href: TRANSACTIONS_QUALITY_REVIEW_HREF,
+    });
   }
 
   const missingQuoteIsins = new Set(input.missingQuoteIsins.filter(Boolean));
   if (missingQuoteIsins.size > 0) {
-    issues.push({ code: "missing_quotes", source: "quote_snapshot", severity: "review", count: missingQuoteIsins.size, href: "#/settings" });
+    issues.push({
+      code: "missing_quotes",
+      source: "quote_snapshot",
+      severity: "review",
+      count: missingQuoteIsins.size,
+      href: "#/settings",
+    });
   }
 
   const staleQuoteIsins = new Set(input.staleQuoteIsins.filter(Boolean));
   if (staleQuoteIsins.size > 0) {
-    issues.push({ code: "stale_quotes", source: "quote_snapshot", severity: "tip", count: staleQuoteIsins.size, href: "#/settings" });
+    issues.push({
+      code: "stale_quotes",
+      source: "quote_snapshot",
+      severity: "tip",
+      count: staleQuoteIsins.size,
+      href: "#/settings",
+    });
   }
 
   if (input.lastBackupAt === "") {
-    issues.push({ code: "backup_not_recorded", source: "backup_metadata", severity: "review", count: 1, href: "#/settings" });
+    issues.push({
+      code: "backup_not_recorded",
+      source: "backup_metadata",
+      severity: "review",
+      count: 1,
+      href: "#/settings",
+    });
   }
 
   const ordered = issues.sort((left, right) => {
@@ -91,10 +129,20 @@ export function buildPortfolioDataHealth(input: {
     return left.code.localeCompare(right.code);
   });
 
+  const onlyLedger =
+    ordered.length > 0 && ordered.every((issue) => issue.source === "transaction_ledger");
+  const missingNotesOnly =
+    onlyLedger &&
+    missingNoteCount > 0 &&
+    transactionIssues.length > 0 &&
+    transactionIssues.every((issue) => issue.code === "missing_note");
+
   return {
     issues: ordered,
-    actionCount: ordered.filter((issue) => issue.severity === "action").reduce((sum, issue) => sum + issue.count, 0),
-    reviewCount: ordered.filter((issue) => issue.severity === "review").reduce((sum, issue) => sum + issue.count, 0),
-    tipCount: ordered.filter((issue) => issue.severity === "tip").reduce((sum, issue) => sum + issue.count, 0),
+    actionCount: ordered.filter((i) => i.severity === "action").reduce((s, i) => s + i.count, 0),
+    reviewCount: ordered.filter((i) => i.severity === "review").reduce((s, i) => s + i.count, 0),
+    tipCount: ordered.filter((i) => i.severity === "tip").reduce((s, i) => s + i.count, 0),
+    missingNotesOnly,
+    missingNoteCount,
   };
 }
