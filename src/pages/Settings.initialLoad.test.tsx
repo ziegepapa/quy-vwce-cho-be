@@ -133,9 +133,9 @@ describe("Settings initial load state", () => {
     expect(screen.getByRole("button", { name: "3 năm" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "5 năm" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "7 năm" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "8%" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "12%" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "16%" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "8%" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "12%" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "16%" })).toBeNull();
     expect(screen.getByText("Hôm nay")).toBeTruthy();
     expect(screen.getByText("Bắt đầu an toàn")).toBeTruthy();
     expect(screen.getByText("Năm cần tiền")).toBeTruthy();
