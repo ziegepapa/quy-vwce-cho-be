@@ -1,1 +1,0 @@
-Use repository contents fetch to obtain the current blob SHA before updating an existing file.
