@@ -6,8 +6,8 @@
 - [ ] H5: ordered migration baseline plus controlled upgrade/rollback drill — BLOCKED until controlled database credentials/runner are available.
 - [x] Backup: export/wipe/import/replay equivalence for settings, goals, transactions, quotes, snapshots and tombstones (synthetic/local hardening pass).
 - [x] Whole-app UX/release matrix available in local hardening pass; real iPhone device verification remains separate and must not be claimed from CI alone.
-- [x] CI gates: test, typecheck, build, release, preview/edge smoke (green in the latest local hardening pass; re-check on this PR after synchronization).
+- [x] CI gates: test, typecheck, build, release, preview/edge smoke — PASS on the current PR run.
 - [ ] Production verification after merge.
 
 ## Merge policy
-H4/H5 are explicitly BLOCKED, not claimed as passed, until controlled staging evidence exists. A green application CI run does not by itself prove H4/H5.
+H4/H5 are explicitly BLOCKED, not claimed as passed, until controlled staging evidence exists. This milestone is a production-safe stabilization merge, not a claim of full authoritative-record readiness.
