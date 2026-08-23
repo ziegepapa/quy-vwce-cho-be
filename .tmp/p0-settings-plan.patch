@@ -1,0 +1,155 @@
+From fd006fa5e86d0d6593d38ce101c0243725bddeec Mon Sep 17 00:00:00 2001
+From: Grok <grok@x.ai>
+Date: Sun, 23 Aug 2026 09:36:11 +0000
+Subject: [PATCH] fix(settings): plan sheet above dock + visible horizon result
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Raise P40 sheet z-index to --z-sheet and hide bottom dock while open
+- Fix hasGoal when needFullAmount so dated goals show plan output
+- Show sheet result preview: phase, safe-start year, need year, this-year € split, transfer %
+---
+ src/components/SettingsCboWorkspace.tsx | 69 ++++++++++++++++++++-----
+ src/styles/settings-cbo.css             | 11 ++--
+ 2 files changed, 65 insertions(+), 15 deletions(-)
+
+diff --git a/src/components/SettingsCboWorkspace.tsx b/src/components/SettingsCboWorkspace.tsx
+index 0f3e69f..f964a2c 100644
+--- a/src/components/SettingsCboWorkspace.tsx
++++ b/src/components/SettingsCboWorkspace.tsx
+@@ -1,4 +1,4 @@
+-import { useMemo, useState, type ReactNode } from "react";
++import { useEffect, useMemo, useState, type ReactNode } from "react";
+ import type { AppLocale } from "../lib/locale";
+ import type { AppSettings, PlanTarget } from "../lib/types";
+ import type { ThemeChoice } from "../lib/theme";
+@@ -77,7 +77,7 @@ function copyFor(locale: AppLocale) {
+     fund: "FAMILIENFONDS", editProfile: "Profil bearbeiten", profile: "Familienprofil", planName: "Name des Plans", childName: "Name des Kindes", account: "Konto läuft auf", parent: "Eltern", child: "Kind",
+     plan: "Plan", planEmpty: "Noch kein Ziel", planEmptyCopy: "Hinterlegen Sie Jahr und Zielbetrag, um den Jahresüberblick zu sehen.", addGoal: "Ziel hinzufügen", configurePlan: "Plan anpassen", annual: "DIESES JAHR", disclaimer: "Illustrative Ansicht · erfasste Buchungen bleiben unverändert.",
+     phase: { accumulate: ["Aufbau", "Noch weit bis zum Zieltermin – Beiträge werden im Aufbau-Szenario gezeigt."], transition: ["Übergang", "Der Sicherheitszeitraum beginnt – neue Beiträge werden beispielhaft geteilt."], protect: ["Schutz", "Der Zieltermin rückt näher – der sichere Teil steht im Vordergrund."], use: ["Verwenden", "Zieljahr erreicht – bestätigten Bedarf und verfügbare Mittel vergleichen."] },
+-    contribution: "Monatlicher Beitrag", transfer: "Zusätzliche Vorschau", noTransfer: "Nicht nötig", unavailable: "Nicht verfügbar – kein bestätigter VWCE-Wert", safe: "Sicherer Teil", vwce: "VWCE", targetDate: "Zieltermin", fullAmount: "Nahezu gesamtes Vermögen verwenden", targetAmount: "Zielbetrag", safeWindow: "Sicherheitszeitraum (Vorschau)", transferRate: "Transfer-Vorschau/Jahr", milestones: ["Heute", "Sicherheit beginnt", "Zieljahr"], advanced: "Erweitert für Simulation", advancedHelp: "Rendite, Inflation und Sicherheitsmarge", simulation: "Annahmen für Ziel & Simulation", simulationNote: "Nur für Ziel und Simulation; keine Buchung wird verändert.", vwceReturn: "VWCE-Rendite", inflation: "Inflation", safeReturn: "Sicherer Teil", buffer: "Sicherheitsmarge", save: "Fertig",
++    contribution: "Monatlicher Beitrag", transfer: "Zusätzliche Vorschau", noTransfer: "Nicht nötig", unavailable: "Nicht verfügbar – kein bestätigter VWCE-Wert", safe: "Sicherer Teil", vwce: "VWCE", targetDate: "Zieltermin", fullAmount: "Nahezu gesamtes Vermögen verwenden", targetAmount: "Zielbetrag", safeWindow: "Sicherheitszeitraum (Vorschau)", transferRate: "Transfer-Vorschau/Jahr", milestones: ["Heute", "Sicherheit beginnt", "Zieljahr"], resultTitle: "Ergebnisvorschau", resultSafeStart: "Sicherheit ab", resultNeedYear: "Zieljahr", resultPhase: "Phase", resultThisYear: "Dieses Jahr", fullPortfolio: "Nahezu gesamtes Vermögen", transferPctYear: "Transfer-Vorschau", advanced: "Erweitert für Simulation", advancedHelp: "Rendite, Inflation und Sicherheitsmarge", simulation: "Annahmen für Ziel & Simulation", simulationNote: "Nur für Ziel und Simulation; keine Buchung wird verändert.", vwceReturn: "VWCE-Rendite", inflation: "Inflation", safeReturn: "Sicherer Teil", buffer: "Sicherheitsmarge", save: "Fertig",
+     everyday: "Im Alltag", language: "Sprache", appearance: "Darstellung", wallet: "Cash-Modell in der App", walletHelp: "Bestehende Buchungslogik bleibt unverändert.", security: "Sicherheit", password: "Passwort", recovery: "Wiederherstellungslink", mfa: "MFA / TOTP", signOut: "Abmelden",
+     prices: "Kurse", pricesHelp: "Feed-Status und wirksame Kurse", pricesInfo: "Details zur Kursquelle", data: "Daten & Betrieb", sync: "Gesundheit & Synchronisierung", syncNow: "Jetzt synchronisieren", transfers: "Sicherung & Gerätewechsel", backup: "JSON sichern", restore: "Daten wiederherstellen", csv: "CSV exportieren", device: "Gerät wiederherstellen", handoff: "Notfallmappe & Übergabe", diagnostics: "Gerätedetails", danger: "Gefahrenbereich", localDetails: "Daten auf diesem Gerät", close: "Schließen", perYear: "%/Jahr", missingContribution: "Kein Monatsbeitrag konfiguriert", useNeed: "Bedarf in diesem Jahr", safeAvailable: "Sicher verfügbar",
+   };
+@@ -86,25 +86,36 @@ function copyFor(locale: AppLocale) {
+     fund: "QUỸ GIA ĐÌNH", editProfile: "Chỉnh hồ sơ", profile: "Hồ sơ gia đình", planName: "Tên kế hoạch", childName: "Tên bé", account: "Tài khoản đứng tên", parent: "Cha/mẹ", child: "Bé",
+     plan: "Kế hoạch", planEmpty: "Chưa có mục tiêu", planEmptyCopy: "Thêm năm và số tiền cần để xem kế hoạch năm nay.", addGoal: "Thêm mục tiêu", configurePlan: "Tùy chỉnh kế hoạch", annual: "NĂM NAY", disclaimer: "Gợi ý minh họa · không thay đổi giao dịch đã ghi.",
+     phase: { accumulate: ["Tích lũy", "Còn xa hạn — khoản góp được hiển thị theo pha tích lũy."], transition: ["Chuyển dần", "Đang vào cửa sổ an toàn — khoản góp được tách theo preview."], protect: ["Bảo vệ", "Gần hạn — phần an toàn được hiển thị nổi bật."], use: ["Rút", "Năm cần tiền — đối chiếu nhu cầu với phần an toàn đã xác nhận."] },
+-    contribution: "Khoản góp hằng tháng", transfer: "Preview chuyển thêm", noTransfer: "Không cần", unavailable: "Chưa có – không có giá trị VWCE đã xác nhận", safe: "Phần an toàn", vwce: "VWCE", targetDate: "Năm / ngày cần tiền", fullAmount: "Dùng gần như toàn bộ danh mục", targetAmount: "Số € mục tiêu", safeWindow: "Cửa sổ an toàn (preview)", transferRate: "Preview chuyển đổi/năm", milestones: ["Hôm nay", "Bắt đầu an toàn", "Năm cần tiền"], advanced: "Nâng cao cho mô phỏng", advancedHelp: "Lợi suất, lạm phát và biên an toàn", simulation: "Giả định mô phỏng", simulationNote: "Chỉ dùng cho mục tiêu và mô phỏng; không thay đổi giao dịch đã ghi.", vwceReturn: "Lợi suất VWCE", inflation: "Lạm phát", safeReturn: "Phần an toàn", buffer: "Biên an toàn", save: "Xong",
++    contribution: "Khoản góp hằng tháng", transfer: "Preview chuyển thêm", noTransfer: "Không cần", unavailable: "Chưa có – không có giá trị VWCE đã xác nhận", safe: "Phần an toàn", vwce: "VWCE", targetDate: "Năm / ngày cần tiền", fullAmount: "Dùng gần như toàn bộ danh mục", targetAmount: "Số € mục tiêu", safeWindow: "Cửa sổ an toàn (preview)", transferRate: "Preview chuyển đổi/năm", milestones: ["Hôm nay", "Bắt đầu an toàn", "Năm cần tiền"], resultTitle: "Kết quả gợi ý", resultSafeStart: "Bắt đầu an toàn", resultNeedYear: "Năm cần tiền", resultPhase: "Pha", resultThisYear: "Năm nay", fullPortfolio: "Gần như toàn bộ danh mục", transferPctYear: "Preview chuyển/năm", advanced: "Nâng cao cho mô phỏng", advancedHelp: "Lợi suất, lạm phát và biên an toàn", simulation: "Giả định mô phỏng", simulationNote: "Chỉ dùng cho mục tiêu và mô phỏng; không thay đổi giao dịch đã ghi.", vwceReturn: "Lợi suất VWCE", inflation: "Lạm phát", safeReturn: "Phần an toàn", buffer: "Biên an toàn", save: "Xong",
+     everyday: "Tùy chọn hằng ngày", language: "Ngôn ngữ", appearance: "Giao diện", wallet: "Ví trong app", walletHelp: "Giữ nguyên logic ghi nhận tiền nạp trước lệnh mua hiện có.", security: "Bảo mật", password: "Đổi mật khẩu", recovery: "Link khôi phục", mfa: "MFA / TOTP", signOut: "Đăng xuất",
+     prices: "Giá", pricesHelp: "Trạng thái feed và giá đang dùng", pricesInfo: "Tìm hiểu nguồn giá", data: "Dữ liệu & vận hành", sync: "Sức khỏe & đồng bộ", syncNow: "Đồng bộ ngay", transfers: "Sao lưu & chuyển máy", backup: "Sao lưu JSON", restore: "Khôi phục dữ liệu", csv: "Xuất CSV", device: "Khôi phục thiết bị", handoff: "Hồ sơ khẩn cấp & bàn giao", diagnostics: "Chi tiết thiết bị", danger: "Vùng nguy hiểm", localDetails: "Dữ liệu trên thiết bị", close: "Đóng", perYear: "%/năm", missingContribution: "Chưa có khoản góp hằng tháng", useNeed: "Khoản cần năm nay", safeAvailable: "An toàn khả dụng",
+   } as const;
+ }
+ 
+ function Sheet({ title, onClose, closeLabel, children }: { title: string; onClose: () => void; closeLabel: string; children: ReactNode }) {
++  useEffect(() => {
++    const dock = document.querySelector(".bottom-dock");
++    document.documentElement.classList.add("p40-sheet-open");
++    document.body.classList.add("p40-sheet-open");
++    dock?.classList.add("is-hidden");
++    return () => {
++      document.documentElement.classList.remove("p40-sheet-open");
++      document.body.classList.remove("p40-sheet-open");
++      document.querySelector(".bottom-dock")?.classList.remove("is-hidden");
++    };
++  }, []);
+   return <div className="p40-sheet-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="p40-sheet" role="dialog" aria-modal="true" aria-label={title}><div className="p40-sheet-grabber" aria-hidden /><header><strong>{title}</strong><button type="button" aria-label={closeLabel} onClick={onClose}>×</button></header><div className="p40-sheet-body">{children}</div></section></div>;
+ }
+ 
+-function PlanSummary({ settings, locale, copy, onOpenPlan }: { settings: AppSettings; locale: AppLocale; copy: ReturnType<typeof copyFor>; onOpenPlan: () => void }) {
++function PlanSummary({ settings, locale, copy, onOpenPlan, deRiskYears = 5 }: { settings: AppSettings; locale: AppLocale; copy: ReturnType<typeof copyFor>; onOpenPlan: () => void; deRiskYears?: number }) {
+   const today = useMemo(() => new Date(), []);
+   const target = settings.planTarget ?? { targetUseDate: settings.endDate ?? "", needFullAmount: true };
+   const targetAmount = !target.needFullAmount && Number.isFinite(target.partialNeedEuro) && (target.partialNeedEuro ?? 0) > 0 ? target.partialNeedEuro ?? null : null;
+   const contribution = settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1 > 0 ? settings.contributionY1 : null;
+   const yearsLeft = yearsTo(target.targetUseDate, today);
+   const hasGoal = targetAmount !== null && yearsLeft !== null;
+   const deRiskYears = 5;
+   const phase = hasGoal ? phaseFor(yearsLeft, deRiskYears) : null;
+   const [phaseName, phaseSentence] = phase ? copy.phase[phase] : ["", ""];
+   const vwceShare = phase === "accumulate" ? 1 : phase === "transition" ? 0.5 : 0;
+   const safeShare = phase === "use" ? 0 : 1 - vwceShare;
+   const goalLabel = settings.planName || copy.plan;
+@@ -169,7 +169,17 @@ export default function SettingsCboWorkspace(props: Props) {
+     <div className="p40-preference-grid">
+       <div className="p40-preference-item"><span>{copy.appearance}</span><div className="p40-choice-row">{["ember", "ocean", "vault"].map((choice) => <button key={choice} type="button" className={props.theme === choice ? "selected" : ""} onClick={() => props.onTheme(choice as ThemeChoice)}>{choice}</button>)}</div></div>
+       <div className="p40-preference-item"><span>{copy.language}</span><div className="p40-choice-row"><button type="button" className={props.locale === "vi" ? "selected" : ""} onClick={() => props.onLocale("vi")}>Tiếng Việt</button><button type="button" className={props.locale === "de" ? "selected" : ""} onClick={() => props.onLocale("de")}>Deutsch</button></div></div>
+@@ -177,12 +187,61 @@ export default function SettingsCboWorkspace(props: Props) {
+     <div className="p40-zone">{props.activeTab === "general" ? <PlanSummary settings={props.settings} locale={props.locale} copy={copy} onOpenPlan={() => setSheet("plan")} /> : null}{props.activeTab === "prices" ? props.pricesPanel : null}{props.activeTab === "data" ? <div className="p40-surface">{props.dataHealthPanel}</div> : null}{props.activeTab === "general" ? <div className="p40-surface"><div className="p40-zone-head"><h2>{copy.data}</h2></div>{props.handoffAction}{props.syncHealthPanel}{props.syncConflictPanel}<div className="p40-settings-actions"><InlineAction title={copy.csv} onClick={props.onExportCsv} />{props.onOpenMigrate ? <InlineAction title={copy.device} onClick={props.onOpenMigrate} /> : null}</div></div> : null}</div>
+ 
+-    {sheet === "plan" ? <Sheet title={copy.plan} closeLabel={copy.close} onClose={() => setSheet(null)}><div className="p40-sheet-fields"><label><span>{copy.targetDate}</span><input type="date" value={target.targetUseDate} onChange={(event) => editTarget({ targetUseDate: event.target.value })} /></label><label className="p40-toggle-row"><span><strong>{copy.fullAmount}</strong></span><input type="checkbox" checked={target.needFullAmount} onChange={(event) => editTarget({ needFullAmount: event.target.checked, partialNeedEuro: event.target.checked ? undefined : target.partialNeedEuro })} /></label>{!target.needFullAmount ? <label><span>{copy.targetAmount}</span><input inputMode="decimal" type="number" min="0" value={target.partialNeedEuro ?? ""} onChange={(event) => editTarget({ partialNeedEuro: parseNumber(event.target.value) })} /></label> : null}<div><span>{copy.safeWindow}</span><div className="p40-segments">{[3, 5, 7].map((value) => <button key={value} type="button" className={deRiskYears === value ? "selected" : ""} onClick={() => setDeRiskYears(value)}>{value} {props.locale === "de" ? "J." : "năm"}</button>)}</div></div><label><span>{copy.transferRate}</span><select value={transferRate} onChange={(event) => setTransferRate(Number(event.target.value))}><option value={8}>8%</option><option value={12}>12%</option><option value={16}>16%</option></select></label><div className="p40-milestones"><div><span>{copy.milestones[0]}</span><strong>{currentYear}</strong></div><div><span>{copy.milestones[1]}</span><strong>{Math.max(currentYear, goalYear - deRiskYears)}</strong></div><div><span>{copy.milestones[2]}</span><strong>{goalYear}</strong></div></div><button type="button" className="p40-advanced-link" onClick={() => setSheet("simulation")}>{copy.advanced}<small>{copy.advancedHelp}</small><IconChevronRight aria-hidden /></button><button type="button" className="p40-sheet-done" onClick={() => setSheet(null)}>{copy.save}</button></Sheet> : null}
++    {sheet === "plan" ? <Sheet title={copy.plan} closeLabel={copy.close} onClose={() => setSheet(null)}>
++      <div className="p40-sheet-fields">
++        <label><span>{copy.targetDate}</span><input type="date" value={target.targetUseDate} onChange={(event) => editTarget({ targetUseDate: event.target.value })} /></label>
++        <label className="p40-toggle-row"><span><strong>{copy.fullAmount}</strong></span><input type="checkbox" checked={target.needFullAmount} onChange={(event) => editTarget({ needFullAmount: event.target.checked, partialNeedEuro: event.target.checked ? undefined : target.partialNeedEuro })} /></label>
++        {!target.needFullAmount ? <label><span>{copy.targetAmount}</span><input inputMode="decimal" type="number" min="0" value={target.partialNeedEuro ?? ""} onChange={(event) => editTarget({ partialNeedEuro: parseNumber(event.target.value) })} /></label> : null}
++        <div><span>{copy.safeWindow}</span><div className="p40-segments">{[3, 5, 7].map((value) => <button key={value} type="button" className={deRiskYears === value ? "selected" : ""} onClick={() => setDeRiskYears(value)}>{value} {props.locale === "de" ? "J." : "năm"}</button>)}</div></div>
++        <label><span>{copy.transferRate}</span><select value={transferRate} onChange={(event) => setTransferRate(Number(event.target.value))}><option value={8}>8%</option><option value={12}>12%</option><option value={16}>16%</option></select></label>
++      </div>
++      <div className="p40-milestones"><div><span>{copy.milestones[0]}</span><strong>{currentYear}</strong></div><div><span>{copy.milestones[1]}</span><strong>{Math.max(currentYear, goalYear - deRiskYears)}</strong></div><div><span>{copy.milestones[2]}</span><strong>{goalYear}</strong></div></div>
++      {(() => {
++        const yearsLeftSheet = yearsTo(target.targetUseDate, today);
++        const hasDate = yearsLeftSheet !== null;
++        const hasAmount = target.needFullAmount || (Number.isFinite(target.partialNeedEuro) && (target.partialNeedEuro ?? 0) > 0);
++        if (!hasDate || !hasAmount) {
++          return <div className="p40-sheet-result" role="status"><span>{copy.resultTitle}</span><p>{copy.planEmptyCopy}</p></div>;
++        }
++        const phaseSheet = phaseFor(yearsLeftSheet!, deRiskYears);
++        const [phaseNameSheet, phaseSentenceSheet] = copy.phase[phaseSheet];
++        const safeStartYear = Math.max(currentYear, goalYear - deRiskYears);
++        const vwceShareSheet = phaseSheet === "accumulate" ? 1 : phaseSheet === "transition" ? 0.5 : 0;
++        const safeShareSheet = phaseSheet === "use" ? 0 : 1 - vwceShareSheet;
++        const contributionSheet = props.settings.contributionY2 > 0 ? props.settings.contributionY2 : props.settings.contributionY1 > 0 ? props.settings.contributionY1 : null;
+        const amountLabel = target.needFullAmount ? copy.fullPortfolio : money(target.partialNeedEuro ?? 0, props.locale);
+        return <div className="p40-sheet-result" role="status">
+          <span>{copy.resultTitle}</span>
+          <strong>{phaseNameSheet} · {phaseSheet === "use" ? goalYear : `${yearsLeftSheet} ${props.locale === "de" ? "Jahre" : "năm"}`}</strong>
+          <p>{phaseSentenceSheet}</p>
+          <small>{copy.resultSafeStart}: <b>{safeStartYear}</b> · {copy.resultNeedYear}: <b>{goalYear}</b></small>
+          {contributionSheet === null ? <small>{copy.missingContribution}</small> : phaseSheet === "use" ? <small>{copy.useNeed}: {amountLabel}</small> : <small>{copy.resultThisYear}: {money(contributionSheet, props.locale)} → {money(contributionSheet * vwceShareSheet, props.locale)} {copy.vwce} · {money(contributionSheet * safeShareSheet, props.locale)} {copy.safe}</small>}
+          <small>{copy.transferPctYear}: {phaseSheet === "accumulate" ? copy.noTransfer : `${transferRate}%`} · {copy.disclaimer}</small>
+        </div>;
+      })()}
+      <button type="button" className="p40-advanced-link" onClick={() => setSheet("simulation")}>{copy.advanced}<small>{copy.advancedHelp}</small><IconChevronRight aria-hidden /></button>
+      <button type="button" className="p40-sheet-done" onClick={() => setSheet(null)}>{copy.save}</button>
+    </Sheet> : null}
+    {sheet === "simulation" ? <Sheet title={copy.simulation} closeLabel={copy.close} onClose={() => setSheet("plan")}><p className="p40-sheet-note">{copy.simulationNote}</p><div className="p40-sheet-fields p40-percent-grid"><label><span>{copy.vwceReturn}</span><input inputMode="decimal" value={String(props.settings.vwceReturn * 100)} onChange={(event) => updateRate("vwceReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.inflation}</span><input inputMode="decimal" value={String(props.settings.inflationRate * 100)} onChange={(event) => updateRate("inflationRate", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.safeReturn}</span><input inputMode="decimal" value={String(props.settings.safeReturn * 100)} onChange={(event) => updateRate("safeReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.buffer}</span><input inputMode="decimal" value={String(props.settings.bufferPct * 100)} onChange={(event) => updateRate("bufferPct", event.target.value)} /><small>%</small></label></div><button type="button" className="p40-sheet-done" onClick={() => setSheet("plan")}>{copy.save}</button></Sheet> : null}
+   </div>;
+ }
+ diff --git a/src/styles/settings-cbo.css b/src/styles/settings-cbo.css
+index e644e4c..77e79b7 100644
+--- a/src/styles/settings-cbo.css
++++ b/src/styles/settings-cbo.css
+@@ -146,13 +146,18 @@
+ .p40-danger-zone .cbo-action-row { color: var(--p40-danger); }
+ .p40-danger-zone .cbo-action-row > svg { color: color-mix(in srgb, var(--p40-danger) 70%, var(--p40-muted)); }
+ 
+-.p40-sheet-layer { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; padding: max(10px, env(safe-area-inset-top)) 0 0; background: rgba(13, 23, 21, .32); }
++.p40-sheet-layer { position: fixed; inset: 0; z-index: var(--z-sheet, 80); display: flex; align-items: flex-end; padding: max(10px, env(safe-area-inset-top)) 0 0; background: rgba(13, 23, 21, .32); }
+ .p40-sheet { width: min(100%, 680px); max-height: min(86dvh, 760px); margin: 0 auto; overflow: auto; border-radius: 24px 24px 0 0; background: var(--p40-surface); box-shadow: 0 -12px 36px rgba(17, 33, 29, .16); }
+ .p40-sheet-grabber { width: 38px; height: 4px; margin: 10px auto 2px; border-radius: 4px; background: var(--p40-line-strong); }
+ .p40-sheet > header { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--p40-line); }
+ .p40-sheet > header strong { font-family: ui-serif, Georgia, serif; font-size: 20px; letter-spacing: -.025em; }
+ .p40-sheet > header button { width: 44px; height: 44px; color: var(--p40-muted); font-size: 27px; line-height: 1; border: 0; background: transparent; }
+-.p40-sheet-body { display: grid; gap: 18px; padding: 20px max(20px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
++.p40-sheet-body { display: grid; gap: 18px; padding: 20px max(20px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
++.p40-sheet-result { display: grid; gap: 8px; padding: 14px; border-radius: 14px; background: var(--p40-surface-subtle); border: 1px solid var(--p40-line); }
++.p40-sheet-result > span { color: var(--p40-muted); font-size: 11px; font-weight: 740; letter-spacing: .04em; text-transform: uppercase; }
++.p40-sheet-result strong { font-size: 15px; line-height: 1.35; color: var(--p40-ink); }
++.p40-sheet-result p { margin: 0; color: var(--p40-ink); font-size: 14px; line-height: 1.45; }
++.p40-sheet-result small { color: var(--p40-muted); font-size: 12px; line-height: 1.4; }
+ .p40-sheet-fields { display: grid; gap: 15px; }
+ .p40-sheet-fields > label { display: grid; gap: 6px; }
+ .p40-sheet-fields input, .p40-sheet-fields select { width: 100%; min-height: 48px; padding: 0 11px; color: var(--p40-ink); border: 1px solid var(--p40-line); border-radius: 11px; background: var(--p40-surface); }
+@@ -169,7 +169,7 @@
+ .p40-advanced-link { min-height: 56px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 2px 12px; padding: 0; color: var(--p40-ink); font-size: 14px; font-weight: 720; text-align: left; border: 0; border-top: 1px solid var(--p40-line); background: transparent; }
+ .p40-advanced-link small { color: var(--p40-muted); font-size: 11px; font-weight: 500; }
+ .p40-advanced-link svg { grid-column: 2; grid-row: 1 / span 2; color: var(--p40-muted); }
+-.p40-sheet-done { min-height: 46px; color: #fff; font-weight: 760; border: 0; border-radius: 12px; background: var(--p40-teal); }
++.p40-sheet-done { position: sticky; bottom: 0; z-index: 2; min-height: 46px; margin-top: 4px; color: #fff; font-weight: 760; border: 0; border-radius: 12px; background: var(--p40-teal); box-shadow: 0 -8px 16px color-mix(in srgb, var(--p40-surface) 88%, transparent); }
+ 
+ .p40-settings :is(button, input, select):focus-visible { outline: 3px solid color-mix(in srgb, var(--p40-teal) 55%, transparent); outline-offset: 3px; }
+ @media (min-width: 560px) { .p40-settings { padding-inline: 28px; } .p40-preference-grid { grid-template-columns: 1fr 1fr; } .p40-price-zone .settings-field-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
