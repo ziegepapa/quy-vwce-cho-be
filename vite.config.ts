@@ -18,13 +18,11 @@ export default defineConfig({
       transformIndexHtml(html) {
         return html.replace(
           "</head>",
-          `    <meta name="vwce-app-release-version" content="${appReleaseVersion}">\n  </head>`,
+          `    <meta name=\"vwce-app-release-version\" content=\"${appReleaseVersion}\">\n  </head>`,
         );
       },
     },
     VitePWA({
-      // Normal updates remain owner-confirmed. A stable public bridge keeps this
-      // control reachable when a previous application shell was cached.
       registerType: "prompt",
       injectRegister: "script-defer",
       includeAssets: ["icons/*.svg", "icons/*.png"],
@@ -56,13 +54,11 @@ export default defineConfig({
         navigateFallback: "/quy-vwce-cho-be/index.html",
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        // P26/P27 bounded recovery hooks. Normal updates remain explicitly owner-confirmed.
         importScripts: [
           "pwa-update-recovery.js",
           "pwa-final-runtime-recovery.js",
           "pwa-p34-update-recovery.js",
         ],
-        // Normal updates wait until the bridge posts explicit SKIP_WAITING.
         skipWaiting: false,
       },
       devOptions: {
@@ -74,52 +70,29 @@ export default defineConfig({
     environment: "node",
     include: [
       "src/**/*.test.ts",
-      // Post-baseline: root recovery callback, listener-first initialization and
-      // safe invalid-link state must run under jsdom in the normal release gate.
       "src/lib/auth.recovery.test.ts",
       "src/pages/Auth.recovery.test.tsx",
       "src/App.recoveryGate.test.tsx",
-      // Giữ contract thị giác demo (màu hiệu suất và card Giá) ngoài TS build.
       "src/styles/demoV10VisualRegression.test.js",
       "src/styles/txFilterSheetSafeArea.test.js",
-      // PR0: bat dan tung file .test.tsx da doc toan bo source.
       "src/pages/Goals.loadState.test.tsx",
       "src/pages/Overview.loadState.test.tsx",
-      // P10.3: continuity snapshot must remain allowlisted and privacy-safe.
       "src/pages/continuitySnapshot.test.ts",
-      // PR0.1: test cong nhap sao luu cua PR3. Da doc tron Settings.tsx,
-      // Settings.pendingSyncImport.test.tsx va backupImportGate.ts truoc khi bat.
       "src/pages/Settings.pendingSyncImport.test.tsx",
-      // PR0.2: test ranh gioi loi toan app. Da doc tron AppFailureBoundary.tsx
-      // va AppFailureBoundary.test.tsx tren main truoc khi bat.
       "src/components/AppFailureBoundary.test.tsx",
-      // P5.0: dialog keyboard contract — the suite explicitly focuses the trigger
-      // before click in jsdom, so it can assert Escape and focus restoration.
       "src/components/ModalAccessibilityManager.test.tsx",
-      // P6.1: local-only diagnostics surface — verifies German/Vietnamese copy
-      // and that untrusted stored payload fields cannot be rendered.
       "src/components/LocalDiagnosticsPanel.test.tsx",
-      // P7.3: local-only inventory must render only allowlisted counts and copy.
       "src/components/LocalDataInventoryPanel.test.tsx",
-      // P6.3: Sync guidance must stay accessible, localized and explicitly safe.
       "src/components/SyncHealthSummary.test.tsx",
-      // PR0.3: test ranh gioi loi toan app.Giao dich. Da doc tron Transactions.tsx
-      // va Transactions.loadState.test.tsx tren main truoc khi bat.
       "src/pages/Transactions.loadState.test.tsx",
-      // PR0.5 (lo lon 7 file): da doc TOAN VAN tren main 39b4ec66 truoc khi bat
-      // Notfallmappe.tsx; SimulationRoute.tsx + PageFailureBoundary.tsx +
-      // operationErrors.ts; QuoteFeedRefresh.tsx + quoteFreshness.ts;
-      // Settings.tsx; MigrateWizard.tsx + defaults.ts.
       "src/pages/Notfallmappe.initialLoad.test.tsx",
       "src/pages/Notfallmappe.saveState.test.tsx",
       "src/pages/SimulationRoute.test.tsx",
       "src/components/QuoteFeedRefresh.test.tsx",
       "src/pages/Settings.initialLoad.test.tsx",
       "src/pages/Settings.operationErrors.test.tsx",
+      "src/components/SettingsCboWorkspace.yearlyPlan.test.tsx",
       "src/pages/MigrateWizard.test.tsx",
-      // CHUA BAT - can PR sua rieng trong file test, khong sua production:
-      // - src/pages/Settings.test.tsx (FINDING_NOTION_50: mock cu, thieu
-      //   PlanRoadmapSection va ../lib/recoveryReadOnly).
     ],
   },
 });
