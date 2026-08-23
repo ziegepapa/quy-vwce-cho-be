@@ -66,8 +66,8 @@ describe("SettingsCboWorkspace yearly plan", () => {
     expect(table.textContent).toContain("2034");
     expect(table.textContent).toContain("2039");
     expect(table.textContent).toContain("Hiện tại");
-    expect(table.textContent).toContain("Bắt đầu an toàn");
-    expect(table.textContent).toContain("Năm cần tiền");
+    expect(table.textContent).toContain("Mốc an toàn");
+    expect(table.textContent).toContain("Mốc mục tiêu");
     expect(table.textContent).toContain("1.200");
     expect(document.body.textContent).not.toMatch(/Mua|Bán|lệnh mua|lệnh bán/);
   });
@@ -82,7 +82,7 @@ describe("SettingsCboWorkspace yearly plan", () => {
 
     expect(screen.getByText("Jahresplan")).toBeTruthy();
     expect(table.textContent).toContain("Heute");
-    expect(table.textContent).toContain("Sicherheit beginnt");
+    expect(table.textContent).toContain("Sicherheitsbeginn");
     expect(table.textContent).toContain("Zieljahr");
   });
 });
