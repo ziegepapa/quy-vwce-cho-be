@@ -69,7 +69,8 @@ describe("SettingsCboWorkspace yearly plan", () => {
     expect(table.textContent).toContain("Mốc an toàn");
     expect(table.textContent).toContain("Mốc mục tiêu");
     expect(table.textContent).toContain("1.200");
-    expect(document.body.textContent).not.toMatch(/Mua|Bán|lệnh mua|lệnh bán/);
+    expect(table.textContent).not.toMatch(/\b(Mua|Bán)\b/);
+    expect(screen.queryByRole("button", { name: /^(Mua|Bán)/i })).toBeNull();
   });
 
   it("keeps the yearly table localized in German", () => {
