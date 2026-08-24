@@ -139,6 +139,33 @@ test("mobile local-vault routes keep primary controls reachable without horizont
 
 });
 
+test("mobile Transactions keeps PDF import reachable above the dock", async ({ page }) => {
+  await page.setViewportSize(iphone13Viewport);
+  const { localVaultEntry } = await openPrivateVaultEntry(page);
+  test.skip(!(await localVaultEntry.isVisible()), "requires the local-only preview entry");
+
+  await page.goto("./#/transactions", { waitUntil: "networkidle" });
+  const importSummary = page.locator(".tx-import-tools > summary");
+  await expect(importSummary).toBeVisible();
+  await importSummary.click();
+
+  const importButton = page.getByRole("button", { name: "Nhập hóa đơn hoặc sao kê Depot", exact: true });
+  await expect(importButton).toBeVisible();
+  await expect(page.locator(".bottom-dock")).toHaveClass(/is-hidden/);
+  await expect.poll(() => page.evaluate(() => {
+    const button = document.querySelector(".import-review > button") as HTMLElement | null;
+    const dock = document.querySelector(".bottom-dock") as HTMLElement | null;
+    if (!button) return false;
+    const rect = button.getBoundingClientRect();
+    if (rect.top < 0 || rect.bottom > window.innerHeight) return false;
+    if (!dock) return true;
+    const dockRect = dock.getBoundingClientRect();
+    return dock.classList.contains("is-hidden") || rect.bottom < dockRect.top - 8;
+  })).toBe(true);
+
+  await importSummary.click();
+});
+
 test("mobile Settings keeps P40 plan mechanics in a sheet and all tab actions reachable without overflow", async ({ page }) => {
   await page.setViewportSize(iphone13Viewport);
   const { localVaultEntry } = await openPrivateVaultEntry(page);

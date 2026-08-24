@@ -738,3 +738,39 @@ html.tx-filter-open .app-shell::after {
   .tx-filter-backdrop,
   .tx-filter-sheet { scroll-behavior: auto; }
 }
+
+
+/* TRANSACTIONS-PDF-IMPORT-DOCK-2026: make the PDF importer a true mobile sheet above the dock. */
+@media (max-width: 899px) {
+  .tx-wrap {
+    padding-bottom: max(136px, calc(96px + env(safe-area-inset-bottom, 0px)));
+  }
+
+  .tx-wrap .tx-import-tools[open] {
+    position: fixed;
+    z-index: var(--z-sheet, 80);
+    top: max(12px, env(safe-area-inset-top, 0px));
+    right: auto;
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    width: min(calc(100vw - 24px), 420px);
+    max-height: 82dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+  }
+
+  html.tx-import-open,
+  body.tx-import-open {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  html.tx-import-open .bottom-dock,
+  html.tx-import-open .app-shell::after {
+    pointer-events: none !important;
+    visibility: hidden;
+    opacity: 0;
+  }
+}
