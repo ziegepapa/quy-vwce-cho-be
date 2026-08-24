@@ -1,0 +1,185 @@
+name: PDF sheet polish
+on:
+  push:
+    branches:
+      - fix/p0-transactions-pdf-sheet-polish-v2
+permissions:
+  contents: write
+jobs:
+  polish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Apply PDF sheet redesign
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          css_path = Path('src/styles/import-review-workspace.css')
+          css = css_path.read_text()
+          marker = '/* TRANSACTIONS-PDF-IMPORT-SHEET-POLISH-2026:'
+          if marker in css:
+              css = css[:css.index(marker)].rstrip() + '\n'
+
+          css += r'''
+          /* TRANSACTIONS-PDF-IMPORT-SHEET-POLISH-V2-2026: real iOS bottom-sheet overlay. */
+          @media (max-width: 899px) {
+            html.tx-import-open,
+            body.tx-import-open {
+              overflow: hidden;
+              overscroll-behavior: none;
+            }
+
+            .tx-wrap .tx-import-tools[open] {
+              position: fixed !important;
+              inset: 0 !important;
+              z-index: 1000 !important;
+              display: flex !important;
+              flex-direction: column !important;
+              align-items: stretch !important;
+              justify-content: flex-end !important;
+              width: 100vw !important;
+              max-width: none !important;
+              max-height: none !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: visible !important;
+              transform: none !important;
+              border: 0 !important;
+              border-radius: 0 !important;
+              background: rgba(27, 19, 14, 0.24) !important;
+              backdrop-filter: blur(7px) saturate(0.94) !important;
+              -webkit-backdrop-filter: blur(7px) saturate(0.94) !important;
+            }
+
+            :root[data-theme="dark"] .tx-wrap .tx-import-tools[open] {
+              background: rgba(2, 10, 18, 0.42) !important;
+            }
+
+            .tx-wrap .tx-import-tools[open] > summary {
+              flex: 0 0 auto;
+              position: relative;
+              display: flex !important;
+              align-items: center;
+              justify-content: center;
+              width: min(calc(100vw - 24px), 520px);
+              min-height: 58px;
+              margin: 0 auto;
+              padding: 15px 58px 12px;
+              color: var(--demo-text);
+              font-size: 15px;
+              font-weight: 850;
+              letter-spacing: -0.015em;
+              list-style: none;
+              cursor: pointer;
+              border: 1px solid var(--demo-gb);
+              border-bottom: 0;
+              border-radius: 24px 24px 0 0;
+              background: var(--demo-bg, #fffaf4);
+              box-shadow: 0 22px 55px rgba(0,0,0,.18), 0 1px 0 rgba(255,255,255,.55) inset;
+            }
+
+            :root[data-theme="dark"] .tx-wrap .tx-import-tools[open] > summary {
+              background: var(--demo-g, #14171b);
+            }
+
+            .tx-wrap .tx-import-tools[open] > summary::-webkit-details-marker {
+              display: none;
+            }
+
+            .tx-wrap .tx-import-tools[open] > summary::before {
+              content: "";
+              position: absolute;
+              top: 9px;
+              left: 50%;
+              width: 38px;
+              height: 4px;
+              border-radius: 999px;
+              background: color-mix(in srgb, var(--demo-text) 20%, transparent);
+              transform: translateX(-50%);
+            }
+
+            .tx-wrap .tx-import-tools[open] > summary::after {
+              content: "×";
+              position: absolute;
+              top: 50%;
+              right: 12px;
+              display: grid;
+              place-items: center;
+              width: 36px;
+              height: 36px;
+              color: var(--demo-sub);
+              font-size: 23px;
+              font-weight: 350;
+              line-height: 1;
+              border: 1px solid var(--demo-gb);
+              border-radius: 999px;
+              background: color-mix(in srgb, var(--demo-g) 78%, transparent);
+              transform: translateY(-36%);
+            }
+
+            .tx-wrap .tx-import-tools[open] > .import-review {
+              flex: 0 1 auto;
+              width: min(calc(100vw - 24px), 520px);
+              max-height: min(62dvh, 540px);
+              margin: 0 auto !important;
+              padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+              overflow-y: auto;
+              box-sizing: border-box;
+              overscroll-behavior: contain;
+              border: 1px solid var(--demo-gb);
+              border-top: 0;
+              border-radius: 0 0 24px 24px;
+              background: var(--demo-bg, #fffaf4);
+              box-shadow: 0 26px 70px rgba(0,0,0,.24);
+            }
+
+            :root[data-theme="dark"] .tx-wrap .tx-import-tools[open] > .import-review {
+              background: var(--demo-g, #14171b);
+            }
+
+            .tx-wrap .tx-import-tools[open] > .import-review > button.secondary {
+              min-height: 54px;
+              margin: 0;
+              color: var(--demo-text);
+              font-size: 14px;
+              font-weight: 850;
+              border: 1px solid color-mix(in srgb, var(--demo-vi) 28%, var(--demo-gb));
+              border-radius: 15px;
+              background: color-mix(in srgb, var(--demo-vi) 7%, var(--demo-bg, #fffaf4));
+              box-shadow: none;
+            }
+
+            .tx-wrap .tx-import-tools[open] > .import-review > * + * {
+              margin-top: 12px;
+            }
+          }
+          '''
+          css_path.write_text(css)
+
+          test_path = Path('tests/preview.e2e.ts')
+          test = test_path.read_text()
+          needle = 'await expect(page.locator(".bottom-dock")).toHaveClass(/is-hidden/);'
+          extra = needle + '\n  await expect(page.locator(".tx-import-tools[open]")).toBeVisible();\n  await expect(page.locator(".tx-import-tools[open] > .import-review")).toBeVisible();\n  await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector(".tx-import-tools[open] > .import-review")!).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");'
+          if needle in test and 'tx-import-tools[open] > .import-review' not in test:
+              test = test.replace(needle, extra)
+              test_path.write_text(test)
+          PY
+
+      - name: Validate
+        run: |
+          npm ci
+          npm test -- --run
+          npm run build
+
+      - name: Commit exact patch and remove runner
+        shell: bash
+        run: |
+          rm -f .github/workflows/polish-pdf-sheet.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/styles/import-review-workspace.css tests/preview.e2e.ts .github/workflows/polish-pdf-sheet.yml
+          git diff --cached --check
+          git commit -m 'fix(transactions): redesign mobile PDF import sheet'
+          git push
