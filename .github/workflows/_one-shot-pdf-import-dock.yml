@@ -30,12 +30,14 @@ jobs:
           tx = Path('src/pages/Transactions.tsx')
           s = tx.read_text()
           old = '''    document.documentElement.classList.toggle("tx-filter-open", filterSheetOpen);\n    document.body.classList.toggle("tx-filter-open", filterSheetOpen);\n    if (dock) {\n      dock.classList.toggle("is-hidden", filterSheetOpen);\n      dock.toggleAttribute("inert", filterSheetOpen);\n      dock.setAttribute("aria-hidden", String(filterSheetOpen));\n    }'''
-          new = '''    const overlayOpen = filterSheetOpen || pdfToolsOpen;\n    document.documentElement.classList.toggle("tx-filter-open", filterSheetOpen);\n    document.body.classList.toggle("tx-filter-open", filterSheetOpen);\n    document.documentElement.classList.toggle("tx-import-open", pdfToolsOpen);\n    document.body.classList.toggle("tx-import-open", pdfToolsOpen);\n    if (dock) {\n      dock.classList.toggle("is-hidden", overlayOpen);\n      dock.toggleAttribute("inert", overlayOpen);\n      dock.setAttribute("aria-hidden", String(overlayOpen));\n    }'''
-          assert old in s, 'Transactions overlay block not found'
+          new = '''    document.documentElement.classList.toggle("tx-filter-open", filterSheetOpen);\n    document.body.classList.toggle("tx-filter-open", filterSheetOpen);\n    document.documentElement.classList.toggle("tx-import-open", pdfToolsOpen);\n    document.body.classList.toggle("tx-import-open", pdfToolsOpen);\n    if (dock) {\n      dock.classList.toggle("is-hidden", filterSheetOpen);\n      dock.toggleAttribute("inert", filterSheetOpen);\n      dock.setAttribute("aria-hidden", String(filterSheetOpen));\n      if (pdfToolsOpen && !filterSheetOpen) {\n        dock.classList.add("is-hidden");\n        dock.toggleAttribute("inert", true);\n        dock.setAttribute("aria-hidden", "true");\n      }\n    }'''
+          if old not in s:
+              raise SystemExit('Transactions overlay block not found')
           s = s.replace(old, new, 1)
           old2 = '''      document.documentElement.classList.remove("tx-filter-open");\n      document.body.classList.remove("tx-filter-open");\n      const currentDock = document.querySelector(".bottom-dock");\n      currentDock?.classList.remove("is-hidden");\n      currentDock?.removeAttribute("inert");\n      currentDock?.removeAttribute("aria-hidden");\n    };\n  }, [filterSheetOpen]);'''
           new2 = '''      document.documentElement.classList.remove("tx-filter-open");\n      document.body.classList.remove("tx-filter-open");\n      document.documentElement.classList.remove("tx-import-open");\n      document.body.classList.remove("tx-import-open");\n      const currentDock = document.querySelector(".bottom-dock");\n      currentDock?.classList.remove("is-hidden");\n      currentDock?.removeAttribute("inert");\n      currentDock?.removeAttribute("aria-hidden");\n    };\n  }, [filterSheetOpen, pdfToolsOpen]);'''
-          assert old2 in s, 'Transactions overlay cleanup block not found'
+          if old2 not in s:
+              raise SystemExit('Transactions overlay cleanup block not found')
           s = s.replace(old2, new2, 1)
           tx.write_text(s)
 
@@ -48,10 +50,11 @@ jobs:
 
           e2e = Path('tests/preview.e2e.ts')
           t = e2e.read_text()
-          marker = '''test("mobile Settings keeps P40 plan mechanics in a sheet and all tab actions reachable without overflow", async ({ page }) => {'''
           if 'mobile Transactions keeps PDF import reachable above the dock' not in t:
+              marker = '''test("mobile Settings keeps P40 plan mechanics in a sheet and all tab actions reachable without overflow", async ({ page }) => {'''
               test_block = '''test("mobile Transactions keeps PDF import reachable above the dock", async ({ page }) => {\n  await page.setViewportSize(iphone13Viewport);\n  const { localVaultEntry } = await openPrivateVaultEntry(page);\n  test.skip(!(await localVaultEntry.isVisible()), "requires the local-only preview entry");\n\n  await page.goto("./#/transactions", { waitUntil: "networkidle" });\n  const importSummary = page.locator(".tx-import-tools > summary");\n  await expect(importSummary).toBeVisible();\n  await importSummary.click();\n\n  const importButton = page.getByRole("button", { name: "Nhập hóa đơn hoặc sao kê Depot", exact: true });\n  await expect(importButton).toBeVisible();\n  await expect(page.locator(".bottom-dock")).toHaveClass(/is-hidden/);\n  await expect.poll(() => page.evaluate(() => {\n    const button = document.querySelector(".import-review > button") as HTMLElement | null;\n    const dock = document.querySelector(".bottom-dock") as HTMLElement | null;\n    if (!button) return false;\n    const rect = button.getBoundingClientRect();\n    if (rect.top < 0 || rect.bottom > window.innerHeight) return false;\n    if (!dock) return true;\n    const dockRect = dock.getBoundingClientRect();\n    return dock.classList.contains("is-hidden") || rect.bottom < dockRect.top - 8;\n  })).toBe(true);\n\n  await importSummary.click();\n});\n\n'''
-              assert marker in t, 'Transactions preview test insertion marker not found'
+              if marker not in t:
+                  raise SystemExit('Transactions preview insertion marker not found')
               t = t.replace(marker, test_block + marker, 1)
           e2e.write_text(t)
           PY
@@ -67,8 +70,6 @@ jobs:
 
       - name: Commit final code only
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
