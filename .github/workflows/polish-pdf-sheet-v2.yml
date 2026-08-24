@@ -1,0 +1,43 @@
+name: PDF sheet v2
+on:
+  push:
+    branches:
+      - fix/p0-transactions-pdf-sheet-polish-v2
+permissions:
+  contents: write
+jobs:
+  polish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Apply v2 polish
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/styles/import-review-workspace.css')
+          s = p.read_text()
+          marker = '/* TRANSACTIONS-PDF-IMPORT-SHEET-POLISH-2026:'
+          if marker in s:
+              s = s[:s.index(marker)].rstrip() + '\n'
+          s += '''\n          /* TRANSACTIONS-PDF-IMPORT-SHEET-POLISH-V2-2026 */\n          @media (max-width: 899px) {\n            html.tx-import-open, body.tx-import-open { overflow:hidden; overscroll-behavior:none; }\n            .tx-wrap .tx-import-tools[open] { position:fixed !important; inset:0 !important; z-index:1000 !important; display:flex !important; flex-direction:column !important; justify-content:flex-end !important; width:100vw !important; max-width:none !important; max-height:none !important; margin:0 !important; padding:0 !important; overflow:visible !important; transform:none !important; border:0 !important; background:rgba(27,19,14,.24) !important; backdrop-filter:blur(7px) saturate(.94) !important; -webkit-backdrop-filter:blur(7px) saturate(.94) !important; }\n            :root[data-theme="dark"] .tx-wrap .tx-import-tools[open] { background:rgba(2,10,18,.42) !important; }\n            .tx-wrap .tx-import-tools[open] > summary { position:relative; display:flex !important; align-items:center; justify-content:center; width:min(calc(100vw - 24px),520px); min-height:58px; margin:0 auto; padding:15px 58px 12px; color:var(--demo-text); font-size:15px; font-weight:850; list-style:none; border:1px solid var(--demo-gb); border-bottom:0; border-radius:24px 24px 0 0; background:var(--demo-bg,#fffaf4); }\n            .tx-wrap .tx-import-tools[open] > summary::-webkit-details-marker { display:none; }\n            .tx-wrap .tx-import-tools[open] > summary::before { content:""; position:absolute; top:9px; left:50%; width:38px; height:4px; border-radius:999px; background:color-mix(in srgb,var(--demo-text) 20%,transparent); transform:translateX(-50%); }\n            .tx-wrap .tx-import-tools[open] > summary::after { content:"×"; position:absolute; top:50%; right:12px; display:grid; place-items:center; width:36px; height:36px; color:var(--demo-sub); font-size:23px; border:1px solid var(--demo-gb); border-radius:999px; background:color-mix(in srgb,var(--demo-g) 78%,transparent); transform:translateY(-36%); }\n            .tx-wrap .tx-import-tools[open] > .import-review { width:min(calc(100vw - 24px),520px); max-height:min(62dvh,540px); margin:0 auto !important; padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px)); overflow-y:auto; box-sizing:border-box; border:1px solid var(--demo-gb); border-top:0; border-radius:0 0 24px 24px; background:var(--demo-bg,#fffaf4); box-shadow:0 26px 70px rgba(0,0,0,.24); }\n            .tx-wrap .tx-import-tools[open] > .import-review > button.secondary { min-height:54px; margin:0; color:var(--demo-text); font-size:14px; font-weight:850; border:1px solid color-mix(in srgb,var(--demo-vi) 28%,var(--demo-gb)); border-radius:15px; background:color-mix(in srgb,var(--demo-vi) 7%,var(--demo-bg,#fffaf4)); }\n          }\n          '''
+          p.write_text(s)
+          t = Path('tests/preview.e2e.ts')
+          test = t.read_text()
+          needle = 'await expect(page.locator(".bottom-dock")).toHaveClass(/is-hidden/);'
+          extra = needle + '\n  await expect(page.locator(".tx-import-tools[open] > .import-review")).toBeVisible();'
+          if needle in test and 'tx-import-tools[open] > .import-review' not in test:
+              t.write_text(test.replace(needle, extra))
+          PY
+      - name: Validate and commit
+        run: |
+          npm ci
+          npm test -- --run
+          npm run build
+          rm -f .github/workflows/polish-pdf-sheet-v2.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/styles/import-review-workspace.css tests/preview.e2e.ts .github/workflows/polish-pdf-sheet-v2.yml
+          git diff --cached --check
+          git commit -m 'fix(transactions): redesign mobile PDF import sheet'
+          git push
