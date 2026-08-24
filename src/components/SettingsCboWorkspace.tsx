@@ -5,6 +5,8 @@ import type { ThemeChoice } from "../lib/theme";
 import { IconChevronRight, IconSync } from "./Icons";
 import "../styles/settings-cbo.css";
 
+const CONTRIBUTION_PRESETS = [100, 120, 150, 200, 300] as const;
+
 type CboTab = "general" | "prices" | "data";
 type ChildAction = "password-change" | "password-reset" | "mfa" | "diagnostics" | "backup" | "restore";
 type SettingsSheet = "profile" | "plan" | "simulation" | null;
@@ -137,7 +139,7 @@ function copyFor(locale: AppLocale) {
     fund: "FAMILIENFONDS", editProfile: "Profil bearbeiten", profile: "Familienprofil", planName: "Name des Plans", childName: "Name des Kindes", account: "Konto läuft auf", parent: "Eltern", child: "Kind",
     plan: "Plan", planEmpty: "Noch kein Ziel", planEmptyCopy: "Hinterlegen Sie Jahr und Zielbetrag, um den Jahresüberblick zu sehen.", addGoal: "Ziel hinzufügen", configurePlan: "Plan anpassen", annual: "DIESES JAHR", disclaimer: "Illustrative Ansicht · erfasste Buchungen bleiben unverändert.",
     phase: { accumulate: ["Aufbau", "Noch weit bis zum Zieltermin – Beiträge werden im Aufbau-Szenario gezeigt."], transition: ["Übergang", "Der Sicherheitszeitraum beginnt – Beiträge werden als neutrale Szenarioansicht gezeigt."], protect: ["Schutz", "Der Zieltermin rückt näher – der sichere Teil steht im Vordergrund."], use: ["Verwenden", "Zieljahr erreicht – bestätigten Bedarf und verfügbare Mittel vergleichen."] },
-    contribution: "Monatlicher Beitrag", safe: "Sicherer Teil", vwce: "VWCE", targetDate: "Zieltermin", fullAmount: "Nahezu gesamtes Vermögen verwenden", targetAmount: "Zielbetrag", safeWindow: "Sicherheitszeitraum (Vorschau)", milestones: ["Heute", "Sicherheit beginnt", "Zieljahr"], advanced: "Erweitert für Simulation", advancedHelp: "Rendite, Inflation und Sicherheitsmarge", simulation: "Annahmen für Ziel & Simulation", simulationNote: "Nur für Ziel und Simulation; keine Buchung wird verändert.", vwceReturn: "VWCE-Rendite", inflation: "Inflation", safeReturn: "Sicherer Teil", buffer: "Sicherheitsmarge", save: "Fertig", resultTitle: "Ergebnisvorschau", resultSafeStart: "Sicherheit ab", resultNeedYear: "Zieljahr", resultThisYear: "Dieses Jahr", fullPortfolio: "Nahezu gesamtes Vermögen", yearPlanTitle: "Jahresplan", yearPlanSubtitle: "Vorschau aus Ihren Plan- und Beitragsangaben · keine Buchung wird erzeugt.", currentMarker: "Heute", safeMarker: "Sicherheitsbeginn", goalMarker: "Zieljahr",
+    contribution: "Monatlicher Beitrag", contributionHint: "Nur Vorschau · keine Buchung", contributionYear: "Jahr", safe: "Sicherer Teil", vwce: "VWCE", targetDate: "Zieltermin", fullAmount: "Nahezu gesamtes Vermögen verwenden", targetAmount: "Zielbetrag", safeWindow: "Sicherheitszeitraum (Vorschau)", milestones: ["Heute", "Sicherheit beginnt", "Zieljahr"], advanced: "Erweitert für Simulation", advancedHelp: "Rendite, Inflation und Sicherheitsmarge", simulation: "Annahmen für Ziel & Simulation", simulationNote: "Nur für Ziel und Simulation; keine Buchung wird verändert.", vwceReturn: "VWCE-Rendite", inflation: "Inflation", safeReturn: "Sicherer Teil", buffer: "Sicherheitsmarge", save: "Fertig", resultTitle: "Ergebnisvorschau", resultSafeStart: "Sicherheit ab", resultNeedYear: "Zieljahr", resultThisYear: "Dieses Jahr", fullPortfolio: "Nahezu gesamtes Vermögen", yearPlanTitle: "Jahresplan", yearPlanSubtitle: "Vorschau aus Ihren Plan- und Beitragsangaben · keine Buchung wird erzeugt.", currentMarker: "Heute", safeMarker: "Sicherheitsbeginn", goalMarker: "Zieljahr",
     everyday: "Im Alltag", language: "Sprache", appearance: "Darstellung", wallet: "Cash-Modell in der App", walletHelp: "Bestehende Buchungslogik bleibt unverändert.", security: "Sicherheit", password: "Passwort", recovery: "Wiederherstellungslink", mfa: "MFA / TOTP", signOut: "Abmelden",
     prices: "Kurse", pricesHelp: "Feed-Status und wirksame Kurse", pricesInfo: "Details zur Kursquelle", data: "Daten & Betrieb", sync: "Gesundheit & Synchronisierung", syncNow: "Jetzt synchronisieren", transfers: "Sicherung & Gerätewechsel", backup: "JSON sichern", restore: "Daten wiederherstellen", csv: "CSV exportieren", device: "Gerät wiederherstellen", handoff: "Notfallmappe & Übergabe", diagnostics: "Gerätedetails", danger: "Gefahrenbereich", localDetails: "Daten auf diesem Gerät", close: "Schließen", perYear: "%/Jahr", missingContribution: "Kein Monatsbeitrag konfiguriert", useNeed: "Bedarf in diesem Jahr", safeAvailable: "Sicher verfügbar",
   };
@@ -146,7 +148,7 @@ function copyFor(locale: AppLocale) {
     fund: "QUỸ GIA ĐÌNH", editProfile: "Chỉnh hồ sơ", profile: "Hồ sơ gia đình", planName: "Tên kế hoạch", childName: "Tên bé", account: "Tài khoản đứng tên", parent: "Cha/mẹ", child: "Bé",
     plan: "Kế hoạch", planEmpty: "Chưa có mục tiêu", planEmptyCopy: "Thêm năm và số tiền cần để xem kế hoạch năm nay.", addGoal: "Thêm mục tiêu", configurePlan: "Tùy chỉnh kế hoạch", annual: "NĂM NAY", disclaimer: "Gợi ý minh họa · không thay đổi giao dịch đã ghi.",
     phase: { accumulate: ["Tích lũy", "Còn xa hạn — khoản góp được hiển thị theo pha tích lũy."], transition: ["Chuyển dần", "Đang vào cửa sổ an toàn — bảng chỉ là kịch bản minh họa."], protect: ["Bảo vệ", "Gần hạn — phần an toàn được hiển thị nổi bật."], use: ["Rút", "Năm cần tiền — đối chiếu nhu cầu với phần an toàn đã xác nhận."] },
-    contribution: "Khoản góp hằng tháng", safe: "Phần an toàn", vwce: "VWCE", targetDate: "Năm / ngày cần tiền", fullAmount: "Dùng gần như toàn bộ danh mục", targetAmount: "Số € mục tiêu", safeWindow: "Cửa sổ an toàn (preview)", milestones: ["Hôm nay", "Bắt đầu an toàn", "Năm cần tiền"], advanced: "Nâng cao cho mô phỏng", advancedHelp: "Lợi suất, lạm phát và biên an toàn", simulation: "Giả định mô phỏng", simulationNote: "Chỉ dùng cho mục tiêu và mô phỏng; không thay đổi giao dịch đã ghi.", vwceReturn: "Lợi suất VWCE", inflation: "Lạm phát", safeReturn: "Phần an toàn", buffer: "Biên an toàn", save: "Xong", resultTitle: "Kết quả gợi ý", resultSafeStart: "Bắt đầu an toàn", resultNeedYear: "Năm cần tiền", resultThisYear: "Năm nay", fullPortfolio: "Gần như toàn bộ danh mục", yearPlanTitle: "Kế hoạch từng năm", yearPlanSubtitle: "Bảng dự kiến từ năm bắt đầu đến năm cần tiền · không tạo lệnh mua/bán.", currentMarker: "Hiện tại", safeMarker: "Mốc an toàn", goalMarker: "Mốc mục tiêu",
+    contribution: "Khoản góp hằng tháng", contributionHint: "Chỉ minh họa · không tạo giao dịch", contributionYear: "năm", safe: "Phần an toàn", vwce: "VWCE", targetDate: "Năm / ngày cần tiền", fullAmount: "Dùng gần như toàn bộ danh mục", targetAmount: "Số € mục tiêu", safeWindow: "Cửa sổ an toàn (preview)", milestones: ["Hôm nay", "Bắt đầu an toàn", "Năm cần tiền"], advanced: "Nâng cao cho mô phỏng", advancedHelp: "Lợi suất, lạm phát và biên an toàn", simulation: "Giả định mô phỏng", simulationNote: "Chỉ dùng cho mục tiêu và mô phỏng; không thay đổi giao dịch đã ghi.", vwceReturn: "Lợi suất VWCE", inflation: "Lạm phát", safeReturn: "Phần an toàn", buffer: "Biên an toàn", save: "Xong", resultTitle: "Kết quả gợi ý", resultSafeStart: "Bắt đầu an toàn", resultNeedYear: "Năm cần tiền", resultThisYear: "Năm nay", fullPortfolio: "Gần như toàn bộ danh mục", yearPlanTitle: "Kế hoạch từng năm", yearPlanSubtitle: "Bảng dự kiến từ năm bắt đầu đến năm cần tiền · không tạo lệnh mua/bán.", currentMarker: "Hiện tại", safeMarker: "Mốc an toàn", goalMarker: "Mốc mục tiêu",
     everyday: "Tùy chọn hằng ngày", language: "Ngôn ngữ", appearance: "Giao diện", wallet: "Ví trong app", walletHelp: "Giữ nguyên logic ghi nhận tiền nạp trước lệnh mua hiện có.", security: "Bảo mật", password: "Đổi mật khẩu", recovery: "Link khôi phục", mfa: "MFA / TOTP", signOut: "Đăng xuất",
     prices: "Giá", pricesHelp: "Trạng thái feed và giá đang dùng", pricesInfo: "Tìm hiểu nguồn giá", data: "Dữ liệu & vận hành", sync: "Sức khỏe & đồng bộ", syncNow: "Đồng bộ ngay", transfers: "Sao lưu & chuyển máy", backup: "Sao lưu JSON", restore: "Khôi phục dữ liệu", csv: "Xuất CSV", device: "Khôi phục thiết bị", handoff: "Hồ sơ khẩn cấp & bàn giao", diagnostics: "Chi tiết thiết bị", danger: "Vùng nguy hiểm", localDetails: "Dữ liệu trên thiết bị", close: "Đóng", perYear: "%/năm", missingContribution: "Chưa có khoản góp hằng tháng", useNeed: "Khoản cần năm nay", safeAvailable: "An toàn khả dụng",
   } as const;
@@ -205,10 +207,17 @@ export default function SettingsCboWorkspace(props: Props) {
   const currentYear = today.getFullYear();
   const goalYear = /^\d{4}/.test(target.targetUseDate) ? Number(target.targetUseDate.slice(0, 4)) : currentYear;
   const themes: Array<{ value: ThemeChoice; label: string }> = props.locale === "de" ? [{ value: "premium", label: "Vault" }, { value: "dark", label: "Ozean" }, { value: "light", label: "Ember" }] : [{ value: "premium", label: "Vault" }, { value: "dark", label: "Ocean" }, { value: "light", label: "Ember" }];
+  const contributionParsed = parseNumber(contributionDraft);
 
   const editTarget = (patch: Partial<PlanTarget>) => props.onChangeTarget({ ...target, ...patch });
   const updateRate = (key: "vwceReturn" | "inflationRate" | "safeReturn" | "bufferPct", value: string) => { const parsed = parsePercent(value); if (parsed !== undefined) props.onPatchSettings({ [key]: parsed }); };
   const yearlyPlanRows = useMemo(() => buildYearlyPlanRows(props.settings, target, deRiskYears, currentYear), [props.settings, target, deRiskYears, currentYear]);
+
+  const applyContribution = (value: number) => {
+    const next = Math.max(0, Math.round(value));
+    setContributionDraft(String(next));
+    props.onPatchSettings({ contributionY1: next, contributionY2: next });
+  };
 
   useEffect(() => {
     if (sheet !== "plan") return;
@@ -241,14 +250,35 @@ export default function SettingsCboWorkspace(props: Props) {
         <label><span>{copy.targetDate}</span><input type="date" value={target.targetUseDate} onChange={(event) => editTarget({ targetUseDate: event.target.value })} /></label>
         <label className="p40-toggle-row"><span><strong>{copy.fullAmount}</strong></span><input type="checkbox" checked={target.needFullAmount} onChange={(event) => editTarget({ needFullAmount: event.target.checked, partialNeedEuro: event.target.checked ? undefined : target.partialNeedEuro })} /></label>
         {!target.needFullAmount ? <label><span>{copy.targetAmount}</span><input inputMode="decimal" type="number" min="0" value={target.partialNeedEuro ?? ""} onChange={(event) => editTarget({ partialNeedEuro: parseNumber(event.target.value) })} /></label> : null}
-        <label><span>{copy.contribution}</span><input data-testid="p40-contribution-input" inputMode="decimal" type="text" autoComplete="off" value={contributionDraft} onChange={(event) => {
-          const raw = event.target.value;
-          setContributionDraft(raw);
-          if (raw.trim() === "") return;
-          const parsed = parseNumber(raw);
-          if (parsed === undefined || parsed < 0) return;
-          props.onPatchSettings({ contributionY1: parsed, contributionY2: parsed });
-        }} /></label>
+        <div className="p40-contrib" data-testid="p40-contribution-block">
+          <div className="p40-contrib-head">
+            <span>{copy.contribution}</span>
+            <small>{copy.contributionHint}</small>
+          </div>
+          <div className="p40-contrib-hero">
+            <button type="button" className="p40-contrib-step" aria-label="-10" disabled={(contributionParsed ?? 0) <= 0} onClick={() => applyContribution((contributionParsed ?? 0) - 10)}>−</button>
+            <div className="p40-contrib-field">
+              <input data-testid="p40-contribution-input" inputMode="decimal" type="text" autoComplete="off" value={contributionDraft} onChange={(event) => {
+                const raw = event.target.value;
+                setContributionDraft(raw);
+                if (raw.trim() === "") return;
+                const parsed = parseNumber(raw);
+                if (parsed === undefined || parsed < 0) return;
+                props.onPatchSettings({ contributionY1: parsed, contributionY2: parsed });
+              }} />
+              <span aria-hidden>€</span>
+            </div>
+            <button type="button" className="p40-contrib-step" aria-label="+10" onClick={() => applyContribution((contributionParsed ?? 0) + 10)}>+</button>
+          </div>
+          <div className="p40-contrib-presets" role="group" aria-label={copy.contribution}>
+            {CONTRIBUTION_PRESETS.map((preset) => (
+              <button key={preset} type="button" className={contributionParsed === preset ? "selected" : ""} onClick={() => applyContribution(preset)}>{preset}</button>
+            ))}
+          </div>
+          {contributionParsed !== undefined && contributionParsed > 0 ? (
+            <p className="p40-contrib-impact">≈ {money(contributionParsed * 12, props.locale)} / {copy.contributionYear}</p>
+          ) : null}
+        </div>
         <div><span>{copy.safeWindow}</span><div className="p40-segments">{[3, 5, 7].map((value) => <button key={value} type="button" className={deRiskYears === value ? "selected" : ""} onClick={() => setDeRiskYears(value)}>{value} {props.locale === "de" ? "J." : "năm"}</button>)}</div></div>
       </div>
       <div className="p40-milestones"><div><span>{copy.milestones[0]}</span><strong>{currentYear}</strong></div><div><span>{copy.milestones[1]}</span><strong>{Math.max(currentYear, goalYear - deRiskYears)}</strong></div><div><span>{copy.milestones[2]}</span><strong>{goalYear}</strong></div></div>
