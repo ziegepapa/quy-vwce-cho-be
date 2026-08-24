@@ -11,6 +11,7 @@ type CboTab = "general" | "prices" | "data";
 type ChildAction = "password-change" | "password-reset" | "mfa" | "diagnostics" | "backup" | "restore";
 type SettingsSheet = "profile" | "plan" | "simulation" | null;
 type HorizonPhase = "accumulate" | "transition" | "protect" | "use";
+type ContribInsightTone = "neutral" | "ok" | "caution" | "warn";
 type YearlyPlanRow = {
   year: number;
   months: number;
@@ -57,6 +58,10 @@ function percent(value: number, locale: AppLocale): string {
   return new Intl.NumberFormat(locale === "de" ? "de-DE" : "vi-VN", { style: "percent", maximumFractionDigits: 0 }).format(value);
 }
 
+function formatPlainYears(value: number, locale: AppLocale): string {
+  return new Intl.NumberFormat(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 1, minimumFractionDigits: 0 }).format(value);
+}
+
 function parseNumber(value: string): number | undefined {
   if (value.trim() === "") return undefined;
   const result = Number(value.replace(",", "."));
@@ -93,6 +98,33 @@ function monthsForPlanYear(year: number, start: Date, target: Date): number {
   const startMonth = year === start.getFullYear() ? start.getMonth() : 0;
   const endMonth = year === target.getFullYear() ? target.getMonth() : 11;
   return Math.max(0, endMonth - startMonth + 1);
+}
+
+function buildContributionInsight(
+  monthly: number | undefined,
+  partialEuro: number | null,
+  yearsLeft: number | null,
+  messages: { pureOnly: string; exceedsAnnual: string; early: string; tight: string; balanced: string; noReturn: string },
+): null | { tone: ContribInsightTone; annual: number; pureYears: number | null; yearsLeft: number | null; message: string; footnote: string } {
+  if (monthly === undefined || monthly <= 0) return null;
+  const annual = monthly * 12;
+  if (partialEuro === null || partialEuro <= 0) {
+    return { tone: "neutral", annual, pureYears: null, yearsLeft, message: messages.pureOnly, footnote: messages.noReturn };
+  }
+  const pureYears = partialEuro / annual;
+  if (annual >= partialEuro) {
+    return { tone: "warn", annual, pureYears, yearsLeft, message: messages.exceedsAnnual, footnote: messages.noReturn };
+  }
+  if (yearsLeft !== null && yearsLeft > 0) {
+    if (pureYears <= yearsLeft * 0.45) {
+      return { tone: "caution", annual, pureYears, yearsLeft, message: messages.early, footnote: messages.noReturn };
+    }
+    if (pureYears >= yearsLeft * 1.35) {
+      return { tone: "caution", annual, pureYears, yearsLeft, message: messages.tight, footnote: messages.noReturn };
+    }
+    return { tone: "ok", annual, pureYears, yearsLeft, message: messages.balanced, footnote: messages.noReturn };
+  }
+  return { tone: "neutral", annual, pureYears, yearsLeft, message: messages.pureOnly, footnote: messages.noReturn };
 }
 
 function buildYearlyPlanRows(settings: AppSettings, target: PlanTarget, deRiskYears: number, currentYear: number): YearlyPlanRow[] {
@@ -139,7 +171,15 @@ function copyFor(locale: AppLocale) {
     fund: "FAMILIENFONDS", editProfile: "Profil bearbeiten", profile: "Familienprofil", planName: "Name des Plans", childName: "Name des Kindes", account: "Konto läuft auf", parent: "Eltern", child: "Kind",
     plan: "Plan", planEmpty: "Noch kein Ziel", planEmptyCopy: "Hinterlegen Sie Jahr und Zielbetrag, um den Jahresüberblick zu sehen.", addGoal: "Ziel hinzufügen", configurePlan: "Plan anpassen", annual: "DIESES JAHR", disclaimer: "Illustrative Ansicht · erfasste Buchungen bleiben unverändert.",
     phase: { accumulate: ["Aufbau", "Noch weit bis zum Zieltermin – Beiträge werden im Aufbau-Szenario gezeigt."], transition: ["Übergang", "Der Sicherheitszeitraum beginnt – Beiträge werden als neutrale Szenarioansicht gezeigt."], protect: ["Schutz", "Der Zieltermin rückt näher – der sichere Teil steht im Vordergrund."], use: ["Verwenden", "Zieljahr erreicht – bestätigten Bedarf und verfügbare Mittel vergleichen."] },
-    contribution: "Monatlicher Beitrag", contributionHint: "Nur Vorschau · keine Buchung", contributionYear: "Jahr", safe: "Sicherer Teil", vwce: "VWCE", targetDate: "Zieltermin", fullAmount: "Nahezu gesamtes Vermögen verwenden", targetAmount: "Zielbetrag", safeWindow: "Sicherheitszeitraum (Vorschau)", milestones: ["Heute", "Sicherheit beginnt", "Zieljahr"], advanced: "Erweitert für Simulation", advancedHelp: "Rendite, Inflation und Sicherheitsmarge", simulation: "Annahmen für Ziel & Simulation", simulationNote: "Nur für Ziel und Simulation; keine Buchung wird verändert.", vwceReturn: "VWCE-Rendite", inflation: "Inflation", safeReturn: "Sicherer Teil", buffer: "Sicherheitsmarge", save: "Fertig", resultTitle: "Ergebnisvorschau", resultSafeStart: "Sicherheit ab", resultNeedYear: "Zieljahr", resultThisYear: "Dieses Jahr", fullPortfolio: "Nahezu gesamtes Vermögen", yearPlanTitle: "Jahresplan", yearPlanSubtitle: "Vorschau aus Ihren Plan- und Beitragsangaben · keine Buchung wird erzeugt.", currentMarker: "Heute", safeMarker: "Sicherheitsbeginn", goalMarker: "Zieljahr",
+    contribution: "Monatlicher Beitrag", contributionHint: "Nur Vorschau · keine Buchung", contributionYear: "Jahr",
+    insightAnnual: "Pro Jahr", insightPure: "Nur Beiträge", insightHorizon: "Horizont",
+    insightPureOnly: "Jährlicher Beitrag als Vorschau.",
+    insightExceeds: "Ein Jahresbeitrag deckt den Zielbetrag bereits — Eingabe prüfen.",
+    insightEarly: "Mit diesem Beitrag würde der Zielbetrag (nur Beiträge) deutlich vor dem Horizont erreicht.",
+    insightTight: "Mit diesem Beitrag reichen reine Beiträge vor dem Zieljahr möglicherweise nicht.",
+    insightBalanced: "Beitrag und Zeithorizont passen grob zusammen (nur Beiträge, ohne Rendite).",
+    insightNoReturn: "Ohne Rendite · keine Anlageberatung · keine Buchung.",
+    safe: "Sicherer Teil", vwce: "VWCE", targetDate: "Zieltermin", fullAmount: "Nahezu gesamtes Vermögen verwenden", targetAmount: "Zielbetrag", safeWindow: "Sicherheitszeitraum (Vorschau)", milestones: ["Heute", "Sicherheit beginnt", "Zieljahr"], advanced: "Erweitert für Simulation", advancedHelp: "Rendite, Inflation und Sicherheitsmarge", simulation: "Annahmen für Ziel & Simulation", simulationNote: "Nur für Ziel und Simulation; keine Buchung wird verändert.", vwceReturn: "VWCE-Rendite", inflation: "Inflation", safeReturn: "Sicherer Teil", buffer: "Sicherheitsmarge", save: "Fertig", resultTitle: "Ergebnisvorschau", resultSafeStart: "Sicherheit ab", resultNeedYear: "Zieljahr", resultThisYear: "Dieses Jahr", fullPortfolio: "Nahezu gesamtes Vermögen", yearPlanTitle: "Jahresplan", yearPlanSubtitle: "Vorschau aus Ihren Plan- und Beitragsangaben · keine Buchung wird erzeugt.", currentMarker: "Heute", safeMarker: "Sicherheitsbeginn", goalMarker: "Zieljahr",
     everyday: "Im Alltag", language: "Sprache", appearance: "Darstellung", wallet: "Cash-Modell in der App", walletHelp: "Bestehende Buchungslogik bleibt unverändert.", security: "Sicherheit", password: "Passwort", recovery: "Wiederherstellungslink", mfa: "MFA / TOTP", signOut: "Abmelden",
     prices: "Kurse", pricesHelp: "Feed-Status und wirksame Kurse", pricesInfo: "Details zur Kursquelle", data: "Daten & Betrieb", sync: "Gesundheit & Synchronisierung", syncNow: "Jetzt synchronisieren", transfers: "Sicherung & Gerätewechsel", backup: "JSON sichern", restore: "Daten wiederherstellen", csv: "CSV exportieren", device: "Gerät wiederherstellen", handoff: "Notfallmappe & Übergabe", diagnostics: "Gerätedetails", danger: "Gefahrenbereich", localDetails: "Daten auf diesem Gerät", close: "Schließen", perYear: "%/Jahr", missingContribution: "Kein Monatsbeitrag konfiguriert", useNeed: "Bedarf in diesem Jahr", safeAvailable: "Sicher verfügbar",
   };
@@ -148,7 +188,15 @@ function copyFor(locale: AppLocale) {
     fund: "QUỸ GIA ĐÌNH", editProfile: "Chỉnh hồ sơ", profile: "Hồ sơ gia đình", planName: "Tên kế hoạch", childName: "Tên bé", account: "Tài khoản đứng tên", parent: "Cha/mẹ", child: "Bé",
     plan: "Kế hoạch", planEmpty: "Chưa có mục tiêu", planEmptyCopy: "Thêm năm và số tiền cần để xem kế hoạch năm nay.", addGoal: "Thêm mục tiêu", configurePlan: "Tùy chỉnh kế hoạch", annual: "NĂM NAY", disclaimer: "Gợi ý minh họa · không thay đổi giao dịch đã ghi.",
     phase: { accumulate: ["Tích lũy", "Còn xa hạn — khoản góp được hiển thị theo pha tích lũy."], transition: ["Chuyển dần", "Đang vào cửa sổ an toàn — bảng chỉ là kịch bản minh họa."], protect: ["Bảo vệ", "Gần hạn — phần an toàn được hiển thị nổi bật."], use: ["Rút", "Năm cần tiền — đối chiếu nhu cầu với phần an toàn đã xác nhận."] },
-    contribution: "Khoản góp hằng tháng", contributionHint: "Chỉ minh họa · không tạo giao dịch", contributionYear: "năm", safe: "Phần an toàn", vwce: "VWCE", targetDate: "Năm / ngày cần tiền", fullAmount: "Dùng gần như toàn bộ danh mục", targetAmount: "Số € mục tiêu", safeWindow: "Cửa sổ an toàn (preview)", milestones: ["Hôm nay", "Bắt đầu an toàn", "Năm cần tiền"], advanced: "Nâng cao cho mô phỏng", advancedHelp: "Lợi suất, lạm phát và biên an toàn", simulation: "Giả định mô phỏng", simulationNote: "Chỉ dùng cho mục tiêu và mô phỏng; không thay đổi giao dịch đã ghi.", vwceReturn: "Lợi suất VWCE", inflation: "Lạm phát", safeReturn: "Phần an toàn", buffer: "Biên an toàn", save: "Xong", resultTitle: "Kết quả gợi ý", resultSafeStart: "Bắt đầu an toàn", resultNeedYear: "Năm cần tiền", resultThisYear: "Năm nay", fullPortfolio: "Gần như toàn bộ danh mục", yearPlanTitle: "Kế hoạch từng năm", yearPlanSubtitle: "Bảng dự kiến từ năm bắt đầu đến năm cần tiền · không tạo lệnh mua/bán.", currentMarker: "Hiện tại", safeMarker: "Mốc an toàn", goalMarker: "Mốc mục tiêu",
+    contribution: "Khoản góp hằng tháng", contributionHint: "Chỉ minh họa · không tạo giao dịch", contributionYear: "năm",
+    insightAnnual: "Mỗi năm", insightPure: "Góp thuần", insightHorizon: "Còn lại",
+    insightPureOnly: "Tổng góp minh họa theo năm.",
+    insightExceeds: "Góp một năm đã ≥ mục tiêu — nên kiểm tra lại số.",
+    insightEarly: "Với mức này, góp thuần có thể đủ mục tiêu sớm hơn khung năm đã chọn.",
+    insightTight: "Với mức này, góp thuần có thể chưa đủ trước năm cần tiền.",
+    insightBalanced: "Mức góp và khung thời gian khá khớp (chỉ góp thuần, không tính lãi).",
+    insightNoReturn: "Không tính lợi suất · không phải tư vấn · không tạo giao dịch.",
+    safe: "Phần an toàn", vwce: "VWCE", targetDate: "Năm / ngày cần tiền", fullAmount: "Dùng gần như toàn bộ danh mục", targetAmount: "Số € mục tiêu", safeWindow: "Cửa sổ an toàn (preview)", milestones: ["Hôm nay", "Bắt đầu an toàn", "Năm cần tiền"], advanced: "Nâng cao cho mô phỏng", advancedHelp: "Lợi suất, lạm phát và biên an toàn", simulation: "Giả định mô phỏng", simulationNote: "Chỉ dùng cho mục tiêu và mô phỏng; không thay đổi giao dịch đã ghi.", vwceReturn: "Lợi suất VWCE", inflation: "Lạm phát", safeReturn: "Phần an toàn", buffer: "Biên an toàn", save: "Xong", resultTitle: "Kết quả gợi ý", resultSafeStart: "Bắt đầu an toàn", resultNeedYear: "Năm cần tiền", resultThisYear: "Năm nay", fullPortfolio: "Gần như toàn bộ danh mục", yearPlanTitle: "Kế hoạch từng năm", yearPlanSubtitle: "Bảng dự kiến từ năm bắt đầu đến năm cần tiền · không tạo lệnh mua/bán.", currentMarker: "Hiện tại", safeMarker: "Mốc an toàn", goalMarker: "Mốc mục tiêu",
     everyday: "Tùy chọn hằng ngày", language: "Ngôn ngữ", appearance: "Giao diện", wallet: "Ví trong app", walletHelp: "Giữ nguyên logic ghi nhận tiền nạp trước lệnh mua hiện có.", security: "Bảo mật", password: "Đổi mật khẩu", recovery: "Link khôi phục", mfa: "MFA / TOTP", signOut: "Đăng xuất",
     prices: "Giá", pricesHelp: "Trạng thái feed và giá đang dùng", pricesInfo: "Tìm hiểu nguồn giá", data: "Dữ liệu & vận hành", sync: "Sức khỏe & đồng bộ", syncNow: "Đồng bộ ngay", transfers: "Sao lưu & chuyển máy", backup: "Sao lưu JSON", restore: "Khôi phục dữ liệu", csv: "Xuất CSV", device: "Khôi phục thiết bị", handoff: "Hồ sơ khẩn cấp & bàn giao", diagnostics: "Chi tiết thiết bị", danger: "Vùng nguy hiểm", localDetails: "Dữ liệu trên thiết bị", close: "Đóng", perYear: "%/năm", missingContribution: "Chưa có khoản góp hằng tháng", useNeed: "Khoản cần năm nay", safeAvailable: "An toàn khả dụng",
   } as const;
@@ -208,6 +256,19 @@ export default function SettingsCboWorkspace(props: Props) {
   const goalYear = /^\d{4}/.test(target.targetUseDate) ? Number(target.targetUseDate.slice(0, 4)) : currentYear;
   const themes: Array<{ value: ThemeChoice; label: string }> = props.locale === "de" ? [{ value: "premium", label: "Vault" }, { value: "dark", label: "Ozean" }, { value: "light", label: "Ember" }] : [{ value: "premium", label: "Vault" }, { value: "dark", label: "Ocean" }, { value: "light", label: "Ember" }];
   const contributionParsed = parseNumber(contributionDraft);
+  const partialEuroForInsight =
+    !target.needFullAmount && Number.isFinite(target.partialNeedEuro) && (target.partialNeedEuro ?? 0) > 0
+      ? Number(target.partialNeedEuro)
+      : null;
+  const yearsLeftForInsight = yearsTo(target.targetUseDate, today);
+  const contributionInsight = buildContributionInsight(contributionParsed, partialEuroForInsight, yearsLeftForInsight, {
+    pureOnly: copy.insightPureOnly,
+    exceedsAnnual: copy.insightExceeds,
+    early: copy.insightEarly,
+    tight: copy.insightTight,
+    balanced: copy.insightBalanced,
+    noReturn: copy.insightNoReturn,
+  });
 
   const editTarget = (patch: Partial<PlanTarget>) => props.onChangeTarget({ ...target, ...patch });
   const updateRate = (key: "vwceReturn" | "inflationRate" | "safeReturn" | "bufferPct", value: string) => { const parsed = parsePercent(value); if (parsed !== undefined) props.onPatchSettings({ [key]: parsed }); };
@@ -275,8 +336,16 @@ export default function SettingsCboWorkspace(props: Props) {
               <button key={preset} type="button" className={contributionParsed === preset ? "selected" : ""} onClick={() => applyContribution(preset)}>{preset}</button>
             ))}
           </div>
-          {contributionParsed !== undefined && contributionParsed > 0 ? (
-            <p className="p40-contrib-impact">≈ {money(contributionParsed * 12, props.locale)} / {copy.contributionYear}</p>
+          {contributionInsight ? (
+            <div className={`p40-contrib-insight p40-contrib-insight--${contributionInsight.tone}`} data-testid="p40-contrib-insight" role="status">
+              <div className="p40-contrib-insight-metrics">
+                <div><span>{copy.insightAnnual}</span><strong>{money(contributionInsight.annual, props.locale)}</strong></div>
+                <div><span>{copy.insightPure}</span><strong>{contributionInsight.pureYears === null ? "—" : `≈ ${formatPlainYears(contributionInsight.pureYears, props.locale)} ${copy.contributionYear}`}</strong></div>
+                <div><span>{copy.insightHorizon}</span><strong>{contributionInsight.yearsLeft === null ? "—" : `${contributionInsight.yearsLeft} ${copy.contributionYear}`}</strong></div>
+              </div>
+              <p>{contributionInsight.message}</p>
+              <small>{contributionInsight.footnote}</small>
+            </div>
           ) : null}
         </div>
         <div><span>{copy.safeWindow}</span><div className="p40-segments">{[3, 5, 7].map((value) => <button key={value} type="button" className={deRiskYears === value ? "selected" : ""} onClick={() => setDeRiskYears(value)}>{value} {props.locale === "de" ? "J." : "năm"}</button>)}</div></div>
