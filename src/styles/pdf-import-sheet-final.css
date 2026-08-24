@@ -1,0 +1,148 @@
+/* TRANSACTIONS-PDF-IMPORT-FINAL-2026: stable mobile bottom-sheet composition. */
+@media (max-width: 899px) {
+  html.tx-import-open,
+  body.tx-import-open {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  body.tx-import-open::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .tx-wrap .tx-import-tools[open] {
+    position: fixed !important;
+    inset: auto 12px calc(10px + env(safe-area-inset-bottom, 0px)) 12px !important;
+    z-index: 2147483000 !important;
+    display: block !important;
+    width: auto !important;
+    max-width: 520px !important;
+    max-height: min(72dvh, 640px) !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+    border: 1px solid var(--demo-gb) !important;
+    border-radius: 24px !important;
+    background: var(--demo-bg, #fffaf4) !important;
+    box-shadow:
+      0 0 0 100vmax rgba(32, 22, 16, 0.32),
+      0 24px 70px rgba(0, 0, 0, 0.28),
+      0 1px 0 rgba(255, 255, 255, 0.58) inset !important;
+    isolation: isolate !important;
+  }
+
+  :root[data-theme="dark"] .tx-wrap .tx-import-tools[open] {
+    background: var(--demo-g, #14171b) !important;
+    box-shadow:
+      0 0 0 100vmax rgba(0, 8, 16, 0.48),
+      0 24px 70px rgba(0, 0, 0, 0.46),
+      0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
+  }
+
+  .tx-wrap .tx-import-tools[open] > summary {
+    position: relative !important;
+    z-index: 2 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-height: 60px !important;
+    margin: 0 !important;
+    padding: 17px 58px 12px !important;
+    color: var(--demo-text) !important;
+    font-size: 15px !important;
+    font-weight: 850 !important;
+    letter-spacing: -0.015em !important;
+    cursor: pointer !important;
+    list-style: none !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--demo-gb) !important;
+    border-radius: 24px 24px 0 0 !important;
+    background: var(--demo-bg, #fffaf4) !important;
+  }
+
+  :root[data-theme="dark"] .tx-wrap .tx-import-tools[open] > summary {
+    background: var(--demo-g, #14171b) !important;
+  }
+
+  .tx-wrap .tx-import-tools[open] > summary::-webkit-details-marker {
+    display: none !important;
+  }
+
+  .tx-wrap .tx-import-tools[open] > summary::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 9px !important;
+    left: 50% !important;
+    width: 38px !important;
+    height: 4px !important;
+    border-radius: 999px !important;
+    background: color-mix(in srgb, var(--demo-text) 20%, transparent) !important;
+    transform: translateX(-50%) !important;
+  }
+
+  .tx-wrap .tx-import-tools[open] > summary::after {
+    content: "×" !important;
+    position: absolute !important;
+    top: 50% !important;
+    right: 12px !important;
+    display: grid !important;
+    place-items: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    color: var(--demo-sub) !important;
+    font-size: 23px !important;
+    font-weight: 350 !important;
+    line-height: 1 !important;
+    border: 1px solid var(--demo-gb) !important;
+    border-radius: 999px !important;
+    background: color-mix(in srgb, var(--demo-g) 82%, transparent) !important;
+    transform: translateY(-36%) !important;
+  }
+
+  .tx-wrap .tx-import-tools[open] > .import-review {
+    position: relative !important;
+    z-index: 2 !important;
+    display: block !important;
+    width: 100% !important;
+    max-height: calc(min(72dvh, 640px) - 60px) !important;
+    margin: 0 !important;
+    padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+    overscroll-behavior: contain !important;
+    border: 0 !important;
+    border-radius: 0 0 24px 24px !important;
+    background: var(--demo-bg, #fffaf4) !important;
+  }
+
+  :root[data-theme="dark"] .tx-wrap .tx-import-tools[open] > .import-review {
+    background: var(--demo-g, #14171b) !important;
+  }
+
+  .tx-wrap .tx-import-tools[open] > .import-review > button.secondary {
+    min-height: 52px !important;
+    margin: 0 !important;
+    color: var(--demo-text) !important;
+    font-size: 14px !important;
+    font-weight: 850 !important;
+    border: 1px solid color-mix(in srgb, var(--demo-vi) 28%, var(--demo-gb)) !important;
+    border-radius: 15px !important;
+    background: color-mix(in srgb, var(--demo-vi) 7%, var(--demo-bg, #fffaf4)) !important;
+    box-shadow: none !important;
+  }
+
+  .tx-wrap .tx-import-tools[open] > .import-review > * + * {
+    margin-top: 12px !important;
+  }
+
+  html.tx-import-open .bottom-dock,
+  body.tx-import-open .bottom-dock {
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
