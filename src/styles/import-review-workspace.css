@@ -27,80 +27,70 @@
   .import-review .import-review-steps li { padding: 6px 4px; font-size: 9px; }
 }
 
-/* TRANSACTIONS-PDF-IMPORT-SHEET-POLISH-2026: opaque, compact, iOS-native action sheet. */
+/* TRANSACTIONS-PDF-IMPORT-SHEET-V2-2026: explicit viewport overlay + compact opaque bottom sheet. */
 @media (max-width: 899px) {
   html.tx-import-open,
-  body.tx-import-open {
-    overflow: hidden;
-    overscroll-behavior: none;
-  }
-
-  body.tx-import-open::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--z-sheet, 80) - 1);
-    pointer-events: none;
-    background: rgba(37, 24, 14, 0.32);
-    backdrop-filter: blur(9px) saturate(0.92);
-    -webkit-backdrop-filter: blur(9px) saturate(0.92);
-  }
-
-  :root[data-theme="dark"] body.tx-import-open::before {
-    background: rgba(0, 10, 18, 0.46);
-  }
+  body.tx-import-open { overflow: hidden; overscroll-behavior: none; }
 
   .tx-wrap .tx-import-tools[open] {
-    position: fixed;
-    z-index: var(--z-sheet, 80);
-    top: auto;
-    right: auto;
-    bottom: max(12px, env(safe-area-inset-bottom, 0px));
-    left: 50%;
-    width: min(calc(100vw - 24px), 520px);
-    max-height: min(68dvh, 620px);
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    box-sizing: border-box;
-    transform: translateX(-50%);
-    border: 1px solid var(--demo-gb);
-    border-radius: 24px;
-    background: var(--demo-bg);
-    box-shadow:
-      0 24px 70px rgba(0, 0, 0, 0.24),
-      0 1px 0 rgba(255, 255, 255, 0.45) inset;
-    isolation: isolate;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-end !important;
+    width: 100vw !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: rgba(31, 22, 16, 0.28) !important;
+    backdrop-filter: blur(7px) saturate(0.92) !important;
+    -webkit-backdrop-filter: blur(7px) saturate(0.92) !important;
+  }
+
+  :root[data-theme="dark"] .tx-wrap .tx-import-tools[open] {
+    background: rgba(0, 8, 16, 0.44) !important;
   }
 
   .tx-wrap .tx-import-tools[open] > summary {
     position: relative;
-    display: flex;
+    z-index: 1;
+    display: flex !important;
+    flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    min-height: 58px;
-    padding: 14px 54px 10px;
+    width: min(calc(100vw - 24px), 520px);
+    min-height: 60px;
+    margin: 0 auto;
+    padding: 16px 58px 12px;
     color: var(--demo-text);
     font-size: 15px;
     font-weight: 850;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     cursor: pointer;
     list-style: none;
-    border: 0;
-    border-bottom: 1px solid var(--demo-gb);
-    background: var(--demo-bg);
+    border: 1px solid var(--demo-gb);
+    border-bottom: 0;
+    border-radius: 24px 24px 0 0;
+    background: var(--demo-bg, #fffaf4);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18), 0 1px 0 rgba(255,255,255,0.55) inset;
   }
 
-  .tx-wrap .tx-import-tools[open] > summary::-webkit-details-marker {
-    display: none;
-  }
+  :root[data-theme="dark"] .tx-wrap .tx-import-tools[open] > summary { background: var(--demo-g, #14171b); }
+  .tx-wrap .tx-import-tools[open] > summary::-webkit-details-marker { display: none; }
 
   .tx-wrap .tx-import-tools[open] > summary::before {
     content: "";
     position: absolute;
-    top: 8px;
+    top: 9px;
     left: 50%;
-    width: 36px;
+    width: 38px;
     height: 4px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--demo-text) 18%, transparent);
@@ -112,42 +102,51 @@
     position: absolute;
     top: 50%;
     right: 12px;
-    width: 34px;
-    height: 34px;
     display: grid;
     place-items: center;
+    width: 36px;
+    height: 36px;
     color: var(--demo-sub);
-    font-size: 24px;
-    font-weight: 400;
+    font-size: 23px;
+    font-weight: 350;
     line-height: 1;
     border: 1px solid var(--demo-gb);
     border-radius: 999px;
-    background: color-mix(in srgb, var(--demo-g) 72%, transparent);
-    transform: translateY(-40%);
+    background: color-mix(in srgb, var(--demo-g, #18181b) 82%, transparent);
+    transform: translateY(-36%);
   }
 
   .tx-wrap .tx-import-tools[open] > .import-review {
-    max-height: calc(min(68dvh, 620px) - 58px);
-    margin: 0 !important;
-    padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    position: relative;
+    z-index: 1;
+    flex: 0 1 auto;
+    width: min(calc(100vw - 24px), 520px);
+    max-height: min(62dvh, 540px);
+    margin: 0 auto !important;
+    padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     box-sizing: border-box;
     overscroll-behavior: contain;
+    border: 1px solid var(--demo-gb);
+    border-top: 0;
+    border-radius: 0 0 24px 24px;
+    background: var(--demo-bg, #fffaf4);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.26);
   }
+
+  :root[data-theme="dark"] .tx-wrap .tx-import-tools[open] > .import-review { background: var(--demo-g, #14171b); }
 
   .tx-wrap .tx-import-tools[open] > .import-review > button.secondary {
-    min-height: 52px;
+    min-height: 54px;
     margin: 0;
     color: var(--demo-text);
-    font-size: 13px;
-    font-weight: 820;
-    border: 1px solid color-mix(in srgb, var(--demo-vi) 30%, var(--demo-gb));
-    border-radius: 16px;
-    background: color-mix(in srgb, var(--demo-vi) 7%, var(--demo-bg));
-    box-shadow: 0 10px 26px color-mix(in srgb, var(--demo-vi) 10%, transparent);
+    font-size: 14px;
+    font-weight: 850;
+    border: 1px solid color-mix(in srgb, var(--demo-vi) 28%, var(--demo-gb));
+    border-radius: 15px;
+    background: color-mix(in srgb, var(--demo-vi) 7%, var(--demo-bg, #fffaf4));
+    box-shadow: none;
   }
 
-  .tx-wrap .tx-import-tools[open] > .import-review > * + * {
-    margin-top: 12px;
-  }
+  .tx-wrap .tx-import-tools[open] > .import-review > * + * { margin-top: 12px; }
 }
