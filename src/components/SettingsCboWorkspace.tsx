@@ -199,6 +199,7 @@ export default function SettingsCboWorkspace(props: Props) {
   const copy = copyFor(props.locale);
   const [sheet, setSheet] = useState<SettingsSheet>(null);
   const [deRiskYears, setDeRiskYears] = useState(5);
+  const [contributionDraft, setContributionDraft] = useState("");
   const target = props.settings.planTarget ?? { targetUseDate: props.settings.endDate ?? "", needFullAmount: true };
   const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
@@ -208,11 +209,16 @@ export default function SettingsCboWorkspace(props: Props) {
   const editTarget = (patch: Partial<PlanTarget>) => props.onChangeTarget({ ...target, ...patch });
   const updateRate = (key: "vwceReturn" | "inflationRate" | "safeReturn" | "bufferPct", value: string) => { const parsed = parsePercent(value); if (parsed !== undefined) props.onPatchSettings({ [key]: parsed }); };
   const yearlyPlanRows = useMemo(() => buildYearlyPlanRows(props.settings, target, deRiskYears, currentYear), [props.settings, target, deRiskYears, currentYear]);
-  const contributionInputValue = props.settings.contributionY2 > 0
-    ? props.settings.contributionY2
-    : props.settings.contributionY1 > 0
-      ? props.settings.contributionY1
-      : "";
+
+  useEffect(() => {
+    if (sheet !== "plan") return;
+    const stored = props.settings.contributionY2 > 0
+      ? props.settings.contributionY2
+      : props.settings.contributionY1 > 0
+        ? props.settings.contributionY1
+        : "";
+    setContributionDraft(stored === "" ? "" : String(stored));
+  }, [sheet, props.settings.contributionY1, props.settings.contributionY2]);
 
   return <div className="settings-cbo p40-settings">
     <header className="p40-header"><h1>{copy.title}</h1><div className="p40-identity"><span>{copy.fund}</span><strong>{props.settings.planName || "VWCE Vault"}{props.settings.childName ? ` · ${props.settings.childName}` : ""}</strong><small role="status">{props.saveLabel || copy.saved}</small></div></header>
@@ -235,7 +241,14 @@ export default function SettingsCboWorkspace(props: Props) {
         <label><span>{copy.targetDate}</span><input type="date" value={target.targetUseDate} onChange={(event) => editTarget({ targetUseDate: event.target.value })} /></label>
         <label className="p40-toggle-row"><span><strong>{copy.fullAmount}</strong></span><input type="checkbox" checked={target.needFullAmount} onChange={(event) => editTarget({ needFullAmount: event.target.checked, partialNeedEuro: event.target.checked ? undefined : target.partialNeedEuro })} /></label>
         {!target.needFullAmount ? <label><span>{copy.targetAmount}</span><input inputMode="decimal" type="number" min="0" value={target.partialNeedEuro ?? ""} onChange={(event) => editTarget({ partialNeedEuro: parseNumber(event.target.value) })} /></label> : null}
-        <label><span>{copy.contribution}</span><input data-testid="p40-contribution-input" inputMode="decimal" type="number" min="0" step="1" value={contributionInputValue} onChange={(event) => { const parsed = parseNumber(event.target.value); if (parsed === undefined) return; props.onPatchSettings({ contributionY1: parsed, contributionY2: parsed }); }} /></label>
+        <label><span>{copy.contribution}</span><input data-testid="p40-contribution-input" inputMode="decimal" type="text" autoComplete="off" value={contributionDraft} onChange={(event) => {
+          const raw = event.target.value;
+          setContributionDraft(raw);
+          if (raw.trim() === "") return;
+          const parsed = parseNumber(raw);
+          if (parsed === undefined || parsed < 0) return;
+          props.onPatchSettings({ contributionY1: parsed, contributionY2: parsed });
+        }} /></label>
         <div><span>{copy.safeWindow}</span><div className="p40-segments">{[3, 5, 7].map((value) => <button key={value} type="button" className={deRiskYears === value ? "selected" : ""} onClick={() => setDeRiskYears(value)}>{value} {props.locale === "de" ? "J." : "năm"}</button>)}</div></div>
       </div>
       <div className="p40-milestones"><div><span>{copy.milestones[0]}</span><strong>{currentYear}</strong></div><div><span>{copy.milestones[1]}</span><strong>{Math.max(currentYear, goalYear - deRiskYears)}</strong></div><div><span>{copy.milestones[2]}</span><strong>{goalYear}</strong></div></div>
