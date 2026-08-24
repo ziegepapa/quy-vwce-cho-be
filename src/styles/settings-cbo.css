@@ -214,10 +214,7 @@
   background: var(--p40-surface);
 }
 .p40-contrib-step:disabled { opacity: .4; }
-.p40-contrib-field {
-  position: relative;
-  display: grid;
-}
+.p40-contrib-field { position: relative; display: grid; }
 .p40-contrib-field input {
   width: 100%;
   min-height: 56px;
@@ -242,11 +239,7 @@
   font-weight: 700;
   pointer-events: none;
 }
-.p40-contrib-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
+.p40-contrib-presets { display: flex; flex-wrap: wrap; gap: 6px; }
 .p40-contrib-presets button {
   min-height: 40px;
   min-width: 52px;
@@ -263,12 +256,59 @@
   border-color: color-mix(in srgb, var(--p40-teal) 55%, var(--p40-line));
   background: var(--p40-teal-soft);
 }
-.p40-contrib-impact {
+.p40-contrib-insight {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--p40-line);
+  background: var(--p40-surface);
+}
+.p40-contrib-insight--neutral { border-color: var(--p40-line); }
+.p40-contrib-insight--ok {
+  border-color: color-mix(in srgb, var(--p40-growth) 42%, var(--p40-line));
+  background: var(--p40-growth-soft);
+}
+.p40-contrib-insight--caution {
+  border-color: color-mix(in srgb, var(--p40-caution) 48%, var(--p40-line));
+  background: var(--p40-caution-soft);
+}
+.p40-contrib-insight--warn {
+  border-color: color-mix(in srgb, var(--p40-danger) 38%, var(--p40-line));
+  background: var(--p40-danger-soft);
+}
+.p40-contrib-insight-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.p40-contrib-insight-metrics > div { min-width: 0; display: grid; gap: 2px; }
+.p40-contrib-insight-metrics span {
+  overflow: hidden;
+  color: var(--p40-muted);
+  font-size: 10px;
+  font-weight: 780;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.p40-contrib-insight-metrics strong {
+  color: var(--p40-ink);
+  font-size: 15px;
+  letter-spacing: -.02em;
+}
+.p40-contrib-insight > p {
   margin: 0;
-  color: var(--p40-teal);
+  color: var(--p40-ink);
   font-size: 13px;
-  font-weight: 700;
-  letter-spacing: -.01em;
+  font-weight: 620;
+  line-height: 1.4;
+}
+.p40-contrib-insight > small {
+  color: var(--p40-muted);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .p40-settings :is(button, input, select):focus-visible { outline: 3px solid color-mix(in srgb, var(--p40-teal) 55%, transparent); outline-offset: 3px; }
