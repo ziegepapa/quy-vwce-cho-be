@@ -229,21 +229,30 @@ export default function Transactions() {
     const dock = document.querySelector(".bottom-dock");
     document.documentElement.classList.toggle("tx-filter-open", filterSheetOpen);
     document.body.classList.toggle("tx-filter-open", filterSheetOpen);
+    document.documentElement.classList.toggle("tx-import-open", pdfToolsOpen);
+    document.body.classList.toggle("tx-import-open", pdfToolsOpen);
     if (dock) {
       dock.classList.toggle("is-hidden", filterSheetOpen);
       dock.toggleAttribute("inert", filterSheetOpen);
       dock.setAttribute("aria-hidden", String(filterSheetOpen));
+      if (pdfToolsOpen && !filterSheetOpen) {
+        dock.classList.add("is-hidden");
+        dock.toggleAttribute("inert", true);
+        dock.setAttribute("aria-hidden", "true");
+      }
     }
     if (filterSheetOpen) requestAnimationFrame(() => filterSheetRef.current?.focus());
     return () => {
       document.documentElement.classList.remove("tx-filter-open");
       document.body.classList.remove("tx-filter-open");
+      document.documentElement.classList.remove("tx-import-open");
+      document.body.classList.remove("tx-import-open");
       const currentDock = document.querySelector(".bottom-dock");
       currentDock?.classList.remove("is-hidden");
       currentDock?.removeAttribute("inert");
       currentDock?.removeAttribute("aria-hidden");
     };
-  }, [filterSheetOpen]);
+  }, [filterSheetOpen, pdfToolsOpen]);
 
   const [sort, setSort] = useState<TransactionSort>("newest");
   const [qualityVisibleLimit, setQualityVisibleLimit] = useState(3);
