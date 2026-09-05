@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "isin": "IE00BK5BQT80",
+  "ticker": "VWCE",
+  "venue": "XETRA",
+  "currency": "EUR",
+  "price": 167.88,
+  "asOf": "2026-09-04",
+  "fetchedAt": "2026-09-05T10:23:34.503Z",
+  "provider": "onvista",
+  "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
+}

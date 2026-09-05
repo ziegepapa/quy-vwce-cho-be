@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-05T10:23:35.116Z",
+  "quotes": [
+    {
+      "instrumentIsin": "IE00BK5BQT80",
+      "currency": "EUR",
+      "venue": "XETRA",
+      "price": 167.88,
+      "asOf": "2026-09-04",
+      "fetchedAt": "2026-09-05T10:23:34.503Z",
+      "source": "auto",
+      "provider": "onvista",
+      "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
+    }
+  ]
+}
