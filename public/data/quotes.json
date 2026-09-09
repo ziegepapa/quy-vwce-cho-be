@@ -1,17 +1,19 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-09T11:06:07.287Z",
+  "generatedAt": "2026-09-09T19:56:26.897Z",
   "quotes": [
     {
       "instrumentIsin": "IE00BK5BQT80",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 167.58,
-      "asOf": "2026-09-08",
-      "fetchedAt": "2026-09-09T11:06:06.716Z",
+      "price": 166.22,
+      "asOf": "2026-09-09",
+      "fetchedAt": "2026-09-09T19:56:26.052Z",
       "source": "auto",
-      "provider": "onvista",
-      "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
+      "provider": "yahoo_finance_chart",
+      "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
+      "crossCheckedWith": "onvista",
+      "crossCheckDifferencePct": 0
     }
   ]
 }
