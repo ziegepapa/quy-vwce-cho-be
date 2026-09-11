@@ -6,9 +6,7 @@
   "currency": "EUR",
   "price": 165.26,
   "asOf": "2026-09-10",
-  "fetchedAt": "2026-09-10T19:55:21.493Z",
-  "provider": "yahoo_finance_chart",
-  "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
-  "crossCheckedWith": "onvista",
-  "crossCheckDifferencePct": 0
+  "fetchedAt": "2026-09-11T11:00:31.032Z",
+  "provider": "onvista",
+  "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
 }
