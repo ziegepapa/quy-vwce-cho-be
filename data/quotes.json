@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-15T20:21:05.139Z",
+  "quotes": [
+    {
+      "instrumentIsin": "IE00BK5BQT80",
+      "currency": "EUR",
+      "venue": "XETRA",
+      "price": 165.36,
+      "asOf": "2026-09-15",
+      "fetchedAt": "2026-09-15T20:21:04.327Z",
+      "source": "auto",
+      "provider": "yahoo_finance_chart",
+      "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
+      "crossCheckedWith": "onvista",
+      "crossCheckDifferencePct": 0
+    }
+  ]
+}
