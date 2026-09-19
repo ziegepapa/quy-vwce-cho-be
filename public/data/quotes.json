@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-18T19:50:48.392Z",
+  "generatedAt": "2026-09-19T10:42:22.323Z",
   "quotes": [
     {
       "instrumentIsin": "IE00BK5BQT80",
@@ -8,12 +8,10 @@
       "venue": "XETRA",
       "price": 167.14,
       "asOf": "2026-09-18",
-      "fetchedAt": "2026-09-18T19:50:47.832Z",
+      "fetchedAt": "2026-09-19T10:42:21.646Z",
       "source": "auto",
-      "provider": "yahoo_finance_chart",
-      "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
-      "crossCheckedWith": "onvista",
-      "crossCheckDifferencePct": 0
+      "provider": "onvista",
+      "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
     }
   ]
 }
