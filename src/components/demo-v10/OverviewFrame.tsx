@@ -5,6 +5,7 @@ import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
 import type { PlanVsReality } from "../../pages/planVsReality";
 import type { YearInReview } from "../../pages/yearInReview";
 import type { PortfolioDataHealth } from "../../pages/portfolioDataHealth";
+import type { DailyBriefing } from "../../pages/dailyBriefing";
 import "../../styles/demo-v10-overview.css";
 
 type OverviewFrameProps = {
@@ -19,6 +20,7 @@ type OverviewFrameProps = {
   savingsPlan: string | null;
   heartbeat: PortfolioHeartbeat;
   dataHealth: PortfolioDataHealth;
+  briefing: DailyBriefing;
   goalTargetDate: string | null;
   goalHorizon: string | null;
   planVsReality: PlanVsReality;
@@ -80,6 +82,17 @@ function overviewCopy(locale: "vi" | "de") {
     yearReviewWithdrawn: "Ausgezahlt",
     yearReviewPriceSnapshot: "Neuester Preis",
     yearReviewNoSnapshot: "Noch kein aktueller Preis erfasst",
+    todayTitle: "Heute im Blick",
+    todayPriceMove: "Kursbewegung",
+    todayVsYesterday: "vs. gestern",
+    todayValueDelta: "Wertänderung (Schätzung)",
+    todayStreak: "Beitragsserie",
+    todayStreakMonths: (count: number) => `${count} Monat${count === 1 ? "" : "e"} in Folge`,
+    todayMilestone: "Nächster Meilenstein",
+    todayMilestoneRemaining: (remaining: string) => `Noch ${remaining}`,
+    todayNextContribution: "Nächste Rate",
+    todayNextContributionIn: (days: number) => days === 0 ? "Heute" : `in ${days} Tag${days === 1 ? "" : "en"}`,
+    todayEstimateNote: "Schätzung aus Schlusskurs",
   } : {
     pageLabel: "Tổng quan",
     price: "Giá VWCE",
@@ -130,6 +143,17 @@ function overviewCopy(locale: "vi" | "de") {
     yearReviewWithdrawn: "Đã rút",
     yearReviewPriceSnapshot: "Giá gần nhất",
     yearReviewNoSnapshot: "Chưa có giá gần nhất",
+    todayTitle: "Hôm nay có gì",
+    todayPriceMove: "Biến động giá",
+    todayVsYesterday: "so với hôm qua",
+    todayValueDelta: "Giá trị thay đổi (ước tính)",
+    todayStreak: "Chuỗi tháng góp",
+    todayStreakMonths: (count: number) => `${count} tháng liên tiếp`,
+    todayMilestone: "Mốc tiếp theo",
+    todayMilestoneRemaining: (remaining: string) => `Còn ${remaining}`,
+    todayNextContribution: "Kỳ góp tới",
+    todayNextContributionIn: (days: number) => days === 0 ? "Hôm nay" : `Còn ${days} ngày`,
+    todayEstimateNote: "Ước tính theo giá đóng cửa",
   };
 }
 
@@ -145,6 +169,7 @@ export default function OverviewFrame({
   savingsPlan,
   heartbeat,
   dataHealth,
+  briefing,
   goalTargetDate,
   goalHorizon,
   planVsReality,
@@ -189,6 +214,19 @@ export default function OverviewFrame({
   const planDetail = planVsReality.plannedMonths === 0
     ? text.planNotStarted
     : `${text.planMonths(planVsReality.plannedMonths, planVsReality.recordedMonths)} · ${planVsReality.missingMonths > 0 ? text.planMissing(planVsReality.missingMonths) : text.planOnTrack}`;
+  const todayPricePct = briefing.priceChange == null
+    ? null
+    : `${briefing.priceChange.pct > 0 ? "+" : ""}${briefing.priceChange.pct.toFixed(1).replace(".", ",")}%`;
+  const todayPriceArrow = briefing.priceChange == null
+    ? "—"
+    : briefing.priceChange.direction === "up"
+      ? "▲"
+      : briefing.priceChange.direction === "down"
+        ? "▼"
+        : "■";
+  const todayPriceDirectionClass = briefing.priceChange == null
+    ? "flat"
+    : briefing.priceChange.direction;
   const yearReviewLine = useMemo(() => [
     `${text.yearReview} ${yearInReview.year}`,
     `${text.yearReviewContributed}: ${formatMoney(yearInReview.contributionAmount)}`,
@@ -223,6 +261,49 @@ export default function OverviewFrame({
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="gl today-card" aria-label={text.todayTitle}>
+          <div className="today-head"><span>{text.todayTitle}</span></div>
+          <div className="today-grid">
+            <div className="today-item">
+              <span className="today-label">{text.todayPriceMove}</span>
+              <strong className={`today-value ${todayPriceDirectionClass}`}>
+                {todayPriceArrow} {todayPricePct ?? "—"}
+              </strong>
+              <small>{text.todayVsYesterday}</small>
+            </div>
+            <div className="today-item">
+              <span className="today-label">{text.todayValueDelta}</span>
+              <strong className={`today-value ${briefing.valueDeltaEstimate == null ? "flat" : briefing.valueDeltaEstimate > 0 ? "up" : briefing.valueDeltaEstimate < 0 ? "down" : "flat"}`}>
+                {briefing.valueDeltaEstimate == null
+                  ? "—"
+                  : `${briefing.valueDeltaEstimate > 0 ? "+" : briefing.valueDeltaEstimate < 0 ? "−" : ""}${formatMoney(Math.abs(briefing.valueDeltaEstimate))}`}
+              </strong>
+              <small>{text.todayEstimateNote}</small>
+            </div>
+            <div className="today-item">
+              <span className="today-label">{text.todayStreak}</span>
+              <strong className="today-value calm">{text.todayStreakMonths(briefing.streakMonths)}</strong>
+            </div>
+            <div className="today-item">
+              <span className="today-label">{text.todayNextContribution}</span>
+              <strong className="today-value calm">
+                {briefing.daysToNextContribution == null ? "—" : text.todayNextContributionIn(briefing.daysToNextContribution)}
+              </strong>
+            </div>
+          </div>
+          {briefing.nextMilestone ? (
+            <div className="today-milestone">
+              <div className="today-milestone-row">
+                <span>{text.todayMilestone}: <strong>{formatMoney(briefing.nextMilestone.target)}</strong></span>
+                <span>{text.todayMilestoneRemaining(formatMoney(briefing.nextMilestone.remaining))}</span>
+              </div>
+              <div className="today-track" aria-label={`${text.todayMilestone}: ${briefing.nextMilestone.progressPct.toFixed(0)}%`}>
+                <span style={{ width: `${briefing.nextMilestone.progressPct}%` }} />
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="gl" aria-label={text.price}>
