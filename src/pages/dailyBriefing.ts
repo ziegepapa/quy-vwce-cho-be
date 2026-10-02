@@ -14,7 +14,7 @@ export type DailyBriefing = {
   priceChange: { direction: PriceDirection; pct: number } | null;
   /**
    * Display-only estimate of how the VWCE position value moved since the
-   * previous close (vwceQty × price delta). Never feeds the ledger.
+   * previous close (vwceQty * price delta). Never feeds the ledger.
    */
   valueDeltaEstimate: number | null;
   /** Consecutive contribution months (see lib/contributionStreak). */
