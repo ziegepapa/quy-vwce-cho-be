@@ -4,6 +4,7 @@ import { formatMoney } from "../lib/calc";
 import { buildOverviewHero } from "../lib/overviewNumbers";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import { computeHeroLifetimeContribution } from "../lib/heroLifetime";
+import { computeContributionStreak } from "../lib/contributionStreak";
 import OverviewFrame from "../components/demo-v10/OverviewFrame";
 import { useLocale } from "../lib/locale";
 import { findTransactionQualityIssues } from "./transactionQualityInbox";
@@ -11,6 +12,28 @@ import { buildPortfolioHeartbeat } from "./portfolioHeartbeat";
 import { buildPlanVsReality, planRealityReviewYears } from "./planVsReality";
 import { buildYearInReview, yearInReviewYears } from "./yearInReview";
 import { buildPortfolioDataHealth } from "./portfolioDataHealth";
+import { buildDailyBriefing, type BriefingPricePoint, type DailyBriefing } from "./dailyBriefing";
+
+function priceHistoryUrl(): string {
+  const baseUrl = import.meta.env.BASE_URL as string | undefined;
+  const base = baseUrl && baseUrl.endsWith("/") ? baseUrl : `${baseUrl || "/"}/`;
+  return `${base}data/price-history/IE00BK5BQT80.json`;
+}
+
+function readPriceHistory(payload: unknown): BriefingPricePoint[] {
+  if (!payload || typeof payload !== "object") return [];
+  const raw = (payload as { points?: unknown }).points;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (row): row is { date: string; price: number } =>
+        !!row &&
+        typeof row === "object" &&
+        typeof (row as { date?: unknown }).date === "string" &&
+        Number.isFinite((row as { price?: unknown }).price),
+    )
+    .map((row) => ({ date: row.date, price: row.price as number }));
+}
 
 function overviewPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
@@ -75,6 +98,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
   const [transactions, setTransactions] = useState<Awaited<ReturnType<typeof listTransactions>>>([]);
   const [quotes, setQuotes] = useState<Awaited<ReturnType<typeof listQuotes>>>([]);
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
+  const [priceHistory, setPriceHistory] = useState<BriefingPricePoint[]>([]);
   const [planReviewYear, setPlanReviewYear] = useState<number | null>(null);
   const [yearReviewYear, setYearReviewYear] = useState<number | null>(null);
 
@@ -95,6 +119,15 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       })
       .finally(() => {
         if (alive) setLoading(false);
+      });
+    // Daily briefing price history: best effort, never blocks the overview.
+    void fetch(priceHistoryUrl())
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (alive) setPriceHistory(readPriceHistory(payload));
+      })
+      .catch(() => {
+        if (alive) setPriceHistory([]);
       });
     return () => {
       alive = false;
@@ -155,6 +188,20 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       staleQuoteIsins: snapshot.stalePriceIsins,
       lastBackupAt,
     });
+    // Daily briefing: display-only, feeds on already computed numbers.
+    const streak = computeContributionStreak(transactions);
+    const contributionDay = Number(settings.startDate.slice(8, 10));
+    const briefing: DailyBriefing = buildDailyBriefing({
+      priceHistory,
+      vwceQty: portfolio.vwceQty,
+      assets: hero.assets,
+      streakMonths: streak.streakMonths,
+      contributionDay:
+        Number.isInteger(contributionDay) && contributionDay >= 1 && contributionDay <= 28
+          ? contributionDay
+          : null,
+      now: currentDate,
+    });
     const planToday = currentDate.toISOString().slice(0, 10);
     const planReviewYears = planRealityReviewYears({
       startDate: settings.startDate,
@@ -210,6 +257,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       savingsPlan: Number.isFinite(plannedContribution) && plannedContribution > 0 ? formatMoney(plannedContribution) : null,
       heartbeat,
       dataHealth,
+      briefing,
       planVsReality,
       planReviewYears,
       onPlanReviewYearChange: setPlanReviewYear,
@@ -219,7 +267,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       goalTargetDate: formatGoalTargetDate(settings.endDate, locale),
       goalHorizon: goalHorizon(settings.endDate, locale, currentDate),
     };
-  }, [lastBackupAt, locale, planReviewYear, yearReviewYear, settings, text, transactions, quotes]);
+  }, [lastBackupAt, locale, planReviewYear, yearReviewYear, settings, text, transactions, quotes, priceHistory]);
 
   if (loading) return <main className="demo-v10-screen" role="status" aria-label={text.loading} aria-busy="true" />;
   if (failed || !view) {
