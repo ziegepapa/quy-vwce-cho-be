@@ -247,6 +247,37 @@
   .ov .heartbeat-grid { grid-template-columns: 1fr; }
 }
 
+/* DAILY-BRIEFING-2026: fresh daily glance; display-only, never touches ledger economics. */
+.ov .today-card {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border-color: color-mix(in srgb, var(--demo-em) 26%, var(--demo-gb));
+}
+.ov .today-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--demo-text); font-size: 12px; font-weight: 820; }
+.ov .today-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ov .today-item { display: grid; min-width: 0; gap: 4px; padding: 8px; background: color-mix(in srgb, var(--demo-g) 56%, transparent); border: 1px solid color-mix(in srgb, var(--demo-gb) 74%, transparent); border-radius: 10px; }
+.ov .today-label { overflow: hidden; color: var(--demo-dim); font-size: 9px; font-weight: 760; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.ov .today-value { overflow: hidden; color: var(--demo-text); font-size: 12px; font-weight: 830; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.ov .today-value.up { color: var(--demo-em); }
+.ov .today-value.down { color: var(--demo-re); }
+.ov .today-value.flat { color: var(--demo-sub); }
+.ov .today-value.calm { color: var(--demo-text); font-size: 11px; white-space: normal; }
+.ov .today-item small { overflow: hidden; color: var(--demo-dim); font-size: 9px; font-weight: 700; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.ov .today-milestone { display: grid; gap: 6px; }
+.ov .today-milestone-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--demo-sub); font-size: 10px; font-weight: 740; }
+.ov .today-milestone-row strong { color: var(--demo-text); font-weight: 830; }
+.ov .today-track { height: 8px; overflow: hidden; background: color-mix(in srgb, var(--demo-gb) 62%, transparent); border-radius: 999px; }
+.ov .today-track > span { display: block; height: 100%; background: linear-gradient(90deg, var(--demo-em), var(--demo-vi)); border-radius: inherit; transition: width 180ms cubic-bezier(.23, 1, .32, 1); }
+@media (max-width: 420px) {
+  .ov .today-grid { gap: 6px; }
+  .ov .today-item { padding: 7px; }
+  .ov .today-value { font-size: 11px; }
+}
+@media (max-width: 330px) {
+  .ov .today-grid { grid-template-columns: 1fr; }
+}
+
 /* PORTFOLIO-DATA-HEALTH-2026: factual, source-labeled review queue; no score or automated remediation. */
 .ov .data-health-card { display: grid; gap: 9px; padding: 13px; border-color: color-mix(in srgb, var(--demo-vi) 24%, var(--demo-gb)); }
 .ov .data-health-card.data-health-action { border-color: color-mix(in srgb, var(--demo-re) 42%, var(--demo-gb)); }
