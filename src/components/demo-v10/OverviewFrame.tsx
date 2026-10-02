@@ -4,9 +4,9 @@ import { formatMoney } from "../../lib/calc";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
 import type { PlanVsReality } from "../../pages/planVsReality";
 import type { YearInReview } from "../../pages/yearInReview";
-import type { PortfolioDataHealth } from "../../pages/portfolioDataHealth";
+import type { PortfolioDataHealth, PortfolioDataHealthIssue } from "../../pages/portfolioDataHealth";
 import type { DailyBriefing } from "../../pages/dailyBriefing";
-import "../../styles/demo-v10-overview.css";
+import "../../styles/overview-clean.css";
 
 type OverviewFrameProps = {
   assetsLabel: string;
@@ -35,126 +35,165 @@ function overviewCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     pageLabel: "Übersicht",
     price: "VWCE-Kurs",
-    currentPrice: "AKTUELL",
-    stalePrice: "ALTER KURS",
+    stalePrice: "Alter Kurs",
     shares: "Anteile",
     savingsPlan: "Sparplan",
-    perMonth: "/ Mon.",
-    rhythm: "Portfoliorhythmus",
-    rhythmNext: "Nächste Rate",
-    rhythmPerformance: "Aktueller Stand",
-    rhythmAttention: "Aufmerksamkeit",
+    perMonth: "/Mon.",
+    attention: "Zu beachten",
+    rhythmQuality: (count: number) => `${count} Transaktion${count === 1 ? "" : "en"} prüfen`,
+    rhythmMissingPrices: (count: number) => `Kurse für ${count} Wertpapier${count === 1 ? "" : "e"} fehlen`,
+    rhythmStalePrices: (count: number) => `Kurse für ${count} Wertpapier${count === 1 ? "" : "e"} aktualisieren`,
+    healthIssue: (issue: PortfolioDataHealthIssue) => issue.code === "transaction_quality"
+      ? `${issue.count} Datenpunkte prüfen`
+      : issue.code === "missing_quotes"
+        ? `Kurse für ${issue.count} Wertpapiere fehlen`
+        : issue.code === "stale_quotes"
+          ? `Kurse für ${issue.count} Wertpapiere aktualisieren`
+          : "Backup noch nicht erfasst",
+    review: "Prüfen",
     performanceGain: "Im Plus",
     performanceLoss: "Im Minus",
     performanceFlat: "Unverändert",
     performanceUnavailable: "Noch nicht bewertbar",
-    rhythmQuality: (count: number) => `${count} Transaktion${count === 1 ? "" : "en"} prüfen`,
-    rhythmMissingPrices: (count: number) => `Kurse für ${count} Wertpapier${count === 1 ? "" : "e"} fehlen`,
-    rhythmStalePrices: (count: number) => `Kurse für ${count} Wertpapier${count === 1 ? "" : "e"} aktualisieren`,
-    rhythmClear: "Alles im Blick",
-    review: "Prüfen",
-    dataHealth: "Datenstatus",
-    dataHealthClear: "Keine Datenhinweise",
-    dataHealthSummary: (count: number) => `${count} Datenpunkt${count === 1 ? "" : "e"} prüfen`,
-    dataHealthMissingNotes: (count: number) => count === 1 ? "1 Notiz fehlt" : `${count} Notizen fehlen`,
-    dataHealthAction: "Aktion erforderlich",
-    dataHealthReview: "Prüfen",
-    dataHealthTip: "Hinweis",
-    currentPlan: "Aktueller Langfristplan",
+    currentPlan: "Langfristplan",
     targetDate: "Zieltermin",
-    timeHorizon: "Zeitraum",
+    timeHorizon: "Verbleibend",
     targetUnknown: "Noch kein Zieltermin erfasst",
     reviewYear: "Prüfjahr",
-    planPlanned: "Sparplan bis heute",
     planRecorded: "Erfasst",
+    planOfTarget: "vom Plan",
     planNotStarted: "Der Plan startet noch nicht",
     planOnTrack: "Planbetrag erreicht",
     planBelowPlan: "Unter dem Planbetrag",
     planMonths: (planned: number, recorded: number) => `${recorded}/${planned} Monate erfasst`,
     planMissing: (count: number) => `${count} Monat${count === 1 ? "" : "e"} ohne erfassten Beitrag`,
+    nextMilestone: "Nächster Meilenstein",
+    milestoneRemaining: (remaining: string) => `Noch ${remaining}`,
+    streakMonths: (count: number) => `${count} Monat${count === 1 ? "" : "e"} in Folge`,
     yearReview: "Jahresrückblick",
-    yearReviewYear: "Prüfjahr",
     yearReviewExport: "Bericht exportieren",
-    yearReviewTransactions: "Erfasste Buchungen",
-    yearReviewQuality: (count: number) => count === 0 ? "Keine Datenpunkte offen" : `${count} Datenpunkte prüfen`,
-    yearReviewMissingNotes: (count: number) => count === 1 ? "1 Notiz fehlt" : `${count} Notizen fehlen`,
+    yearReviewTransactions: "Buchungen",
     yearReviewContributed: "Eingezahlt",
-    yearReviewWithdrawn: "Ausgezahlt",
+    yearReviewQuality: (count: number) => count === 0 ? "Keine offenen Datenpunkte" : `${count} Datenpunkte prüfen`,
+    yearReviewMissingNotes: (count: number) => count === 1 ? "1 Notiz fehlt" : `${count} Notizen fehlen`,
     yearReviewPriceSnapshot: "Neuester Preis",
     yearReviewNoSnapshot: "Noch kein aktueller Preis erfasst",
-    todayTitle: "Heute im Blick",
+    todayTitle: "Heute",
     todayPriceMove: "Kursbewegung",
     todayVsYesterday: "vs. gestern",
-    todayValueDelta: "Wertänderung (Schätzung)",
-    todayStreak: "Beitragsserie",
-    todayStreakMonths: (count: number) => `${count} Monat${count === 1 ? "" : "e"} in Folge`,
-    todayMilestone: "Nächster Meilenstein",
-    todayMilestoneRemaining: (remaining: string) => `Noch ${remaining}`,
     todayNextContribution: "Nächste Rate",
     todayNextContributionIn: (days: number) => days === 0 ? "Heute" : `in ${days} Tag${days === 1 ? "" : "en"}`,
-    todayEstimateNote: "Schätzung aus Schlusskurs",
   } : {
     pageLabel: "Tổng quan",
     price: "Giá VWCE",
-    currentPrice: "MỚI NHẤT",
-    stalePrice: "GIÁ CŨ",
-    shares: "Cổ phần",
-    savingsPlan: "Khoản góp hằng tháng",
+    stalePrice: "Giá cũ",
+    shares: "cổ phần",
+    savingsPlan: "Khoản góp",
     perMonth: "/th",
-    rhythm: "Nhịp danh mục",
-    rhythmNext: "Kỳ góp tiếp theo",
-    rhythmPerformance: "Hiệu suất hiện tại",
-    rhythmAttention: "Cần chú ý",
+    attention: "Cần chú ý",
+    rhythmQuality: (count: number) => `${count} giao dịch cần rà soát`,
+    rhythmMissingPrices: (count: number) => `Thiếu giá cho ${count} mã`,
+    rhythmStalePrices: (count: number) => `Cần cập nhật giá cho ${count} mã`,
+    healthIssue: (issue: PortfolioDataHealthIssue) => issue.code === "transaction_quality"
+      ? `${issue.count} mục dữ liệu cần rà soát`
+      : issue.code === "missing_quotes"
+        ? `Thiếu giá cho ${issue.count} mã`
+        : issue.code === "stale_quotes"
+          ? `Cần cập nhật giá cho ${issue.count} mã`
+          : "Chưa ghi nhận sao lưu",
+    review: "Rà soát",
     performanceGain: "Đang lãi",
     performanceLoss: "Đang lỗ",
     performanceFlat: "Hòa vốn",
     performanceUnavailable: "Chưa định giá",
-    rhythmQuality: (count: number) => `${count} giao dịch cần rà soát`,
-    rhythmMissingPrices: (count: number) => `Thiếu giá cho ${count} mã`,
-    rhythmStalePrices: (count: number) => `Cần cập nhật giá cho ${count} mã`,
-    rhythmClear: "Không có việc cần xử lý",
-    review: "Rà soát",
-    dataHealth: "Tình trạng dữ liệu",
-    dataHealthClear: "Không có mục dữ liệu cần chú ý",
-    dataHealthSummary: (count: number) => `${count} mục dữ liệu cần rà soát`,
-    dataHealthMissingNotes: (count: number) => count === 1 ? "1 ghi chú còn thiếu" : `${count} ghi chú còn thiếu`,
-    dataHealthAction: "Cần xử lý",
-    dataHealthReview: "Cần kiểm tra",
-    dataHealthTip: "Gợi ý",
-    currentPlan: "Kế hoạch dài hạn hiện tại",
-    targetDate: "Ngày mục tiêu",
-    timeHorizon: "Thời gian còn lại",
+    currentPlan: "Kế hoạch dài hạn",
+    targetDate: "Mục tiêu",
+    timeHorizon: "Còn lại",
     targetUnknown: "Chưa có ngày mục tiêu",
-    reviewYear: "Năm rà soát",
-    planPlanned: "Kế hoạch góp đến nay",
-    planRecorded: "Đã ghi nhận",
+    reviewYear: "Năm",
+    planRecorded: "Đã góp",
+    planOfTarget: "kế hoạch",
     planNotStarted: "Kế hoạch chưa bắt đầu",
     planOnTrack: "Đã đạt mức kế hoạch",
     planBelowPlan: "Chưa đạt mức kế hoạch",
     planMonths: (planned: number, recorded: number) => `Đã ghi nhận ${recorded}/${planned} tháng`,
-    planMissing: (count: number) => `${count} tháng chưa có khoản góp ghi nhận`,
+    planMissing: (count: number) => `${count} tháng chưa có khoản góp`,
+    nextMilestone: "Mốc tiếp theo",
+    milestoneRemaining: (remaining: string) => `Còn ${remaining}`,
+    streakMonths: (count: number) => `${count} tháng liên tiếp`,
     yearReview: "Tổng kết năm",
-    yearReviewYear: "Năm rà soát",
     yearReviewExport: "Xuất báo cáo",
-    yearReviewTransactions: "Giao dịch đã ghi",
-    yearReviewQuality: (count: number) => count === 0 ? "Không còn mục dữ liệu cần rà soát" : `${count} mục dữ liệu cần rà soát`,
-    yearReviewMissingNotes: (count: number) => count === 1 ? "1 ghi chú còn thiếu" : `${count} ghi chú còn thiếu`,
+    yearReviewTransactions: "giao dịch",
     yearReviewContributed: "Đã góp",
-    yearReviewWithdrawn: "Đã rút",
+    yearReviewQuality: (count: number) => count === 0 ? "Không còn mục cần rà soát" : `${count} mục cần rà soát`,
+    yearReviewMissingNotes: (count: number) => count === 1 ? "1 ghi chú còn thiếu" : `${count} ghi chú còn thiếu`,
     yearReviewPriceSnapshot: "Giá gần nhất",
     yearReviewNoSnapshot: "Chưa có giá gần nhất",
-    todayTitle: "Hôm nay có gì",
+    todayTitle: "Hôm nay",
     todayPriceMove: "Biến động giá",
     todayVsYesterday: "so với hôm qua",
-    todayValueDelta: "Giá trị thay đổi (ước tính)",
-    todayStreak: "Chuỗi tháng góp",
-    todayStreakMonths: (count: number) => `${count} tháng liên tiếp`,
-    todayMilestone: "Mốc tiếp theo",
-    todayMilestoneRemaining: (remaining: string) => `Còn ${remaining}`,
     todayNextContribution: "Kỳ góp tới",
     todayNextContributionIn: (days: number) => days === 0 ? "Hôm nay" : `Còn ${days} ngày`,
-    todayEstimateNote: "Ước tính theo giá đóng cửa",
   };
+}
+
+type AttentionItem = {
+  key: string;
+  label: string;
+  href: string | null;
+  severity: "action" | "review" | "tip";
+};
+
+/**
+ * One merged attention list. Heartbeat already prioritizes the top signal, so a
+ * data-health issue describing the same underlying signal is folded into that
+ * row instead of being shown twice. Data-health rows carry the more precise
+ * destination (e.g. the quality review lens).
+ */
+function buildAttentionItems(
+  heartbeat: PortfolioHeartbeat,
+  dataHealth: PortfolioDataHealth,
+  text: ReturnType<typeof overviewCopy>,
+): AttentionItem[] {
+  const items: AttentionItem[] = [];
+  const seen = new Set<string>();
+  const byCode = new Map(dataHealth.issues.map((issue) => [issue.code, issue]));
+  const heartbeatCode = heartbeat.attention.kind === "quality"
+    ? "transaction_quality"
+    : heartbeat.attention.kind === "missing_prices"
+      ? "missing_quotes"
+      : heartbeat.attention.kind === "stale_prices"
+        ? "stale_quotes"
+        : null;
+  const preciseLabel = (issue: PortfolioDataHealthIssue) =>
+    issue.code === "transaction_quality" && dataHealth.missingNotesOnly
+      ? text.yearReviewMissingNotes(dataHealth.missingNoteCount)
+      : text.healthIssue(issue);
+  if (heartbeat.attention.kind !== "none") {
+    const issue = heartbeatCode ? byCode.get(heartbeatCode) : undefined;
+    if (issue) {
+      items.push({ key: issue.code, label: preciseLabel(issue), href: issue.href, severity: issue.severity });
+      seen.add(issue.code);
+    } else {
+      const label = heartbeat.attention.kind === "quality"
+        ? text.rhythmQuality(heartbeat.attention.count)
+        : heartbeat.attention.kind === "missing_prices"
+          ? text.rhythmMissingPrices(heartbeat.attention.count)
+          : text.rhythmStalePrices(heartbeat.attention.count);
+      items.push({
+        key: `heartbeat-${heartbeat.attention.kind}`,
+        label,
+        href: heartbeat.attention.href,
+        severity: "review",
+      });
+      if (heartbeatCode) seen.add(heartbeatCode);
+    }
+  }
+  for (const issue of dataHealth.issues) {
+    if (seen.has(issue.code)) continue;
+    items.push({ key: issue.code, label: preciseLabel(issue), href: issue.href, severity: issue.severity });
+  }
+  return items;
 }
 
 export default function OverviewFrame({
@@ -181,17 +220,10 @@ export default function OverviewFrame({
 }: OverviewFrameProps) {
   const { locale } = useLocale();
   const text = overviewCopy(locale);
-  const primaryHealthIssue = dataHealth.issues[0] ?? null;
-  const dataHealthLabel = !dataHealth.issues.length
-    ? text.dataHealthClear
-    : dataHealth.missingNotesOnly
-      ? text.dataHealthMissingNotes(dataHealth.missingNoteCount)
-      : text.dataHealthSummary(dataHealth.issues.length);
-  const yearReviewQualityLabel = yearInReview.qualityIssueCount === 0
-    ? text.yearReviewQuality(0)
-    : yearInReview.missingNotesOnly
-      ? text.yearReviewMissingNotes(yearInReview.missingNoteCount)
-      : text.yearReviewQuality(yearInReview.qualityIssueCount);
+  const attentionItems = useMemo(
+    () => buildAttentionItems(heartbeat, dataHealth, text),
+    [heartbeat, dataHealth, text],
+  );
   const performanceLabel = heartbeat.performanceState === "gain"
     ? text.performanceGain
     : heartbeat.performanceState === "loss"
@@ -199,13 +231,6 @@ export default function OverviewFrame({
       : heartbeat.performanceState === "flat"
         ? text.performanceFlat
         : text.performanceUnavailable;
-  const rhythmAttentionLabel = heartbeat.attention.kind === "quality"
-    ? text.rhythmQuality(heartbeat.attention.count)
-    : heartbeat.attention.kind === "missing_prices"
-      ? text.rhythmMissingPrices(heartbeat.attention.count)
-      : heartbeat.attention.kind === "stale_prices"
-        ? text.rhythmStalePrices(heartbeat.attention.count)
-        : text.rhythmClear;
   const planStateLabel = planVsReality.state === "on_track"
     ? text.planOnTrack
     : planVsReality.state === "below_plan"
@@ -213,7 +238,7 @@ export default function OverviewFrame({
       : text.planNotStarted;
   const planDetail = planVsReality.plannedMonths === 0
     ? text.planNotStarted
-    : `${text.planMonths(planVsReality.plannedMonths, planVsReality.recordedMonths)} · ${planVsReality.missingMonths > 0 ? text.planMissing(planVsReality.missingMonths) : text.planOnTrack}`;
+    : `${text.planMonths(planVsReality.plannedMonths, planVsReality.recordedMonths)}${planVsReality.missingMonths > 0 ? ` · ${text.planMissing(planVsReality.missingMonths)}` : ""}`;
   const todayPricePct = briefing.priceChange == null
     ? null
     : `${briefing.priceChange.pct > 0 ? "+" : ""}${briefing.priceChange.pct.toFixed(1).replace(".", ",")}%`;
@@ -227,18 +252,23 @@ export default function OverviewFrame({
   const todayPriceDirectionClass = briefing.priceChange == null
     ? "flat"
     : briefing.priceChange.direction;
+  const goalMeta = goalTargetDate
+    ? `${text.targetDate}: ${goalTargetDate}${goalHorizon ? ` · ${text.timeHorizon} ${goalHorizon}` : ""}`
+    : text.targetUnknown;
+  const yearReviewQualityLabel = yearInReview.qualityIssueCount === 0
+    ? text.yearReviewQuality(0)
+    : yearInReview.missingNotesOnly
+      ? text.yearReviewMissingNotes(yearInReview.missingNoteCount)
+      : text.yearReviewQuality(yearInReview.qualityIssueCount);
   const yearReviewLine = useMemo(() => [
     `${text.yearReview} ${yearInReview.year}`,
     `${text.yearReviewContributed}: ${formatMoney(yearInReview.contributionAmount)}`,
-    `${text.yearReviewWithdrawn}: ${formatMoney(yearInReview.withdrawnAmount)}`,
     `${text.yearReviewTransactions}: ${yearInReview.transactionCount}`,
-    yearInReview.missingNotesOnly
-      ? text.yearReviewMissingNotes(yearInReview.missingNoteCount)
-      : text.yearReviewQuality(yearInReview.qualityIssueCount),
+    yearReviewQualityLabel,
     yearInReview.priceSnapshot
       ? `${text.yearReviewPriceSnapshot}: ${formatMoney(yearInReview.priceSnapshot.price)} · ${yearInReview.priceSnapshot.asOf}`
       : text.yearReviewNoSnapshot,
-  ].join("\n"), [text, yearInReview]);
+  ].join("\n"), [text, yearInReview, yearReviewQualityLabel]);
   const exportYearReview = () => {
     const url = URL.createObjectURL(new Blob([`${yearReviewLine}\n`], { type: "text/plain;charset=utf-8" }));
     const anchor = document.createElement("a");
@@ -249,144 +279,138 @@ export default function OverviewFrame({
   };
 
   return (
-    <main className="demo-v10-screen" aria-label={text.pageLabel}>
-      <div className="ov overview-state-surface">
-        <section className="gl hero">
-          <div className="hero-flex">
-            <div className="hero-left">
-              <div className="h-eye">{assetsLabel}</div>
-              <div className="h-num">{assets}</div>
-              <div className="h-row">
-                <span className={`bdg ${pnlPositive ? "bdg-up" : "bdg-down"}`}>{pnl ?? "—"}</span>
-              </div>
-            </div>
+    <main className="ovc-screen" aria-label={text.pageLabel}>
+      <div className="ov">
+        {/* 1 — Hero: one number, one story */}
+        <section className="ovc-hero" aria-label={assetsLabel}>
+          <div className="ovc-eyebrow">{assetsLabel}</div>
+          <div className="ovc-value">{assets}</div>
+          <div className="ovc-pnl-row">
+            <span className={`ovc-pnl ${pnlPositive ? "up" : "down"}`}>{pnl ?? "—"}</span>
+            <span className={`ovc-pnl-pct ${heartbeat.performanceState}`}>
+              {heartbeat.performance ?? performanceLabel}
+            </span>
+          </div>
+          <div className="ovc-meta">
+            <span>
+              <span className="ovc-label">{text.price}</span>{" "}
+              <span className="ovc-price">{price ?? "—"}</span>
+            </span>
+            {priceAsOf ? <span>{priceAsOf}</span> : null}
+            {stale ? <span className="ovc-stale-tag">{text.stalePrice}</span> : null}
+            <span>
+              <span className="ovc-label">{text.shares}</span>{" "}
+              <span>{shares ?? "—"}</span>
+            </span>
           </div>
         </section>
 
-        <section className="gl today-card" aria-label={text.todayTitle}>
-          <div className="today-head"><span>{text.todayTitle}</span></div>
-          <div className="today-grid">
-            <div className="today-item">
-              <span className="today-label">{text.todayPriceMove}</span>
-              <strong className={`today-value ${todayPriceDirectionClass}`}>
+        {/* 2 — Today: the daily hook, slim */}
+        <section className="ovc-card" aria-label={text.todayTitle}>
+          <h2 className="ovc-title">{text.todayTitle}</h2>
+          <div className="ovc-today-grid">
+            <div className="ovc-today-item">
+              <span className="ovc-label">{text.todayPriceMove}</span>
+              <strong className={`ovc-today-value ${todayPriceDirectionClass}`}>
                 {todayPriceArrow} {todayPricePct ?? "—"}
               </strong>
               <small>{text.todayVsYesterday}</small>
             </div>
-            <div className="today-item">
-              <span className="today-label">{text.todayValueDelta}</span>
-              <strong className={`today-value ${briefing.valueDeltaEstimate == null ? "flat" : briefing.valueDeltaEstimate > 0 ? "up" : briefing.valueDeltaEstimate < 0 ? "down" : "flat"}`}>
-                {briefing.valueDeltaEstimate == null
-                  ? "—"
-                  : `${briefing.valueDeltaEstimate > 0 ? "+" : briefing.valueDeltaEstimate < 0 ? "−" : ""}${formatMoney(Math.abs(briefing.valueDeltaEstimate))}`}
-              </strong>
-              <small>{text.todayEstimateNote}</small>
-            </div>
-            <div className="today-item">
-              <span className="today-label">{text.todayStreak}</span>
-              <strong className="today-value calm">{text.todayStreakMonths(briefing.streakMonths)}</strong>
-            </div>
-            <div className="today-item">
-              <span className="today-label">{text.todayNextContribution}</span>
-              <strong className="today-value calm">
+            <div className="ovc-today-item">
+              <span className="ovc-label">{text.todayNextContribution}</span>
+              <strong className="ovc-today-value calm">
                 {briefing.daysToNextContribution == null ? "—" : text.todayNextContributionIn(briefing.daysToNextContribution)}
               </strong>
             </div>
           </div>
-          {briefing.nextMilestone ? (
-            <div className="today-milestone">
-              <div className="today-milestone-row">
-                <span>{text.todayMilestone}: <strong>{formatMoney(briefing.nextMilestone.target)}</strong></span>
-                <span>{text.todayMilestoneRemaining(formatMoney(briefing.nextMilestone.remaining))}</span>
-              </div>
-              <div className="today-track" aria-label={`${text.todayMilestone}: ${briefing.nextMilestone.progressPct.toFixed(0)}%`}>
-                <span style={{ width: `${briefing.nextMilestone.progressPct}%` }} />
-              </div>
-            </div>
-          ) : null}
         </section>
 
-        <section className="gl" aria-label={text.price}>
-          <div className={`price-row${stale ? " stale" : ""}`}>
-            <div className="pr-left">
-              <div className="pr-label">{text.price}</div>
-              <div className="pr-num">
-                {stale ? <span className="pr-tilde show">~</span> : null}
-                <span className="pr-cur">€</span>
-                <span className={`pr-big${price ? "" : " dim"}`}>{price ? price.replace(/^€/, "") : "—"}</span>
-              </div>
-              <div className="pr-ts">{priceAsOf ?? "—"}</div>
-            </div>
-            <div className="pr-right">
-              <span className={`pr-pill ${stale ? "old" : "live"}`}>
-                <span className={stale ? "da" : "dl"} />
-                {stale ? text.stalePrice : price ? text.currentPrice : "—"}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <section className="gl combo-row" aria-label={`${text.shares} · ${text.savingsPlan}`}>
-          <div className="cr-item"><div className="cr-lbl">{text.shares}</div><div className="cr-val cr-em">{shares ?? "—"}</div></div>
-          <div className="cr-div" aria-hidden />
-          <div className="cr-item"><div className="cr-lbl">{text.savingsPlan}</div><div className="cr-val cr-am">{savingsPlan ?? "—"}{savingsPlan ? <span className="cr-unit">{text.perMonth}</span> : null}</div></div>
-        </section>
-
-        <section className={`gl heartbeat-card heartbeat-${heartbeat.attention.kind}`} data-heartbeat-attention={heartbeat.attention.kind} aria-label={text.rhythm}>
-          <div className="heartbeat-head"><span>{text.rhythm}</span><span className={`heartbeat-status ${heartbeat.attention.kind === "none" ? "calm" : "needs-review"}`}>{heartbeat.attention.kind === "none" ? text.rhythmClear : text.rhythmAttention}</span></div>
-          <div className="heartbeat-grid">
-            <div className="heartbeat-item"><span className="heartbeat-label">{text.rhythmNext}</span><strong className="heartbeat-value next">{heartbeat.nextContribution ?? "—"}</strong></div>
-            <div className="heartbeat-item"><span className="heartbeat-label">{text.rhythmPerformance}</span><strong className={`heartbeat-value performance ${heartbeat.performanceState}`}>{heartbeat.performance ?? performanceLabel}</strong><small>{heartbeat.performance ? performanceLabel : null}</small></div>
-            <div className="heartbeat-item attention"><span className="heartbeat-label">{text.rhythmAttention}</span>{heartbeat.attention.href ? <a className="heartbeat-action" href={heartbeat.attention.href}>{rhythmAttentionLabel}<span>{text.review} ›</span></a> : <strong className="heartbeat-value calm">{rhythmAttentionLabel}</strong>}</div>
-          </div>
-        </section>
-
-        <section className={`gl data-health-card data-health-${primaryHealthIssue?.severity ?? "clear"}`} aria-label={text.dataHealth}>
-          <div className="data-health-head"><span>{text.dataHealth}</span><strong>{dataHealthLabel}</strong></div>
-          {primaryHealthIssue ? (
-            <a className={`data-health-item data-health-summary ${primaryHealthIssue.severity}`} href={primaryHealthIssue.href} data-testid="data-health-primary-link">
-              <span className="data-health-copy"><strong>{dataHealthLabel}</strong><small>{primaryHealthIssue.severity === "action" ? text.dataHealthAction : primaryHealthIssue.severity === "review" ? text.dataHealthReview : text.dataHealthTip}</small></span>
-              <span className={`data-health-severity ${primaryHealthIssue.severity}`}>{text.review} ›</span>
-            </a>
-          ) : null}
-        </section>
-
-        <section className={`gl plan-reality-card plan-reality-${planVsReality.state}`} data-plan-reality-state={planVsReality.state} aria-label={text.currentPlan}>
-          <div className="plan-reality-head overview-goal-head">
-            <div className="overview-goal-title"><span>{text.currentPlan}</span><small>{text.targetDate}: <strong>{goalTargetDate ?? text.targetUnknown}</strong>{goalHorizon ? ` · ${text.timeHorizon}: ${goalHorizon}` : ""}</small></div>
-            <label className="plan-reality-year-label">
+        {/* 3 — Plan: milestone + progress + rhythm in one card */}
+        <section className="ovc-card" aria-label={text.currentPlan}>
+          <div className="ovc-card-head">
+            <h2 className="ovc-title">{text.currentPlan}</h2>
+            <label className="ovc-year-label">
               <span>{text.reviewYear}</span>
               <select aria-label={text.reviewYear} value={planVsReality.year} onChange={(event) => onPlanReviewYearChange(Number(event.target.value))}>
                 {planReviewYears.map((year) => <option key={year} value={year}>{year}</option>)}
               </select>
             </label>
-            <strong>{planStateLabel}</strong>
           </div>
-          <div className="plan-reality-grid">
-            <div><span>{text.planPlanned}</span><strong>{formatMoney(planVsReality.plannedAmount)}</strong></div>
-            <div><span>{text.planRecorded}</span><strong>{formatMoney(planVsReality.actualAmount)}</strong></div>
+          {briefing.nextMilestone ? (
+            <div className="ovc-milestone">
+              <div className="ovc-row">
+                <span>{text.nextMilestone}: <strong>{formatMoney(briefing.nextMilestone.target)}</strong></span>
+                <span className="ovc-muted">{text.milestoneRemaining(formatMoney(briefing.nextMilestone.remaining))}</span>
+              </div>
+              <div className="ovc-bar" role="progressbar" aria-valuenow={Math.round(briefing.nextMilestone.progressPct)} aria-valuemin={0} aria-valuemax={100}>
+                <span style={{ width: `${briefing.nextMilestone.progressPct}%` }} />
+              </div>
+            </div>
+          ) : null}
+          <div className="ovc-plan-progress">
+            <div className="ovc-row">
+              <span>{text.planRecorded} <strong>{formatMoney(planVsReality.actualAmount)}</strong> / {text.planOfTarget} <strong>{formatMoney(planVsReality.plannedAmount)}</strong></span>
+              <span className={`ovc-state ${planVsReality.state}`}>{planStateLabel}</span>
+            </div>
+            <div className="ovc-bar" role="progressbar" aria-valuenow={Math.round(planVsReality.progressPct)} aria-valuemin={0} aria-valuemax={100}>
+              <span style={{ width: `${planVsReality.progressPct}%` }} />
+            </div>
+            <p className="ovc-muted">{planDetail}</p>
           </div>
-          <div className="plan-reality-track" aria-label={`${text.currentPlan}: ${planVsReality.progressPct.toFixed(0)}%`}><span style={{ width: `${planVsReality.progressPct}%` }} /></div>
-          <p>{planDetail}</p>
+          <div className="ovc-plan-meta">
+            {savingsPlan ? (
+              <span>
+                <span>{text.savingsPlan}</span>{" "}
+                <strong>{savingsPlan}{text.perMonth}</strong>
+              </span>
+            ) : null}
+            {briefing.streakMonths > 0 ? <span>{text.streakMonths(briefing.streakMonths)}</span> : null}
+            <span>{goalMeta}</span>
+          </div>
         </section>
 
-        <section className="gl year-review-card" aria-label={text.yearReview}>
-          <div className="year-review-head">
-            <div>
-              <span>{text.yearReview}</span>
-              <label className="year-review-year-label">
-                <span>{text.yearReviewYear}</span>
-                <select aria-label={text.yearReviewYear} value={yearInReview.year} onChange={(event) => onYearReviewYearChange(Number(event.target.value))}>
-                  {yearReviewYears.map((year) => <option key={year} value={year}>{year}</option>)}
-                </select>
-              </label>
-            </div>
-            <button type="button" className="year-review-export" onClick={exportYearReview}>{text.yearReviewExport}</button>
+        {/* 4 — Attention: merged, only when there is something to do */}
+        {attentionItems.length > 0 ? (
+          <section className="ovc-card ovc-attention" aria-label={text.attention} data-attention-count={attentionItems.length}>
+            <h2 className="ovc-title">{text.attention}</h2>
+            <ul className="ovc-attention-list">
+              {attentionItems.map((item) => (
+                <li key={item.key}>
+                  {item.href ? (
+                    <a href={item.href}>
+                      <span className={`ovc-sev sev-${item.severity}`} aria-hidden />
+                      <span>{item.label}</span>
+                      <span className="ovc-go">{text.review} ›</span>
+                    </a>
+                  ) : (
+                    <span className="ovc-attention-static">
+                      <span className={`ovc-sev sev-${item.severity}`} aria-hidden />
+                      <span>{item.label}</span>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {/* 5 — Year review: quiet footer row */}
+        <section className="ovc-foot" aria-label={text.yearReview}>
+          <div className="ovc-foot-head">
+            <span className="ovc-title">{text.yearReview}</span>
+            <label className="ovc-year-label">
+              <select aria-label={text.reviewYear} value={yearInReview.year} onChange={(event) => onYearReviewYearChange(Number(event.target.value))}>
+                {yearReviewYears.map((year) => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </label>
+            <button type="button" className="ovc-export" onClick={exportYearReview}>{text.yearReviewExport}</button>
           </div>
-          <div className="year-review-grid year-review-compact">
-            <div><span>{text.yearReviewTransactions}</span><strong>{yearInReview.transactionCount}</strong></div>
-            <div><span>{text.rhythmAttention}</span><strong className={yearInReview.qualityIssueCount > 0 ? "needs-review" : "calm"} data-testid="year-review-quality">{yearReviewQualityLabel}</strong></div>
-          </div>
+          <p className="ovc-muted">
+            {text.yearReviewContributed} {formatMoney(yearInReview.contributionAmount)} · {yearInReview.transactionCount} {text.yearReviewTransactions} · {yearReviewQualityLabel}
+            {" · "}{yearInReview.priceSnapshot
+              ? `${text.yearReviewPriceSnapshot} ${formatMoney(yearInReview.priceSnapshot.price)} · ${yearInReview.priceSnapshot.asOf}`
+              : text.yearReviewNoSnapshot}
+          </p>
         </section>
       </div>
     </main>

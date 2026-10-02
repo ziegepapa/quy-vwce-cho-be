@@ -126,9 +126,9 @@ describe("Overview German locale", () => {
     expect(await screen.findByText("VWCE-Kurs")).toBeTruthy();
     expect(screen.getByText("Anteile")).toBeTruthy();
     expect(screen.getAllByText("Sparplan").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Portfoliorhythmus")).toBeTruthy();
-    expect(screen.getByLabelText("Datenstatus")).toBeTruthy();
-    expect(screen.getByLabelText("Aktueller Langfristplan")).toBeTruthy();
+    expect(screen.getByLabelText("Heute")).toBeTruthy();
+    expect(screen.getByLabelText("Zu beachten")).toBeTruthy();
+    expect(screen.getByLabelText("Langfristplan")).toBeTruthy();
     expect(screen.getByText(/Zieltermin:/)).toBeTruthy();
     expect(screen.getByLabelText("Jahresrückblick")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Bericht exportieren" })).toBeTruthy();
@@ -137,27 +137,26 @@ describe("Overview German locale", () => {
   });
 });
 
-describe("Overview demo v10 hierarchy", () => {
+describe("Overview clean hierarchy", () => {
   it("renders a calm portfolio-state hierarchy without duplicating the transaction dashboard", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
 
     const { container } = renderOverview();
 
     await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
-    expect(container.querySelector(".gl.hero .hero-flex .hero-left .h-eye")).toBeTruthy();
-    expect(container.querySelector(".price-row .pr-left .pr-label")).toBeTruthy();
-    expect(container.querySelector(".combo-row .cr-item .cr-lbl")).toBeTruthy();
-    expect(container.querySelector(".heartbeat-card .heartbeat-grid")).toBeTruthy();
-    expect(container.querySelector(".data-health-card .data-health-summary")).toBeTruthy();
+    expect(container.querySelector(".ovc-hero .ovc-eyebrow")).toBeTruthy();
+    expect(container.querySelector(".ovc-meta .ovc-price")).toBeTruthy();
+    expect(container.querySelector(".ovc-plan-meta")).toBeTruthy();
+    expect(container.querySelector(".ovc-today-grid")).toBeTruthy();
+    expect(container.querySelector(".ovc-attention .ovc-attention-list")).toBeTruthy();
     expect(container.querySelector(".data-health-list")).toBeNull();
-    expect(container.querySelector(".plan-reality-card .overview-goal-title")).toBeTruthy();
-    expect(container.querySelector(".year-review-card .year-review-compact")).toBeTruthy();
-    expect(container.querySelectorAll(".year-review-compact > div")).toHaveLength(2);
+    expect(container.querySelector('[aria-label="Kế hoạch dài hạn"]')).toBeTruthy();
+    expect(container.querySelector(".ovc-foot")).toBeTruthy();
     expect(container.querySelector(".streak-card")).toBeNull();
     expect(container.querySelector(".perf-card")).toBeNull();
-    expect(container.querySelector(".cr-am")?.textContent).toContain("100,00");
-    expect(container.querySelector(".cr-am")?.textContent).toContain("/th");
-    expect(container.querySelector(".heartbeat-value.performance")?.textContent).toBe("Chưa định giá");
+    expect(container.querySelector(".ovc-plan-meta")?.textContent).toContain("100,00");
+    expect(container.querySelector(".ovc-plan-meta")?.textContent).toContain("/th");
+    expect(container.querySelector(".ovc-pnl-pct")?.textContent).toBe("Chưa định giá");
   });
 
   it("binds the current portfolio value without inventing a PnL badge or contribution streak", async () => {
@@ -166,38 +165,44 @@ describe("Overview demo v10 hierarchy", () => {
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".hero")).toBeTruthy());
-    expect(container.querySelector(".h-num")?.textContent?.trim()).not.toBe("");
-    expect(container.querySelector(".h-row .bdg")?.textContent?.trim()).toBe("—");
+    await waitFor(() => expect(container.querySelector(".ovc-hero")).toBeTruthy());
+    expect(container.querySelector(".ovc-value")?.textContent?.trim()).not.toBe("");
+    expect(container.querySelector(".ovc-pnl-row .ovc-pnl")?.textContent?.trim()).toBe("—");
     expect(container.querySelector(".hero-ring")).toBeNull();
     expect(container.querySelector(".streak-card")).toBeNull();
   });
 
-  it("renders one compact Data Health summary that links to the existing review surface", async () => {
+  it("renders one merged attention list that links to the existing review surfaces", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-health", "2026-08-01")]);
     dbMocks.listQuotes.mockResolvedValue([{ id: "quote-health", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".data-health-card")).toBeTruthy());
-    expect(screen.getByLabelText("Tình trạng dữ liệu")).toBeTruthy();
-    expect(container.querySelectorAll(".data-health-card a")).toHaveLength(1);
-    const healthLink = container.querySelector<HTMLAnchorElement>(".data-health-card a");
-    expect(healthLink?.getAttribute("href")).toBe("#/settings");
-    expect(healthLink?.textContent).toContain("2 mục dữ liệu cần rà soát");
+    await waitFor(() => expect(container.querySelector(".ovc-attention")).toBeTruthy());
+    expect(screen.getByLabelText("Cần chú ý")).toBeTruthy();
+    const links = container.querySelectorAll<HTMLAnchorElement>(".ovc-attention a");
+    expect(links).toHaveLength(2);
+    expect(links[0]?.getAttribute("href")).toBe("#/transactions?quality=needs_review");
+    expect(links[0]?.textContent).toContain("1 mục dữ liệu cần rà soát");
+    expect(links[1]?.getAttribute("href")).toBe("#/settings");
+    expect(links[1]?.textContent).toContain("Chưa ghi nhận sao lưu");
     expect(container.querySelector(".data-health-list")).toBeNull();
   });
 
-  it("routes a data-quality attention signal to the existing transaction review workflow", async () => {
+  it("folds a data-quality attention signal into the merged list without duplicating it", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-quality", "2026-08-01")]);
     dbMocks.listQuotes.mockResolvedValue([{ id: "quote-quality", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".heartbeat-card")?.getAttribute("data-heartbeat-attention")).toBe("quality"));
-    expect(container.querySelector(".heartbeat-card a[href='#/transactions']")?.textContent).toContain("1 giao dịch cần rà soát");
+    await waitFor(() => expect(container.querySelector(".ovc-attention")).toBeTruthy());
+    // One row only: the heartbeat signal and the data-health issue describe the
+    // same underlying signal, so they must not appear twice.
+    expect(container.querySelectorAll(".ovc-attention a[href='#/transactions?quality=needs_review']")).toHaveLength(1);
+    expect(container.querySelector(".ovc-attention")?.textContent).toContain("1 mục dữ liệu cần rà soát");
+    expect(container.querySelector(".ovc-attention")?.textContent).not.toContain("1 giao dịch cần rà soát");
   });
 
   it("uses precise missing-notes wording when Data Health only has missing notes", async () => {
@@ -218,10 +223,10 @@ describe("Overview demo v10 hierarchy", () => {
       updatedAt: TX_STAMP,
     }]);
     const { container } = renderOverview();
-    await waitFor(() => expect(container.querySelector(".data-health-card")).toBeTruthy());
+    await waitFor(() => expect(container.querySelector(".ovc-attention")).toBeTruthy());
     expect(container.textContent).toContain("2 ghi chú còn thiếu");
     expect(container.textContent).not.toContain("2 mục dữ liệu cần rà soát");
-    const healthLink = container.querySelector(".data-health-card a");
+    const healthLink = container.querySelector(".ovc-attention a");
     expect(healthLink?.getAttribute("href")).toBe("#/transactions?quality=needs_review");
   });
 
@@ -232,33 +237,38 @@ describe("Overview demo v10 hierarchy", () => {
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".heartbeat-card")?.getAttribute("data-heartbeat-attention")).toBe("missing_prices"));
+    await waitFor(() => expect(container.querySelector(".ovc-attention")).toBeTruthy());
     expect(screen.getByRole("link", { name: /Thiếu giá cho 1 mã/ }).getAttribute("href")).toBe("#/settings");
+    // The heartbeat signal and the data-health issue are the same signal:
+    // the price row appears exactly once, next to the unrelated backup row.
+    const links = container.querySelectorAll(".ovc-attention a");
+    expect(links).toHaveLength(2);
+    expect(Array.from(links).filter((a) => /Thiếu giá cho 1 mã/.test(a.textContent ?? ""))).toHaveLength(1);
   });
 
-  it("keeps a factual gain state in Portfolio Rhythm without a second performance dashboard", async () => {
+  it("keeps a factual gain state in the hero without a second performance dashboard", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-gain", "2026-08-01")]);
     dbMocks.listQuotes.mockResolvedValue([{ id: "quote-gain", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 150, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".heartbeat-value.performance")?.textContent).toBe("+50,0%"));
-    expect(container.querySelector(".heartbeat-value.performance")?.className).toContain("gain");
-    expect(screen.getByText("Đang lãi")).toBeTruthy();
+    await waitFor(() => expect(container.querySelector(".ovc-pnl-pct")?.textContent).toBe("+50,0%"));
+    expect(container.querySelector(".ovc-pnl-pct")?.className).toContain("gain");
+    expect(container.querySelector(".ovc-pnl")?.className).toContain("up");
     expect(container.querySelector(".perf-card")).toBeNull();
   });
 
-  it("keeps a factual loss state in Portfolio Rhythm without an inferred chart", async () => {
+  it("keeps a factual loss state in the hero without an inferred chart", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-loss", "2026-08-01")]);
     dbMocks.listQuotes.mockResolvedValue([{ id: "quote-loss", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 80, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".heartbeat-value.performance")?.textContent).toBe("-20,0%"));
-    expect(container.querySelector(".heartbeat-value.performance")?.className).toContain("loss");
-    expect(screen.getByText("Đang lỗ")).toBeTruthy();
+    await waitFor(() => expect(container.querySelector(".ovc-pnl-pct")?.textContent).toBe("-20,0%"));
+    expect(container.querySelector(".ovc-pnl-pct")?.className).toContain("loss");
+    expect(container.querySelector(".ovc-pnl")?.className).toContain("down");
     expect(container.querySelector(".perf-card")).toBeNull();
   });
 
@@ -268,8 +278,8 @@ describe("Overview demo v10 hierarchy", () => {
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".heartbeat-value.performance")?.textContent).toBe("Chưa định giá"));
-    expect(container.querySelector(".heartbeat-value.performance")?.className).toContain("unavailable");
+    await waitFor(() => expect(container.querySelector(".ovc-pnl-pct")?.textContent).toBe("Chưa định giá"));
+    expect(container.querySelector(".ovc-pnl-pct")?.className).toContain("unavailable");
     expect(container.querySelector(".perf-card")).toBeNull();
   });
 
@@ -280,8 +290,8 @@ describe("Overview demo v10 hierarchy", () => {
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".price-row")).toBeTruthy());
-    expect(container.querySelector(".pr-big")?.textContent).toContain("110,00");
+    await waitFor(() => expect(container.querySelector(".ovc-meta")).toBeTruthy());
+    expect(container.querySelector(".ovc-price")?.textContent).toContain("110,00");
     expect(container.querySelector(".sparkline-svg")).toBeNull();
     expect(container.querySelector(".perf-card")).toBeNull();
   });
@@ -298,8 +308,8 @@ describe("Overview demo v10 hierarchy", () => {
 
     await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
     expect(screen.getByText("Tài sản đã định giá")).toBeTruthy();
-    expect(container.querySelector(".heartbeat-value.performance")?.textContent?.trim()).toBe("Chưa định giá");
-    expect(container.querySelector(".price-row")).toBeTruthy();
-    expect(container.querySelector(".combo-row")).toBeTruthy();
+    expect(container.querySelector(".ovc-pnl-pct")?.textContent?.trim()).toBe("Chưa định giá");
+    expect(container.querySelector(".ovc-meta")).toBeTruthy();
+    expect(container.querySelector(".ovc-plan-meta")).toBeTruthy();
   });
 });
