@@ -55,6 +55,7 @@ import {
   type TransactionTimeLens,
 } from "./transactionsListWindow";
 import "../styles/demo-v10-transactions.css";
+import "../styles/clean-shared.css";
 
 const TradeRepublicPdfImport = lazy(() => import("../components/TradeRepublicPdfImport"));
 
@@ -664,19 +665,10 @@ export default function Transactions() {
         </div>
       </div>
 
-      <div className="sum3">
-        <div className="gl sum-c">
-          <div className="sum-lbl">{text.contributed}</div>
-          <div className="sum-val">{formatDisplayMoney(analysis.contributed, locale)}</div>
-        </div>
-        <div className="gl sum-c">
-          <div className="sum-lbl">{text.pnl}</div>
-          <div className={`sum-val${analysis.totalPnl == null ? "" : analysis.totalPnl >= 0 ? " pos" : " neg"}`}>{analysis.totalPnl == null ? "—" : formatDisplayMoney(analysis.totalPnl, locale)}</div>
-        </div>
-        <div className="gl sum-c">
-          <div className="sum-lbl">{text.transactionCount}</div>
-          <div className="sum-val">{txs.length}</div>
-        </div>
+      <div className="summary-strip" aria-label={text.contributed}>
+        <span><strong>{formatDisplayMoney(analysis.contributed, locale)}</strong> {text.contributed}</span>
+        <span><strong className={analysis.totalPnl == null ? "" : analysis.totalPnl >= 0 ? "pos" : "neg"}>{analysis.totalPnl == null ? "—" : formatDisplayMoney(analysis.totalPnl, locale)}</strong> {text.pnl}</span>
+        <span><strong>{txs.length}</strong> {text.transactionCount}</span>
       </div>
 
       {qualityIssues.length ? (
