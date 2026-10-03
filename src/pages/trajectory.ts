@@ -41,8 +41,9 @@ function validDate(value: string): Date | null {
  * but those settings are a soft guess, not a commitment, so the verdict was
  * dishonest. This builds from ACTUAL behavior instead: the recent monthly
  * pace, compounded to the user's target date with the configured return
- * assumption. The target date is soft too — it follows settings.endDate, so
- * changing the target year reshapes the projection instead of breaking it.
+ * assumption. The target date is soft too — it follows the effective target
+ * date (planTarget.targetUseDate ?? settings.endDate), so changing the
+ * target year in Settings reshapes the projection instead of breaking it.
  * Pure: no Date.now(), no storage, no network.
  */
 export function buildTrajectory(input: {

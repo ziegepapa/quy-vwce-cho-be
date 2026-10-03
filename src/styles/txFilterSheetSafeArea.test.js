@@ -32,9 +32,9 @@ describe("tx filter sheet safe-area regression", () => {
     expect(css).toMatch(/max-height:\s*min\(80dvh/);
     expect(css).toMatch(/\.tx-filter-actions\s*\{[\s\S]*safe-area-inset-bottom/);
   });
-  it("keeps saved views and PDF import outside the primary filter sheet", () => {
+  it("keeps saved views inside the primary filter sheet and PDF import outside of it", () => {
     const filterMarkup = tx.slice(tx.indexOf('id="tx-filter-sheet"'), tx.indexOf('data-testid="tx-filter-actions"'));
-    expect(filterMarkup).not.toContain("tx-saved-views-entry");
+    expect(filterMarkup).toContain("tx-saved-views-entry");
     expect(filterMarkup).not.toContain("TradeRepublicPdfImport");
     expect(tx).toMatch(/tx-saved-views-entry/);
     expect(tx).toMatch(/tx-import-tools/);

@@ -254,14 +254,15 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       today: planToday,
     });
     // Forward-looking trajectory from ACTUAL behavior (not from the soft
-    // contribution settings). Follows settings.endDate, so changing the
-    // target year reshapes the projection.
+    // contribution settings). Follows the effective target date
+    // (planTarget.targetUseDate ?? settings.endDate), so changing the target
+    // year in Settings reshapes the projection.
     const trajectory = buildTrajectory({
       transactions,
       trackInAppCash: settings.trackInAppCash,
       currentValue: hero.assets,
       annualReturn: settings.vwceReturn,
-      targetDate: settings.endDate,
+      targetDate: settings.planTarget?.targetUseDate ?? settings.endDate,
       today: planToday,
     });
     const yearInReview = buildYearInReview({
