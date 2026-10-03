@@ -9,7 +9,7 @@ import OverviewFrame from "../components/demo-v10/OverviewFrame";
 import { useLocale } from "../lib/locale";
 import { findTransactionQualityIssues } from "./transactionQualityInbox";
 import { buildPortfolioHeartbeat } from "./portfolioHeartbeat";
-import { buildPlanVsReality, planRealityReviewYears } from "./planVsReality";
+import { buildLifetimePlan, buildPlanVsReality } from "./planVsReality";
 import { buildYearInReview, yearInReviewYears } from "./yearInReview";
 import { buildPortfolioDataHealth } from "./portfolioDataHealth";
 import { buildDailyBriefing, type BriefingPricePoint, type DailyBriefing } from "./dailyBriefing";
@@ -39,6 +39,8 @@ function overviewPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     valuedAssets: "Bewertetes Vermögen",
     updated: "Stand",
+    priceToday: "Schlusskurs heute",
+    priceYesterday: "Schlusskurs gestern",
     loading: "Übersicht wird geladen",
     unavailable: "Übersicht konnte nicht geladen werden",
     deviceDataSafe: "Ihre Gerätedaten bleiben unverändert.",
@@ -46,6 +48,8 @@ function overviewPageCopy(locale: "vi" | "de") {
   } : {
     valuedAssets: "Tài sản đã định giá",
     updated: "Cập nhật",
+    priceToday: "Giá đóng cửa hôm nay",
+    priceYesterday: "Giá đóng cửa hôm qua",
     loading: "Đang tải Tổng quan",
     unavailable: "Không tải được Tổng quan",
     deviceDataSafe: "Dữ liệu trên thiết bị vẫn được giữ nguyên.",
@@ -77,8 +81,27 @@ function goalHorizon(value: string | null | undefined, locale: "vi" | "de", now 
   return locale === "de" ? `${years} J. ${remainingMonths} Mon.` : `${years} năm ${remainingMonths} tháng`;
 }
 
-function nextPlanDate(startDate: string, locale: "vi" | "de", now = new Date()): string | null {
-  const day = Number(startDate.slice(8, 10));
+/**
+ * Freshness label for the quote: the feed only ever publishes CLOSED Xetra
+ * sessions (see scripts/price), so "today"/"yesterday" always means the last
+ * close — never an intraday guess.
+ */
+function relativePriceAsOf(
+  asOf: string | null | undefined,
+  text: { updated: string; priceToday: string; priceYesterday: string },
+  now = new Date(),
+): string | null {
+  if (!asOf || !/^\d{4}-\d{2}-\d{2}$/.test(asOf)) return null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const day = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (asOf === day(now)) return text.priceToday;
+  if (asOf === day(yesterday)) return text.priceYesterday;
+  return `${text.updated} ${asOf.slice(8, 10)}/${asOf.slice(5, 7)}`;
+}
+
+function nextPlanDate(startDate: string, locale: "vi" | "de", now = new Date()): string | null {  const day = Number(startDate.slice(8, 10));
   if (!Number.isInteger(day) || day < 1 || day > 28) return null;
   const next = new Date(now.getFullYear(), now.getMonth(), day, 12, 0, 0);
   if (next.getTime() <= now.getTime()) next.setMonth(next.getMonth() + 1);
@@ -99,7 +122,6 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
   const [quotes, setQuotes] = useState<Awaited<ReturnType<typeof listQuotes>>>([]);
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
   const [priceHistory, setPriceHistory] = useState<BriefingPricePoint[]>([]);
-  const [planReviewYear, setPlanReviewYear] = useState<number | null>(null);
   const [yearReviewYear, setYearReviewYear] = useState<number | null>(null);
 
   useEffect(() => {
@@ -203,23 +225,6 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       now: currentDate,
     });
     const planToday = currentDate.toISOString().slice(0, 10);
-    const planReviewYears = planRealityReviewYears({
-      startDate: settings.startDate,
-      transactions,
-      today: planToday,
-    });
-    const selectedPlanReviewYear = planReviewYear && planReviewYears.includes(planReviewYear)
-      ? planReviewYear
-      : planReviewYears[0] ?? currentDate.getFullYear();
-    const planVsReality = buildPlanVsReality({
-      startDate: settings.startDate,
-      contributionY1: settings.contributionY1,
-      contributionY2: settings.contributionY2,
-      trackInAppCash: settings.trackInAppCash,
-      transactions,
-      today: planToday,
-      year: selectedPlanReviewYear,
-    });
     const yearReviewYears = yearInReviewYears({
       today: planToday,
       transactions,
@@ -228,6 +233,25 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     const selectedYearReviewYear = yearReviewYear && yearReviewYears.includes(yearReviewYear)
       ? yearReviewYear
       : yearReviewYears[0] ?? currentDate.getFullYear();
+    // Yearly slice only feeds the year-in-review internals; the plan card
+    // itself shows the lifetime horizon.
+    const planVsReality = buildPlanVsReality({
+      startDate: settings.startDate,
+      contributionY1: settings.contributionY1,
+      contributionY2: settings.contributionY2,
+      trackInAppCash: settings.trackInAppCash,
+      transactions,
+      today: planToday,
+      year: selectedYearReviewYear,
+    });
+    const lifetimePlan = buildLifetimePlan({
+      startDate: settings.startDate,
+      contributionY1: settings.contributionY1,
+      contributionY2: settings.contributionY2,
+      trackInAppCash: settings.trackInAppCash,
+      transactions,
+      today: planToday,
+    });
     const yearInReview = buildYearInReview({
       today: planToday,
       trackInAppCash: settings.trackInAppCash,
@@ -247,9 +271,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       price: vwcePrice > 0
         ? `€${vwcePrice.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : null,
-      priceAsOf: snapshot.vwceAsOf
-        ? `${text.updated} ${snapshot.vwceAsOf.slice(8, 10)}/${snapshot.vwceAsOf.slice(5, 7)}`
-        : null,
+      priceAsOf: relativePriceAsOf(snapshot.vwceAsOf, text, currentDate),
       stale: snapshot.stalePriceIsins.length > 0,
       shares: portfolio.vwceQty > 0
         ? portfolio.vwceQty.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 4 })
@@ -258,16 +280,14 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       heartbeat,
       dataHealth,
       briefing,
-      planVsReality,
-      planReviewYears,
-      onPlanReviewYearChange: setPlanReviewYear,
+      lifetimePlan,
       yearInReview,
       yearReviewYears,
       onYearReviewYearChange: setYearReviewYear,
       goalTargetDate: formatGoalTargetDate(settings.endDate, locale),
       goalHorizon: goalHorizon(settings.endDate, locale, currentDate),
     };
-  }, [lastBackupAt, locale, planReviewYear, yearReviewYear, settings, text, transactions, quotes, priceHistory]);
+  }, [lastBackupAt, locale, yearReviewYear, settings, text, transactions, quotes, priceHistory]);
 
   if (loading) return <main className="demo-v10-screen" role="status" aria-label={text.loading} aria-busy="true" />;
   if (failed || !view) {

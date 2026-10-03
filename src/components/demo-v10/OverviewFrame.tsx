@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useLocale } from "../../lib/locale";
 import { formatMoney } from "../../lib/calc";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
-import type { PlanVsReality } from "../../pages/planVsReality";
+import type { LifetimePlan } from "../../pages/planVsReality";
 import type { YearInReview } from "../../pages/yearInReview";
 import type { PortfolioDataHealth, PortfolioDataHealthIssue } from "../../pages/portfolioDataHealth";
 import type { DailyBriefing } from "../../pages/dailyBriefing";
@@ -21,11 +21,9 @@ type OverviewFrameProps = {
   heartbeat: PortfolioHeartbeat;
   dataHealth: PortfolioDataHealth;
   briefing: DailyBriefing;
+  lifetimePlan: LifetimePlan;
   goalTargetDate: string | null;
   goalHorizon: string | null;
-  planVsReality: PlanVsReality;
-  planReviewYears: number[];
-  onPlanReviewYearChange: (year: number) => void;
   yearInReview: YearInReview;
   yearReviewYears: number[];
   onYearReviewYearChange: (year: number) => void;
@@ -66,6 +64,7 @@ function overviewCopy(locale: "vi" | "de") {
     planOnTrack: "Planbetrag erreicht",
     planBelowPlan: "Unter dem Planbetrag",
     planMonths: (planned: number, recorded: number) => `${recorded}/${planned} Monate erfasst`,
+    planFrom: (label: string) => `seit ${label}`,
     planMissing: (count: number) => `${count} Monat${count === 1 ? "" : "e"} ohne erfassten Beitrag`,
     nextMilestone: "Nächster Meilenstein",
     milestoneRemaining: (remaining: string) => `Noch ${remaining}`,
@@ -117,6 +116,7 @@ function overviewCopy(locale: "vi" | "de") {
     planOnTrack: "Đã đạt mức kế hoạch",
     planBelowPlan: "Chưa đạt mức kế hoạch",
     planMonths: (planned: number, recorded: number) => `Đã ghi nhận ${recorded}/${planned} tháng`,
+    planFrom: (label: string) => `từ ${label}`,
     planMissing: (count: number) => `${count} tháng chưa có khoản góp`,
     nextMilestone: "Mốc tiếp theo",
     milestoneRemaining: (remaining: string) => `Còn ${remaining}`,
@@ -209,11 +209,9 @@ export default function OverviewFrame({
   heartbeat,
   dataHealth,
   briefing,
+  lifetimePlan,
   goalTargetDate,
   goalHorizon,
-  planVsReality,
-  planReviewYears,
-  onPlanReviewYearChange,
   yearInReview,
   yearReviewYears,
   onYearReviewYearChange,
@@ -231,14 +229,14 @@ export default function OverviewFrame({
       : heartbeat.performanceState === "flat"
         ? text.performanceFlat
         : text.performanceUnavailable;
-  const planStateLabel = planVsReality.state === "on_track"
+  const planStateLabel = lifetimePlan.state === "on_track"
     ? text.planOnTrack
-    : planVsReality.state === "below_plan"
+    : lifetimePlan.state === "below_plan"
       ? text.planBelowPlan
       : text.planNotStarted;
-  const planDetail = planVsReality.plannedMonths === 0
+  const planDetail = lifetimePlan.plannedMonths === 0
     ? text.planNotStarted
-    : `${text.planMonths(planVsReality.plannedMonths, planVsReality.recordedMonths)}${planVsReality.missingMonths > 0 ? ` · ${text.planMissing(planVsReality.missingMonths)}` : ""}`;
+    : `${text.planMonths(lifetimePlan.plannedMonths, lifetimePlan.recordedMonths)} · ${text.planFrom(lifetimePlan.startLabel ?? "")}${lifetimePlan.missingMonths > 0 ? ` · ${text.planMissing(lifetimePlan.missingMonths)}` : ""}`;
   const todayPricePct = briefing.priceChange == null
     ? null
     : `${briefing.priceChange.pct > 0 ? "+" : ""}${briefing.priceChange.pct.toFixed(1).replace(".", ",")}%`;
@@ -325,16 +323,10 @@ export default function OverviewFrame({
           </div>
         </section>
 
-        {/* 3 — Plan: milestone + progress + rhythm in one card */}
+        {/* 3 — Plan: milestone + lifetime progress + rhythm in one card */}
         <section className="ovc-card" aria-label={text.currentPlan}>
           <div className="ovc-card-head">
             <h2 className="ovc-title">{text.currentPlan}</h2>
-            <label className="ovc-year-label">
-              <span>{text.reviewYear}</span>
-              <select aria-label={text.reviewYear} value={planVsReality.year} onChange={(event) => onPlanReviewYearChange(Number(event.target.value))}>
-                {planReviewYears.map((year) => <option key={year} value={year}>{year}</option>)}
-              </select>
-            </label>
           </div>
           {briefing.nextMilestone ? (
             <div className="ovc-milestone">
@@ -349,11 +341,11 @@ export default function OverviewFrame({
           ) : null}
           <div className="ovc-plan-progress">
             <div className="ovc-row">
-              <span>{text.planRecorded} <strong>{formatMoney(planVsReality.actualAmount)}</strong> / {text.planOfTarget} <strong>{formatMoney(planVsReality.plannedAmount)}</strong></span>
-              <span className={`ovc-state ${planVsReality.state}`}>{planStateLabel}</span>
+              <span>{text.planRecorded} <strong>{formatMoney(lifetimePlan.actualAmount)}</strong> / {text.planOfTarget} <strong>{formatMoney(lifetimePlan.plannedAmount)}</strong></span>
+              <span className={`ovc-state ${lifetimePlan.state}`}>{planStateLabel}</span>
             </div>
-            <div className="ovc-bar" role="progressbar" aria-valuenow={Math.round(planVsReality.progressPct)} aria-valuemin={0} aria-valuemax={100}>
-              <span style={{ width: `${planVsReality.progressPct}%` }} />
+            <div className="ovc-bar" role="progressbar" aria-valuenow={Math.round(lifetimePlan.progressPct)} aria-valuemin={0} aria-valuemax={100}>
+              <span style={{ width: `${lifetimePlan.progressPct}%` }} />
             </div>
             <p className="ovc-muted">{planDetail}</p>
           </div>

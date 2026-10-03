@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPlanVsReality, planRealityReviewYears } from "./planVsReality";
+import { buildLifetimePlan, buildPlanVsReality, planRealityReviewYears } from "./planVsReality";
 
 const base = {
   startDate: "2026-01-15",
@@ -83,5 +83,67 @@ describe("buildPlanVsReality", () => {
 
   it("never selects a future review year", () => {
     expect(buildPlanVsReality({ ...base, today: "2026-03-20", year: 2030 })).toMatchObject({ year: 2026, plannedMonths: 3 });
+  });
+});
+
+describe("buildLifetimePlan", () => {
+  it("sums the whole plan horizon, not just the current year", () => {
+    const view = buildLifetimePlan({
+      ...base,
+      startDate: "2025-01-15",
+      today: "2026-03-20",
+      transactions: [
+        { date: "2025-06-15", type: "buy_vwce", amount: 100 },
+        { date: "2026-01-15", type: "buy_vwce", amount: 100 },
+        { date: "2026-02-15", type: "buy_vwce", amount: 100 },
+      ],
+    });
+    // Jan 2025..Mar 2026, due day 15th: Mar 2026 due (15th) <= Mar 20 -> 15 months.
+    // First 12 months at Y1=100, next 3 at Y2=120.
+    expect(view).toMatchObject({
+      mode: "securities_first",
+      startLabel: "01/2025",
+      plannedMonths: 15,
+      plannedAmount: 12 * 100 + 3 * 120,
+      actualAmount: 300,
+      recordedMonths: 3,
+      missingMonths: 12,
+      state: "below_plan",
+    });
+    expect(view.progressPct).toBeCloseTo((300 / 1560) * 100, 5);
+  });
+
+  it("reports on_track when lifetime contributions reach the lifetime plan", () => {
+    const txs = Array.from({ length: 15 }, (_, i) => {
+      const d = new Date(2025, i, 15);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-15`;
+      return { date: iso, type: "buy_vwce", amount: i < 12 ? 100 : 120 };
+    });
+    const view = buildLifetimePlan({ ...base, startDate: "2025-01-15", today: "2026-03-20", transactions: txs });
+    expect(view).toMatchObject({ plannedMonths: 15, recordedMonths: 15, missingMonths: 0, state: "on_track" });
+    expect(view.progressPct).toBe(100);
+  });
+
+  it("returns not_started when the plan starts in the future", () => {
+    expect(buildLifetimePlan({ ...base, startDate: "2027-01-15" })).toMatchObject({
+      plannedMonths: 0,
+      actualAmount: 0,
+      state: "not_started",
+      startLabel: null,
+    });
+  });
+
+  it("never double-counts a funding leg with its security buy", () => {
+    const view = buildLifetimePlan({
+      ...base,
+      today: "2026-03-20",
+      transactions: [
+        { date: "2026-01-15", type: "cash_in", amount: 100 },
+        { date: "2026-01-15", type: "buy_vwce", amount: 100 },
+      ],
+    });
+    // securities-first: only the buy counts.
+    expect(view.actualAmount).toBe(100);
+    expect(view.recordedMonths).toBe(1);
   });
 });
