@@ -123,17 +123,16 @@ describe("Overview German locale", () => {
 
     renderGermanOverview();
 
-    expect(await screen.findByText("VWCE-Kurs")).toBeTruthy();
-    expect(screen.getByText("Anteile")).toBeTruthy();
-    expect(screen.getAllByText("Sparplan").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Heute")).toBeTruthy();
+    // Price shown inline without a redundant label; shares inline.
+    expect(await screen.findByText(/Anteile/)).toBeTruthy();
+    expect(screen.getByText(/Nächster Beitrag/)).toBeTruthy();
     expect(screen.getByLabelText("Zu beachten")).toBeTruthy();
     expect(screen.getByLabelText("Langfristplan")).toBeTruthy();
     expect(screen.getByText(/Zieltermin:/)).toBeTruthy();
     expect(screen.getByLabelText("Jahresrückblick")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Bericht exportieren" })).toBeTruthy();
     expect(screen.getAllByText("Noch nicht bewertbar").length).toBeGreaterThan(0);
-    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Hiệu suất danh mục|Vốn góp|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Tình trạng dữ liệu|Kế hoạch dài hạn hiện tại|Tổng kết năm|Xuất báo cáo/);
+    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Hiệu suất danh mục|Vốn góp|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Tình trạng dữ liệu|Kế hoạch dài hạn hiện tại|Tổng kết năm|Xuất báo cáo|Hôm nay|Biến động giá/);
   });
 });
 
@@ -147,16 +146,22 @@ describe("Overview clean hierarchy", () => {
     expect(container.querySelector(".ovc-hero .ovc-eyebrow")).toBeTruthy();
     expect(container.querySelector(".ovc-meta .ovc-price")).toBeTruthy();
     expect(container.querySelector(".ovc-plan-meta")).toBeTruthy();
-    expect(container.querySelector(".ovc-today-grid")).toBeTruthy();
+    // No "Hôm nay" card anymore: the day move lives in the hero meta and the
+    // contribution countdown lives in the plan smart line.
+    expect(container.querySelector(".ovc-today-grid")).toBeNull();
+    expect(container.querySelector(".ovc-smart")).toBeTruthy();
     expect(container.querySelector(".ovc-attention .ovc-attention-list")).toBeTruthy();
     expect(container.querySelector(".data-health-list")).toBeNull();
     expect(container.querySelector('[aria-label="Kế hoạch dài hạn"]')).toBeTruthy();
     expect(container.querySelector(".ovc-foot")).toBeTruthy();
     expect(container.querySelector(".streak-card")).toBeNull();
     expect(container.querySelector(".perf-card")).toBeNull();
-    expect(container.querySelector(".ovc-plan-meta")?.textContent).toContain("100,00");
-    expect(container.querySelector(".ovc-plan-meta")?.textContent).toContain("/th");
+    expect(container.querySelector(".ovc-plan-meta")?.textContent).toContain("Mục tiêu");
+    expect(container.querySelector(".ovc-smart")?.textContent).toContain("100,00");
+    expect(container.querySelector(".ovc-smart")?.textContent).toContain("/th");
     expect(container.querySelector(".ovc-pnl-pct")?.textContent).toBe("Chưa định giá");
+    // Footer no longer duplicates the plan card ("đã góp") or the hero (price).
+    expect(container.querySelector(".ovc-foot .ovc-muted")?.textContent).not.toContain("Giá gần nhất");
   });
 
   it("binds the current portfolio value without inventing a PnL badge or contribution streak", async () => {
@@ -326,5 +331,34 @@ describe("Overview clean hierarchy", () => {
     expect(planCard?.textContent).toContain("từ 01/2025");
     expect(planCard?.querySelector("select")).toBeNull();
     expect(planCard?.textContent).toContain("Đã ghi nhận");
+  });
+
+  it("folds the day move into the hero and the countdown into the plan smart line", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ points: [
+        { date: "2026-08-18", price: 100 },
+        { date: "2026-08-19", price: 110 },
+      ] }),
+    }));
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-day-1", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([
+      { id: "q-day-2", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP },
+    ]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
+    // No separate "Hôm nay" card anymore.
+    expect(container.querySelector(".ovc-today-grid")).toBeNull();
+    expect(screen.queryByText("Hôm nay")).toBeNull();
+    // The day move lives in the hero meta line.
+    await waitFor(() => expect(container.querySelector(".ovc-daypct")).toBeTruthy());
+    expect(container.querySelector(".ovc-meta")?.textContent).toContain("+10,0%");
+    // The contribution countdown lives in the plan smart line.
+    expect(container.querySelector(".ovc-smart")?.textContent).toContain("Kỳ góp");
+    expect(container.querySelector(".ovc-smart")?.textContent).toContain("100,00");
+    vi.unstubAllGlobals();
   });
 });
