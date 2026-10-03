@@ -55,18 +55,9 @@
 }
 .tx-wrap .add-btn:active { transform: scale(.97); }
 
-/* ---------- 3 thẻ tổng ---------- */
-.tx-wrap .sum3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.tx-wrap .sum-c { padding: 12px 10px; text-align: center; }
-.tx-wrap .sum-lbl { margin-bottom: 6px; color: var(--text-tertiary); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.tx-wrap .sum-val { color: var(--text-primary); overflow-wrap: anywhere; font-size: 17px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.tx-wrap .sum-val.pos { color: var(--success-600); }
-.tx-wrap .sum-val.neg { color: var(--danger-600); }
 
-@media (max-width: 360px) {
-  .tx-wrap .sum-c { padding: 10px 6px; }
-  .tx-wrap .sum-val { font-size: 15px; }
-}
+/* ---------- Nhãn eyebrow dùng chung (quality summary) ---------- */
+.tx-wrap .sum-lbl { color: var(--text-tertiary); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 
 /* ---------- Nhật ký ---------- */
 .tx-wrap .tx-journal { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -283,66 +274,6 @@
 }
 .tx-wrap .tx-quality-open:focus-visible { outline: 2px solid var(--warning-600); outline-offset: 2px; }
 
-/* Chi tiết inbox chất lượng (khi mở rộng) */
-.tx-wrap .tx-quality-inbox { padding: 16px; }
-.tx-wrap .tx-quality-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.tx-wrap .tx-quality-head strong { display: block; margin-top: 3px; color: var(--text-primary); font-size: 14px; line-height: 1.35; }
-.tx-wrap .tx-quality-state {
-  display: inline-grid;
-  flex: 0 0 auto;
-  place-items: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  font-size: 11px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  border-radius: 999px;
-}
-.tx-wrap .tx-quality-state.needs-review { color: var(--warning-600); background: var(--warning-050); }
-.tx-wrap .tx-quality-state.clean { color: var(--success-600); background: var(--success-050); }
-.tx-wrap .tx-quality-clean { margin: 11px 0 0; color: var(--text-secondary); font-size: 13px; }
-.tx-wrap .tx-quality-list { display: grid; gap: 8px; margin-top: 12px; }
-.tx-wrap .tx-quality-item {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 10px;
-  width: 100%;
-  min-height: 56px;
-  padding: 10px 12px;
-  color: var(--text-primary);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-}
-.tx-wrap .tx-quality-item:active { transform: scale(.985); }
-.tx-wrap .tx-quality-item:focus-visible,
-.tx-wrap .tx-quality-more:focus-visible { outline: 2px solid var(--primary-600); outline-offset: 2px; }
-.tx-wrap .tx-quality-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 999px; }
-.tx-wrap .tx-quality-dot.action { background: var(--warning-600); }
-.tx-wrap .tx-quality-dot.review { background: var(--primary-600); }
-.tx-wrap .tx-quality-dot.tip { background: var(--text-tertiary); }
-.tx-wrap .tx-quality-copy { display: grid; flex: 1 1 auto; min-width: 0; gap: 2px; }
-.tx-wrap .tx-quality-copy strong { overflow: hidden; color: var(--text-primary); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
-.tx-wrap .tx-quality-copy span { overflow: hidden; color: var(--text-tertiary); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.tx-wrap .tx-quality-severity { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-.tx-wrap .tx-quality-severity.action { color: var(--warning-600); }
-.tx-wrap .tx-quality-severity.review { color: var(--primary-600); }
-.tx-wrap .tx-quality-severity.tip { color: var(--text-tertiary); }
-.tx-wrap .tx-quality-more {
-  min-height: 40px;
-  color: var(--primary-600);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-}
 
 /* ---------- Góc xem đã lưu (trong sheet lọc) ---------- */
 .tx-wrap .tx-saved-views-entry { display: grid; gap: 10px; padding-top: 4px; }
