@@ -7,6 +7,8 @@ import type { Trajectory } from "../../pages/trajectory";
 import type { YearInReview } from "../../pages/yearInReview";
 import type { PortfolioDataHealth, PortfolioDataHealthIssue } from "../../pages/portfolioDataHealth";
 import type { DailyBriefing } from "../../pages/dailyBriefing";
+import type { ValueHistoryPoint } from "../../lib/valueHistory";
+import ValueHistoryChart from "../ValueHistoryChart";
 import "../../styles/overview-clean.css";
 
 type OverviewFrameProps = {
@@ -29,6 +31,7 @@ type OverviewFrameProps = {
   yearInReview: YearInReview;
   yearReviewYears: number[];
   onYearReviewYearChange: (year: number) => void;
+  valueHistory: ValueHistoryPoint[] | null;
 };
 
 function overviewCopy(locale: "vi" | "de") {
@@ -36,6 +39,7 @@ function overviewCopy(locale: "vi" | "de") {
     pageLabel: "Übersicht",
     stalePrice: "Alter Kurs",
     shares: "Anteile",
+    valueHistoryLabel: "Portfoliowert pro Monat",
     savingsPlan: "Sparplan",
     perMonth: "/Mon.",
     attention: "Zu beachten",
@@ -88,6 +92,7 @@ function overviewCopy(locale: "vi" | "de") {
     pageLabel: "Tổng quan",
     stalePrice: "Giá cũ",
     shares: "cổ phần",
+    valueHistoryLabel: "Giá trị quỹ theo tháng",
     savingsPlan: "Khoản góp",
     perMonth: "/th",
     attention: "Cần chú ý",
@@ -218,6 +223,7 @@ export default function OverviewFrame({
   yearInReview,
   yearReviewYears,
   onYearReviewYearChange,
+  valueHistory,
 }: OverviewFrameProps) {
   const { locale } = useLocale();
   const text = overviewCopy(locale);
@@ -317,6 +323,9 @@ export default function OverviewFrame({
             {stale ? <span className="ovc-stale-tag">{text.stalePrice}</span> : null}
             <span>{shares ?? "—"} {text.shares}</span>
           </div>
+          {valueHistory ? (
+            <ValueHistoryChart points={valueHistory} label={text.valueHistoryLabel} />
+          ) : null}
         </section>
 
         {/* 2 — Plan: smart pace line + facts + behavior-based trajectory */}
