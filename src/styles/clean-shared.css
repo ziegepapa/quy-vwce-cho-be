@@ -1,0 +1,33 @@
+/* Clean shared patterns — dùng chung cho các trang theo ngôn ngữ clean.
+   Token theo data-theme (light/dark/premium) từ tokens.css. */
+
+/* Strip tóm tắt: một dòng, ngăn bằng dấu · — đồng bộ với ovc-meta. */
+.summary-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  padding: 2px 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.summary-strip > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+.summary-strip > span:not(:last-child)::after {
+  content: "·";
+  margin: 0 10px;
+  color: var(--text-tertiary);
+}
+.summary-strip strong {
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 14px;
+}
+.summary-strip strong.pos { color: var(--success-600); }
+.summary-strip strong.neg { color: var(--danger-600); }
+.summary-strip strong.gain { color: var(--success-600); }

@@ -351,6 +351,20 @@
   font-variant-numeric: tabular-nums;
 }
 
+.ovc-history-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 14px;
+}
+
+.ovc-history-label {
+  font-size: 19px;
+  font-weight: 600;
+  fill: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ovc-bar > span {
     transition: none;

@@ -14,6 +14,7 @@ import { buildTrajectory } from "./trajectory";
 import { buildYearInReview, yearInReviewYears } from "./yearInReview";
 import { buildPortfolioDataHealth } from "./portfolioDataHealth";
 import { buildDailyBriefing, type BriefingPricePoint, type DailyBriefing } from "./dailyBriefing";
+import { buildValueHistory } from "../lib/valueHistory";
 
 function priceHistoryUrl(): string {
   const baseUrl = import.meta.env.BASE_URL as string | undefined;
@@ -298,6 +299,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       yearInReview,
       yearReviewYears,
       onYearReviewYearChange: setYearReviewYear,
+      valueHistory: buildValueHistory({ transactions, quotes, locale }),
       goalTargetDate: formatGoalTargetDate(settings.endDate, locale),
       goalHorizon: goalHorizon(settings.endDate, locale, currentDate),
     };
