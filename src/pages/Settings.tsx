@@ -38,7 +38,6 @@ import {
   IconChevronRight,
   IconClose,
   IconDownload,
-  IconGoal,
   IconLanguage,
   IconLifebuoy,
   IconLock,
@@ -112,12 +111,6 @@ type SettingsText = {
   account: string;
   security: string;
   securitySubtitle: string;
-  plan: string;
-  planSubtitle: string;
-  targetDateLabel: string;
-  targetDateSub: string;
-  monthlyContributionLabel: string;
-  monthlyContributionSub: string;
   vaultName: string;
   password: string;
   changePassword: string;
@@ -193,12 +186,6 @@ function settingsStrings(locale: AppLocale): SettingsText {
     account: "Konto",
     security: "Sicherheit",
     securitySubtitle: "Passwort und Mehrfaktor-Schutz dieses Kontos.",
-    plan: "Plan",
-    planSubtitle: "Verwendungsziel und Beitragsrhythmus des Fonds.",
-    targetDateLabel: "Verwendungsdatum",
-    targetDateSub: "Ein anderes Jahr passt die Projektion in der Übersicht an.",
-    monthlyContributionLabel: "Monatlicher Beitrag",
-    monthlyContributionSub: "Gilt für alle Jahre.",
     vaultName: "VWCE Vault",
     password: "Passwort",
     changePassword: "Passwort ändern",
@@ -271,12 +258,6 @@ function settingsStrings(locale: AppLocale): SettingsText {
     account: "Tài khoản",
     security: "Bảo mật",
     securitySubtitle: "Mật khẩu và xác thực đa yếu tố cho tài khoản này.",
-    plan: "Kế hoạch",
-    planSubtitle: "Mốc sử dụng và nhịp góp của quỹ.",
-    targetDateLabel: "Mốc sử dụng",
-    targetDateSub: "Đổi năm là quỹ đạo ở Tổng quan tự cập nhật theo.",
-    monthlyContributionLabel: "Mức góp mỗi tháng",
-    monthlyContributionSub: "Áp dụng cho mọi năm.",
     vaultName: "VWCE Vault",
     password: "Mật khẩu",
     changePassword: "Đổi mật khẩu",
@@ -1040,54 +1021,6 @@ export default function SettingsPage({
           transactions={planTransactions}
           onChangeTarget={(next) => patchSettings({ planTarget: next })}
         />
-      ) : null}
-
-      {cboMode ? (
-      <section className="set-atelier-cluster set-plan-cluster" aria-label={text.plan}>
-      <header className="set-section-head"><span>{text.plan}</span><small>{text.planSubtitle}</small></header>
-      <section className="set-group">
-        <label className="set-row set-plan-field">
-          <span className="set-row-icon"><IconGoal /></span>
-          <span className="sr-body"><span className="sr-name">{text.targetDateLabel}</span><span className="sr-sub">{text.targetDateSub}</span></span>
-          <input
-            type="date"
-            className="set-plan-input"
-            aria-label={text.targetDateLabel}
-            value={settings.planTarget?.targetUseDate ?? settings.endDate}
-            onChange={(event) => {
-              const value = event.target.value;
-              if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
-              patchSettings({
-                planTarget: {
-                  ...(settings.planTarget ?? { targetUseDate: settings.endDate, needFullAmount: true }),
-                  targetUseDate: value,
-                },
-              });
-            }}
-          />
-        </label>
-        <label className="set-row set-plan-field">
-          <span className="set-row-icon teal"><IconSync /></span>
-          <span className="sr-body"><span className="sr-name">{text.monthlyContributionLabel}</span><span className="sr-sub">{text.monthlyContributionSub}</span></span>
-          <span className="set-plan-money">
-            <input
-              type="number"
-              className="set-plan-input"
-              aria-label={text.monthlyContributionLabel}
-              inputMode="decimal"
-              min="0"
-              value={settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1 > 0 ? settings.contributionY1 : ""}
-              onChange={(event) => {
-                const raw = event.target.value;
-                const value = raw === "" ? 0 : Math.max(0, Number(raw) || 0);
-                patchSettings({ contributionY1: value, contributionY2: value });
-              }}
-            />
-            <span aria-hidden>€</span>
-          </span>
-        </label>
-      </section>
-      </section>
       ) : null}
 
       <section className="set-atelier-cluster set-security-cluster" aria-label={text.security}>
