@@ -162,27 +162,10 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         )}
       </section>
 
-      <div className="sim-sum3">
-        <div className="gl ss-c">
-          <div className="ss-lbl">{text.end}</div>
-          <div className="ss-val" style={{ color: "var(--demo-vi)" }}>
-            {primary && !planUnreachable ? formatMoneyRounded(headlineValue, locale) : "—"}
-          </div>
-        </div>
-        <div className="gl ss-c">
-          <div className="ss-lbl">{text.contributed}</div>
-          <div className="ss-val" style={{ color: "var(--demo-sub)" }}>
-            {primary && !planUnreachable
-              ? formatMoneyRounded(primary.out.contributed + initialBalance, locale)
-              : "—"}
-          </div>
-        </div>
-        <div className="gl ss-c">
-          <div className="ss-lbl">{text.gain}</div>
-          <div className="ss-val" style={{ color: "var(--demo-em)" }}>
-            {primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}
-          </div>
-        </div>
+      <div className="summary-strip" aria-label={text.contributed}>
+        <span><strong>{primary && !planUnreachable ? formatMoneyRounded(headlineValue, locale) : "—"}</strong> {text.end}</span>
+        <span><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong> {text.contributed}</span>
+        <span><strong className="gain">{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong> {text.gain}</span>
       </div>
 
       <section className="gl sim-chart-card">
@@ -196,8 +179,8 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           locale={locale}
         />
         <div className="chart-legend">
-          <span><i style={{ background: "var(--demo-vi)" }} /> {text.contributed}</span>
-          <span><i style={{ background: "var(--demo-em)" }} /> {text.forecast}</span>
+          <span><i style={{ background: "var(--primary-600)" }} /> {text.contributed}</span>
+          <span><i style={{ background: "var(--success-600)" }} /> {text.forecast}</span>
         </div>
       </section>
 
@@ -328,7 +311,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
               <span>
                 {yi === 0 ? text.current : String(calYear)}
                 {goalYearSet.has(yi) ? (
-                  <small style={{ marginLeft: 4, color: "var(--demo-vi)" }}>
+                  <small style={{ marginLeft: 4, color: "var(--primary-600)" }}>
                     {goalNameByYear.get(yi)}
                   </small>
                 ) : null}
@@ -354,8 +337,8 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
 
       <div className="sim-note">ⓘ {text.disclaimer}</div>
 
-      <details className="gl" style={{ padding: 14 }}>
-        <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--demo-dim)" }}>
+      <details className="gl">
+        <summary>
           {advSummary}
         </summary>
         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
