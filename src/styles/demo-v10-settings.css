@@ -435,11 +435,3 @@ html.settings-child-open,body.settings-child-open { overflow: hidden; }.bottom-d
   .settings-plan-studio-metrics { grid-template-columns: 1fr; }
   .settings-plan-studio-metrics > div:last-child { grid-column: auto; }
 }
-
-/* Plan cluster: inline editable fields inside atelier rows. */
-label.set-row.set-plan-field { cursor: pointer; }
-.set-plan-field .sr-body { flex: 1 1 auto; min-width: 0; }
-.set-plan-input { max-width: 150px; padding: 8px 10px; border: 1px solid var(--atelier-line); border-radius: 10px; background: color-mix(in srgb, var(--demo-g) 55%, transparent); color: var(--demo-text); font: inherit; font-size: 13px; text-align: right; }
-.set-plan-input:focus-visible { outline: 2px solid var(--demo-em); outline-offset: 1px; }
-.set-plan-money { display: inline-flex; align-items: center; gap: 6px; color: var(--demo-dim); font-size: 13px; }
-.set-plan-money .set-plan-input { max-width: 110px; }
