@@ -10,6 +10,7 @@ import { useLocale } from "../lib/locale";
 import { findTransactionQualityIssues } from "./transactionQualityInbox";
 import { buildPortfolioHeartbeat } from "./portfolioHeartbeat";
 import { buildLifetimePlan, buildPlanVsReality } from "./planVsReality";
+import { buildTrajectory } from "./trajectory";
 import { buildYearInReview, yearInReviewYears } from "./yearInReview";
 import { buildPortfolioDataHealth } from "./portfolioDataHealth";
 import { buildDailyBriefing, type BriefingPricePoint, type DailyBriefing } from "./dailyBriefing";
@@ -252,6 +253,17 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       transactions,
       today: planToday,
     });
+    // Forward-looking trajectory from ACTUAL behavior (not from the soft
+    // contribution settings). Follows settings.endDate, so changing the
+    // target year reshapes the projection.
+    const trajectory = buildTrajectory({
+      transactions,
+      trackInAppCash: settings.trackInAppCash,
+      currentValue: hero.assets,
+      annualReturn: settings.vwceReturn,
+      targetDate: settings.endDate,
+      today: planToday,
+    });
     const yearInReview = buildYearInReview({
       today: planToday,
       trackInAppCash: settings.trackInAppCash,
@@ -281,6 +293,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       dataHealth,
       briefing,
       lifetimePlan,
+      trajectory,
       yearInReview,
       yearReviewYears,
       onYearReviewYearChange: setYearReviewYear,

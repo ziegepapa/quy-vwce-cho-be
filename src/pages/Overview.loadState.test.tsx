@@ -132,7 +132,7 @@ describe("Overview German locale", () => {
     expect(screen.getByLabelText("Jahresrückblick")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Bericht exportieren" })).toBeTruthy();
     expect(screen.getAllByText("Noch nicht bewertbar").length).toBeGreaterThan(0);
-    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Hiệu suất danh mục|Vốn góp|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Tình trạng dữ liệu|Kế hoạch dài hạn hiện tại|Tổng kết năm|Xuất báo cáo|Hôm nay|Biến động giá/);
+    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Hiệu suất danh mục|Vốn góp|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Tình trạng dữ liệu|Kế hoạch dài hạn hiện tại|Tổng kết năm|Xuất báo cáo|Hôm nay|Biến động giá|Nhịp |Ước đạt/);
   });
 });
 
@@ -358,7 +358,32 @@ describe("Overview clean hierarchy", () => {
     expect(container.querySelector(".ovc-meta")?.textContent).toContain("+10,0%");
     // The contribution countdown lives in the plan smart line.
     expect(container.querySelector(".ovc-smart")?.textContent).toContain("Kỳ góp");
-    expect(container.querySelector(".ovc-smart")?.textContent).toContain("100,00");
+    expect(container.querySelector(".ovc-smart")?.textContent).toContain("Nhịp");
+    expect(container.querySelector(".ovc-smart")?.textContent).toContain("/tháng");
     vi.unstubAllGlobals();
+  });
+
+  it("shows a behavior-based trajectory instead of a fixed-plan verdict", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([
+      buyVwce("tx-tj-1", "2026-07-15"),
+      buyVwce("tx-tj-2", "2026-08-15"),
+      buyVwce("tx-tj-3", "2026-09-15"),
+    ]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
+    const planCard = container.querySelector('[aria-label="Kế hoạch dài hạn"]');
+    expect(planCard).toBeTruthy();
+    // Trajectory from actual behavior, tied to the (changeable) target year.
+    await waitFor(() => expect(planCard?.querySelector(".ovc-trajectory")).toBeTruthy());
+    expect(planCard?.textContent).toContain("Ước đạt");
+    expect(planCard?.textContent).toContain("2042");
+    expect(planCard?.textContent).toContain("Nhịp 100,00");
+    // No fixed-plan verdict anymore: the contribution settings are a soft guess.
+    expect(planCard?.textContent).not.toContain("Chưa đạt mức kế hoạch");
+    expect(planCard?.textContent).not.toContain("Đã đạt mức kế hoạch");
+    expect(planCard?.textContent).not.toContain("Mốc tiếp theo");
   });
 });
