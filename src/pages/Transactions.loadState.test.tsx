@@ -56,10 +56,10 @@ describe("Transactions load and empty states", () => {
     dbMocks.listTransactions.mockResolvedValue([]);
     render(createElement(MemoryRouter, null, createElement(LocaleProvider, null, createElement(Transactions))));
 
-    expect(await screen.findByText("Transaktionsjournal")).toBeTruthy();
+    expect(await screen.findByText("Transaktionen")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Filter" })).toBeTruthy();
     expect(screen.getByLabelText("Transaktionen durchsuchen")).toBeTruthy();
-    expect(screen.getByText("Alle Transaktionen sind vollständig.")).toBeTruthy();
+    expect(document.querySelector(".tx-quality-summary")).toBeNull();
     expect(screen.getAllByRole("button", { name: "+ Hinzufügen" })[0]).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Filter" }));
     expect(screen.getByRole("dialog", { name: "Filter" })).toBeTruthy();
@@ -157,7 +157,7 @@ describe("Transactions load and empty states", () => {
     ]);
     render(createElement(Transactions));
 
-    await screen.findByText("Nhật ký giao dịch");
+    await screen.findByText("Tổng góp");
     fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
     fireEvent.click(screen.getByRole("button", { name: "Đầu tư" }));
     expect(document.querySelectorAll(".tx-item")).toHaveLength(2);
@@ -169,16 +169,21 @@ describe("Transactions load and empty states", () => {
     expect(screen.getByRole("button", { name: "Đầu tư ×" })).toBeTruthy();
   });
 
-  it("saves, reapplies and removes a local Saved view from its entry outside the filter sheet without changing the ledger", async () => {
+  it("saves, reapplies and removes a local Saved view from its entry inside the filter sheet without changing the ledger", async () => {
     dbMocks.listTransactions.mockResolvedValue([
       { id: "tx-buy", date: "2026-08-20", type: "buy_vwce", amount: 100, notes: "VWCE", createdAt: "2026-08-20T00:00:00Z", updatedAt: "2026-08-20T00:00:00Z", source: "manual" },
     ]);
     render(createElement(Transactions));
 
-    await screen.findByText("Nhật ký giao dịch");
+    await screen.findByText("Tổng góp");
     fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
     fireEvent.click(screen.getByRole("button", { name: "Tháng này" }));
     fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
+    expect(screen.getByRole("button", { name: "Tháng này ×" })).toBeTruthy();
+
+    // Saved views now live inside the filter sheet.
+    fireEvent.click(screen.getByRole("button", { name: /^Lọc/ }));
+    expect(document.querySelector(".tx-saved-views-entry")).toBeTruthy();
     fireEvent.click(document.querySelector(".tx-saved-views-entry summary") as Element);
     fireEvent.change(screen.getByLabelText("Tên góc xem"), { target: { value: "Mua gần đây" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu góc xem hiện tại" }));
@@ -187,14 +192,19 @@ describe("Transactions load and empty states", () => {
     expect(saved.getAttribute("aria-pressed")).toBe("true");
     expect(JSON.parse(window.localStorage.getItem(TRANSACTION_SAVED_VIEWS_KEY) ?? "[]")).toHaveLength(1);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Lọc/ }));
+    // Reset the lens, then reapply the saved view: the sheet closes and the ledger shows the lens chip.
     fireEvent.click(screen.getAllByRole("button", { name: "Toàn bộ" })[0]);
     fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
-    expect(saved.getAttribute("aria-pressed")).toBe("false");
-    fireEvent.click(saved);
-    expect(saved.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByRole("button", { name: "Tháng này ×" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Lọc/ }));
+    fireEvent.click(document.querySelector(".tx-saved-views-entry summary") as Element);
+    fireEvent.click(screen.getByRole("button", { name: "Mua gần đây" }));
+    expect(document.querySelector(".tx-filter-sheet")).toBeNull();
     expect(screen.getByRole("button", { name: "Tháng này ×" })).toBeTruthy();
 
+    fireEvent.click(screen.getByRole("button", { name: /^Lọc/ }));
+    fireEvent.click(document.querySelector(".tx-saved-views-entry summary") as Element);
     fireEvent.click(screen.getByRole("button", { name: "Xóa góc xem Mua gần đây" }));
     expect(screen.queryByRole("button", { name: "Mua gần đây" })).toBeNull();
     expect(JSON.parse(window.localStorage.getItem(TRANSACTION_SAVED_VIEWS_KEY) ?? "[]")).toHaveLength(0);
@@ -238,7 +248,7 @@ describe("Transactions load and empty states", () => {
     dbMocks.listTransactions.mockResolvedValue([]);
     render(createElement(Transactions));
 
-    await screen.findByText("Nhật ký giao dịch");
+    await screen.findByText("Tổng góp");
     fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
     fireEvent.click(screen.getByRole("button", { name: "Tháng này" }));
     expect(screen.getByRole("button", { name: "Tháng này" }).getAttribute("aria-pressed")).toBe("true");
@@ -255,7 +265,7 @@ describe("Transactions load and empty states", () => {
     document.body.append(dock);
     render(createElement(Transactions));
 
-    await screen.findByText("Nhật ký giao dịch");
+    await screen.findByText("Tổng góp");
     fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
     expect(dock.classList.contains("is-hidden")).toBe(true);
     expect(dock.hasAttribute("inert")).toBe(true);
