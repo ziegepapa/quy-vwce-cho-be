@@ -22,6 +22,7 @@ import { useLocale } from "../lib/locale";
 import { formatDisplayMoney } from "../ui/localeFormatting";
 import SimulationDemoShell from "../components/demo-v10/SimulationDemoShell";
 import "../styles/demo-v10-simulation.css";
+import "../styles/clean-shared.css";
 
 type UndoSnap = {
   values: Partial<Pick<AppSettings, "contributionY1" | "contributionY2" | "vwceReturn">>;
