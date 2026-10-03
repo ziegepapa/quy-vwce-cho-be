@@ -3,6 +3,7 @@ import { useLocale } from "../../lib/locale";
 import { formatMoney } from "../../lib/calc";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
 import type { LifetimePlan } from "../../pages/planVsReality";
+import type { Trajectory } from "../../pages/trajectory";
 import type { YearInReview } from "../../pages/yearInReview";
 import type { PortfolioDataHealth, PortfolioDataHealthIssue } from "../../pages/portfolioDataHealth";
 import type { DailyBriefing } from "../../pages/dailyBriefing";
@@ -22,6 +23,7 @@ type OverviewFrameProps = {
   dataHealth: PortfolioDataHealth;
   briefing: DailyBriefing;
   lifetimePlan: LifetimePlan;
+  trajectory: Trajectory | null;
   goalTargetDate: string | null;
   goalHorizon: string | null;
   yearInReview: YearInReview;
@@ -60,13 +62,15 @@ function overviewCopy(locale: "vi" | "de") {
     planRecorded: "Erfasst",
     planOfTarget: "vom Plan",
     planNotStarted: "Der Plan startet noch nicht",
-    planOnTrack: "Planbetrag erreicht",
-    planBelowPlan: "Unter dem Planbetrag",
+    planContributed: "Eingezahlt",
+    trajectoryPace: (pace: string, days: number) => `Tempo ${pace}/Mon. · nächste Rate in ${days} Tag${days === 1 ? "" : "en"}`,
+    trajectoryPaceBare: (pace: string) => `Tempo ${pace}/Mon.`,
+    trajectoryLabel: "Voraussichtlich",
+    trajectoryYear: (year: number) => `bis ${year}`,
+    trajectoryAssumption: (pace: string, rate: string) => `Bei Tempo ${pace}/Mon. · Annahme ${rate}/Jahr · nur eine Schätzung`,
     planMonths: (planned: number, recorded: number) => `${recorded}/${planned} Monate erfasst`,
     planFrom: (label: string) => `seit ${label}`,
     planMissing: (count: number) => `${count} Monat${count === 1 ? "" : "e"} ohne erfassten Beitrag`,
-    nextMilestone: "Nächster Meilenstein",
-    milestoneRemaining: (remaining: string) => `Noch ${remaining}`,
     streakMonths: (count: number) => `${count} Monat${count === 1 ? "" : "e"} in Folge`,
     yearReview: "Jahresrückblick",
     yearReviewExport: "Bericht exportieren",
@@ -110,13 +114,15 @@ function overviewCopy(locale: "vi" | "de") {
     planRecorded: "Đã góp",
     planOfTarget: "kế hoạch",
     planNotStarted: "Kế hoạch chưa bắt đầu",
-    planOnTrack: "Đã đạt mức kế hoạch",
-    planBelowPlan: "Chưa đạt mức kế hoạch",
+    planContributed: "Đã góp",
+    trajectoryPace: (pace: string, days: number) => `Nhịp ${pace}/tháng · Kỳ góp tới trong ${days} ngày`,
+    trajectoryPaceBare: (pace: string) => `Nhịp ${pace}/tháng`,
+    trajectoryLabel: "Ước đạt",
+    trajectoryYear: (year: number) => `vào ${year}`,
+    trajectoryAssumption: (pace: string, rate: string) => `Giữ nhịp ${pace}/tháng · giả định ${rate}/năm · chỉ là ước tính`,
     planMonths: (planned: number, recorded: number) => `Đã ghi nhận ${recorded}/${planned} tháng`,
     planFrom: (label: string) => `từ ${label}`,
     planMissing: (count: number) => `${count} tháng chưa có khoản góp`,
-    nextMilestone: "Mốc tiếp theo",
-    milestoneRemaining: (remaining: string) => `Còn ${remaining}`,
     streakMonths: (count: number) => `${count} tháng liên tiếp`,
     yearReview: "Tổng kết năm",
     yearReviewExport: "Xuất báo cáo",
@@ -206,6 +212,7 @@ export default function OverviewFrame({
   dataHealth,
   briefing,
   lifetimePlan,
+  trajectory,
   goalTargetDate,
   goalHorizon,
   yearInReview,
@@ -225,22 +232,20 @@ export default function OverviewFrame({
       : heartbeat.performanceState === "flat"
         ? text.performanceFlat
         : text.performanceUnavailable;
-  const planStateLabel = lifetimePlan.state === "on_track"
-    ? text.planOnTrack
-    : lifetimePlan.state === "below_plan"
-      ? text.planBelowPlan
-      : text.planNotStarted;
-  const planDetail = lifetimePlan.plannedMonths === 0
+  // Facts: what has actually been contributed. No judgment against the soft
+  // contribution settings — the trajectory below is the forward-looking part.
+  const planFacts = lifetimePlan.plannedMonths === 0
     ? text.planNotStarted
-    : `${text.planMonths(lifetimePlan.plannedMonths, lifetimePlan.recordedMonths)} · ${text.planFrom(lifetimePlan.startLabel ?? "")}${lifetimePlan.missingMonths > 0 ? ` · ${text.planMissing(lifetimePlan.missingMonths)}` : ""}`;
-  // One smart status line: plan state + the next contribution in one breath.
-  // This replaces the old split between the "Hôm nay" countdown card and the
-  // plan meta rhythm line.
-  const planSmartLine = lifetimePlan.state === "not_started"
-    ? text.planNotStarted
-    : savingsPlan && briefing.daysToNextContribution != null
-      ? `${planStateLabel} · ${text.planNextContribution(`${savingsPlan}${text.perMonth}`, briefing.daysToNextContribution)}`
-      : planStateLabel;
+    : `${text.planContributed} ${formatMoney(lifetimePlan.actualAmount)} · ${text.planMonths(lifetimePlan.plannedMonths, lifetimePlan.recordedMonths)} · ${text.planFrom(lifetimePlan.startLabel ?? "")}${lifetimePlan.missingMonths > 0 ? ` · ${text.planMissing(lifetimePlan.missingMonths)}` : ""}`;
+  // Smart line: the actual monthly pace + the next contribution in one breath.
+  const countdownDays = briefing.daysToNextContribution;
+  const planSmartLine = trajectory != null && countdownDays != null
+    ? text.trajectoryPace(formatMoney(trajectory.pace), countdownDays)
+    : trajectory != null
+      ? text.trajectoryPaceBare(formatMoney(trajectory.pace))
+      : countdownDays != null && savingsPlan
+        ? text.planNextContribution(`${savingsPlan}${text.perMonth}`, countdownDays)
+        : text.planNotStarted;
   const todayPricePct = briefing.priceChange == null
     ? null
     : `${briefing.priceChange.pct > 0 ? "+" : ""}${briefing.priceChange.pct.toFixed(1).replace(".", ",")}%`;
@@ -314,33 +319,25 @@ export default function OverviewFrame({
           </div>
         </section>
 
-        {/* 2 — Today: the daily hook, slim */}
-        {/* 2 — Plan: smart status + milestone + lifetime progress in one card */}
+        {/* 2 — Plan: smart pace line + facts + behavior-based trajectory */}
         <section className="ovc-card" aria-label={text.currentPlan}>
           <div className="ovc-card-head">
             <h2 className="ovc-title">{text.currentPlan}</h2>
           </div>
           <p className="ovc-smart">{planSmartLine}</p>
-          {briefing.nextMilestone ? (
-            <div className="ovc-milestone">
+          <p className="ovc-muted">{planFacts}</p>
+          {trajectory ? (
+            <div className="ovc-trajectory">
               <div className="ovc-row">
-                <span>{text.nextMilestone}: <strong>{formatMoney(briefing.nextMilestone.target)}</strong></span>
-                <span className="ovc-muted">{text.milestoneRemaining(formatMoney(briefing.nextMilestone.remaining))}</span>
+                <span>{text.trajectoryLabel} <strong>~{formatMoney(trajectory.projected)}</strong></span>
+                <span className="ovc-muted">{text.trajectoryYear(trajectory.targetYear)}</span>
               </div>
-              <div className="ovc-bar" role="progressbar" aria-valuenow={Math.round(briefing.nextMilestone.progressPct)} aria-valuemin={0} aria-valuemax={100}>
-                <span style={{ width: `${briefing.nextMilestone.progressPct}%` }} />
+              <div className="ovc-bar" role="progressbar" aria-valuenow={Math.round(trajectory.progressPct)} aria-valuemin={0} aria-valuemax={100}>
+                <span style={{ width: `${trajectory.progressPct}%` }} />
               </div>
+              <p className="ovc-muted">{text.trajectoryAssumption(formatMoney(trajectory.pace), `${(trajectory.annualReturn * 100).toFixed(0).replace(".", ",")}%`)}</p>
             </div>
           ) : null}
-          <div className="ovc-plan-progress">
-            <div className="ovc-row">
-              <span>{text.planRecorded} <strong>{formatMoney(lifetimePlan.actualAmount)}</strong> / {text.planOfTarget} <strong>{formatMoney(lifetimePlan.plannedAmount)}</strong></span>
-            </div>
-            <div className="ovc-bar" role="progressbar" aria-valuenow={Math.round(lifetimePlan.progressPct)} aria-valuemin={0} aria-valuemax={100}>
-              <span style={{ width: `${lifetimePlan.progressPct}%` }} />
-            </div>
-            <p className="ovc-muted">{planDetail}</p>
-          </div>
           <div className="ovc-plan-meta">
             {briefing.streakMonths > 0 ? <span>{text.streakMonths(briefing.streakMonths)}</span> : null}
             <span>{goalMeta}</span>

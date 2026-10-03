@@ -217,18 +217,14 @@
   background: var(--primary-600);
 }
 
-/* Thanh tiến độ mốc mục tiêu: xanh lá — câu chuyện "tiền đang lớn lên" */
-.ovc-milestone .ovc-bar > span {
+/* Quỹ đạo dài hạn: xanh lá — câu chuyện "tiền đang lớn lên theo nhịp góp thật" */
+.ovc-trajectory .ovc-bar > span {
   background: var(--success-600);
 }
 
-.ovc-milestone {
+.ovc-trajectory {
   padding: 12px 0;
   border-bottom: 1px solid var(--hairline, var(--border-subtle));
-}
-
-.ovc-plan-progress {
-  padding: 12px 0 4px;
 }
 
 .ovc-state {
