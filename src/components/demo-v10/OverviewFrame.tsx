@@ -32,7 +32,6 @@ type OverviewFrameProps = {
 function overviewCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     pageLabel: "Übersicht",
-    price: "VWCE-Kurs",
     stalePrice: "Alter Kurs",
     shares: "Anteile",
     savingsPlan: "Sparplan",
@@ -77,14 +76,12 @@ function overviewCopy(locale: "vi" | "de") {
     yearReviewMissingNotes: (count: number) => count === 1 ? "1 Notiz fehlt" : `${count} Notizen fehlen`,
     yearReviewPriceSnapshot: "Neuester Preis",
     yearReviewNoSnapshot: "Noch kein aktueller Preis erfasst",
-    todayTitle: "Heute",
-    todayPriceMove: "Kursbewegung",
-    todayVsYesterday: "vs. gestern",
-    todayNextContribution: "Nächste Rate",
-    todayNextContributionIn: (days: number) => days === 0 ? "Heute" : `in ${days} Tag${days === 1 ? "" : "en"}`,
+    planNextContribution: (amount: string, days: number) => days === 0
+      ? `Nächster Beitrag ${amount} heute`
+      : `Nächster Beitrag ${amount} in ${days} Tag${days === 1 ? "" : "en"}`,
+    yearReviewFees: "Gebühren",
   } : {
     pageLabel: "Tổng quan",
-    price: "Giá VWCE",
     stalePrice: "Giá cũ",
     shares: "cổ phần",
     savingsPlan: "Khoản góp",
@@ -129,11 +126,10 @@ function overviewCopy(locale: "vi" | "de") {
     yearReviewMissingNotes: (count: number) => count === 1 ? "1 ghi chú còn thiếu" : `${count} ghi chú còn thiếu`,
     yearReviewPriceSnapshot: "Giá gần nhất",
     yearReviewNoSnapshot: "Chưa có giá gần nhất",
-    todayTitle: "Hôm nay",
-    todayPriceMove: "Biến động giá",
-    todayVsYesterday: "so với hôm qua",
-    todayNextContribution: "Kỳ góp tới",
-    todayNextContributionIn: (days: number) => days === 0 ? "Hôm nay" : `Còn ${days} ngày`,
+    planNextContribution: (amount: string, days: number) => days === 0
+      ? `Kỳ góp ${amount} hôm nay`
+      : `Kỳ góp ${amount} còn ${days} ngày nữa`,
+    yearReviewFees: "Phí",
   };
 }
 
@@ -237,6 +233,14 @@ export default function OverviewFrame({
   const planDetail = lifetimePlan.plannedMonths === 0
     ? text.planNotStarted
     : `${text.planMonths(lifetimePlan.plannedMonths, lifetimePlan.recordedMonths)} · ${text.planFrom(lifetimePlan.startLabel ?? "")}${lifetimePlan.missingMonths > 0 ? ` · ${text.planMissing(lifetimePlan.missingMonths)}` : ""}`;
+  // One smart status line: plan state + the next contribution in one breath.
+  // This replaces the old split between the "Hôm nay" countdown card and the
+  // plan meta rhythm line.
+  const planSmartLine = lifetimePlan.state === "not_started"
+    ? text.planNotStarted
+    : savingsPlan && briefing.daysToNextContribution != null
+      ? `${planStateLabel} · ${text.planNextContribution(`${savingsPlan}${text.perMonth}`, briefing.daysToNextContribution)}`
+      : planStateLabel;
   const todayPricePct = briefing.priceChange == null
     ? null
     : `${briefing.priceChange.pct > 0 ? "+" : ""}${briefing.priceChange.pct.toFixed(1).replace(".", ",")}%`;
@@ -258,6 +262,14 @@ export default function OverviewFrame({
     : yearInReview.missingNotesOnly
       ? text.yearReviewMissingNotes(yearInReview.missingNoteCount)
       : text.yearReviewQuality(yearInReview.qualityIssueCount);
+  // Slim footer display: no "đã góp" (the plan card owns the lifetime figure)
+  // and no price snapshot (the hero owns the price). The export below keeps
+  // the full detail.
+  const yearReviewDisplay = [
+    `${yearInReview.transactionCount} ${text.yearReviewTransactions}`,
+    `${text.yearReviewFees} ${formatMoney(yearInReview.fees)}`,
+    yearReviewQualityLabel,
+  ].join(" · ");
   const yearReviewLine = useMemo(() => [
     `${text.yearReview} ${yearInReview.year}`,
     `${text.yearReviewContributed}: ${formatMoney(yearInReview.contributionAmount)}`,
@@ -290,44 +302,25 @@ export default function OverviewFrame({
             </span>
           </div>
           <div className="ovc-meta">
-            <span>
-              <span className="ovc-label">{text.price}</span>{" "}
-              <span className="ovc-price">{price ?? "—"}</span>
+            <span className="ovc-price">
+              {price ?? "—"}
+              {todayPricePct ? (
+                <span className={`ovc-daypct ${todayPriceDirectionClass}`}>{todayPriceArrow} {todayPricePct}</span>
+              ) : null}
             </span>
             {priceAsOf ? <span>{priceAsOf}</span> : null}
             {stale ? <span className="ovc-stale-tag">{text.stalePrice}</span> : null}
-            <span>
-              <span className="ovc-label">{text.shares}</span>{" "}
-              <span>{shares ?? "—"}</span>
-            </span>
+            <span>{shares ?? "—"} {text.shares}</span>
           </div>
         </section>
 
         {/* 2 — Today: the daily hook, slim */}
-        <section className="ovc-card" aria-label={text.todayTitle}>
-          <h2 className="ovc-title">{text.todayTitle}</h2>
-          <div className="ovc-today-grid">
-            <div className="ovc-today-item">
-              <span className="ovc-label">{text.todayPriceMove}</span>
-              <strong className={`ovc-today-value ${todayPriceDirectionClass}`}>
-                {todayPriceArrow} {todayPricePct ?? "—"}
-              </strong>
-              <small>{text.todayVsYesterday}</small>
-            </div>
-            <div className="ovc-today-item">
-              <span className="ovc-label">{text.todayNextContribution}</span>
-              <strong className="ovc-today-value calm">
-                {briefing.daysToNextContribution == null ? "—" : text.todayNextContributionIn(briefing.daysToNextContribution)}
-              </strong>
-            </div>
-          </div>
-        </section>
-
-        {/* 3 — Plan: milestone + lifetime progress + rhythm in one card */}
+        {/* 2 — Plan: smart status + milestone + lifetime progress in one card */}
         <section className="ovc-card" aria-label={text.currentPlan}>
           <div className="ovc-card-head">
             <h2 className="ovc-title">{text.currentPlan}</h2>
           </div>
+          <p className="ovc-smart">{planSmartLine}</p>
           {briefing.nextMilestone ? (
             <div className="ovc-milestone">
               <div className="ovc-row">
@@ -342,7 +335,6 @@ export default function OverviewFrame({
           <div className="ovc-plan-progress">
             <div className="ovc-row">
               <span>{text.planRecorded} <strong>{formatMoney(lifetimePlan.actualAmount)}</strong> / {text.planOfTarget} <strong>{formatMoney(lifetimePlan.plannedAmount)}</strong></span>
-              <span className={`ovc-state ${lifetimePlan.state}`}>{planStateLabel}</span>
             </div>
             <div className="ovc-bar" role="progressbar" aria-valuenow={Math.round(lifetimePlan.progressPct)} aria-valuemin={0} aria-valuemax={100}>
               <span style={{ width: `${lifetimePlan.progressPct}%` }} />
@@ -350,12 +342,6 @@ export default function OverviewFrame({
             <p className="ovc-muted">{planDetail}</p>
           </div>
           <div className="ovc-plan-meta">
-            {savingsPlan ? (
-              <span>
-                <span>{text.savingsPlan}</span>{" "}
-                <strong>{savingsPlan}{text.perMonth}</strong>
-              </span>
-            ) : null}
             {briefing.streakMonths > 0 ? <span>{text.streakMonths(briefing.streakMonths)}</span> : null}
             <span>{goalMeta}</span>
           </div>
@@ -397,12 +383,7 @@ export default function OverviewFrame({
             </label>
             <button type="button" className="ovc-export" onClick={exportYearReview}>{text.yearReviewExport}</button>
           </div>
-          <p className="ovc-muted">
-            {text.yearReviewContributed} {formatMoney(yearInReview.contributionAmount)} · {yearInReview.transactionCount} {text.yearReviewTransactions} · {yearReviewQualityLabel}
-            {" · "}{yearInReview.priceSnapshot
-              ? `${text.yearReviewPriceSnapshot} ${formatMoney(yearInReview.priceSnapshot.price)} · ${yearInReview.priceSnapshot.asOf}`
-              : text.yearReviewNoSnapshot}
-          </p>
+          <p className="ovc-muted">{yearReviewDisplay}</p>
         </section>
       </div>
     </main>
