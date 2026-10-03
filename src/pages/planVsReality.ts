@@ -40,8 +40,8 @@ export type LifetimePlan = {
 /**
  * Lifetime version of the plan-vs-reality view: total contributed since the
  * plan start vs total planned since the plan start. This is what the
- * "Kế hoạch dài hạn" (long-term plan) card shows — the yearly slice was
- * conceptually wrong there ("long-term" title, one-year numbers).
+ * long-term plan card shows — the yearly slice was conceptually wrong there
+ * ("long-term" title, one-year numbers).
  * Pure: no Date.now(), no storage, no network.
  */
 export function buildLifetimePlan(input: {
