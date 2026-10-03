@@ -3,9 +3,9 @@ import { round2 } from "../../lib/calc";
 import { formatDisplayMoney, type DisplayLocale } from "../../ui/localeFormatting";
 
 function scenarioColor(id: string): string {
-  if (id === "cautious") return "var(--demo-sub, #a78bfa)";
-  if (id === "bull") return "var(--demo-em, #10b981)";
-  return "var(--demo-vi, #8b5cf6)";
+  if (id === "cautious") return "var(--text-secondary)";
+  if (id === "bull") return "var(--success-600)";
+  return "var(--primary-600)";
 }
 
 export type ChartResult = {
@@ -96,12 +96,12 @@ export function SimulationDemoChart({
     >
       <defs>
         <linearGradient id="chart-deposit-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--demo-vi)" stopOpacity=".45" />
-          <stop offset="100%" stopColor="var(--demo-vi)" stopOpacity=".04" />
+          <stop offset="0%" stopColor="var(--primary-600)" stopOpacity=".45" />
+          <stop offset="100%" stopColor="var(--primary-600)" stopOpacity=".04" />
         </linearGradient>
         <linearGradient id="chart-projection-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--demo-em)" stopOpacity=".55" />
-          <stop offset="100%" stopColor="var(--demo-em)" stopOpacity=".05" />
+          <stop offset="0%" stopColor="var(--success-600)" stopOpacity=".55" />
+          <stop offset="100%" stopColor="var(--success-600)" stopOpacity=".05" />
         </linearGradient>
       </defs>
       {showBand && cautious && bull ? (
@@ -111,8 +111,8 @@ export function SimulationDemoChart({
         <>
           <path d={areaToBaseline(base.out.yearEnds, "contributed")} fill="url(#chart-deposit-gradient)" />
           <path d={areaToBaseline(base.out.yearEnds, "total")} fill="url(#chart-projection-gradient)" />
-          <path d={pathFor(base.out.yearEnds, "contributed")} fill="none" stroke="var(--demo-vi)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-          <path d={pathFor(base.out.yearEnds, "total")} fill="none" stroke="var(--demo-em)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          <path d={pathFor(base.out.yearEnds, "contributed")} fill="none" stroke="var(--primary-600)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+          <path d={pathFor(base.out.yearEnds, "total")} fill="none" stroke="var(--success-600)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
         </>
       ) : null}
       {markers.map((m) => (
@@ -122,7 +122,7 @@ export function SimulationDemoChart({
         </g>
       ))}
       {baseEnd ? (
-        <text x={W - 4} y={y(baseEnd.total)} fontSize={10} fill="var(--demo-em)" textAnchor="end" dominantBaseline="middle">
+        <text x={W - 4} y={y(baseEnd.total)} fontSize={10} fill="var(--success-600)" textAnchor="end" dominantBaseline="middle">
           {formatDisplayMoney(Math.round(baseEnd.total), locale)}
         </text>
       ) : null}
