@@ -312,4 +312,19 @@ describe("Overview clean hierarchy", () => {
     expect(container.querySelector(".ovc-meta")).toBeTruthy();
     expect(container.querySelector(".ovc-plan-meta")).toBeTruthy();
   });
+
+  it("shows lifetime plan progress from the plan start instead of a yearly slice", async () => {
+    dbMocks.getSettings.mockResolvedValue({ ...defaultSettings(), startDate: "2025-01-15" });
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-life-1", "2025-03-15")]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
+    const planCard = container.querySelector('[aria-label="Kế hoạch dài hạn"]');
+    expect(planCard).toBeTruthy();
+    // Lifetime horizon: anchored at the plan start, no yearly slice selector.
+    expect(planCard?.textContent).toContain("từ 01/2025");
+    expect(planCard?.querySelector("select")).toBeNull();
+    expect(planCard?.textContent).toContain("Đã ghi nhận");
+  });
 });

@@ -24,6 +24,83 @@ export type PlanVsReality = {
   state: "not_started" | "on_track" | "below_plan";
 };
 
+export type LifetimePlan = {
+  mode: HeroLifetimeMode;
+  /** "MM/YYYY" of the plan start, for display. */
+  startLabel: string | null;
+  plannedMonths: number;
+  recordedMonths: number;
+  missingMonths: number;
+  plannedAmount: number;
+  actualAmount: number;
+  progressPct: number;
+  state: "not_started" | "on_track" | "below_plan";
+};
+
+/**
+ * Lifetime version of the plan-vs-reality view: total contributed since the
+ * plan start vs total planned since the plan start. This is what the
+ * "Kế hoạch dài hạn" (long-term plan) card shows — the yearly slice was
+ * conceptually wrong there ("long-term" title, one-year numbers).
+ * Pure: no Date.now(), no storage, no network.
+ */
+export function buildLifetimePlan(input: {
+  startDate: string;
+  contributionY1: number;
+  contributionY2: number;
+  trackInAppCash: boolean | null | undefined;
+  transactions: readonly PlanRealityTransaction[];
+  today: string;
+}): LifetimePlan {
+  const today = validDate(input.today) ?? new Date(0);
+  const start = validDate(input.startDate);
+  const mode = heroLifetimeMode(input.trackInAppCash);
+  const countedTypes = mode === "cash_first" ? CASH_FIRST_CONTRIBUTION_TYPES : SECURITIES_FIRST_CONTRIBUTION_TYPES;
+  const firstYearMonthly = Number.isFinite(input.contributionY1) && input.contributionY1 > 0 ? input.contributionY1 : 0;
+  const laterMonthly = Number.isFinite(input.contributionY2) && input.contributionY2 > 0 ? input.contributionY2 : 0;
+
+  if (!start || start > today) {
+    return {
+      mode, startLabel: null, plannedMonths: 0, recordedMonths: 0, missingMonths: 0,
+      plannedAmount: 0, actualAmount: 0, progressPct: 0, state: "not_started",
+    };
+  }
+
+  let plannedMonths = 0;
+  let plannedAmount = 0;
+  const monthCursor = new Date(start.getFullYear(), start.getMonth(), 1, 12, 0, 0);
+  const dueDay = Math.min(28, Math.max(1, start.getDate()));
+  let monthIndex = 0;
+  while (monthCursor <= today) {
+    const due = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), dueDay, 12, 0, 0);
+    if (due > today) break;
+    plannedMonths += 1;
+    plannedAmount += planAmountForMonth(monthIndex, firstYearMonthly, laterMonthly);
+    monthCursor.setMonth(monthCursor.getMonth() + 1);
+    monthIndex += 1;
+  }
+
+  const recordedMonths = new Set<string>();
+  let actualAmount = 0;
+  for (const tx of input.transactions ?? []) {
+    if (!tx || tx.deletedAt || !countedTypes.includes(tx.type)) continue;
+    const date = validDate(tx.date);
+    if (!date || date > today) continue;
+    if (!Number.isFinite(tx.amount) || tx.amount <= 0) continue;
+    actualAmount += tx.amount;
+    recordedMonths.add(tx.date.slice(0, 7));
+  }
+
+  const missingMonths = Math.max(0, plannedMonths - recordedMonths.size);
+  const progressPct = plannedAmount > 0 ? Math.min(100, Math.max(0, (actualAmount / plannedAmount) * 100)) : 0;
+  const state = plannedMonths === 0 ? "not_started" : actualAmount >= plannedAmount ? "on_track" : "below_plan";
+  const startLabel = `${String(start.getMonth() + 1).padStart(2, "0")}/${start.getFullYear()}`;
+  return {
+    mode, startLabel, plannedMonths, recordedMonths: recordedMonths.size, missingMonths,
+    plannedAmount, actualAmount, progressPct, state,
+  };
+}
+
 /**
  * Returns only calendar years that can be reviewed from the existing plan/data.
  * This is display-only: it neither persists a preference nor changes ledger data.
