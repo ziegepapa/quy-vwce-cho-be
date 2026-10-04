@@ -19,6 +19,8 @@ VWCE Vault nên vận hành như một **family investment operating system**: d
 
 ## Ưu tiên đề xuất tiếp theo
 
+> **Tình trạng thực hiện (10/2026):** toàn bộ P1 (Smart time lens, Saved views, Data quality inbox, Portfolio heartbeat), P2 (Import review workspace, Plan versus reality, Year-in-review) và P3 (Shared household handoff, Confidence timeline) đã được triển khai — xem `src/pages/Transactions.tsx` (timeLens, saved views, quality inbox), `src/pages/portfolioHeartbeat.ts`, `src/pages/planVsReality.ts`, `src/pages/yearInReview.ts`, `src/pages/HouseholdHandoff.tsx`, `src/pages/ConfidenceTimeline.tsx`. Hướng phát triển từ 10/2026 chuyển sang **tinh gọn**: Overview rút từ 8 khối xuống 3 vùng, rebuild Transactions + Settings đồng bộ ngôn ngữ gọn (#296–#301). Các mục dưới đây giữ lại làm tài liệu gốc của roadmap.
+
 | Ưu tiên | Hạng mục | Giá trị người dùng | Phạm vi kỹ thuật an toàn |
 |---|---|---|---|
 | P1 | **Smart time lens** | Một chạm xem Tháng này, 90 ngày, Năm nay hoặc Năm trước; journal hiển thị kết quả ngay trong ngữ cảnh kế hoạch. | Chỉ là filter hiển thị trên view-model Transactions. |
