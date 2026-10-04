@@ -34,7 +34,9 @@ export type ProjectOutput = {
 export const TAX_RATE = 0.26375;
 export const TEILFREISTELLUNG = 0.3;
 export const SPARERPAUSCH = 1000;
-export const DEFAULT_TER = 0.0022;
+// OCF VWCE: 0.14%/nam, ap dung tu 28/7/2026 (Vanguard giam tu 0.19%).
+// Truoc do: 0.22% (den 7/10/2025) -> 0.19% (tu 7/10/2025).
+export const DEFAULT_TER = 0.0014;
 export const MAX_YEARS = 40;
 
 export function projectEnd(input: ProjectInput): ProjectOutput {
