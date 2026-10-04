@@ -843,7 +843,9 @@ export default function SettingsPage({
           dataHealthPanel={<LocalDataInventoryPanel localeOverride={locale} />}
           syncHealthPanel={syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
           syncConflictPanel={conflictPanel}
-          onSelectTab={(tab) => setSearchParams(tab === "general" ? {} : { tab }, { replace: true })}
+          mfaEnrolled={auth.mfaEnrolled}
+          lastSyncAt={lastLocalSyncAt || null}
+          appVersion={APP_RELEASE_VERSION}
           onPatchSettings={patchSettings}
           onChangeTarget={(next) => patchSettings({ planTarget: next })}
           onTheme={pickTheme}

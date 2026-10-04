@@ -54,7 +54,7 @@ import {
   type TransactionSort,
   type TransactionTimeLens,
 } from "./transactionsListWindow";
-import "../styles/demo-v10-transactions.css";
+import "../styles/transactions-v2.css";
 import "../styles/clean-shared.css";
 
 const TradeRepublicPdfImport = lazy(() => import("../components/TradeRepublicPdfImport"));
@@ -183,9 +183,9 @@ export default function Transactions() {
   const { locale } = useLocale();
   const types = useMemo(() => transactionTypes(locale), [locale]);
   const text = locale === "de" ? {
-    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", transactionCount: "Buchungen", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Filter schließen", tools: "Filter", filterSheet: "Filter", applyFilters: "Anwenden", search: "Suchen", searchLedger: "Transaktionen durchsuchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", instrument: "Wertpapier", instrumentVwce: "VWCE", instrumentOther: "Andere Wertpapiere", status: "Status", statusNormal: "Unauffällig", statusReview: "Prüfen", activeFilterChips: "Aktive Filter", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", journal: "Transaktionsjournal", quickFilter: "Schnellfilter", buysQuick: "VWCE-Käufe", contributionsQuick: "Einzahlungen", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", editTransaction: "Transaktion bearbeiten", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen", deleteConfirm: "Diese Transaktion löschen?", activity: "Aktivität", tradeActivity: "Wertpapiere", fundingActivity: "Einzahlungen", outflowActivity: "Ausgaben", newest: "Neueste zuerst", oldest: "Älteste zuerst", amountDesc: "Höchster Betrag", sort: "Sortierung", activeFilters: "{count} aktiv", clearFilters: "Zurücksetzen", quickBuy: "VWCE kaufen", quickFunding: "Geld einzahlen", rowMenu: "Aktionen für Transaktion", timeLens: "Zeitraum", timeAll: "Gesamt", thisMonth: "Dieser Monat", last90Days: "90 Tage", thisYear: "Dieses Jahr", lastYear: "Letztes Jahr", qualityInbox: "Datenqualität", qualityCount: "{count} prüfen", qualityMore: "{count} weitere zeigen", qualityOpen: "Öffnen und prüfen", qualityAction: "Aktion erforderlich", qualityReview: "Prüfen", qualityTip: "Hinweis", qualityMissingIsin: "ISIN fehlt", qualityInvalidIsin: "ISIN ist ungültig", qualityInvalidAmount: "Betrag fehlt oder ist ungültig", qualityMissingQuantity: "Menge oder Stückpreis fehlt", qualityMissingUnitPrice: "Stückpreis fehlt", qualityMissingNote: "Notiz fehlt", qualitySourceReplay: "Finanzielle Prüfung", qualitySourceCompleteness: "Vollständigkeitsprüfung", qualityRecordManual: "Manuell", qualityRecordTradeRepublic: "Trade Republic PDF", qualityRecordLegacy: "Legacy / unbekannt", savedViews: "Gespeicherte Ansichten", saveView: "Ansicht speichern", savedViewName: "Name der Ansicht", savedViewNamePlaceholder: "z. B. Käufe dieses Jahr", saveCurrentView: "Aktuelle Ansicht speichern", savedViewEmpty: "Noch keine gespeicherte Ansicht.", savedViewLimit: "Maximal {count} Ansichten. Löschen Sie eine Ansicht, um fortzufahren.", savedViewNameRequired: "Geben Sie einen Namen für die Ansicht ein.", savedViewStorageError: "Diese Ansicht konnte auf diesem Gerät nicht gespeichert werden.", savedViewNoFilters: "Wählen Sie mindestens einen Filter oder eine Sortierung aus.", removeSavedView: "Ansicht {name} löschen", dateAmountRequired: "Datum und Betrag sind erforderlich.", adjustmentNoteRequired: "Für eine Anpassung ist eine Notiz erforderlich.", invalidIsinChecksum: "ISIN ist ungültig oder die Prüfsumme stimmt nicht.", sellQuantityRequired: "Für einen Verkauf ist eine Wertpapiermenge erforderlich.", priceOrQuantityRequired: "Preis oder Menge ist erforderlich.", invalidQuantity: "Die Menge ist ungültig.",
+    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", transactionCount: "Buchungen", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Filter schließen", tools: "Filter", filterSheet: "Filter", applyFilters: "Anwenden", search: "Suchen", searchLedger: "Transaktionen durchsuchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", instrument: "Wertpapier", instrumentVwce: "VWCE", instrumentOther: "Andere Wertpapiere", status: "Status", statusNormal: "Unauffällig", statusReview: "Prüfen", activeFilterChips: "Aktive Filter", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", journal: "Transaktionsjournal", quickFilter: "Schnellfilter", buysQuick: "VWCE-Käufe", contributionsQuick: "Einzahlungen", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", editTransaction: "Transaktion bearbeiten", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen", deleteConfirm: "Diese Transaktion löschen?", activity: "Aktivität", tradeActivity: "Wertpapiere", fundingActivity: "Einzahlungen", outflowActivity: "Ausgaben", newest: "Neueste zuerst", oldest: "Älteste zuerst", amountDesc: "Höchster Betrag", sort: "Sortierung", activeFilters: "{count} aktiv", clearFilters: "Zurücksetzen", quickBuy: "VWCE kaufen", quickFunding: "Geld einzahlen", rowMenu: "Aktionen für Transaktion", timeLens: "Zeitraum", timeAll: "Gesamt", thisMonth: "Dieser Monat", last90Days: "90 Tage", thisYear: "Dieses Jahr", lastYear: "Letztes Jahr", qualityInbox: "Datenqualität", qualityCount: "{count} prüfen", qualityMore: "{count} weitere zeigen", qualityOpen: "Öffnen und prüfen", qualityAction: "Aktion erforderlich", qualityReview: "Prüfen", qualityTip: "Hinweis", qualityMissingIsin: "ISIN fehlt", qualityInvalidIsin: "ISIN ist ungültig", qualityInvalidAmount: "Betrag fehlt oder ist ungültig", qualityMissingQuantity: "Menge oder Stückpreis fehlt", qualityMissingUnitPrice: "Stückpreis fehlt", qualityMissingNote: "Notiz fehlt", qualitySourceReplay: "Finanzielle Prüfung", qualitySourceCompleteness: "Vollständigkeitsprüfung", qualityRecordManual: "Manuell", qualityRecordTradeRepublic: "Trade Republic PDF", qualityRecordLegacy: "Legacy / unbekannt", savedViews: "Gespeicherte Ansichten", saveView: "Ansicht speichern", savedViewName: "Name der Ansicht", savedViewNamePlaceholder: "z. B. Käufe dieses Jahr", saveCurrentView: "Aktuelle Ansicht speichern", savedViewEmpty: "Noch keine gespeicherte Ansicht.", savedViewLimit: "Maximal {count} Ansichten. Löschen Sie eine Ansicht, um fortzufahren.", savedViewNameRequired: "Geben Sie einen Namen für die Ansicht ein.", savedViewStorageError: "Diese Ansicht konnte auf diesem Gerät nicht gespeichert werden.", savedViewNoFilters: "Wählen Sie mindestens einen Filter oder eine Sortierung aus.", removeSavedView: "Ansicht {name} löschen", dateAmountRequired: "Datum und Betrag sind erforderlich.", adjustmentNoteRequired: "Für eine Anpassung ist eine Notiz erforderlich.", invalidIsinChecksum: "ISIN ist ungültig oder die Prüfsumme stimmt nicht.", sellQuantityRequired: "Für einen Verkauf ist eine Wertpapiermenge erforderlich.", priceOrQuantityRequired: "Preis oder Menge ist erforderlich.", invalidQuantity: "Die Menge ist ungültig.", heroContributed: "eingezahlt", heroTxCount: "{count} Buchungen", yearPills: "Jahr wählen", yearSummary: "{count} Buchungen im Jahr {year}", allYearsSummary: "{count} Buchungen · alle Jahre", detailPrev: "Vorherige Buchung", detailNext: "Nächste Buchung", detailClose: "Details schließen", lotWorth: "Tranche jetzt wert", boughtMarker: "Kauf", sourceLabel: "Quelle",
   } : {
-    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", transactionCount: "Giao dịch", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Đóng bộ lọc", tools: "Lọc", filterSheet: "Bộ lọc", applyFilters: "Áp dụng", search: "Tìm", searchLedger: "Tìm kiếm giao dịch", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", instrument: "Công cụ", instrumentVwce: "VWCE", instrumentOther: "Chứng khoán khác", status: "Trạng thái", statusNormal: "Bình thường", statusReview: "Cần rà soát", activeFilterChips: "Bộ lọc đang dùng", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", editTransaction: "Sửa giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước", qualityInbox: "Dữ liệu cần rà soát", qualityCount: "{count} cần rà soát", qualityMore: "Xem thêm {count}", qualityOpen: "Mở để rà soát", qualityAction: "Cần xử lý", qualityReview: "Cần kiểm tra", qualityTip: "Gợi ý", qualityMissingIsin: "Thiếu ISIN", qualityInvalidIsin: "ISIN không hợp lệ", qualityInvalidAmount: "Số tiền thiếu hoặc không hợp lệ", qualityMissingQuantity: "Thiếu số lượng hoặc giá đơn vị", qualityMissingUnitPrice: "Thiếu giá đơn vị", qualityMissingNote: "Thiếu ghi chú", qualitySourceReplay: "Kiểm tra tài chính", qualitySourceCompleteness: "Kiểm tra độ đầy đủ", qualityRecordManual: "Nhập thủ công", qualityRecordTradeRepublic: "PDF Trade Republic", qualityRecordLegacy: "Legacy / không rõ nguồn", savedViews: "Góc xem đã lưu", saveView: "Lưu view", savedViewName: "Tên góc xem", savedViewNamePlaceholder: "Ví dụ: Mua trong năm nay", saveCurrentView: "Lưu góc xem hiện tại", savedViewEmpty: "Chưa có góc xem nào được lưu.", savedViewLimit: "Tối đa {count} góc xem. Hãy xóa một góc xem để tiếp tục.", savedViewNameRequired: "Hãy nhập tên cho góc xem.", savedViewStorageError: "Không thể lưu góc xem trên thiết bị này.", savedViewNoFilters: "Hãy chọn ít nhất một bộ lọc hoặc sắp xếp trước.", removeSavedView: "Xóa góc xem {name}", dateAmountRequired: "Ngày và số tiền bắt buộc", adjustmentNoteRequired: "Điều chỉnh bắt buộc có ghi chú", invalidIsinChecksum: "ISIN không hợp lệ hoặc sai checksum.", sellQuantityRequired: "Giao dịch bán cần số lượng chứng khoán.", priceOrQuantityRequired: "Cần giá hoặc số lượng", invalidQuantity: "Số lượng không hợp lệ",
+    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", transactionCount: "Giao dịch", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Đóng bộ lọc", tools: "Lọc", filterSheet: "Bộ lọc", applyFilters: "Áp dụng", search: "Tìm", searchLedger: "Tìm kiếm giao dịch", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", instrument: "Công cụ", instrumentVwce: "VWCE", instrumentOther: "Chứng khoán khác", status: "Trạng thái", statusNormal: "Bình thường", statusReview: "Cần rà soát", activeFilterChips: "Bộ lọc đang dùng", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", editTransaction: "Sửa giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước", qualityInbox: "Dữ liệu cần rà soát", qualityCount: "{count} cần rà soát", qualityMore: "Xem thêm {count}", qualityOpen: "Mở để rà soát", qualityAction: "Cần xử lý", qualityReview: "Cần kiểm tra", qualityTip: "Gợi ý", qualityMissingIsin: "Thiếu ISIN", qualityInvalidIsin: "ISIN không hợp lệ", qualityInvalidAmount: "Số tiền thiếu hoặc không hợp lệ", qualityMissingQuantity: "Thiếu số lượng hoặc giá đơn vị", qualityMissingUnitPrice: "Thiếu giá đơn vị", qualityMissingNote: "Thiếu ghi chú", qualitySourceReplay: "Kiểm tra tài chính", qualitySourceCompleteness: "Kiểm tra độ đầy đủ", qualityRecordManual: "Nhập thủ công", qualityRecordTradeRepublic: "PDF Trade Republic", qualityRecordLegacy: "Legacy / không rõ nguồn", savedViews: "Góc xem đã lưu", saveView: "Lưu view", savedViewName: "Tên góc xem", savedViewNamePlaceholder: "Ví dụ: Mua trong năm nay", saveCurrentView: "Lưu góc xem hiện tại", savedViewEmpty: "Chưa có góc xem nào được lưu.", savedViewLimit: "Tối đa {count} góc xem. Hãy xóa một góc xem để tiếp tục.", savedViewNameRequired: "Hãy nhập tên cho góc xem.", savedViewStorageError: "Không thể lưu góc xem trên thiết bị này.", savedViewNoFilters: "Hãy chọn ít nhất một bộ lọc hoặc sắp xếp trước.", removeSavedView: "Xóa góc xem {name}", dateAmountRequired: "Ngày và số tiền bắt buộc", adjustmentNoteRequired: "Điều chỉnh bắt buộc có ghi chú", invalidIsinChecksum: "ISIN không hợp lệ hoặc sai checksum.", sellQuantityRequired: "Giao dịch bán cần số lượng chứng khoán.", priceOrQuantityRequired: "Cần giá hoặc số lượng", invalidQuantity: "Số lượng không hợp lệ", heroContributed: "đã góp", heroTxCount: "{count} giao dịch", yearPills: "Chọn năm xem", yearSummary: "{count} giao dịch trong năm {year}", allYearsSummary: "{count} giao dịch · tất cả các năm", detailPrev: "Giao dịch trước", detailNext: "Giao dịch sau", detailClose: "Đóng chi tiết", lotWorth: "lô này hiện trị giá", boughtMarker: "mua", sourceLabel: "Nguồn",
   };
   const pdfImportLabel = locale === "de" ? "PDF importieren" : "Nhập PDF";
 
@@ -199,6 +199,7 @@ export default function Transactions() {
   const [form, setForm] = useState(emptyForm());
   const [editId, setEditId] = useState<string | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const filterSheetRef = useRef<HTMLElement | null>(null);
   const [pdfToolsOpen, setPdfToolsOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -256,11 +257,10 @@ export default function Transactions() {
   }, [filterSheetOpen, pdfToolsOpen]);
 
   const [sort, setSort] = useState<TransactionSort>("newest");
-  const [qualityVisibleLimit, setQualityVisibleLimit] = useState(3);
   const [savedViews, setSavedViews] = useState<SavedTransactionView[]>(() => readTransactionSavedViews());
   const [savedViewName, setSavedViewName] = useState("");
   const [savedViewError, setSavedViewError] = useState("");
-  const [visibleLimit, setVisibleLimit] = useState(TRANSACTION_WINDOW_SIZE);
+  const [visibleLimit, setVisibleLimit] = useState(5);
   const deferredQuery = useDeferredValue(q);
   const [qtyError, setQtyError] = useState("");
   const [isinError, setIsinError] = useState("");
@@ -275,10 +275,9 @@ export default function Transactions() {
         getSettings().catch(() => null),
       ]);
       setTxs(nextTransactions);
-      setVisibleLimit(TRANSACTION_WINDOW_SIZE);
+      setVisibleLimit(5);
       setQuotes(nextQuotes);
     setTrackInAppCash(settings?.trackInAppCash);
-    setQualityVisibleLimit(3);
     setLoadError(false);
     } catch {
       setLoadError(true);
@@ -308,7 +307,7 @@ export default function Transactions() {
   const qualityTransactionIds = useMemo(() => new Set(qualityIssues.map((issue) => issue.transactionId)), [qualityIssues]);
 
   useEffect(() => {
-    setVisibleLimit(TRANSACTION_WINDOW_SIZE);
+    setVisibleLimit(5);
   }, [activityFilter, deferredQuery, instrumentFilter, qualityFilter, sort, timeLens, typeFilter, yearFilter]);
 
   const listWindow = useMemo(
@@ -336,13 +335,120 @@ export default function Transactions() {
     : null;
 
   const transactionsById = useMemo(() => new Map(txs.map((tx) => [tx.id, tx])), [txs]);
-  const visibleQualityIssues = qualityIssues.slice(0, qualityVisibleLimit);
 
   const analysis = useMemo(
     () => analyzeTransactions(txs, quotes, trackInAppCash),
     [txs, quotes, trackInAppCash],
   );
   const analysisIsEmpty = analysis.openPositions === 0 && analysis.buyCount === 0;
+
+  const latestYear = years[0] ?? "all";
+  const yearDefaulted = useRef(false);
+  useEffect(() => {
+    if (!yearDefaulted.current && !loading && !loadError && years[0]) {
+      yearDefaulted.current = true;
+      setYearFilter(years[0]);
+    }
+  }, [loading, loadError, years]);
+
+  const contributionTypes = useMemo(
+    () => (analysis.contributionMode === "cash_first" ? ["cash_in"] : ["buy_vwce", "buy_security"]),
+    [analysis.contributionMode],
+  );
+
+  const monthlyBars = useMemo(() => {
+    const now = new Date();
+    const months: Array<{ key: string; year: number; month: number; value: number }> = [];
+    for (let i = 23; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, year: d.getFullYear(), month: d.getMonth() + 1, value: 0 });
+    }
+    const sums = new Map<string, number>();
+    for (const tx of txs) {
+      if (tx.deletedAt) continue;
+      if (!contributionTypes.includes(tx.type)) continue;
+      if (typeof tx.amount !== "number" || !Number.isFinite(tx.amount) || tx.amount <= 0) continue;
+      const key = tx.date.slice(0, 7);
+      sums.set(key, (sums.get(key) ?? 0) + tx.amount);
+    }
+    let max = 0;
+    for (const m of months) {
+      m.value = sums.get(m.key) ?? 0;
+      if (m.value > max) max = m.value;
+    }
+    return { months, max: max > 0 ? max : 1 };
+  }, [txs, contributionTypes]);
+
+  const quoteByIsin = useMemo(() => {
+    const map = new Map<string, Quote>();
+    for (const q of quotes) {
+      const prev = map.get(q.instrumentIsin);
+      if (!prev || q.asOf > prev.asOf || (q.asOf === prev.asOf && (q.updatedAt ?? "") > (prev.updatedAt ?? ""))) {
+        map.set(q.instrumentIsin, q);
+      }
+    }
+    return map;
+  }, [quotes]);
+
+  const flatVisible = useMemo(() => listWindow.groups.flatMap((group) => group.transactions), [listWindow]);
+  const detailIndex = detailId ? flatVisible.findIndex((tx) => tx.id === detailId) : -1;
+  const detailTx = detailIndex >= 0 ? flatVisible[detailIndex] : null;
+  const detailIsin = detailTx ? resolveInstrumentIsin(detailTx) : undefined;
+  const detailQuote = detailIsin ? quoteByIsin.get(detailIsin) : undefined;
+  const lotValue = detailTx && detailTx.quantity != null && detailQuote ? detailTx.quantity * detailQuote.price : null;
+  const lotPnlPct = lotValue != null && detailTx && detailTx.amount > 0 ? (lotValue - detailTx.amount) / detailTx.amount : null;
+
+  const spark = useMemo(() => {
+    if (!detailTx || !detailIsin) return null;
+    const points = quotes
+      .filter((q) => q.instrumentIsin === detailIsin && q.asOf >= detailTx.date)
+      .sort((a, b) => a.asOf.localeCompare(b.asOf));
+    if (points.length < 2) return null;
+    const maxPoints = 40;
+    const step = Math.max(1, Math.floor(points.length / maxPoints));
+    const sampled = points.filter((_, i) => i % step === 0);
+    const last = points[points.length - 1];
+    if (sampled[sampled.length - 1] !== last) sampled.push(last);
+    const prices = sampled.map((p) => p.price);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const span = max - min || 1;
+    const W = 400; const H = 72; const P = 8;
+    const coords = sampled.map((p, i) => {
+      const x = P + (i / (sampled.length - 1)) * (W - 2 * P);
+      const y = P + (1 - (p.price - min) / span) * (H - 2 * P);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const buyY = P + (1 - (sampled[0].price - min) / span) * (H - 2 * P);
+    return {
+      line: `M${coords.join(" L")}`,
+      area: `M${coords.join(" L")} L${(W - P).toFixed(1)},${H} L${P},${H} Z`,
+      up: prices[prices.length - 1] >= prices[0],
+      buyY,
+    };
+  }, [quotes, detailTx, detailIsin]);
+
+  function selectYear(year: string) {
+    setYearFilter(year);
+    setTimeLens("all");
+  }
+
+  function goDetail(direction: 1 | -1) {
+    const next = detailIndex + direction;
+    if (next >= 0 && next < flatVisible.length) setDetailId(flatVisible[next].id);
+  }
+
+  async function removeDetail() {
+    if (!detailTx) return;
+    if (readOnly) {
+      showBlocked();
+      return;
+    }
+    if (!confirm(text.deleteConfirm)) return;
+    await deleteTransaction(detailTx.id);
+    setDetailId(null);
+    await reload();
+  }
 
   const amount = parseDecimal(form.amount);
   const unitPrice = parseDecimal(form.unitPrice);
@@ -497,7 +603,7 @@ export default function Transactions() {
 
   function resetJournal() {
     setQ("");
-    setYearFilter("all");
+    setYearFilter(latestYear);
     setTypeFilter("all");
     setActivityFilter("all");
     setTimeLens("all");
@@ -648,80 +754,133 @@ export default function Transactions() {
   }
 
   return (
-    <main className="demo-v10-screen" aria-label={text.title}>
+    <main className="txv2-screen" aria-label={text.title}>
       <div className="tx-wrap">
-      <div className="s-head">
-        <h1 className="s-title">{text.title}</h1>
-        <div className="tx-head-actions">
+      <div className="txv2-head">
+        <h1 className="txv2-title">{text.title}</h1>
+        <div className="txv2-head-actions">
           {!readOnly ? (
             <details className="tx-import-tools" onToggle={(event) => setPdfToolsOpen(event.currentTarget.open)}>
               <summary>{pdfImportLabel}</summary>
               {pdfToolsOpen ? <Suspense fallback={<p className="tx-tool-loading" role="status">{text.loading}</p>}><TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /></Suspense> : null}
             </details>
           ) : null}
-          <button type="button" className="add-btn" onClick={() => openCreate()}>
-            + {text.add}
-          </button>
+          <button type="button" className="txv2-add" onClick={() => openCreate()} aria-label={text.addTransaction}>+</button>
         </div>
       </div>
 
-      <div className="summary-strip" aria-label={text.contributed}>
-        <span><strong>{formatDisplayMoney(analysis.contributed, locale)}</strong> {text.contributed}</span>
-        <span><strong className={analysis.totalPnl == null ? "" : analysis.totalPnl >= 0 ? "pos" : "neg"}>{analysis.totalPnl == null ? "—" : formatDisplayMoney(analysis.totalPnl, locale)}</strong> {text.pnl}</span>
-        <span><strong>{txs.length}</strong> {text.transactionCount}</span>
-      </div>
-
-      {qualityIssues.length ? (
-      <section className="demo-v10-gl tx-quality-summary" aria-label={text.qualityInbox}>
-        <div>
-          <div className="sum-lbl">{text.qualityInbox}</div>
-          <strong>{text.qualityCount.replace("{count}", String(qualityIssues.length))}</strong>
+      <section className="txv2-hero" aria-label={text.contributed}>
+        <div className="txv2-hero-amt">{formatDisplayMoney(analysis.contributed, locale)}</div>
+        <div className="txv2-hero-sub">{text.heroContributed} · {text.heroTxCount.replace("{count}", String(txs.length))}</div>
+        <div className="txv2-bars" aria-hidden="true">
+          {monthlyBars.months.map((m, i) => (
+            <span
+              key={m.key}
+              style={{ height: `${Math.max(3, Math.round((m.value / monthlyBars.max) * 100))}%` }}
+              className={(m.value > 0 ? "on " : "") + (i === monthlyBars.months.length - 1 ? "cur" : "")}
+            />
+          ))}
         </div>
-        <button
-          type="button"
-          className="tx-quality-open"
-          onClick={() => {
-            setQualityFilter("needs_review");
-            setFilterSheetOpen(false);
-          }}
-        >
-          {text.qualityOpen} ›
-        </button>
+        <div className="txv2-bars-lbl" aria-hidden="true">
+          {[...new Set(monthlyBars.months.map((m) => m.year))].map((y) => (
+            <span key={y}>{y}</span>
+          ))}
+        </div>
       </section>
+
+      <div className="txv2-tools">
+        <label className="tx-search-field">
+          <span className="sr-only">{text.searchLedger}</span>
+          <input value={q} onChange={(event) => setQ(event.target.value)} placeholder={text.searchPlaceholder} aria-label={text.searchLedger} />
+        </label>
+        <button type="button" className="txv2-filterbtn" aria-expanded={filterSheetOpen} aria-controls="tx-filter-sheet" onClick={openFilterSheet}>
+          <span aria-hidden="true">⧩</span> {text.tools}{activeFilterCount ? ` · ${activeFilterCount}` : ""}
+          {qualityIssues.length > 0 ? <i className="txv2-qdot" title={text.qualityInbox} /> : null}
+        </button>
+      </div>
+
+      {activeFilterCount ? (
+        <div className="tx-active-filter-chips" aria-label={text.activeFilterChips}>
+          {q.trim() ? <button type="button" onClick={() => setQ("")}>{q.trim()} ×</button> : null}
+          {timeLens !== "all" ? <button type="button" onClick={() => setTimeLens("all")}>{timeLens === "this_month" ? text.thisMonth : timeLens === "last_90_days" ? text.last90Days : timeLens === "this_year" ? text.thisYear : text.lastYear} ×</button> : null}
+          {yearFilter !== "all" ? <button type="button" onClick={() => selectYear(latestYear)}>{yearFilter} ×</button> : null}
+          {typeFilter !== "all" ? <button type="button" onClick={() => setTypeFilter("all")}>{types.find((type) => type.value === typeFilter)?.label ?? typeFilter} ×</button> : null}
+          {activityFilter !== "all" ? <button type="button" onClick={() => setActivityFilter("all")}>{activityFilter === "trade" ? text.tradeActivity : activityFilter === "funding" ? text.fundingActivity : text.outflowActivity} ×</button> : null}
+          {instrumentFilter !== "all" ? <button type="button" onClick={() => setInstrumentFilter("all")}>{instrumentFilter === "vwce" ? text.instrumentVwce : text.instrumentOther} ×</button> : null}
+          {qualityFilter !== "all" ? <button type="button" onClick={() => setQualityFilter("all")}>{qualityFilter === "normal" ? text.statusNormal : text.statusReview} ×</button> : null}
+          {sort !== "newest" ? <button type="button" onClick={() => setSort("newest")}>{sort === "oldest" ? text.oldest : text.amountDesc} ×</button> : null}
+        </div>
       ) : null}
 
-      <section className="tx-journal" aria-label={text.journal}>
-        <div className="demo-v10-gl tx-command-deck">
-          <div className="tx-journal-head">
-            <p className="tx-visible-count" role="status" aria-live="polite">
-              {listWindow.hasMore
-                ? text.visibleCount.replace("{visible}", String(listWindow.visible)).replace("{total}", String(listWindow.total))
-                : text.allVisible.replace("{total}", String(listWindow.total))}
-            </p>
-          </div>
-          <div className="tx-ledger-tools">
-            <label className="tx-search-field">
-              <span className="sr-only">{text.searchLedger}</span>
-              <input value={q} onChange={(event) => setQ(event.target.value)} placeholder={text.searchPlaceholder} aria-label={text.searchLedger} />
-            </label>
-            <button type="button" className="tx-tool-trigger" aria-expanded={filterSheetOpen} aria-controls="tx-filter-sheet" onClick={openFilterSheet}>
-              {filterSheetOpen ? text.hideTools : text.tools}{activeFilterCount ? " · " + text.activeFilters.replace("{count}", String(activeFilterCount)) : ""}
-            </button>
-          </div>
-          {activeFilterCount ? (
-            <div className="tx-active-filter-chips" aria-label={text.activeFilterChips}>
-              {q.trim() ? <button type="button" onClick={() => setQ("")}>{q.trim()} ×</button> : null}
-              {timeLens !== "all" ? <button type="button" onClick={() => setTimeLens("all")}>{timeLens === "this_month" ? text.thisMonth : timeLens === "last_90_days" ? text.last90Days : timeLens === "this_year" ? text.thisYear : text.lastYear} ×</button> : null}
-              {yearFilter !== "all" ? <button type="button" onClick={() => setYearFilter("all")}>{yearFilter} ×</button> : null}
-              {typeFilter !== "all" ? <button type="button" onClick={() => setTypeFilter("all")}>{types.find((type) => type.value === typeFilter)?.label ?? typeFilter} ×</button> : null}
-              {activityFilter !== "all" ? <button type="button" onClick={() => setActivityFilter("all")}>{activityFilter === "trade" ? text.tradeActivity : activityFilter === "funding" ? text.fundingActivity : text.outflowActivity} ×</button> : null}
-              {instrumentFilter !== "all" ? <button type="button" onClick={() => setInstrumentFilter("all")}>{instrumentFilter === "vwce" ? text.instrumentVwce : text.instrumentOther} ×</button> : null}
-              {qualityFilter !== "all" ? <button type="button" onClick={() => setQualityFilter("all")}>{qualityFilter === "normal" ? text.statusNormal : text.statusReview} ×</button> : null}
-              {sort !== "newest" ? <button type="button" onClick={() => setSort("newest")}>{sort === "oldest" ? text.oldest : text.amountDesc} ×</button> : null}
-            </div>
-          ) : null}
-        </div>
+      <div className="txv2-years" role="tablist" aria-label={text.yearPills}>
+        {years.map((year) => (
+          <button
+            key={year}
+            type="button"
+            role="tab"
+            aria-selected={yearFilter === year}
+            className={"txv2-ypill" + (yearFilter === year ? " on" : "")}
+            onClick={() => selectYear(year)}
+          >
+            {year}
+          </button>
+        ))}
+      </div>
+      <p className="txv2-ysum" role="status" aria-live="polite">
+        {yearFilter !== "all"
+          ? text.yearSummary.replace("{count}", String(listWindow.total)).replace("{year}", yearFilter)
+          : text.allYearsSummary.replace("{count}", String(listWindow.total))}
+      </p>
 
+      {listWindow.total === 0 ? (
+        <section className="txv2-empty">
+          <p>{txs.length === 0 ? text.noTransactions : text.noMatches}</p>
+          {txs.length === 0 && !readOnly ? (
+            <button type="button" className="txv2-add-first" onClick={() => openCreate()}>
+              + {text.quickBuy}
+            </button>
+          ) : null}
+        </section>
+      ) : (
+        <>
+          <ul className="txv2-list">
+            {flatVisible.map((tx) => {
+              const meta = types.find((t) => t.value === tx.type);
+              const sign = meta?.sign ?? "~";
+              return (
+                <li key={tx.id}>
+                  <button
+                    type="button"
+                    className="txv2-row"
+                    onClick={() => setDetailId(tx.id)}
+                    aria-label={`${meta?.label ?? tx.type}, ${formatDisplayDate(tx.date, locale)}, ${formatDisplayMoney(tx.amount, locale)}`}
+                  >
+                    <span className={`txv2-ico ${iconClass(tx.type)}`} aria-hidden="true">
+                      {iconGlyph(tx.type)}
+                    </span>
+                    <span className="txv2-main">
+                      <span className="txv2-name">{meta?.label ?? tx.type}</span>
+                      <span className="txv2-date">{formatDisplayDate(tx.date, locale)}</span>
+                    </span>
+                    <span className={"txv2-amt" + (sign === "+" ? " pos" : sign === "-" ? " neg" : "")}>
+                      {sign === "-" ? "−" : sign === "+" ? "+" : ""}{formatDisplayMoney(tx.amount, locale)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {listWindow.hasMore ? (
+            <button
+              type="button"
+              className="txv2-more"
+              onClick={() => setVisibleLimit((limit) => limit + TRANSACTION_WINDOW_SIZE)}
+            >
+              {text.loadMore.replace("{count}", String(Math.min(TRANSACTION_WINDOW_SIZE, listWindow.remaining)))}
+            </button>
+          ) : null}
+        </>
+      )}
       {filterSheetOpen ? (
         <div className="tx-filter-backdrop" role="presentation" onMouseDown={closeFilterSheet}>
           <section
@@ -794,13 +953,6 @@ export default function Transactions() {
               </div>
               <details className="tx-filter-more">
                 <summary>{locale === "de" ? "Weitere Filter" : "Bộ lọc khác"}</summary>
-                <div className="tx-filter-section" role="group" aria-label={text.year}>
-                  <span>{text.year}</span>
-                  <div className="tx-filter-options">
-                    <button type="button" className={filterDraft.year === "all" ? "active" : ""} aria-pressed={filterDraft.year === "all"} onClick={() => setFilterDraft((current) => ({ ...current, year: "all" }))}>{text.all}</button>
-                    {years.map((year) => <button key={year} type="button" className={filterDraft.year === year ? "active" : ""} aria-pressed={filterDraft.year === year} onClick={() => setFilterDraft((current) => ({ ...current, year, timeLens: "all" }))}>{year}</button>)}
-                  </div>
-                </div>
                 <div className="tx-filter-section" role="group" aria-label={locale === "de" ? "Details" : "Chi tiết"}>
                   <span>{locale === "de" ? "Details" : "Chi tiết"}</span>
                   <div className="tx-filter-options">
@@ -832,81 +984,84 @@ export default function Transactions() {
         </div>
       ) : null}
 
-      {listWindow.total === 0 ? (
-        <section className="demo-v10-gl" style={{ padding: 18 }}>
-          <p style={{ color: "var(--demo-dim)", margin: 0 }}>
-            {txs.length === 0 ? text.noTransactions : text.noMatches}
-          </p>
-          {txs.length === 0 ? (
-            <button type="button" className="add-btn" style={{ marginTop: 12 }} onClick={() => openCreate()}>
-              + {text.quickBuy}
-            </button>
-          ) : null}
-        </section>
-      ) : (
-        <>
-          {listWindow.groups.map(({ key, transactions: rows }) => (
-          <div key={key}>
-            <div className="mo-lbl">{monthLabel(key)}</div>
-            <section className="gl tx-card">
-              {rows.map((tx) => {
-                const meta = types.find((t) => t.value === tx.type);
-                const sign = meta?.sign ?? "~";
-                const isin = resolveInstrumentIsin(tx);
-                return (
-                  <article key={tx.id} className="tx-item">
-                    <button
-                      type="button"
-                      className="tx-item-main"
-                      onClick={() => openEdit(tx)}
-                      aria-label={`${meta?.label ?? tx.type}, ${formatDisplayDate(tx.date, locale)}, ${formatDisplayMoney(tx.amount, locale)}`}
-                    >
-                      <span className={`tx-ico ${iconClass(tx.type)}`} aria-hidden>
-                        {iconGlyph(tx.type)}
-                      </span>
-                      <span className="tx-b">
-                        <span className="tx-name">{meta?.label ?? tx.type}</span>
-                        <span className="tx-meta">
-                          <span>{formatDisplayDate(tx.date, locale)}</span>
-                          {isin ? <span className="tx-isin">{isin}</span> : null}
-                          {tx.notes ? <span className="tx-note">{tx.notes}</span> : null}
-                        </span>
-                      </span>
-                      <span className="tx-r">
-                        <span className={"tx-amt" + (sign === "+" ? " pos" : sign === "-" ? " neg" : "")}>
-                          {sign === "-" ? "−" : sign === "+" ? "+" : ""}{formatDisplayMoney(tx.amount, locale)}
-                        </span>
-                        {tx.quantity != null ? <span className="tx-sec">{text.quantity} {formatDisplayQuantity(tx.quantity, locale)}</span> : null}
-                      </span>
-                    </button>
-                    {!readOnly ? (
-                      <ActionMenu
-                        ariaLabel={text.rowMenu}
-                        actions={[
-                          { label: text.edit, onClick: () => openEdit(tx) },
-                          { label: text.delete, danger: true, onClick: () => removeTransaction(tx.id) },
-                        ]}
-                      />
-                    ) : null}
-                  </article>
-                );
-              })}
+      {(() => {
+        if (!detailTx) return null;
+        const meta = types.find((t) => t.value === detailTx.type);
+        const sign = meta?.sign ?? "~";
+        return (
+          <div className="txv2-detail-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailId(null); }}>
+            <section
+              className="txv2-detail"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${meta?.label ?? detailTx.type}, ${formatDisplayDate(detailTx.date, locale)}`}
+              onKeyDown={(event) => { if (event.key === "Escape") setDetailId(null); }}
+            >
+              <div className="sheet-handle" aria-hidden="true" />
+              <div className="txv2-detail-head">
+                <span className={`txv2-ico ${iconClass(detailTx.type)}`} aria-hidden="true">
+                  {iconGlyph(detailTx.type)}
+                </span>
+                <div className="txv2-detail-titles">
+                  <strong>{meta?.label ?? detailTx.type}</strong>
+                  <span>{formatDisplayDate(detailTx.date, locale)}</span>
+                </div>
+                <div className="txv2-detail-nav">
+                  <button type="button" onClick={() => goDetail(-1)} disabled={detailIndex <= 0} aria-label={text.detailPrev}>‹</button>
+                  <button type="button" onClick={() => goDetail(1)} disabled={detailIndex >= flatVisible.length - 1} aria-label={text.detailNext}>›</button>
+                </div>
+                <button type="button" className="txv2-detail-x" onClick={() => setDetailId(null)} aria-label={text.detailClose}>×</button>
+              </div>
+              <div className="txv2-detail-hero">
+                <div className={"txv2-detail-amt" + (sign === "+" ? " pos" : sign === "-" ? " neg" : "")}>
+                  {sign === "-" ? "−" : sign === "+" ? "+" : ""}{formatDisplayMoney(detailTx.amount, locale)}
+                </div>
+                {detailTx.quantity != null && detailTx.unitPrice ? (
+                  <div className="txv2-detail-meta">
+                    {formatDisplayQuantity(detailTx.quantity, locale)} × {formatDisplayMoney(detailTx.unitPrice, locale)}
+                  </div>
+                ) : null}
+                {lotValue != null && lotPnlPct != null ? (
+                  <div className="txv2-detail-pl">
+                    <b className={lotPnlPct >= 0 ? "pos" : "neg"}>
+                      {lotPnlPct >= 0 ? "+" : "−"}{Math.abs(lotPnlPct * 100).toFixed(1)}%
+                    </b>
+                    <span>{text.lotWorth} {formatDisplayMoney(lotValue, locale)}</span>
+                  </div>
+                ) : null}
+              </div>
+              {spark ? (
+                <svg className="txv2-spark" viewBox="0 0 400 72" preserveAspectRatio="none" aria-hidden="true">
+                  <path d={spark.area} fill={spark.up ? "rgba(15,164,127,.12)" : "rgba(224,69,95,.12)"} />
+                  <path d={spark.line} fill="none" stroke={spark.up ? "var(--success-600)" : "var(--danger-600)"} strokeWidth="2.5" strokeLinecap="round" />
+                  <circle cx="8" cy={spark.buyY} r="4" fill="var(--surface-raised)" stroke="var(--text-tertiary)" strokeWidth="2.5" />
+                </svg>
+              ) : null}
+              <dl className="txv2-detail-card">
+                <div><dt>{text.type}</dt><dd>{meta?.label ?? detailTx.type}</dd></div>
+                <div><dt>{text.date}</dt><dd>{formatDisplayDate(detailTx.date, locale)}</dd></div>
+                {detailIsin ? <div><dt>ISIN</dt><dd className="mono">{detailIsin}</dd></div> : null}
+                {detailTx.quantity != null ? <div><dt>{text.quantity}</dt><dd>{formatDisplayQuantity(detailTx.quantity, locale)}</dd></div> : null}
+                {detailTx.unitPrice ? <div><dt>{text.unitPrice}</dt><dd>{formatDisplayMoney(detailTx.unitPrice, locale)}</dd></div> : null}
+                {detailTx.fee ? <div><dt>{text.fee}</dt><dd>{formatDisplayMoney(detailTx.fee, locale)}</dd></div> : null}
+                {detailTx.tax ? <div><dt>{text.tax}</dt><dd>{formatDisplayMoney(detailTx.tax, locale)}</dd></div> : null}
+                {detailTx.notes ? <div><dt>{text.notes}</dt><dd>{detailTx.notes}</dd></div> : null}
+                <div><dt>{text.sourceLabel}</dt><dd>{qualityRecordSourceLabel(detailTx.source ?? "legacy_or_unknown")}</dd></div>
+              </dl>
+              {!readOnly ? (
+                <div className="txv2-detail-actions">
+                  <button type="button" className="primary" onClick={() => { const tx = detailTx; setDetailId(null); openEdit(tx); }}>
+                    {text.edit}
+                  </button>
+                  <button type="button" className="danger" onClick={() => void removeDetail()}>
+                    {text.delete}
+                  </button>
+                </div>
+              ) : null}
             </section>
           </div>
-          ))}
-          {listWindow.hasMore ? (
-            <button
-              type="button"
-              className="tx-load-more"
-              onClick={() => setVisibleLimit((limit) => limit + TRANSACTION_WINDOW_SIZE)}
-            >
-              {text.loadMore.replace("{count}", String(Math.min(TRANSACTION_WINDOW_SIZE, listWindow.remaining)))}
-            </button>
-          ) : null}
-        </>
-      )}
-      </section>
-
+        );
+      })()}
       {show ? (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">

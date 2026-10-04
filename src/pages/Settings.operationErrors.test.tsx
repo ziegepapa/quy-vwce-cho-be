@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { AppSettings } from "../lib/types";
 import { APP_RELEASE_VERSION } from "../lib/appVersion";
@@ -129,24 +129,24 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     renderGermanSettings();
 
     expect(await screen.findByRole("heading", { name: "Einstellungen" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "Allgemein" }).getAttribute("aria-selected")).toBe("true");
-    expect(screen.getByRole("heading", { name: "Plan" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Sicherheit" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "PLAN" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "SICHERHEIT" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Passwort" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Wiederherstellungslink" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "VI" })).toBeTruthy();
-    expect(screen.getByText("Darstellung")).toBeTruthy();
-    expect(screen.getByText("Sprache")).toBeTruthy();
-    expect(screen.getByText("Ozean")).toBeTruthy();
-    expect(screen.queryByText("Ocean")).toBeNull();
+    expect(screen.getByRole("button", { name: /Sprache/ })).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Daten" }));
-    await waitFor(() => expect(screen.getByRole("tab", { name: "Daten" }).getAttribute("aria-selected")).toBe("true"));
-    expect(screen.getAllByText("Daten & Betrieb").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Darstellung" }));
+    const themeDialog = await screen.findByRole("dialog", { name: "Darstellung" });
+    expect(within(themeDialog).getByText("Ozean")).toBeTruthy();
+    expect(screen.queryByText("Ocean")).toBeNull();
+    fireEvent.click(within(themeDialog).getByRole("button", { name: "Schließen" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
+    fireEvent.click(screen.getByRole("button", { name: "Sichern & wiederherstellen" }));
+    const transfersDialog = await screen.findByRole("dialog", { name: "Sichern & wiederherstellen" });
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
-    fireEvent.click(screen.getByRole("button", { name: /JSON sichern/ }));
+    fireEvent.click(within(transfersDialog).getByRole("button", { name: /JSON sichern/ }));
     const germanBackupSheet = await screen.findByRole("dialog", { name: "Datensicherung" });
     fireEvent.click(germanBackupSheet.querySelector("button.settings-child-primary") as HTMLButtonElement);
     await waitFor(() => expect(dbMocks.exportBackup).toHaveBeenCalledTimes(1));
@@ -157,8 +157,13 @@ describe("German Settings and mobile Advanced hierarchy", () => {
 
   it("renders immediate localized feedback for successful JSON export", async () => {
     renderSettings("/settings?tab=data");
+    await screen.findByRole("dialog", { name: "Đồng bộ" });
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
-    fireEvent.click(await screen.findByRole("button", { name: /Sao lưu JSON/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Sao lưu & khôi phục" }));
+    const transfersDialog = await screen.findByRole("dialog", { name: "Sao lưu & khôi phục" });
+    fireEvent.click(within(transfersDialog).getByRole("button", { name: /Sao lưu JSON/ }));
     const vietnameseBackupSheet = await screen.findByRole("dialog", { name: "Sao lưu dữ liệu" });
     fireEvent.click(vietnameseBackupSheet.querySelector("button.settings-child-primary") as HTMLButtonElement);
 
@@ -172,7 +177,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     authMocks.resetPassword.mockResolvedValue({});
     renderSettings();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Đổi mật khẩu/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Mật khẩu/ }));
     const dialog = screen.getByRole("dialog", { name: "Đổi mật khẩu" });
     expect(dialog.textContent).toContain("security-test@example.invalid");
     fireEvent.click(screen.getByRole("button", { name: "Gửi link" }));
@@ -187,7 +192,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     authMocks.resetPassword.mockResolvedValue({ error: "PROVIDER_SECRET_CANARY" });
     renderSettings();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Đổi mật khẩu/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Mật khẩu/ }));
     fireEvent.click(screen.getByRole("button", { name: "Gửi link" }));
 
     const alert = await screen.findByRole("alert");
@@ -197,23 +202,39 @@ describe("German Settings and mobile Advanced hierarchy", () => {
 
   it("keeps malformed and unsupported German backup imports fail-closed", async () => {
     const { container } = renderGermanSettings("/settings?tab=data");
-    fireEvent.click(await screen.findByRole("button", { name: /Daten wiederherstellen/ }));
+    await screen.findByRole("dialog", { name: "Synchronisierung" });
+    fireEvent.click(screen.getByRole("button", { name: "Schließen" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(await screen.findByRole("button", { name: "Sichern & wiederherstellen" }));
+    await screen.findByRole("dialog", { name: "Sichern & wiederherstellen" });
+    const restoreBtn = await screen.findByText("Daten wiederherstellen");
+    fireEvent.click(restoreBtn.closest("button") as HTMLButtonElement);
     await screen.findByRole("dialog", { name: "Daten wiederherstellen" });
-    let input = container.querySelector('input[type="file"]') as HTMLInputElement;
 
     const malformed = new File(["not-json"], "kaputt.json", { type: "application/json" });
     Object.defineProperty(malformed, "text", { value: () => Promise.resolve("not-json") });
-    fireEvent.change(input, { target: { files: [malformed] } });
+    const labelEl = await screen.findByText("Sicherung importieren");
+    const fileInput = labelEl.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).toBeTruthy();
+    fireEvent.change(fileInput, { target: { files: [malformed] } });
     fireEvent.click(await screen.findByRole("button", { name: "Import bestätigen" }));
     await waitFor(() => expect(window.alert).toHaveBeenCalledWith("Ungültige JSON-Datei."));
     expect(dbMocks.importBackup).not.toHaveBeenCalled();
 
-    fireEvent.click(await screen.findByRole("button", { name: /Daten wiederherstellen/ }));
-    input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    // doImport đóng dialog restore -> mở lại qua transfers sheet
+    fireEvent.click(await screen.findByRole("button", { name: "Sichern & wiederherstellen" }));
+    await screen.findByRole("dialog", { name: "Sichern & wiederherstellen" });
+    const restoreBtn2 = await screen.findByText("Daten wiederherstellen");
+    fireEvent.click(restoreBtn2.closest("button") as HTMLButtonElement);
+    await screen.findByRole("dialog", { name: "Daten wiederherstellen" });
+
     const unsupportedJson = JSON.stringify({ schemaVersion: 999, exportedAt: "2026-08-14T06:00:00Z" });
     const unsupported = new File([unsupportedJson], "alt.json", { type: "application/json" });
     Object.defineProperty(unsupported, "text", { value: () => Promise.resolve(unsupportedJson) });
-    fireEvent.change(input, { target: { files: [unsupported] } });
+    const labelEl2 = await screen.findByText("Sicherung importieren");
+    const input2 = labelEl2.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input2).toBeTruthy();
+    fireEvent.change(input2, { target: { files: [unsupported] } });
     fireEvent.click(await screen.findByRole("button", { name: "Import bestätigen" }));
     await waitFor(() => expect(window.alert).toHaveBeenCalledWith("Diese Sicherungsversion wird nicht unterstützt."));
     expect(dbMocks.exportBackup).not.toHaveBeenCalled();
@@ -224,7 +245,13 @@ describe("German Settings and mobile Advanced hierarchy", () => {
   it("aborts German import when the mandatory pre-import backup cannot be created", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("PREBACKUP_SECRET_CANARY"));
     const { container } = renderGermanSettings("/settings?tab=data");
-    fireEvent.click(await screen.findByRole("button", { name: /Daten wiederherstellen/ }));
+    await screen.findByRole("dialog", { name: "Synchronisierung" });
+    fireEvent.click(screen.getByRole("button", { name: "Schließen" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(await screen.findByRole("button", { name: "Sichern & wiederherstellen" }));
+    await screen.findByRole("dialog", { name: "Sichern & wiederherstellen" });
+    const restoreBtn = await screen.findByText("Daten wiederherstellen");
+    fireEvent.click(restoreBtn.closest("button") as HTMLButtonElement);
     await screen.findByRole("dialog", { name: "Daten wiederherstellen" });
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const validJson = JSON.stringify({ schemaVersion: 3, exportedAt: "2026-08-14T06:00:00Z" });
@@ -246,7 +273,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     document.body.append(dock);
     renderSettings();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Đổi mật khẩu/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Mật khẩu/ }));
     expect(screen.getByRole("dialog", { name: "Đổi mật khẩu" })).toBeTruthy();
     expect(dock.classList.contains("is-hidden")).toBe(true);
     expect(dock.hasAttribute("inert")).toBe(true);
@@ -271,9 +298,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
   it("starts MFA from the stable General tab through its child view", async () => {
     authMocks.startMfaEnrollment.mockResolvedValue({ error: "MFA_FAIL" });
     renderSettings();
-    const generalTab = await screen.findByRole("tab", { name: "Chung" });
-    expect(generalTab.getAttribute("aria-selected")).toBe("true");
-    fireEvent.click(screen.getByRole("button", { name: /MFA \/ TOTP/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Xác thực 2 lớp/ }));
     const mfaDialog = await screen.findByRole("dialog", { name: "MFA / TOTP" });
     expect(mfaDialog).toBeTruthy();
     fireEvent.click(mfaDialog.querySelector("button.settings-child-primary") as HTMLButtonElement);
@@ -283,9 +308,8 @@ describe("German Settings and mobile Advanced hierarchy", () => {
 
   it("opens the durable Data tab for the legacy tab=data deep link used by Sync conflict navigation", async () => {
     renderGermanSettings("/settings?tab=data");
-    const dataTab = await screen.findByRole("tab", { name: "Daten" });
-    expect(dataTab.getAttribute("aria-selected")).toBe("true");
-    expect(screen.getAllByText("Daten & Betrieb").length).toBeGreaterThan(0);
+    const syncDialog = await screen.findByRole("dialog", { name: "Synchronisierung" });
+    expect(syncDialog).toBeTruthy();
   });
 });
 
@@ -295,7 +319,7 @@ describe("Settings operation errors", () => {
       .mockRejectedValueOnce(new Error("SETTINGS_SECRET_CANARY"))
       .mockResolvedValueOnce(undefined);
     renderSettings();
-    fireEvent.click(await screen.findByRole("button", { name: "Tùy chỉnh kế hoạch" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Kế hoạch từng năm" }));
     const input = await screen.findByLabelText("Năm / ngày cần tiền") as HTMLInputElement;
 
     fireEvent.change(input, { target: { value: "2043-12-31" } });
@@ -316,8 +340,12 @@ describe("Settings operation errors", () => {
   it("reports JSON export failure without changing data", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("EXPORT_SECRET_CANARY"));
     renderSettings("/settings?tab=data");
-
-    fireEvent.click(await screen.findByRole("button", { name: /Sao lưu JSON/ }));
+    await screen.findByRole("dialog", { name: "Đồng bộ" });
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(await screen.findByRole("button", { name: "Sao lưu & khôi phục" }));
+    const transfersDialogVi = await screen.findByRole("dialog", { name: "Sao lưu & khôi phục" });
+    fireEvent.click(within(transfersDialogVi).getByRole("button", { name: /Sao lưu JSON/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Xuất JSON/ }));
 
     const alert = await screen.findByRole("alert");
@@ -328,7 +356,12 @@ describe("Settings operation errors", () => {
   it("aborts import when the mandatory pre-import backup cannot be created", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("PREBACKUP_SECRET_CANARY"));
     const { container } = renderSettings("/settings?tab=data");
-    fireEvent.click(await screen.findByRole("button", { name: /Khôi phục dữ liệu/ }));
+    await screen.findByRole("dialog", { name: "Đồng bộ" });
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(await screen.findByRole("button", { name: "Sao lưu & khôi phục" }));
+    const transfersDialogVi2 = await screen.findByRole("dialog", { name: "Sao lưu & khôi phục" });
+    fireEvent.click(within(transfersDialogVi2).getByRole("button", { name: /Khôi phục dữ liệu/ }));
     await screen.findByText("Nhập sao lưu");
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File([JSON.stringify({ schemaVersion: 3, exportedAt: "2026-08-14T06:00:00Z" })], "backup.json", { type: "application/json" });
@@ -348,7 +381,10 @@ describe("Settings operation errors", () => {
   it("keeps data when deletion fails and leaves the confirmation available", async () => {
     dbMocks.clearAllData.mockRejectedValueOnce(new Error("DELETE_SECRET_CANARY"));
     renderSettings("/settings?tab=data");
-    expect((await screen.findAllByText("Dữ liệu & vận hành")).length).toBeGreaterThan(0);
+    await screen.findByRole("dialog", { name: "Đồng bộ" });
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(await screen.findByRole("heading", { name: "DỮ LIỆU" })).toBeTruthy();
     const deleteButton = await waitFor(() => {
       const button = [...document.querySelectorAll("button")].find((candidate) => candidate.textContent?.includes("Xóa toàn bộ dữ liệu local"));
       expect(button).toBeTruthy();

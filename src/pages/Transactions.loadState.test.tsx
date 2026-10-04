@@ -60,7 +60,7 @@ describe("Transactions load and empty states", () => {
     expect(screen.getByRole("button", { name: "Filter" })).toBeTruthy();
     expect(screen.getByLabelText("Transaktionen durchsuchen")).toBeTruthy();
     expect(document.querySelector(".tx-quality-summary")).toBeNull();
-    expect(screen.getAllByRole("button", { name: "+ Hinzufügen" })[0]).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Transaktion hinzufügen" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Filter" }));
     expect(screen.getByRole("dialog", { name: "Filter" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Zeitraum" })).toBeTruthy();
@@ -93,7 +93,7 @@ describe("Transactions load and empty states", () => {
 
     expect(await screen.findByText("20.08.2026")).toBeTruthy();
     expect(screen.getByText(/1\.234,50/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "+ Hinzufügen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Transaktion hinzufügen" }));
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(alertMock).toHaveBeenCalledWith("Datum und Betrag sind erforderlich.");
@@ -141,13 +141,12 @@ describe("Transactions load and empty states", () => {
     })));
     render(createElement(Transactions));
 
-    expect(await screen.findByText("Đang hiển thị 60/1000 giao dịch")).toBeTruthy();
-    expect(document.querySelectorAll(".tx-item")).toHaveLength(60);
+    expect(await screen.findByText("1000 giao dịch trong năm 2026")).toBeTruthy();
+    expect(document.querySelectorAll(".txv2-row")).toHaveLength(5);
 
     fireEvent.click(screen.getByRole("button", { name: "Tải thêm 60 giao dịch" }));
 
-    await waitFor(() => expect(document.querySelectorAll(".tx-item")).toHaveLength(120));
-    expect(screen.getByText("Đang hiển thị 120/1000 giao dịch")).toBeTruthy();
+    await waitFor(() => expect(document.querySelectorAll(".txv2-row")).toHaveLength(65));
   });
 
   it("applies activity filters in the compact Filter sheet without changing ledger rows", async () => {
@@ -157,15 +156,15 @@ describe("Transactions load and empty states", () => {
     ]);
     render(createElement(Transactions));
 
-    await screen.findByText("Tổng góp");
-    fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
+    await screen.findByText("2 giao dịch trong năm 2026");
+    fireEvent.click(screen.getByRole("button", { name: /Lọc/ }));
     fireEvent.click(screen.getByRole("button", { name: "Đầu tư" }));
-    expect(document.querySelectorAll(".tx-item")).toHaveLength(2);
+    expect(document.querySelectorAll(".txv2-row")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
 
-    expect(document.querySelectorAll(".tx-item")).toHaveLength(1);
-    expect(document.querySelector(".tx-item")?.textContent).toContain("Mua VWCE");
-    expect(document.querySelector(".tx-item")?.textContent).not.toContain("Góp");
+    expect(document.querySelectorAll(".txv2-row")).toHaveLength(1);
+    expect(document.querySelector(".txv2-row")?.textContent).toContain("Mua VWCE");
+    expect(document.querySelector(".txv2-row")?.textContent).not.toContain("Góp");
     expect(screen.getByRole("button", { name: "Đầu tư ×" })).toBeTruthy();
   });
 
@@ -175,8 +174,8 @@ describe("Transactions load and empty states", () => {
     ]);
     render(createElement(Transactions));
 
-    await screen.findByText("Tổng góp");
-    fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
+    await screen.findByText("1 giao dịch trong năm 2026");
+    fireEvent.click(screen.getByRole("button", { name: /Lọc/ }));
     fireEvent.click(screen.getByRole("button", { name: "Tháng này" }));
     fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
     expect(screen.getByRole("button", { name: "Tháng này ×" })).toBeTruthy();
@@ -223,11 +222,15 @@ describe("Transactions load and empty states", () => {
     })));
     render(createElement(Transactions));
 
-    expect(await screen.findByText("1000 cần rà soát")).toBeTruthy();
-    expect(document.querySelectorAll(".tx-quality-item")).toHaveLength(0);
-    fireEvent.click(screen.getByRole("button", { name: "Mở để rà soát ›" }));
+    await screen.findByText("1000 giao dịch trong năm 2026");
+    // Quality chỉ là chấm báo trên nút Lọc, không banner riêng
+    expect(document.querySelector(".txv2-qdot")).toBeTruthy();
+    expect(screen.queryByText("1000 cần rà soát")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Lọc/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Cần rà soát" }));
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
     expect(screen.getByRole("button", { name: "Cần rà soát ×" })).toBeTruthy();
-    expect(document.querySelectorAll(".tx-item")).toHaveLength(60);
+    expect(document.querySelectorAll(".txv2-row")).toHaveLength(5);
   });
 
   it("opens the canonical needs-review ledger lens without inventing missing data", async () => {
@@ -237,10 +240,13 @@ describe("Transactions load and empty states", () => {
     ]);
     render(createElement(Transactions));
 
-    expect(await screen.findByText("2 cần rà soát")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Mở để rà soát ›" }));
+    await screen.findByText("2 giao dịch trong năm 2026");
+    expect(document.querySelector(".txv2-qdot")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Lọc/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Cần rà soát" }));
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
     expect(screen.getByRole("button", { name: "Cần rà soát ×" })).toBeTruthy();
-    expect(document.querySelectorAll(".tx-item")).toHaveLength(2);
+    expect(document.querySelectorAll(".txv2-row")).toHaveLength(2);
     expect(screen.queryByRole("heading", { name: "Sửa giao dịch" })).toBeNull();
   });
 
@@ -248,8 +254,8 @@ describe("Transactions load and empty states", () => {
     dbMocks.listTransactions.mockResolvedValue([]);
     render(createElement(Transactions));
 
-    await screen.findByText("Tổng góp");
-    fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
+    await screen.findByText("Chưa có giao dịch.");
+    fireEvent.click(screen.getByRole("button", { name: /Lọc/ }));
     fireEvent.click(screen.getByRole("button", { name: "Tháng này" }));
     expect(screen.getByRole("button", { name: "Tháng này" }).getAttribute("aria-pressed")).toBe("true");
     expect(document.querySelectorAll(".tx-active-filter-chips button")).toHaveLength(0);
@@ -265,20 +271,20 @@ describe("Transactions load and empty states", () => {
     document.body.append(dock);
     render(createElement(Transactions));
 
-    await screen.findByText("Tổng góp");
-    fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
+    await screen.findByText("Chưa có giao dịch.");
+    fireEvent.click(screen.getByRole("button", { name: /Lọc/ }));
     expect(dock.classList.contains("is-hidden")).toBe(true);
     expect(dock.hasAttribute("inert")).toBe(true);
     expect(dock.getAttribute("aria-hidden")).toBe("true");
     expect(document.body.classList.contains("tx-filter-open")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Tháng này" }));
-    fireEvent.click(screen.getAllByRole("button", { name: "Đóng bộ lọc" })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Đóng bộ lọc" }));
     expect(dock.classList.contains("is-hidden")).toBe(false);
     expect(dock.hasAttribute("inert")).toBe(false);
     expect(document.body.classList.contains("tx-filter-open")).toBe(false);
 
-    fireEvent.click(screen.getByRole("button", { name: "Lọc" }));
+    fireEvent.click(screen.getByRole("button", { name: /Lọc/ }));
     expect(screen.getByRole("button", { name: "Toàn bộ" }).getAttribute("aria-pressed")).toBe("true");
   });
 
@@ -287,7 +293,7 @@ describe("Transactions load and empty states", () => {
     render(createElement(Transactions));
 
     await screen.findByText("Chưa có giao dịch.");
-    fireEvent.click(screen.getAllByRole("button", { name: "+ Thêm" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Thêm giao dịch" }));
     expect((screen.getByLabelText("Loại") as HTMLSelectElement).value).toBe("buy_vwce");
   });
 
@@ -310,7 +316,7 @@ describe("Transactions load and empty states", () => {
     render(createElement(Transactions));
 
     await screen.findByRole("button", { name: /Mua VWCE, 01\/08\/2026/ });
-    fireEvent.click(screen.getByRole("button", { name: "+ Thêm" }));
+    fireEvent.click(screen.getByRole("button", { name: "Thêm giao dịch" }));
     fireEvent.change(screen.getByLabelText("Loại"), { target: { value: "sell_vwce" } });
     fireEvent.change(screen.getByLabelText(/Tổng tiền/), { target: { value: "300" } });
     fireEvent.change(screen.getByLabelText(/Số lượng/), { target: { value: "3" } });
@@ -336,7 +342,9 @@ describe("Transactions load and empty states", () => {
     ]);
     render(createElement(Transactions));
 
-    expect(await screen.findByText(/Khoản góp tháng 8/)).toBeTruthy();
+    // Ghi chú không hiện ở dòng list (chỉ trong detail sheet), nhưng tìm kiếm vẫn khớp theo ghi chú
+    expect(await screen.findByText("1 giao dịch trong năm 2026")).toBeTruthy();
+    expect(document.querySelectorAll(".txv2-row")).toHaveLength(1);
     fireEvent.change(screen.getByLabelText("Tìm kiếm giao dịch"), { target: { value: "không khớp" } });
 
     expect(screen.getByText("Không có giao dịch khớp bộ lọc.")).toBeTruthy();

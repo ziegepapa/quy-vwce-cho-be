@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { AppLocale } from "../lib/locale";
 import type { AppSettings, PlanTarget } from "../lib/types";
 import type { ThemeChoice } from "../lib/theme";
-import { IconChevronRight, IconSync } from "./Icons";
+import { IconArchive, IconCash, IconChevronRight, IconClose, IconGoal, IconLanguage, IconLock, IconShield, IconSim, IconSliders, IconSync, IconUpload } from "./Icons";
 import "../styles/settings-cbo.css";
+import "../styles/settings-v2.css";
 
 const CONTRIBUTION_PRESETS = [100, 120, 150, 200, 300] as const;
 
 type CboTab = "general" | "prices" | "data";
 type ChildAction = "password-change" | "password-reset" | "mfa" | "diagnostics" | "backup" | "restore";
-type SettingsSheet = "profile" | "plan" | "simulation" | null;
+type SettingsSheet = "profile" | "plan" | "simulation" | "theme" | "language" | "prices" | "sync" | "transfers" | null;
 type HorizonPhase = "accumulate" | "transition" | "protect" | "use";
 type ContribInsightTone = "neutral" | "ok" | "caution" | "warn";
 type YearlyPlanRow = {
@@ -36,7 +37,6 @@ type Props = {
   dataHealthPanel: ReactNode;
   syncHealthPanel: ReactNode;
   syncConflictPanel: ReactNode;
-  onSelectTab: (tab: CboTab) => void;
   onPatchSettings: (next: Partial<AppSettings>) => void;
   onChangeTarget: (next: PlanTarget) => void;
   onTheme: (next: ThemeChoice) => void;
@@ -46,6 +46,9 @@ type Props = {
   onExportCsv: () => void;
   onOpenMigrate?: () => void;
   onSignOut?: () => void;
+  mfaEnrolled?: boolean;
+  lastSyncAt?: string | null;
+  appVersion?: string;
   handoffAction?: ReactNode;
   dangerAction?: ReactNode;
 };
@@ -180,7 +183,11 @@ function copyFor(locale: AppLocale) {
     insightBalanced: "Beitrag und Zeithorizont passen grob zusammen (nur Beiträge, ohne Rendite).",
     insightNoReturn: "Ohne Rendite · keine Anlageberatung · keine Buchung.",
     safe: "Sicherer Teil", vwce: "VWCE", targetDate: "Zieltermin", fullAmount: "Nahezu gesamtes Vermögen verwenden", targetAmount: "Zielbetrag", safeWindow: "Sicherheitszeitraum (Vorschau)", milestones: ["Heute", "Sicherheit beginnt", "Zieljahr"], advanced: "Erweitert für Simulation", advancedHelp: "Rendite, Inflation und Sicherheitsmarge", simulation: "Annahmen für Ziel & Simulation", simulationNote: "Nur für Ziel und Simulation; keine Buchung wird verändert.", vwceReturn: "VWCE-Rendite", inflation: "Inflation", safeReturn: "Sicherer Teil", buffer: "Sicherheitsmarge", save: "Fertig", resultTitle: "Ergebnisvorschau", resultSafeStart: "Sicherheit ab", resultNeedYear: "Zieljahr", resultThisYear: "Dieses Jahr", fullPortfolio: "Nahezu gesamtes Vermögen", yearPlanTitle: "Jahresplan", yearPlanSubtitle: "Vorschau aus Ihren Plan- und Beitragsangaben · keine Buchung wird erzeugt.", currentMarker: "Heute", safeMarker: "Sicherheitsbeginn", goalMarker: "Zieljahr",
-    everyday: "Im Alltag", language: "Sprache", appearance: "Darstellung", wallet: "Cash-Modell in der App", walletHelp: "Bestehende Buchungslogik bleibt unverändert.", security: "Sicherheit", password: "Passwort", recovery: "Wiederherstellungslink", mfa: "MFA / TOTP", signOut: "Abmelden",
+    everyday: "Im Alltag", language: "Sprache", appearance: "Darstellung",
+    planGroup: "PLAN", displayGroup: "ANZEIGE", dataGroup: "DATEN", securityGroup: "SICHERHEIT", otherGroup: "SONSTIGES",
+    profileSub: "Profil & Infos", goalRow: "Ziel", backupRestore: "Sichern & wiederherstellen", syncRow: "Synchronisierung",
+    vwcePrice: "VWCE-Kurs", passwordRow: "Passwort", mfaRow: "Zwei-Faktor-Auth", mfaOn: "Aktiviert", mfaOff: "Nicht aktiviert",
+    versionLabel: "Version", wallet: "Cash-Modell in der App", walletHelp: "Bestehende Buchungslogik bleibt unverändert.", security: "Sicherheit", password: "Passwort", recovery: "Wiederherstellungslink", mfa: "MFA / TOTP", signOut: "Abmelden",
     prices: "Kurse", pricesHelp: "Feed-Status und wirksame Kurse", pricesInfo: "Details zur Kursquelle", data: "Daten & Betrieb", sync: "Gesundheit & Synchronisierung", syncNow: "Jetzt synchronisieren", transfers: "Sicherung & Gerätewechsel", backup: "JSON sichern", restore: "Daten wiederherstellen", csv: "CSV exportieren", device: "Gerät wiederherstellen", handoff: "Notfallmappe & Übergabe", diagnostics: "Gerätedetails", danger: "Gefahrenbereich", localDetails: "Daten auf diesem Gerät", close: "Schließen", perYear: "%/Jahr", missingContribution: "Kein Monatsbeitrag konfiguriert", useNeed: "Bedarf in diesem Jahr", safeAvailable: "Sicher verfügbar",
   };
   return {
@@ -197,7 +204,11 @@ function copyFor(locale: AppLocale) {
     insightBalanced: "Mức góp và khung thời gian khá khớp (chỉ góp thuần, không tính lãi).",
     insightNoReturn: "Không tính lợi suất · không phải tư vấn · không tạo giao dịch.",
     safe: "Phần an toàn", vwce: "VWCE", targetDate: "Năm / ngày cần tiền", fullAmount: "Dùng gần như toàn bộ danh mục", targetAmount: "Số € mục tiêu", safeWindow: "Cửa sổ an toàn (preview)", milestones: ["Hôm nay", "Bắt đầu an toàn", "Năm cần tiền"], advanced: "Nâng cao cho mô phỏng", advancedHelp: "Lợi suất, lạm phát và biên an toàn", simulation: "Giả định mô phỏng", simulationNote: "Chỉ dùng cho mục tiêu và mô phỏng; không thay đổi giao dịch đã ghi.", vwceReturn: "Lợi suất VWCE", inflation: "Lạm phát", safeReturn: "Phần an toàn", buffer: "Biên an toàn", save: "Xong", resultTitle: "Kết quả gợi ý", resultSafeStart: "Bắt đầu an toàn", resultNeedYear: "Năm cần tiền", resultThisYear: "Năm nay", fullPortfolio: "Gần như toàn bộ danh mục", yearPlanTitle: "Kế hoạch từng năm", yearPlanSubtitle: "Bảng dự kiến từ năm bắt đầu đến năm cần tiền · không tạo lệnh mua/bán.", currentMarker: "Hiện tại", safeMarker: "Mốc an toàn", goalMarker: "Mốc mục tiêu",
-    everyday: "Tùy chọn hằng ngày", language: "Ngôn ngữ", appearance: "Giao diện", wallet: "Ví trong app", walletHelp: "Giữ nguyên logic ghi nhận tiền nạp trước lệnh mua hiện có.", security: "Bảo mật", password: "Đổi mật khẩu", recovery: "Link khôi phục", mfa: "MFA / TOTP", signOut: "Đăng xuất",
+    everyday: "Tùy chọn hằng ngày", language: "Ngôn ngữ", appearance: "Giao diện",
+    planGroup: "KẾ HOẠCH", displayGroup: "HIỂN THỊ", dataGroup: "DỮ LIỆU", securityGroup: "BẢO MẬT", otherGroup: "KHÁC",
+    profileSub: "Hồ sơ & thông tin", goalRow: "Mục tiêu", backupRestore: "Sao lưu & khôi phục", syncRow: "Đồng bộ",
+    vwcePrice: "Giá VWCE", passwordRow: "Mật khẩu", mfaRow: "Xác thực 2 lớp", mfaOn: "Đã bật", mfaOff: "Chưa bật",
+    versionLabel: "Phiên bản", wallet: "Ví trong app", walletHelp: "Giữ nguyên logic ghi nhận tiền nạp trước lệnh mua hiện có.", security: "Bảo mật", password: "Đổi mật khẩu", recovery: "Link khôi phục", mfa: "MFA / TOTP", signOut: "Đăng xuất",
     prices: "Giá", pricesHelp: "Trạng thái feed và giá đang dùng", pricesInfo: "Tìm hiểu nguồn giá", data: "Dữ liệu & vận hành", sync: "Sức khỏe & đồng bộ", syncNow: "Đồng bộ ngay", transfers: "Sao lưu & chuyển máy", backup: "Sao lưu JSON", restore: "Khôi phục dữ liệu", csv: "Xuất CSV", device: "Khôi phục thiết bị", handoff: "Hồ sơ khẩn cấp & bàn giao", diagnostics: "Chi tiết thiết bị", danger: "Vùng nguy hiểm", localDetails: "Dữ liệu trên thiết bị", close: "Đóng", perYear: "%/năm", missingContribution: "Chưa có khoản góp hằng tháng", useNeed: "Khoản cần năm nay", safeAvailable: "An toàn khả dụng",
   } as const;
 }
@@ -217,32 +228,35 @@ function Sheet({ title, onClose, closeLabel, children }: { title: string; onClos
   return <div className="p40-sheet-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="p40-sheet" role="dialog" aria-modal="true" aria-label={title}><div className="p40-sheet-grabber" aria-hidden /><header><strong>{title}</strong><button type="button" aria-label={closeLabel} onClick={onClose}>×</button></header><div className="p40-sheet-body">{children}</div></section></div>;
 }
 
-function PlanSummary({ settings, locale, copy, onOpenPlan, deRiskYears = 5 }: { settings: AppSettings; locale: AppLocale; copy: ReturnType<typeof copyFor>; onOpenPlan: () => void; deRiskYears?: number }) {
-  const today = useMemo(() => new Date(), []);
-  const target = settings.planTarget ?? { targetUseDate: settings.endDate ?? "", needFullAmount: true };
-  const partialAmount = !target.needFullAmount && Number.isFinite(target.partialNeedEuro) && (target.partialNeedEuro ?? 0) > 0 ? target.partialNeedEuro ?? null : null;
-  const contribution = settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1 > 0 ? settings.contributionY1 : null;
-  const yearsLeft = yearsTo(target.targetUseDate, today);
-  const hasGoal = yearsLeft !== null && (target.needFullAmount || partialAmount !== null);
-  const phase = hasGoal ? phaseFor(yearsLeft!, deRiskYears) : null;
-  const [phaseName, phaseSentence] = phase ? copy.phase[phase] : ["", ""];
-  const vwceShare = phase === "accumulate" ? 1 : phase === "transition" ? 0.5 : 0;
-  const safeShare = phase === "use" ? 0 : 1 - vwceShare;
-  const goalLabel = settings.planName || copy.plan;
 
-  return <section className={`p40-plan ${phase ? `p40-plan-${phase}` : "p40-plan-empty"}`} aria-label={copy.plan}>
-    <div className="p40-zone-head"><h2>{copy.plan}</h2><button type="button" className="p40-quiet-link" onClick={onOpenPlan}>{hasGoal ? copy.configurePlan : copy.addGoal}<IconChevronRight aria-hidden /></button></div>
-    {!hasGoal ? <div className="p40-plan-empty-state"><span>{copy.planEmpty}</span><p>{copy.planEmptyCopy}</p><button type="button" className="p40-text-button" onClick={onOpenPlan}>{copy.addGoal}<IconChevronRight aria-hidden /></button></div> : <>
-      <div className="p40-phase-line"><span className="p40-phase-chip">{phaseName} · {phase === "use" ? target.targetUseDate.slice(0, 4) : `${yearsLeft} ${locale === "de" ? "Jahre" : "năm"}`}</span></div>
-      <div className="p40-goal"><span>{goalLabel}</span><strong>{target.needFullAmount ? copy.fullPortfolio : money(partialAmount ?? 0, locale)} <small>· {target.targetUseDate.slice(0, 4)}</small></strong></div>
-      <div className="p40-annual"><span>{copy.annual}</span><p>{phaseSentence}</p>{contribution === null ? <strong className="p40-unknown">{copy.missingContribution}</strong> : phase === "use" ? <div className="p40-use-lines"><strong>{copy.useNeed}: {target.needFullAmount ? copy.fullPortfolio : money(partialAmount ?? 0, locale)}</strong><small>{copy.safeAvailable}: —</small></div> : <><strong>{money(contribution, locale)} → {money(contribution * vwceShare, locale)} {copy.vwce} · {money(contribution * safeShare, locale)} {copy.safe}</strong>{phase === "transition" ? <div className="p40-split" aria-label={`${copy.vwce} ${percent(vwceShare, locale)} · ${copy.safe} ${percent(safeShare, locale)}`}><i style={{ width: `${vwceShare * 100}%` }} /><b>{percent(vwceShare, locale)} {copy.vwce}</b><em>{percent(safeShare, locale)} {copy.safe}</em></div> : null}</>}</div>
-      <small className="p40-disclaimer">{copy.disclaimer}</small>
-    </>}
-  </section>;
+const THEME_DOT: Record<ThemeChoice, string> = {
+  premium: "linear-gradient(135deg, #E8D5A3, #B98A2F)",
+  dark: "#2A2650",
+  light: "#FFFFFF",
+};
+
+function relativeTime(iso: string, locale: AppLocale): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return locale === "de" ? "gerade eben" : "vừa xong";
+  if (mins < 60) return locale === "de" ? `vor ${mins} Min.` : `${mins} phút trước`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return locale === "de" ? `vor ${hours} Std.` : `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  return locale === "de" ? `vor ${days} T.` : `${days} ngày trước`;
 }
 
-function InlineAction({ title, onClick }: { title: string; onClick: () => void }) {
-  return <button type="button" className="p40-inline-action" onClick={onClick}><span>{title}</span><IconChevronRight aria-hidden /></button>;
+function SetRow({ icon, label, value, onClick, danger }: {
+  icon: ReactNode; label: string; value?: ReactNode; onClick?: () => void; danger?: boolean;
+}) {
+  return (
+    <button type="button" className={"set2-row" + (danger ? " danger" : "")} onClick={onClick}>
+      <span className="set2-ric" aria-hidden="true">{icon}</span>
+      <span className="set2-rtitle">{label}</span>
+      {value != null && value !== "" ? <span className="set2-rval">{value}</span> : null}
+      <IconChevronRight aria-hidden="true" />
+    </button>
+  );
 }
 
 export default function SettingsCboWorkspace(props: Props) {
@@ -290,20 +304,91 @@ export default function SettingsCboWorkspace(props: Props) {
     setContributionDraft(stored === "" ? "" : String(stored));
   }, [sheet, props.settings.contributionY1, props.settings.contributionY2]);
 
-  return <div className="settings-cbo p40-settings">
-    <header className="p40-header"><h1>{copy.title}</h1><div className="p40-identity"><span>{copy.fund}</span><strong>{props.settings.planName || "VWCE Vault"}{props.settings.childName ? ` · ${props.settings.childName}` : ""}</strong><small role="status">{props.saveLabel || copy.saved}</small></div></header>
-    <div className="p40-tabs" role="tablist" aria-label={copy.title}>{(["general", "prices", "data"] as CboTab[]).map((tab) => <button key={tab} type="button" role="tab" aria-selected={props.activeTab === tab} onClick={() => props.onSelectTab(tab)}>{copy.tabs[tab]}</button>)}</div>
+  const autoOpenedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (autoOpenedRef.current === props.activeTab) return;
+    autoOpenedRef.current = props.activeTab;
+    if (props.activeTab === "data") setSheet("sync");
+    else if (props.activeTab === "prices") setSheet("prices");
+  }, [props.activeTab]);
 
-    {props.activeTab === "general" ? <div className="p40-panel" role="tabpanel">
-      <section className="p40-profile-strip"><div><span>{copy.fund}</span><strong>{props.settings.planName || "VWCE Vault"}{props.settings.childName ? ` · ${props.settings.childName}` : ""}</strong></div><button type="button" onClick={() => setSheet("profile")}>{copy.editProfile}</button></section>
-      <PlanSummary settings={props.settings} locale={props.locale} copy={copy} deRiskYears={deRiskYears} onOpenPlan={() => setSheet("plan")} />
-      <section className="p40-zone p40-everyday"><div className="p40-zone-head"><h2>{copy.everyday}</h2></div><div className="p40-preference-grid"><div><span>{copy.language}</span><div className="p40-segments"><button type="button" className={props.locale === "vi" ? "selected" : ""} onClick={() => props.onLocale("vi")}>VI</button><button type="button" className={props.locale === "de" ? "selected" : ""} onClick={() => props.onLocale("de")}>DE</button></div></div><div><span>{copy.appearance}</span><div className="p40-segments">{themes.map((theme) => <button type="button" key={theme.value} className={props.theme === theme.value ? "selected" : ""} onClick={() => props.onTheme(theme.value)}>{theme.label}</button>)}</div></div></div><label className="p40-toggle-row"><span><strong>{copy.wallet}</strong><small>{copy.walletHelp}</small></span><input type="checkbox" checked={props.settings.trackInAppCash === true} onChange={(event) => props.onPatchSettings({ trackInAppCash: event.target.checked })} /></label></section>
-      <section className="p40-zone p40-security"><div className="p40-zone-head"><h2>{copy.security}</h2></div><div className="p40-security-actions"><InlineAction title={copy.password} onClick={() => props.onOpenChild("password-change")} /><InlineAction title={copy.recovery} onClick={() => props.onOpenChild("password-reset")} /><InlineAction title={copy.mfa} onClick={() => props.onOpenChild("mfa")} /></div>{props.onSignOut ? <button type="button" className="p40-signout" onClick={props.onSignOut}>{copy.signOut}</button> : null}</section>
-    </div> : null}
+  const contribution = props.settings.contributionY2 > 0 ? props.settings.contributionY2 : props.settings.contributionY1 > 0 ? props.settings.contributionY1 : null;
+  const targetYear = /^\d{4}/.test(target.targetUseDate) ? target.targetUseDate.slice(0, 4) : "";
+  const planName = props.settings.planName || "VWCE Vault";
+  const avatarInitial = (props.settings.childName || planName).trim().slice(0, 1).toUpperCase();
 
-    {props.activeTab === "prices" ? <div className="p40-panel" role="tabpanel"><section className="p40-zone p40-price-zone"><div className="p40-zone-head"><div><h2>{copy.prices}</h2><p>{copy.pricesHelp}</p></div><button type="button" className="p40-quiet-link">{copy.pricesInfo}<IconChevronRight aria-hidden /></button></div>{props.pricesPanel}</section></div> : null}
+  return <div className="set2">
+    <h1 className="set2-title">{copy.title}</h1>
 
-    {props.activeTab === "data" ? <div className="p40-panel" role="tabpanel"><header className="p40-tab-intro"><h2>{copy.data}</h2></header><section className="p40-sync-zone"><div className="p40-zone-head"><div><h2>{copy.sync}</h2>{props.lastSync ? <p>{props.lastSync}</p> : null}</div></div><div className="p40-sync-health">{props.syncHealthPanel}</div><button type="button" className="p40-sync-button" disabled={props.syncing} onClick={props.onSync}><IconSync />{props.syncing ? props.syncLabel : copy.syncNow}</button>{props.syncConflictPanel}</section><section className="p40-zone"><div className="p40-zone-head"><h2>{copy.transfers}</h2></div><div className="p40-transfer-grid"><InlineAction title={copy.backup} onClick={() => props.onOpenChild("backup")} /><InlineAction title={copy.restore} onClick={() => props.onOpenChild("restore")} /><InlineAction title={copy.csv} onClick={props.onExportCsv} />{props.onOpenMigrate ? <InlineAction title={copy.device} onClick={props.onOpenMigrate} /> : null}</div>{props.handoffAction ? <div className="p40-handoff">{props.handoffAction}</div> : null}</section><section className="p40-detail-zone"><InlineAction title={copy.diagnostics} onClick={() => props.onOpenChild("diagnostics")} /><details><summary>{copy.localDetails}</summary>{props.dataHealthPanel}</details></section><section className="p40-danger-zone"><span>{copy.danger}</span>{props.dangerAction}</section></div> : null}
+    <button type="button" className="set2-profile" onClick={() => setSheet("profile")}>
+      <span className="set2-avatar" aria-hidden="true">{avatarInitial}</span>
+      <span className="set2-ptext">
+        <strong>{planName}</strong>
+        <small>{copy.profileSub}</small>
+      </span>
+      <IconChevronRight aria-hidden="true" />
+    </button>
+
+    <h2 className="set2-gtitle">{copy.planGroup}</h2>
+    <div className="set2-group">
+      <SetRow icon={<IconCash />} label={copy.contribution} value={contribution != null ? money(contribution, props.locale) : "—"} onClick={() => setSheet("plan")} />
+      <SetRow icon={<IconGoal />} label={copy.goalRow} value={targetYear || "—"} onClick={() => setSheet("plan")} />
+      <SetRow icon={<IconSim />} label={copy.simulation} onClick={() => setSheet("simulation")} />
+      <SetRow icon={<IconArchive />} label={copy.yearPlanTitle} onClick={() => setSheet("plan")} />
+    </div>
+
+    <h2 className="set2-gtitle">{copy.displayGroup}</h2>
+    <div className="set2-group">
+      <button type="button" className="set2-row" onClick={() => setSheet("theme")}>
+        <span className="set2-ric" aria-hidden="true"><IconSliders /></span>
+        <span className="set2-rtitle">{copy.appearance}</span>
+        <span className="set2-dots" aria-hidden="true">
+          {(Object.keys(THEME_DOT) as ThemeChoice[]).map((value) => (
+            <i key={value} style={{ background: THEME_DOT[value] }} className={props.theme === value ? "on" : ""} />
+          ))}
+        </span>
+        <IconChevronRight aria-hidden="true" />
+      </button>
+      <SetRow icon={<IconLanguage />} label={copy.language} value={props.locale === "de" ? "Deutsch" : "Tiếng Việt"} onClick={() => setSheet("language")} />
+    </div>
+
+    <h2 className="set2-gtitle">{copy.dataGroup}</h2>
+    <div className="set2-group">
+      <SetRow icon={<IconArchive />} label={copy.backupRestore} onClick={() => setSheet("transfers")} />
+      <SetRow icon={<IconSync />} label={copy.syncRow} value={props.lastSyncAt ? relativeTime(props.lastSyncAt, props.locale) : undefined} onClick={() => setSheet("sync")} />
+      <SetRow icon={<IconCash />} label={copy.vwcePrice} onClick={() => setSheet("prices")} />
+      <button type="button" className="set2-row" onClick={props.onExportCsv}>
+        <span className="set2-ric" aria-hidden="true"><IconUpload /></span>
+        <span className="set2-rtitle">{copy.csv}</span>
+        <IconChevronRight aria-hidden="true" />
+      </button>
+    </div>
+
+    <h2 className="set2-gtitle">{copy.securityGroup}</h2>
+    <div className="set2-group">
+      <SetRow icon={<IconLock />} label={copy.passwordRow} onClick={() => props.onOpenChild("password-change")} />
+      <SetRow icon={<IconShield />} label={copy.recovery} onClick={() => props.onOpenChild("password-reset")} />
+      <SetRow icon={<IconShield />} label={copy.mfaRow} value={props.mfaEnrolled ? copy.mfaOn : copy.mfaOff} onClick={() => props.onOpenChild("mfa")} />
+      {props.onSignOut ? (
+        <button type="button" className="set2-row" onClick={props.onSignOut}>
+          <span className="set2-ric" aria-hidden="true"><IconClose /></span>
+          <span className="set2-rtitle">{copy.signOut}</span>
+          <IconChevronRight aria-hidden="true" />
+        </button>
+      ) : null}
+    </div>
+
+    <h2 className="set2-gtitle">{copy.otherGroup}</h2>
+    <div className="set2-group set2-legacy">
+      {props.handoffAction}
+      {props.dangerAction}
+    </div>
+
+    <p className="set2-foot">
+      <span className="set2-saved" role="status">✓ {props.saveLabel || copy.saved}</span>
+      {props.appVersion ? <span>{copy.versionLabel} {props.appVersion}</span> : null}
+    </p>
+
 
     {sheet === "profile" ? <Sheet title={copy.profile} closeLabel={copy.close} onClose={() => setSheet(null)}><div className="p40-sheet-fields"><label><span>{copy.planName}</span><input value={props.settings.planName} onChange={(event) => props.onPatchSettings({ planName: event.target.value })} /></label><label><span>{copy.childName}</span><input value={props.settings.childName} onChange={(event) => props.onPatchSettings({ childName: event.target.value })} /></label><div><span>{copy.account}</span><div className="p40-segments"><button type="button" className={props.settings.accountType === "parent" ? "selected" : ""} onClick={() => props.onPatchSettings({ accountType: "parent" })}>{copy.parent}</button><button type="button" className={props.settings.accountType === "child" ? "selected" : ""} onClick={() => props.onPatchSettings({ accountType: "child" })}>{copy.child}</button></div></div></div><button type="button" className="p40-sheet-done" onClick={() => setSheet(null)}>{copy.save}</button></Sheet> : null}
     {sheet === "plan" ? <Sheet title={copy.plan} closeLabel={copy.close} onClose={() => setSheet(null)}>
@@ -407,5 +492,69 @@ export default function SettingsCboWorkspace(props: Props) {
       <button type="button" className="p40-sheet-done" onClick={() => setSheet(null)}>{copy.save}</button>
     </Sheet> : null}
     {sheet === "simulation" ? <Sheet title={copy.simulation} closeLabel={copy.close} onClose={() => setSheet("plan")}><p className="p40-sheet-note">{copy.simulationNote}</p><div className="p40-sheet-fields p40-percent-grid"><label><span>{copy.vwceReturn}</span><input inputMode="decimal" value={String(props.settings.vwceReturn * 100)} onChange={(event) => updateRate("vwceReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.inflation}</span><input inputMode="decimal" value={String(props.settings.inflationRate * 100)} onChange={(event) => updateRate("inflationRate", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.safeReturn}</span><input inputMode="decimal" value={String(props.settings.safeReturn * 100)} onChange={(event) => updateRate("safeReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.buffer}</span><input inputMode="decimal" value={String(props.settings.bufferPct * 100)} onChange={(event) => updateRate("bufferPct", event.target.value)} /><small>%</small></label></div><button type="button" className="p40-sheet-done" onClick={() => setSheet("plan")}>{copy.save}</button></Sheet> : null}
+
+    {sheet === "theme" ? <Sheet title={copy.appearance} closeLabel={copy.close} onClose={() => setSheet(null)}>
+      <div className="set2-theme-list">
+        {themes.map((theme) => (
+          <button
+            key={theme.value}
+            type="button"
+            className={"set2-theme" + (props.theme === theme.value ? " on" : "")}
+            aria-pressed={props.theme === theme.value}
+            onClick={() => { props.onTheme(theme.value); setSheet(null); }}
+          >
+            <i style={{ background: THEME_DOT[theme.value] }} aria-hidden="true" />
+            <span>{theme.label}</span>
+            {props.theme === theme.value ? <b aria-hidden="true">✓</b> : null}
+          </button>
+        ))}
+      </div>
+    </Sheet> : null}
+    {sheet === "language" ? <Sheet title={copy.language} closeLabel={copy.close} onClose={() => setSheet(null)}>
+      <div className="set2-theme-list">
+        {(["vi", "de"] as AppLocale[]).map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={"set2-theme" + (props.locale === value ? " on" : "")}
+            aria-pressed={props.locale === value}
+            onClick={() => { props.onLocale(value); setSheet(null); }}
+          >
+            <span>{value === "vi" ? (props.locale === "de" ? "Vietnamesisch" : "Tiếng Việt") : (props.locale === "de" ? "Deutsch" : "Tiếng Đức")}</span>
+            {props.locale === value ? <b aria-hidden="true">✓</b> : null}
+          </button>
+        ))}
+      </div>
+    </Sheet> : null}
+    {sheet === "prices" ? <Sheet title={copy.vwcePrice} closeLabel={copy.close} onClose={() => setSheet(null)}>
+      <div className="set2-panel">{props.pricesPanel}</div>
+    </Sheet> : null}
+    {sheet === "sync" ? <Sheet title={copy.syncRow} closeLabel={copy.close} onClose={() => setSheet(null)}>
+      {props.lastSync ? <p className="set2-sync-sub">{props.lastSync}</p> : null}
+      <div className="set2-panel">{props.syncHealthPanel}</div>
+      <button type="button" className="set2-sync-btn" disabled={props.syncing} onClick={props.onSync}>
+        <IconSync aria-hidden="true" />{props.syncing ? props.syncLabel : copy.syncNow}
+      </button>
+      <div className="set2-panel">{props.syncConflictPanel}</div>
+    </Sheet> : null}
+    {sheet === "transfers" ? <Sheet title={copy.backupRestore} closeLabel={copy.close} onClose={() => setSheet(null)}>
+      <div className="set2-actions">
+        <button type="button" className="set2-action" onClick={() => { setSheet(null); props.onOpenChild("backup"); }}>
+          <IconArchive aria-hidden="true" /><span>{copy.backup}</span><IconChevronRight aria-hidden="true" />
+        </button>
+        <button type="button" className="set2-action" onClick={() => { setSheet(null); props.onOpenChild("restore"); }}>
+          <IconUpload aria-hidden="true" /><span>{copy.restore}</span><IconChevronRight aria-hidden="true" />
+        </button>
+        <button type="button" className="set2-action" onClick={props.onExportCsv}>
+          <IconCash aria-hidden="true" /><span>{copy.csv}</span><IconChevronRight aria-hidden="true" />
+        </button>
+        {props.onOpenMigrate ? (
+          <button type="button" className="set2-action" onClick={() => { setSheet(null); props.onOpenMigrate?.(); }}>
+            <IconSync aria-hidden="true" /><span>{copy.device}</span><IconChevronRight aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
+    </Sheet> : null}
+
   </div>;
 }
