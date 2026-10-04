@@ -36,7 +36,6 @@ function renderSettings(locale: "vi" | "de" = "vi", overrides: Partial<Component
     dataHealthPanel: null,
     syncHealthPanel: null,
     syncConflictPanel: null,
-    onSelectTab: vi.fn(),
     onPatchSettings: vi.fn(),
     onChangeTarget: vi.fn(),
     onTheme: vi.fn(),
@@ -56,11 +55,12 @@ describe("SettingsCboWorkspace yearly plan", () => {
     vi.setSystemTime(new Date("2026-08-23T12:00:00"));
     renderSettings();
 
-    fireEvent.click(screen.getByRole("button", { name: "Tùy chỉnh kế hoạch" }));
-    const table = screen.getByTestId("p40-yearly-plan");
+    fireEvent.click(screen.getByRole("button", { name: "Kế hoạch từng năm" }));
+    const dialog = screen.getByRole("dialog");
+    const table = within(dialog).getByTestId("p40-yearly-plan");
     const rows = within(table).getAllByRole("row");
 
-    expect(screen.getByText("Kế hoạch từng năm")).toBeTruthy();
+    expect(within(dialog).getByText("Kế hoạch từng năm")).toBeTruthy();
     expect(rows).toHaveLength(15);
     expect(table.textContent).toContain("2026");
     expect(table.textContent).toContain("2034");
@@ -78,10 +78,11 @@ describe("SettingsCboWorkspace yearly plan", () => {
     vi.setSystemTime(new Date("2026-08-23T12:00:00"));
     renderSettings("de", { saveLabel: "Gespeichert" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Plan anpassen" }));
-    const table = screen.getByTestId("p40-yearly-plan");
+    fireEvent.click(screen.getByRole("button", { name: "Jahresplan" }));
+    const dialog = screen.getByRole("dialog");
+    const table = within(dialog).getByTestId("p40-yearly-plan");
 
-    expect(screen.getByText("Jahresplan")).toBeTruthy();
+    expect(within(dialog).getByText("Jahresplan")).toBeTruthy();
     expect(table.textContent).toContain("Heute");
     expect(table.textContent).toContain("Sicherheitsbeginn");
     expect(table.textContent).toContain("Zieljahr");
