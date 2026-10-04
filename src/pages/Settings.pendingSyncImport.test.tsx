@@ -100,9 +100,17 @@ function renderSettings(onReload = vi.fn()) {
 }
 
 async function selectBackupFile(container: HTMLElement) {
-  fireEvent.click(await screen.findByRole("button", { name: /Khôi phục dữ liệu/ }));
+  await screen.findByRole("dialog", { name: "Đồng bộ" });
+  fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  fireEvent.click(await screen.findByRole("button", { name: "Sao lưu & khôi phục" }));
+  await screen.findByRole("dialog", { name: "Sao lưu & khôi phục" });
+  const restoreBtn = await screen.findByText("Khôi phục dữ liệu");
+  fireEvent.click(restoreBtn.closest("button") as HTMLButtonElement);
   await screen.findByRole("dialog", { name: "Khôi phục dữ liệu" });
-  const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+  const labelEl = await screen.findByText("Nhập sao lưu");
+  const input = labelEl.querySelector('input[type="file"]') as HTMLInputElement;
+  expect(input).toBeTruthy();
   const file = new File([FILE_JSON], "backup.json", { type: "application/json" });
   Object.defineProperty(file, "text", { value: () => Promise.resolve(FILE_JSON) });
   fireEvent.change(input, { target: { files: [file] } });
