@@ -214,6 +214,17 @@ function copyFor(locale: AppLocale) {
   } as const;
 }
 
+function usePlanFocusScroll(planFocus: "contribution" | "goal" | "yearplan" | null, goalRef: React.RefObject<HTMLDivElement | null>, contribRef: React.RefObject<HTMLDivElement | null>, yearplanRef: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!planFocus) return;
+    const el = planFocus === "goal" ? goalRef.current : planFocus === "contribution" ? contribRef.current : yearplanRef.current;
+    if (el) {
+      const t = setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+      return () => clearTimeout(t);
+    }
+  }, [planFocus, goalRef, contribRef, yearplanRef]);
+}
+
 function Sheet({ title, onClose, closeLabel, children }: { title: string; onClose: () => void; closeLabel: string; children: ReactNode }) {
   useEffect(() => {
     const dock = document.querySelector(".bottom-dock");
@@ -264,6 +275,10 @@ export default function SettingsCboWorkspace(props: Props) {
   const copy = copyFor(props.locale);
   const [sheet, setSheet] = useState<SettingsSheet>(null);
   const [planFocus, setPlanFocus] = useState<"contribution" | "goal" | "yearplan" | null>(null);
+  const goalRef = useRef<HTMLDivElement>(null);
+  const contribRef = useRef<HTMLDivElement>(null);
+  const yearplanRef = useRef<HTMLElement>(null);
+  usePlanFocusScroll(planFocus, goalRef, contribRef, yearplanRef);
   const [simReturn, setSimReturn] = useState<SettingsSheet>(null);
   const [deRiskYears, setDeRiskYears] = useState(5);
   const [contributionDraft, setContributionDraft] = useState("");
@@ -395,11 +410,11 @@ export default function SettingsCboWorkspace(props: Props) {
 
     {sheet === "profile" ? <Sheet title={copy.profile} closeLabel={copy.close} onClose={() => setSheet(null)}><div className="p40-sheet-fields"><label><span>{copy.planName}</span><input value={props.settings.planName} onChange={(event) => props.onPatchSettings({ planName: event.target.value })} /></label><label><span>{copy.childName}</span><input value={props.settings.childName} onChange={(event) => props.onPatchSettings({ childName: event.target.value })} /></label><div><span>{copy.account}</span><div className="p40-segments"><button type="button" className={props.settings.accountType === "parent" ? "selected" : ""} onClick={() => props.onPatchSettings({ accountType: "parent" })}>{copy.parent}</button><button type="button" className={props.settings.accountType === "child" ? "selected" : ""} onClick={() => props.onPatchSettings({ accountType: "child" })}>{copy.child}</button></div></div></div><button type="button" className="p40-sheet-done" onClick={() => setSheet(null)}>{copy.save}</button></Sheet> : null}
     {sheet === "plan" ? <Sheet title={planFocus === "contribution" ? copy.contribution : planFocus === "goal" ? copy.goalRow : planFocus === "yearplan" ? copy.yearPlanTitle : copy.plan} closeLabel={copy.close} onClose={() => { setSheet(null); setPlanFocus(null); }}>
-      <div className="p40-sheet-fields">
+      <div className="p40-sheet-fields" ref={goalRef} data-focus-section="goal">
         <label><span>{copy.targetDate}</span><input type="date" value={target.targetUseDate} onChange={(event) => editTarget({ targetUseDate: event.target.value })} /></label>
         <label className="p40-toggle-row"><span><strong>{copy.fullAmount}</strong></span><input type="checkbox" checked={target.needFullAmount} onChange={(event) => editTarget({ needFullAmount: event.target.checked, partialNeedEuro: event.target.checked ? undefined : target.partialNeedEuro })} /></label>
         {!target.needFullAmount ? <label><span>{copy.targetAmount}</span><input inputMode="decimal" type="number" min="0" value={target.partialNeedEuro ?? ""} onChange={(event) => editTarget({ partialNeedEuro: parseNumber(event.target.value) })} /></label> : null}
-        <div className="p40-contrib" data-testid="p40-contribution-block">
+        <div className="p40-contrib" data-testid="p40-contribution-block" ref={contribRef} data-focus-section="contribution">
           <div className="p40-contrib-head">
             <span>{copy.contribution}</span>
             <small>{copy.contributionHint}</small>
@@ -462,7 +477,7 @@ export default function SettingsCboWorkspace(props: Props) {
           <small>{copy.disclaimer}</small>
         </div>;
       })()}
-      {yearlyPlanRows.length > 0 ? <section aria-label={copy.yearPlanTitle} style={{ display: "grid", gap: 10 }}>
+      {yearlyPlanRows.length > 0 ? <section aria-label={copy.yearPlanTitle} ref={yearplanRef} data-focus-section="yearplan" style={{ display: "grid", gap: 10 }}>
         {planFocus !== "yearplan" ? <div>
           <strong style={{ display: "block", color: "var(--p40-ink)", fontSize: 17, letterSpacing: "-.02em" }}>{copy.yearPlanTitle}</strong>
           <small style={{ display: "block", marginTop: 4, color: "var(--p40-muted)", fontSize: 12, lineHeight: 1.4 }}>{copy.yearPlanSubtitle}</small>
