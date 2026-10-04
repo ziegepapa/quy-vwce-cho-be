@@ -1,1 +1,121 @@
-aW1wb3J0IHR5cGUgeyBUcmFuc2FjdGlvbiB9IGZyb20gIi4vdHlwZXMiOwppbXBvcnQgdHlwZSB7IFZhbHVlSGlzdG9yeVBvaW50IH0gZnJvbSAiLi92YWx1ZUhpc3RvcnkiOwoKZXhwb3J0IHR5cGUgSm91cm5leUV2ZW50S2luZCA9ICJzdGFydCIgfCAibWlsZXN0b25lIiB8ICJub3ciOwoKZXhwb3J0IHR5cGUgSm91cm5leUV2ZW50ID0gewogIGtpbmQ6IEpvdXJuZXlFdmVudEtpbmQ7CiAgLyoqIERpc3BsYXkgZGF0ZTogWVlZWS1NTS1ERCBmb3Igc3RhcnQvbm93LCBZWVlZLU1NIGZvciBtaWxlc3RvbmVzIChtb250aCBwcmVjaXNpb24pLiAqLwogIGRhdGU6IHN0cmluZzsKICAvKiogU2hvcnQgZGF0ZSBsYWJlbCwgbG9jYWxlLWF3YXJlIChlLmcuICI4LzIwMjYiIC8gIjguMjAyNiIsIG9yICJUNyIgLyAiSnVsIikuICovCiAgZGF0ZUxhYmVsOiBzdHJpbmc7CiAgLyoqIEV2ZW50IHRpdGxlLCBsb2NhbGUtYXdhcmUuICovCiAgdGl0bGU6IHN0cmluZzsKICAvKiogT25lLWxpbmUgZGV0YWlsLCBsb2NhbGUtYXdhcmUuICovCiAgZGV0YWlsOiBzdHJpbmc7Cn07CgovKiogVmFsdWUgbWlsZXN0b25lcyB3b3J0aCBtYXJraW5nIG9uIHRoZSBqb3VybmV5LiAqLwpjb25zdCBNSUxFU1RPTkVTID0gWzEwMDAsIDIwMDAsIDUwMDAsIDEwMDAwLCAyNTAwMCwgNTAwMDAsIDEwMDAwMCwgMjUwMDAwLCA1MDAwMDAsIDEwMDAwMDBdOwoKY29uc3QgQ09OVFJJQlVUSU9OX1RZUEVTID0gbmV3IFNldDxUcmFuc2FjdGlvblsidHlwZSJdPihbCiAgImNhc2hfaW4iLAogICJidXlfdndjZSIsCiAgImJ1eV9zZWN1cml0eSIsCl0pOwoKZnVuY3Rpb24gZm9ybWF0RGF0ZUxhYmVsKGlzbzogc3RyaW5nLCBsb2NhbGU6ICJ2aSIgfCAiZGUiKTogc3RyaW5nIHsKICBjb25zdCBbeSwgbSwgZF0gPSBpc28uc3BsaXQoIi0iKS5tYXAoTnVtYmVyKTsKICByZXR1cm4gbG9jYWxlID09PSAiZGUiID8gYCR7ZH0uJHttfS4ke3l9YCA6IGAke2R9LyR7bX0vJHt5fWA7Cn0KCmZ1bmN0aW9uIGZvcm1hdE1vbmV5U2hvcnQodmFsdWU6IG51bWJlciwgbG9jYWxlOiAidmkiIHwgImRlIik6IHN0cmluZyB7CiAgY29uc3Qgcm91bmRlZCA9IE1hdGgucm91bmQodmFsdWUpOwogIGNvbnN0IGdyb3VwZWQgPSByb3VuZGVkLnRvU3RyaW5nKCkucmVwbGFjZSgvXEIoPz0oXGR7M30pKyg/IVxkKSkvZywgIi4iKTsKICByZXR1cm4gbG9jYWxlID09PSAiZGUiID8gYCR7Z3JvdXBlZH0g4oKsYCA6IGAke2dyb3VwZWR9IOKCrGA7Cn0KCi8qKgogKiBKb3VybmV5IHRpbWVsaW5lIGZyb20gUkVBTCBkYXRhIG9ubHk6IHRoZSBmaXJzdCBjb250cmlidXRpb24sIHRoZSBtb250aHMKICogdGhlIHBvcnRmb2xpbyBmaXJzdCBjcm9zc2VkIHZhbHVlIG1pbGVzdG9uZXMsIGFuZCB0aGUgY3VycmVudCBzdGF0ZS4KICogUmV0dXJucyBudWxsIHdoZW4gdGhlcmUgaXMgbm90aGluZyB0byB0ZWxsIChubyBjb250cmlidXRpb25zKS4KICogUHVyZTogbm8gRGF0ZS5ub3coKSAocGFzcyBgbm93YCksIG5vIHN0b3JhZ2UsIG5vIG5ldHdvcmsuCiAqLwpleHBvcnQgZnVuY3Rpb24gYnVpbGRKb3VybmV5VGltZWxpbmUoaW5wdXQ6IHsKICB0cmFuc2FjdGlvbnM6IHJlYWRvbmx5IFRyYW5zYWN0aW9uW107CiAgdmFsdWVIaXN0b3J5OiByZWFkb25seSBWYWx1ZUhpc3RvcnlQb2ludFtdIHwgbnVsbDsKICBsb2NhbGU6ICJ2aSIgfCAiZGUiOwogIG5vdz86IERhdGU7Cn0pOiBKb3VybmV5RXZlbnRbXSB8IG51bGwgewogIGNvbnN0IHsgdHJhbnNhY3Rpb25zLCB2YWx1ZUhpc3RvcnksIGxvY2FsZSB9ID0gaW5wdXQ7CiAgY29uc3Qgbm93ID0gaW5wdXQubm93ID8/IG5ldyBEYXRlKCk7CgogIGNvbnN0IGVsaWdpYmxlID0gdHJhbnNhY3Rpb25zLmZpbHRlcigKICAgICh0KSA9PiAhdC5kZWxldGVkQXQgJiYgQ09OVFJJQlVUSU9OX1RZUEVTLmhhcyh0LnR5cGUpICYmIC9eXGR7NH0tXGR7Mn0tXGR7Mn0vLnRlc3QodC5kYXRlKSAmJiB0LmFtb3VudCA+IDAsCiAgKTsKICBpZiAoZWxpZ2libGUubGVuZ3RoID09PSAwKSByZXR1cm4gbnVsbDsKCiAgY29uc3Qgc29ydGVkID0gWy4uLmVsaWdpYmxlXS5zb3J0KChhLCBiKSA9PiBhLmRhdGUubG9jYWxlQ29tcGFyZShiLmRhdGUpKTsKICBjb25zdCBmaXJzdCA9IHNvcnRlZFswXTsKCiAgY29uc3QgY29weSA9IHsKICAgIHZpOiB7CiAgICAgIHN0YXJ0OiAiR8OzcCDEkeG6p3UgdGnDqm4iLAogICAgICBzdGFydERldGFpbDogKGFtb3VudDogc3RyaW5nKSA9PiBgQuG6r3QgxJHhuqd1IGjDoG5oIHRyw6xuaCB24bubaSAke2Ftb3VudH1gLAogICAgICBtaWxlc3RvbmU6IChhbW91bnQ6IHN0cmluZykgPT4gYFF14bu5IGNo4bqhbSAke2Ftb3VudH1gLAogICAgICBtaWxlc3RvbmVEZXRhaWw6IChkYXRlTGFiZWw6IHN0cmluZykgPT4gYEzhuqduIMSR4bqndSDEkeG6oXQgbeG7kWMgwrcgJHtkYXRlTGFiZWx9YCwKICAgICAgbm93OiAiSGnhu4duIHThuqFpIiwKICAgICAgbm93RGV0YWlsOiAodmFsdWU6IHN0cmluZywgY29udHJpYnV0ZWQ6IHN0cmluZykgPT4gYCR7dmFsdWV9IMK3IMSRw6MgZ8OzcCAke2NvbnRyaWJ1dGVkfWAsCiAgICB9LAogICAgZGU6IHsKICAgICAgc3RhcnQ6ICJFcnN0ZSBFaW56YWhsdW5nIiwKICAgICAgc3RhcnREZXRhaWw6IChhbW91bnQ6IHN0cmluZykgPT4gYFN0YXJ0IG1pdCAke2Ftb3VudH1gLAogICAgICBtaWxlc3RvbmU6IChhbW91bnQ6IHN0cmluZykgPT4gYEZvbmRzIGVycmVpY2h0ICR7YW1vdW50fWAsCiAgICAgIG1pbGVzdG9uZURldGFpbDogKGRhdGVMYWJlbDogc3RyaW5nKSA9PiBgRXJzdG1hbHMgZXJyZWljaHQgwrcgJHtkYXRlTGFiZWx9YCwKICAgICAgbm93OiAiQWt0dWVsbCIsCiAgICAgIG5vd0RldGFpbDogKHZhbHVlOiBzdHJpbmcsIGNvbnRyaWJ1dGVkOiBzdHJpbmcpID0+IGAke3ZhbHVlfSDCtyBlaW5nZXphaGx0ICR7Y29udHJpYnV0ZWR9YCwKICAgIH0sCiAgfVtsb2NhbGVdOwoKICBjb25zdCBldmVudHM6IEpvdXJuZXlFdmVudFtdID0gWwogICAgewogICAgICBraW5kOiAic3RhcnQiLAogICAgICBkYXRlOiBmaXJzdC5kYXRlLnNsaWNlKDAsIDEwKSwKICAgICAgZGF0ZUxhYmVsOiBmb3JtYXREYXRlTGFiZWwoZmlyc3QuZGF0ZS5zbGljZSgwLCAxMCksIGxvY2FsZSksCiAgICAgIHRpdGxlOiBjb3B5LnN0YXJ0LAogICAgICBkZXRhaWw6IGNvcHkuc3RhcnREZXRhaWwoZm9ybWF0TW9uZXlTaG9ydChmaXJzdC5hbW91bnQsIGxvY2FsZSkpLAogICAgfSwKICBdOwoKICAvLyBNaWxlc3RvbmVzOiBmaXJzdCBtb250aCB0aGUgcG9ydGZvbGlvIHZhbHVlIGNyb3NzZWQgZWFjaCB0aHJlc2hvbGQuCiAgLy8gTW9udGggcHJlY2lzaW9uIG9ubHkg4oCUIHRoZSB2YWx1ZUhpc3RvcnkgcG9pbnQgaXMgYSBtb250aC1lbmQgc25hcHNob3QsCiAgLy8gc28gdGhlIGNyb3NzaW5nIGhhcHBlbmVkIHNvbWV0aW1lIGR1cmluZyB0aGF0IG1vbnRoLgogIGlmICh2YWx1ZUhpc3RvcnkgJiYgdmFsdWVIaXN0b3J5Lmxlbmd0aCA+IDApIHsKICAgIGZvciAoY29uc3QgdGhyZXNob2xkIG9mIE1JTEVTVE9ORVMpIHsKICAgICAgY29uc3QgaGl0ID0gdmFsdWVIaXN0b3J5LmZpbmQoKHApID0+IHAudmFsdWUgPj0gdGhyZXNob2xkKTsKICAgICAgaWYgKCFoaXQpIGJyZWFrOwogICAgICBldmVudHMucHVzaCh7CiAgICAgICAga2luZDogIm1pbGVzdG9uZSIsCiAgICAgICAgZGF0ZTogaGl0Lm1vbnRoLAogICAgICAgIGRhdGVMYWJlbDogaGl0LmxhYmVsLAogICAgICAgIHRpdGxlOiBjb3B5Lm1pbGVzdG9uZShmb3JtYXRNb25leVNob3J0KHRocmVzaG9sZCwgbG9jYWxlKSksCiAgICAgICAgZGV0YWlsOiBjb3B5Lm1pbGVzdG9uZURldGFpbChoaXQubGFiZWwpLAogICAgICB9KTsKICAgIH0KICB9CgogIGNvbnN0IHRvdGFsQ29udHJpYnV0ZWQgPSBlbGlnaWJsZS5yZWR1Y2UoKHN1bSwgdCkgPT4gc3VtICsgdC5hbW91bnQsIDApOwogIGNvbnN0IGxhdGVzdFZhbHVlID0gdmFsdWVIaXN0b3J5ICYmIHZhbHVlSGlzdG9yeS5sZW5ndGggPiAwCiAgICA/IHZhbHVlSGlzdG9yeVt2YWx1ZUhpc3RvcnkubGVuZ3RoIC0gMV0udmFsdWUKICAgIDogMDsKICBjb25zdCB0b2RheUlzbyA9IGAke25vdy5nZXRGdWxsWWVhcigpfS0ke1N0cmluZyhub3cuZ2V0TW9udGgoKSArIDEpLnBhZFN0YXJ0KDIsICIwIil9LSR7U3RyaW5nKG5vdy5nZXREYXRlKCkpLnBhZFN0YXJ0KDIsICIwIil9YDsKICBldmVudHMucHVzaCh7CiAgICBraW5kOiAibm93IiwKICAgIGRhdGU6IHRvZGF5SXNvLAogICAgZGF0ZUxhYmVsOiBmb3JtYXREYXRlTGFiZWwodG9kYXlJc28sIGxvY2FsZSksCiAgICB0aXRsZTogY29weS5ub3csCiAgICBkZXRhaWw6IGNvcHkubm93RGV0YWlsKGZvcm1hdE1vbmV5U2hvcnQobGF0ZXN0VmFsdWUsIGxvY2FsZSksIGZvcm1hdE1vbmV5U2hvcnQodG90YWxDb250cmlidXRlZCwgbG9jYWxlKSksCiAgfSk7CgogIHJldHVybiBldmVudHM7Cn0K
+import type { Transaction } from "./types";
+import type { ValueHistoryPoint } from "./valueHistory";
+
+export type JourneyEventKind = "start" | "milestone" | "now";
+
+export type JourneyEvent = {
+  kind: JourneyEventKind;
+  /** Display date: YYYY-MM-DD for start/now, YYYY-MM for milestones (month precision). */
+  date: string;
+  /** Short date label, locale-aware (e.g. "8/2026" / "8.2026", or "T7" / "Jul"). */
+  dateLabel: string;
+  /** Event title, locale-aware. */
+  title: string;
+  /** One-line detail, locale-aware. */
+  detail: string;
+};
+
+/** Value milestones worth marking on the journey. */
+const MILESTONES = [1000, 2000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+
+const CONTRIBUTION_TYPES = new Set<Transaction["type"]>([
+  "cash_in",
+  "buy_vwce",
+  "buy_security",
+]);
+
+function formatDateLabel(iso: string, locale: "vi" | "de"): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return locale === "de" ? `${d}.${m}.${y}` : `${d}/${m}/${y}`;
+}
+
+function formatMoneyShort(value: number, locale: "vi" | "de"): string {
+  const rounded = Math.round(value);
+  const grouped = rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return locale === "de" ? `${grouped} €` : `${grouped} €`;
+}
+
+/**
+ * Journey timeline from REAL data only: the first contribution, the months
+ * the portfolio first crossed value milestones, and the current state.
+ * Returns null when there is nothing to tell (no contributions).
+ * Pure: no Date.now() (pass `now`), no storage, no network.
+ */
+export function buildJourneyTimeline(input: {
+  transactions: readonly Transaction[];
+  valueHistory: readonly ValueHistoryPoint[] | null;
+  locale: "vi" | "de";
+  now?: Date;
+}): JourneyEvent[] | null {
+  const { transactions, valueHistory, locale } = input;
+  const now = input.now ?? new Date();
+
+  const eligible = transactions.filter(
+    (t) => !t.deletedAt && CONTRIBUTION_TYPES.has(t.type) && /^\d{4}-\d{2}-\d{2}/.test(t.date) && t.amount > 0,
+  );
+  if (eligible.length === 0) return null;
+
+  const sorted = [...eligible].sort((a, b) => a.date.localeCompare(b.date));
+  const first = sorted[0];
+
+  const copy = {
+    vi: {
+      start: "Góp đầu tiên",
+      startDetail: (amount: string) => `Bắt đầu hành trình với ${amount}`,
+      milestone: (amount: string) => `Quỹ chạm ${amount}`,
+      milestoneDetail: (dateLabel: string) => `Lần đầu đạt mốc · ${dateLabel}`,
+      now: "Hiện tại",
+      nowDetail: (value: string, contributed: string) => `${value} · đã góp ${contributed}`,
+    },
+    de: {
+      start: "Erste Einzahlung",
+      startDetail: (amount: string) => `Start mit ${amount}`,
+      milestone: (amount: string) => `Fonds erreicht ${amount}`,
+      milestoneDetail: (dateLabel: string) => `Erstmals erreicht · ${dateLabel}`,
+      now: "Aktuell",
+      nowDetail: (value: string, contributed: string) => `${value} · eingezahlt ${contributed}`,
+    },
+  }[locale];
+
+  const events: JourneyEvent[] = [
+    {
+      kind: "start",
+      date: first.date.slice(0, 10),
+      dateLabel: formatDateLabel(first.date.slice(0, 10), locale),
+      title: copy.start,
+      detail: copy.startDetail(formatMoneyShort(first.amount, locale)),
+    },
+  ];
+
+  // Milestones: first month the portfolio value crossed each threshold.
+  // Month precision only — the valueHistory point is a month-end snapshot,
+  // so the crossing happened sometime during that month.
+  if (valueHistory && valueHistory.length > 0) {
+    for (const threshold of MILESTONES) {
+      const hit = valueHistory.find((p) => p.value >= threshold);
+      if (!hit) break;
+      events.push({
+        kind: "milestone",
+        date: hit.month,
+        dateLabel: hit.label,
+        title: copy.milestone(formatMoneyShort(threshold, locale)),
+        detail: copy.milestoneDetail(hit.label),
+      });
+    }
+  }
+
+  const totalContributed = eligible.reduce((sum, t) => sum + t.amount, 0);
+  const latestValue = valueHistory && valueHistory.length > 0
+    ? valueHistory[valueHistory.length - 1].value
+    : 0;
+  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  events.push({
+    kind: "now",
+    date: todayIso,
+    dateLabel: formatDateLabel(todayIso, locale),
+    title: copy.now,
+    detail: copy.nowDetail(formatMoneyShort(latestValue, locale), formatMoneyShort(totalContributed, locale)),
+  });
+
+  return events;
+}
