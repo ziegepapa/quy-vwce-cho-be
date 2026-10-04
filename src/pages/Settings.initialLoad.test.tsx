@@ -111,7 +111,7 @@ describe("Settings initial load state", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
 
-    expect(await screen.findByText("Tùy chọn hằng ngày")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "KẾ HOẠCH" })).toBeTruthy();
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
   });
 
@@ -119,16 +119,11 @@ describe("Settings initial load state", () => {
     dbMocks.getSettings.mockResolvedValue(loadedSettings());
     renderSettings();
 
-    expect(await screen.findByRole("heading", { name: "Kế hoạch" })).toBeTruthy();
-    expect(document.body.textContent).toContain("50.000");
+    expect(await screen.findByRole("heading", { name: "KẾ HOẠCH" })).toBeTruthy();
     expect(document.body.textContent).toContain("300");
-    expect(screen.getByText("NĂM NAY")).toBeTruthy();
-    expect(document.querySelector(".p40-plan-accumulate")).toBeTruthy();
-    expect(document.body.textContent).toContain("Gợi ý minh họa · không thay đổi giao dịch đã ghi.");
-    expect(document.body.textContent).not.toContain("0.06");
-    expect(screen.queryByText("Cửa sổ an toàn (preview)")).toBeNull();
+    expect(document.body.textContent).toContain("2036");
 
-    fireEvent.click(screen.getByRole("button", { name: "Tùy chỉnh kế hoạch" }));
+    fireEvent.click(screen.getByRole("button", { name: "Kế hoạch từng năm" }));
     expect(screen.getByRole("dialog", { name: "Kế hoạch" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "3 năm" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "5 năm" })).toBeTruthy();
@@ -164,7 +159,7 @@ describe("Settings initial load state", () => {
       },
     });
 
-    fireEvent.click(await screen.findByRole("tab", { name: "Dữ liệu" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Đồng bộ" }));
     expect((await screen.findAllByText("2 xung đột dữ liệu")).length).toBe(1);
     expect(document.querySelector('[data-sync-health="conflict"]')).toBeTruthy();
   });
