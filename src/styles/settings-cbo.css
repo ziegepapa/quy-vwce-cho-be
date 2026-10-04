@@ -148,7 +148,26 @@
 .p40-danger-zone .cbo-action-row { color: var(--p40-danger); }
 .p40-danger-zone .cbo-action-row small, .p40-danger-zone .cbo-action-row > svg { color: color-mix(in srgb, var(--p40-danger) 70%, var(--p40-muted)); }
 
-.p40-sheet-layer { position: fixed; inset: 0; z-index: var(--z-sheet, 80); display: flex; align-items: flex-end; padding: max(10px, env(safe-area-inset-top)) 0 0; background: rgba(13, 23, 21, .32); }
+.p40-sheet-layer {
+  position: fixed; inset: 0; z-index: var(--z-sheet, 80); display: flex; align-items: flex-end; padding: max(10px, env(safe-area-inset-top)) 0 0; background: rgba(13, 23, 21, .32);
+  /* Portal render ra body nên cần định nghĩa lại biến ở đây */
+  --p40-canvas: var(--bg-base);
+  --p40-surface: var(--surface-raised);
+  --p40-surface-subtle: var(--surface-sunken);
+  --p40-ink: var(--text-primary);
+  --p40-muted: var(--text-secondary);
+  --p40-faint: var(--text-tertiary);
+  --p40-line: var(--border-subtle);
+  --p40-line-strong: var(--border-subtle);
+  --p40-teal: var(--primary-600);
+  --p40-teal-soft: var(--primary-050);
+  --p40-growth: var(--success-600);
+  --p40-growth-soft: var(--success-050);
+  --p40-caution: var(--warning-600);
+  --p40-caution-soft: var(--warning-050);
+  --p40-safe: var(--primary-600);
+  --p40-safe-soft: var(--primary-050);
+}
 .p40-sheet { width: min(100%, 680px); max-height: min(86dvh, 760px); margin: 0 auto; overflow: auto; border-radius: 18px 18px 0 0; background: var(--p40-surface); box-shadow: 0 -12px 36px rgba(17, 33, 29, .16); }
 .p40-sheet-grabber { width: 38px; height: 4px; margin: 10px auto 2px; border-radius: 4px; background: var(--p40-line-strong); }
 .p40-sheet > header { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--p40-line); }
