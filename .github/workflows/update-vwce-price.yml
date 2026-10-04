@@ -15,9 +15,14 @@ on:
     # whenever the evening run already wrote the same economics.
     - cron: "0 6 * * 2-6"
 
+# Least privilege: every write (branch push, PR create, auto-merge) goes
+# through the PRICE_BOT_TOKEN PAT. Events triggered by GITHUB_TOKEN do not
+# start new workflow runs, so a PR opened with GITHUB_TOKEN would never
+# receive the required test-build check and auto-merge would hang forever.
+# PRICE_BOT_TOKEN must be a fine-grained PAT scoped to this repo with
+# Contents: read+write and Pull requests: read+write.
 permissions:
-  actions: write
-  contents: write
+  contents: read
 
 concurrency:
   group: update-vwce-price
@@ -27,10 +32,20 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
+      - name: Guard bot token present
+        env:
+          PRICE_BOT_TOKEN: ${{ secrets.PRICE_BOT_TOKEN }}
+        run: |
+          if [ -z "$PRICE_BOT_TOKEN" ]; then
+            echo "::error::Repository secret PRICE_BOT_TOKEN is not set. Create a fine-grained PAT (this repo only; Contents: read+write, Pull requests: read+write) and add it as the PRICE_BOT_TOKEN secret."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          token: ${{ secrets.PRICE_BOT_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -46,8 +61,10 @@ jobs:
       - name: Fetch and update multi-asset quote feed
         run: node scripts/update-quotes.mjs
 
-      - name: Commit and push if economic price data changed
-        id: quote_commit
+      - name: Commit to price branch and open auto-merge PR
+        id: quote_pr
+        env:
+          GH_TOKEN: ${{ secrets.PRICE_BOT_TOKEN }}
         run: |
           set -euo pipefail
           QUOTES_PATH="public/data/quotes.json"
@@ -63,27 +80,13 @@ jobs:
             exit 1
           fi
 
-          # Snapshot generated files outside the worktree before any git reset/rebase.
-          # History file may not exist on first cron run (|| true handles that).
-          cp "$QUOTES_PATH" "$RUNNER_TEMP/quotes.json"
-          cp "$LEGACY_PATH" "$RUNNER_TEMP/vwce-price.json"
-          cp "$HISTORY_PATH" "$RUNNER_TEMP/price-history-vwce.json" 2>/dev/null || true
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Clean index/worktree so pull --rebase cannot conflict with staged changes
-          git reset --hard HEAD
-          git pull --rebase origin main
-
-          # Restore generated files after rebase
-          mkdir -p public/data public/data/price-history
-          cp "$RUNNER_TEMP/quotes.json" "$QUOTES_PATH"
-          cp "$RUNNER_TEMP/vwce-price.json" "$LEGACY_PATH"
-          # Restore history only if the script wrote one (VWCE quote was successful)
-          if [ -f "$RUNNER_TEMP/price-history-vwce.json" ]; then
-            cp "$RUNNER_TEMP/price-history-vwce.json" "$HISTORY_PATH"
-          fi
+          # One branch per UTC date, so the 06:00 catch-up run reuses (and
+          # updates) the evening run's PR instead of opening a duplicate.
+          BRANCH="chore/price-$(date -u +%F)"
+          git checkout -B "$BRANCH"
 
           git add -- "$QUOTES_PATH" "$LEGACY_PATH"
           # Stage history file only if it was written and differs from HEAD
@@ -107,11 +110,18 @@ jobs:
           fi
 
           git commit -m "chore(data): update quotes.json, VWCE mirror, and price history"
-          git push origin HEAD:main
-          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git push -u origin "$BRANCH"
 
-      - name: Trigger test and Pages deploy for updated feed
-        if: steps.quote_commit.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run deploy.yml --ref main
+          if gh pr view "$BRANCH" --json number --jq .number >/dev/null 2>&1; then
+            echo "PR already open for $BRANCH; branch updated"
+          else
+            gh pr create \
+              --base main --head "$BRANCH" \
+              --title "chore(data): update VWCE quotes $(date -u +%F)" \
+              --body "Automated daily price update (VWCE close + mirrors). Data-only change, generated and self-checked by the Update VWCE price workflow. Auto-merge is enabled: it merges only after the required CI checks pass, which then triggers the normal test + Pages deploy."
+          fi
+
+          # Merge once the required checks pass. The PR is opened with the PAT
+          # (not GITHUB_TOKEN) so that CI actually runs on it.
+          gh pr merge "$BRANCH" --auto --squash
+          echo "changed=true" >> "$GITHUB_OUTPUT"
