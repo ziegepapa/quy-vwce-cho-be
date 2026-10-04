@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { AppLocale } from "../lib/locale";
 import type { AppSettings, PlanTarget } from "../lib/types";
 import type { ThemeChoice } from "../lib/theme";
@@ -225,7 +226,7 @@ function Sheet({ title, onClose, closeLabel, children }: { title: string; onClos
       document.querySelector(".bottom-dock")?.classList.remove("is-hidden");
     };
   }, []);
-  return <div className="p40-sheet-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="p40-sheet" role="dialog" aria-modal="true" aria-label={title}><div className="p40-sheet-grabber" aria-hidden /><header><strong>{title}</strong><button type="button" aria-label={closeLabel} onClick={onClose}>×</button></header><div className="p40-sheet-body">{children}</div></section></div>;
+  return createPortal(<div className="p40-sheet-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="p40-sheet" role="dialog" aria-modal="true" aria-label={title}><div className="p40-sheet-grabber" aria-hidden /><header><strong>{title}</strong><button type="button" aria-label={closeLabel} onClick={onClose}>×</button></header><div className="p40-sheet-body">{children}</div></section></div>, document.body);
 }
 
 
