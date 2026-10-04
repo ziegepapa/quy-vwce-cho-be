@@ -1,1 +1,53 @@
-aW1wb3J0IHsgZGVzY3JpYmUsIGV4cGVjdCwgaXQgfSBmcm9tICJ2aXRlc3QiOwppbXBvcnQgeyBidWlsZENvbnRyaWJ1dGlvbkhlYXRtYXAgfSBmcm9tICIuL2NvbnRyaWJ1dGlvbkhlYXRtYXAiOwppbXBvcnQgdHlwZSB7IFRyYW5zYWN0aW9uIH0gZnJvbSAiLi90eXBlcyI7CgpmdW5jdGlvbiB0eChkYXRlOiBzdHJpbmcsIHR5cGU6IFRyYW5zYWN0aW9uWyJ0eXBlIl0sIGFtb3VudDogbnVtYmVyKTogVHJhbnNhY3Rpb24gewogIHJldHVybiB7CiAgICBpZDogYHQtJHtkYXRlfS0ke3R5cGV9YCwgZGF0ZSwgdHlwZSwgYW1vdW50LCBub3RlczogIiIsCiAgICBjcmVhdGVkQXQ6IGRhdGUsIHVwZGF0ZWRBdDogZGF0ZSwKICB9Owp9Cgpjb25zdCBOT1cgPSBuZXcgRGF0ZSgiMjAyNi0xMC0wM1QxMjowMDowMCIpOwoKZGVzY3JpYmUoImJ1aWxkQ29udHJpYnV0aW9uSGVhdG1hcCIsICgpID0+IHsKICBpdCgicmV0dXJucyBudWxsIHdpdGggbm8gY29udHJpYnV0aW9ucyIsICgpID0+IHsKICAgIGV4cGVjdChidWlsZENvbnRyaWJ1dGlvbkhlYXRtYXAoeyB0cmFuc2FjdGlvbnM6IFtdLCBsb2NhbGU6ICJ2aSIsIG5vdzogTk9XIH0pKS50b0JlTnVsbCgpOwogIH0pOwoKICBpdCgicmV0dXJucyBudWxsIHdpdGggYSBzaW5nbGUgbW9udGggb2YgcmFuZ2UiLCAoKSA9PiB7CiAgICBjb25zdCB0eHMgPSBbdHgoIjIwMjYtMTAtMDEiLCAiY2FzaF9pbiIsIDEwMCldOwogICAgZXhwZWN0KGJ1aWxkQ29udHJpYnV0aW9uSGVhdG1hcCh7IHRyYW5zYWN0aW9uczogdHhzLCBsb2NhbGU6ICJ2aSIsIG5vdzogTk9XIH0pKS50b0JlTnVsbCgpOwogIH0pOwoKICBpdCgiYnVpbGRzIG9uZSBjZWxsIHBlciBtb250aCB3aXRoIGludGVuc2l0eSBsZXZlbHMiLCAoKSA9PiB7CiAgICBjb25zdCB0eHMgPSBbCiAgICAgIHR4KCIyMDI2LTA4LTA1IiwgImNhc2hfaW4iLCAxMDApLAogICAgICB0eCgiMjAyNi0wOC0yMCIsICJjYXNoX2luIiwgMTAwKSwgLy8gQXVnOiAyMDAgKG1heCDihpIgbGV2ZWwgNCkKICAgICAgdHgoIjIwMjYtMDktMTAiLCAiYnV5X3Z3Y2UiLCAxMDApLCAvLyBTZXA6IDEwMCDihpIgbGV2ZWwgMgogICAgICAvLyBPY3Q6IDAg4oaSIGxldmVsIDAKICAgIF07CiAgICBjb25zdCBoZWF0ID0gYnVpbGRDb250cmlidXRpb25IZWF0bWFwKHsgdHJhbnNhY3Rpb25zOiB0eHMsIGxvY2FsZTogInZpIiwgbm93OiBOT1cgfSk7CiAgICBleHBlY3QoaGVhdCkubm90LnRvQmVOdWxsKCk7CiAgICBleHBlY3QoaGVhdCEudG90YWxNb250aHMpLnRvQmUoMyk7CiAgICBleHBlY3QoaGVhdCEuYWN0aXZlTW9udGhzKS50b0JlKDIpOwogICAgZXhwZWN0KGhlYXQhLm1vbnRocy5tYXAoKG0pID0+IFttLm1vbnRoLCBtLmFtb3VudCwgbS5sZXZlbF0pKS50b0VxdWFsKFsKICAgICAgWyIyMDI2LTA4IiwgMjAwLCA0XSwKICAgICAgWyIyMDI2LTA5IiwgMTAwLCAzXSwKICAgICAgWyIyMDI2LTEwIiwgMCwgMF0sCiAgICBdKTsKICB9KTsKCiAgaXQoImlnbm9yZXMgZGVsZXRlZCwgbm9uLWNvbnRyaWJ1dGlvbiBhbmQgbm9uLXBvc2l0aXZlIHJvd3MiLCAoKSA9PiB7CiAgICBjb25zdCB0eHMgPSBbCiAgICAgIHR4KCIyMDI2LTA4LTA1IiwgImNhc2hfaW4iLCAxMDApLAogICAgICB7IC4uLnR4KCIyMDI2LTA4LTA2IiwgImNhc2hfaW4iLCA1MDApLCBkZWxldGVkQXQ6ICIyMDI2LTA4LTA3IiB9LAogICAgICB0eCgiMjAyNi0wOC0wNyIsICJjYXNoX291dCIsIDUwKSwKICAgICAgdHgoIjIwMjYtMDktMTAiLCAiZmVlIiwgMTApLAogICAgXTsKICAgIGNvbnN0IGhlYXQgPSBidWlsZENvbnRyaWJ1dGlvbkhlYXRtYXAoeyB0cmFuc2FjdGlvbnM6IHR4cywgbG9jYWxlOiAiZGUiLCBub3c6IE5PVyB9KTsKICAgIGV4cGVjdChoZWF0IS5tb250aHNbMF0uYW1vdW50KS50b0JlKDEwMCk7CiAgICBleHBlY3QoaGVhdCEubW9udGhzWzFdLmxhYmVsKS50b0JlKCJTZXAiKTsKICB9KTsKfSk7Cg==
+import { describe, expect, it } from "vitest";
+import { buildContributionHeatmap } from "./contributionHeatmap";
+import type { Transaction } from "./types";
+
+function tx(date: string, type: Transaction["type"], amount: number): Transaction {
+  return {
+    id: `t-${date}-${type}`, date, type, amount, notes: "",
+    createdAt: date, updatedAt: date,
+  };
+}
+
+const NOW = new Date("2026-10-03T12:00:00");
+
+describe("buildContributionHeatmap", () => {
+  it("returns null with no contributions", () => {
+    expect(buildContributionHeatmap({ transactions: [], locale: "vi", now: NOW })).toBeNull();
+  });
+
+  it("returns null with a single month of range", () => {
+    const txs = [tx("2026-10-01", "cash_in", 100)];
+    expect(buildContributionHeatmap({ transactions: txs, locale: "vi", now: NOW })).toBeNull();
+  });
+
+  it("builds one cell per month with intensity levels", () => {
+    const txs = [
+      tx("2026-08-05", "cash_in", 100),
+      tx("2026-08-20", "cash_in", 100), // Aug: 200 (max → level 4)
+      tx("2026-09-10", "buy_vwce", 100), // Sep: 100 → level 2
+      // Oct: 0 → level 0
+    ];
+    const heat = buildContributionHeatmap({ transactions: txs, locale: "vi", now: NOW });
+    expect(heat).not.toBeNull();
+    expect(heat!.totalMonths).toBe(3);
+    expect(heat!.activeMonths).toBe(2);
+    expect(heat!.months.map((m) => [m.month, m.amount, m.level])).toEqual([
+      ["2026-08", 200, 4],
+      ["2026-09", 100, 3],
+      ["2026-10", 0, 0],
+    ]);
+  });
+
+  it("ignores deleted, non-contribution and non-positive rows", () => {
+    const txs = [
+      tx("2026-08-05", "cash_in", 100),
+      { ...tx("2026-08-06", "cash_in", 500), deletedAt: "2026-08-07" },
+      tx("2026-08-07", "cash_out", 50),
+      tx("2026-09-10", "fee", 10),
+    ];
+    const heat = buildContributionHeatmap({ transactions: txs, locale: "de", now: NOW });
+    expect(heat!.months[0].amount).toBe(100);
+    expect(heat!.months[1].label).toBe("Sep");
+  });
+});
