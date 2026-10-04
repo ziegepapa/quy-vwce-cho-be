@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { AppLocale } from "../lib/locale";
 import type { AppSettings, PlanTarget } from "../lib/types";
 import type { ThemeChoice } from "../lib/theme";
@@ -225,7 +226,7 @@ function Sheet({ title, onClose, closeLabel, children }: { title: string; onClos
       document.querySelector(".bottom-dock")?.classList.remove("is-hidden");
     };
   }, []);
-  return <div className="p40-sheet-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="p40-sheet" role="dialog" aria-modal="true" aria-label={title}><div className="p40-sheet-grabber" aria-hidden /><header><strong>{title}</strong><button type="button" aria-label={closeLabel} onClick={onClose}>×</button></header><div className="p40-sheet-body">{children}</div></section></div>;
+  return createPortal(<div className="p40-sheet-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="p40-sheet" role="dialog" aria-modal="true" aria-label={title}><div className="p40-sheet-grabber" aria-hidden /><header><strong>{title}</strong><button type="button" aria-label={closeLabel} onClick={onClose}>×</button></header><div className="p40-sheet-body">{children}</div></section></div>, document.body);
 }
 
 
@@ -262,6 +263,8 @@ function SetRow({ icon, label, value, onClick, danger }: {
 export default function SettingsCboWorkspace(props: Props) {
   const copy = copyFor(props.locale);
   const [sheet, setSheet] = useState<SettingsSheet>(null);
+  const [planFocus, setPlanFocus] = useState<"contribution" | "goal" | "yearplan" | null>(null);
+  const [simReturn, setSimReturn] = useState<SettingsSheet>(null);
   const [deRiskYears, setDeRiskYears] = useState(5);
   const [contributionDraft, setContributionDraft] = useState("");
   const target = props.settings.planTarget ?? { targetUseDate: props.settings.endDate ?? "", needFullAmount: true };
@@ -331,10 +334,10 @@ export default function SettingsCboWorkspace(props: Props) {
 
     <h2 className="set2-gtitle">{copy.planGroup}</h2>
     <div className="set2-group">
-      <SetRow icon={<IconCash />} label={copy.contribution} value={contribution != null ? money(contribution, props.locale) : "—"} onClick={() => setSheet("plan")} />
-      <SetRow icon={<IconGoal />} label={copy.goalRow} value={targetYear || "—"} onClick={() => setSheet("plan")} />
-      <SetRow icon={<IconSim />} label={copy.simulation} onClick={() => setSheet("simulation")} />
-      <SetRow icon={<IconArchive />} label={copy.yearPlanTitle} onClick={() => setSheet("plan")} />
+      <SetRow icon={<IconCash />} label={copy.contribution} value={contribution != null ? money(contribution, props.locale) : "—"} onClick={() => { setPlanFocus("contribution"); setSheet("plan"); }} />
+      <SetRow icon={<IconGoal />} label={copy.goalRow} value={targetYear || "—"} onClick={() => { setPlanFocus("goal"); setSheet("plan"); }} />
+      <SetRow icon={<IconSim />} label={copy.simulation} onClick={() => { setSimReturn(null); setSheet("simulation"); }} />
+      <SetRow icon={<IconArchive />} label={copy.yearPlanTitle} onClick={() => { setPlanFocus("yearplan"); setSheet("plan"); }} />
     </div>
 
     <h2 className="set2-gtitle">{copy.displayGroup}</h2>
@@ -391,7 +394,7 @@ export default function SettingsCboWorkspace(props: Props) {
 
 
     {sheet === "profile" ? <Sheet title={copy.profile} closeLabel={copy.close} onClose={() => setSheet(null)}><div className="p40-sheet-fields"><label><span>{copy.planName}</span><input value={props.settings.planName} onChange={(event) => props.onPatchSettings({ planName: event.target.value })} /></label><label><span>{copy.childName}</span><input value={props.settings.childName} onChange={(event) => props.onPatchSettings({ childName: event.target.value })} /></label><div><span>{copy.account}</span><div className="p40-segments"><button type="button" className={props.settings.accountType === "parent" ? "selected" : ""} onClick={() => props.onPatchSettings({ accountType: "parent" })}>{copy.parent}</button><button type="button" className={props.settings.accountType === "child" ? "selected" : ""} onClick={() => props.onPatchSettings({ accountType: "child" })}>{copy.child}</button></div></div></div><button type="button" className="p40-sheet-done" onClick={() => setSheet(null)}>{copy.save}</button></Sheet> : null}
-    {sheet === "plan" ? <Sheet title={copy.plan} closeLabel={copy.close} onClose={() => setSheet(null)}>
+    {sheet === "plan" ? <Sheet title={planFocus === "contribution" ? copy.contribution : planFocus === "goal" ? copy.goalRow : planFocus === "yearplan" ? copy.yearPlanTitle : copy.plan} closeLabel={copy.close} onClose={() => { setSheet(null); setPlanFocus(null); }}>
       <div className="p40-sheet-fields">
         <label><span>{copy.targetDate}</span><input type="date" value={target.targetUseDate} onChange={(event) => editTarget({ targetUseDate: event.target.value })} /></label>
         <label className="p40-toggle-row"><span><strong>{copy.fullAmount}</strong></span><input type="checkbox" checked={target.needFullAmount} onChange={(event) => editTarget({ needFullAmount: event.target.checked, partialNeedEuro: event.target.checked ? undefined : target.partialNeedEuro })} /></label>
@@ -460,10 +463,10 @@ export default function SettingsCboWorkspace(props: Props) {
         </div>;
       })()}
       {yearlyPlanRows.length > 0 ? <section aria-label={copy.yearPlanTitle} style={{ display: "grid", gap: 10 }}>
-        <div>
+        {planFocus !== "yearplan" ? <div>
           <strong style={{ display: "block", color: "var(--p40-ink)", fontSize: 17, letterSpacing: "-.02em" }}>{copy.yearPlanTitle}</strong>
           <small style={{ display: "block", marginTop: 4, color: "var(--p40-muted)", fontSize: 12, lineHeight: 1.4 }}>{copy.yearPlanSubtitle}</small>
-        </div>
+        </div> : null}
         <div style={{ overflowX: "auto", border: "1px solid var(--p40-line)", borderRadius: 16, background: "var(--p40-surface)" }}>
           <table data-testid="p40-yearly-plan" style={{ width: "100%", minWidth: 620, borderCollapse: "separate", borderSpacing: 0, fontVariantNumeric: "tabular-nums lining-nums" }}>
             <thead>
@@ -488,10 +491,10 @@ export default function SettingsCboWorkspace(props: Props) {
           </table>
         </div>
       </section> : null}
-      <button type="button" className="p40-advanced-link" onClick={() => setSheet("simulation")}>{copy.advanced}<small>{copy.advancedHelp}</small><IconChevronRight aria-hidden /></button>
+      <button type="button" className="p40-advanced-link" onClick={() => { setSimReturn("plan"); setSheet("simulation"); }}>{copy.advanced}<small>{copy.advancedHelp}</small><IconChevronRight aria-hidden /></button>
       <button type="button" className="p40-sheet-done" onClick={() => setSheet(null)}>{copy.save}</button>
     </Sheet> : null}
-    {sheet === "simulation" ? <Sheet title={copy.simulation} closeLabel={copy.close} onClose={() => setSheet("plan")}><p className="p40-sheet-note">{copy.simulationNote}</p><div className="p40-sheet-fields p40-percent-grid"><label><span>{copy.vwceReturn}</span><input inputMode="decimal" value={String(props.settings.vwceReturn * 100)} onChange={(event) => updateRate("vwceReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.inflation}</span><input inputMode="decimal" value={String(props.settings.inflationRate * 100)} onChange={(event) => updateRate("inflationRate", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.safeReturn}</span><input inputMode="decimal" value={String(props.settings.safeReturn * 100)} onChange={(event) => updateRate("safeReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.buffer}</span><input inputMode="decimal" value={String(props.settings.bufferPct * 100)} onChange={(event) => updateRate("bufferPct", event.target.value)} /><small>%</small></label></div><button type="button" className="p40-sheet-done" onClick={() => setSheet("plan")}>{copy.save}</button></Sheet> : null}
+    {sheet === "simulation" ? <Sheet title={copy.simulation} closeLabel={copy.close} onClose={() => setSheet(simReturn)}><p className="p40-sheet-note">{copy.simulationNote}</p><div className="p40-sheet-fields p40-percent-grid"><label><span>{copy.vwceReturn}</span><input inputMode="decimal" value={String(props.settings.vwceReturn * 100)} onChange={(event) => updateRate("vwceReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.inflation}</span><input inputMode="decimal" value={String(props.settings.inflationRate * 100)} onChange={(event) => updateRate("inflationRate", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.safeReturn}</span><input inputMode="decimal" value={String(props.settings.safeReturn * 100)} onChange={(event) => updateRate("safeReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.buffer}</span><input inputMode="decimal" value={String(props.settings.bufferPct * 100)} onChange={(event) => updateRate("bufferPct", event.target.value)} /><small>%</small></label></div><button type="button" className="p40-sheet-done" onClick={() => setSheet("plan")}>{copy.save}</button></Sheet> : null}
 
     {sheet === "theme" ? <Sheet title={copy.appearance} closeLabel={copy.close} onClose={() => setSheet(null)}>
       <div className="set2-theme-list">
