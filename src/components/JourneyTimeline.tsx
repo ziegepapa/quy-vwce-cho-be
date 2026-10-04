@@ -1,1 +1,33 @@
-aW1wb3J0IHR5cGUgeyBKb3VybmV5RXZlbnQgfSBmcm9tICIuLi9saWIvam91cm5leVRpbWVsaW5lIjsKCnR5cGUgUHJvcHMgPSB7CiAgZXZlbnRzOiBKb3VybmV5RXZlbnRbXTsKICAvKiogU2VjdGlvbiB0aXRsZSwgbG9jYWxlLWF3YXJlLiAqLwogIHRpdGxlOiBzdHJpbmc7Cn07CgovKioKICogVGhlIGZ1bmQncyBzdG9yeSBhcyBhIHF1aWV0IHZlcnRpY2FsIHRpbWVsaW5lOiBmaXJzdCBjb250cmlidXRpb24sCiAqIHZhbHVlIG1pbGVzdG9uZXMsIHRvZGF5LiBSZWFsIGV2ZW50cyBvbmx5IOKAlCBub3RoaW5nIGludmVudGVkLgogKi8KZXhwb3J0IGRlZmF1bHQgZnVuY3Rpb24gSm91cm5leVRpbWVsaW5lKHsgZXZlbnRzLCB0aXRsZSB9OiBQcm9wcykgewogIHJldHVybiAoCiAgICA8ZGl2IGNsYXNzTmFtZT0ib3ZjLWpvdXJuZXkiPgogICAgICA8ZGl2IGNsYXNzTmFtZT0ib3ZjLWNhcmQtaGVhZCI+CiAgICAgICAgPGgyIGNsYXNzTmFtZT0ib3ZjLXRpdGxlIj57dGl0bGV9PC9oMj4KICAgICAgPC9kaXY+CiAgICAgIDxvbCBjbGFzc05hbWU9Im92Yy1qb3VybmV5LWxpc3QiPgogICAgICAgIHtldmVudHMubWFwKChlKSA9PiAoCiAgICAgICAgICA8bGkga2V5PXtgJHtlLmtpbmR9LSR7ZS5kYXRlfWB9IGNsYXNzTmFtZT17YG92Yy1qb3VybmV5LWl0ZW0gay0ke2Uua2luZH1gfT4KICAgICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPSJvdmMtam91cm5leS1kb3QiIGFyaWEtaGlkZGVuIC8+CiAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJvdmMtam91cm5leS1ib2R5Ij4KICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0ib3ZjLWpvdXJuZXktZGF0ZSI+e2UuZGF0ZUxhYmVsfTwvZGl2PgogICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJvdmMtam91cm5leS10aXRsZSI+e2UudGl0bGV9PC9kaXY+CiAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9Im92Yy1tdXRlZCI+e2UuZGV0YWlsfTwvZGl2PgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIDwvbGk+CiAgICAgICAgKSl9CiAgICAgIDwvb2w+CiAgICA8L2Rpdj4KICApOwp9Cg==
+import type { JourneyEvent } from "../lib/journeyTimeline";
+
+type Props = {
+  events: JourneyEvent[];
+  /** Section title, locale-aware. */
+  title: string;
+};
+
+/**
+ * The fund's story as a quiet vertical timeline: first contribution,
+ * value milestones, today. Real events only — nothing invented.
+ */
+export default function JourneyTimeline({ events, title }: Props) {
+  return (
+    <div className="ovc-journey">
+      <div className="ovc-card-head">
+        <h2 className="ovc-title">{title}</h2>
+      </div>
+      <ol className="ovc-journey-list">
+        {events.map((e) => (
+          <li key={`${e.kind}-${e.date}`} className={`ovc-journey-item k-${e.kind}`}>
+            <span className="ovc-journey-dot" aria-hidden />
+            <div className="ovc-journey-body">
+              <div className="ovc-journey-date">{e.dateLabel}</div>
+              <div className="ovc-journey-title">{e.title}</div>
+              <div className="ovc-muted">{e.detail}</div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
