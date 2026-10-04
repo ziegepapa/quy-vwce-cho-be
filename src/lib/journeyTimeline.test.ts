@@ -1,1 +1,54 @@
-aW1wb3J0IHsgZGVzY3JpYmUsIGV4cGVjdCwgaXQgfSBmcm9tICJ2aXRlc3QiOwppbXBvcnQgeyBidWlsZEpvdXJuZXlUaW1lbGluZSB9IGZyb20gIi4vam91cm5leVRpbWVsaW5lIjsKaW1wb3J0IHR5cGUgeyBUcmFuc2FjdGlvbiB9IGZyb20gIi4vdHlwZXMiOwppbXBvcnQgdHlwZSB7IFZhbHVlSGlzdG9yeVBvaW50IH0gZnJvbSAiLi92YWx1ZUhpc3RvcnkiOwoKZnVuY3Rpb24gdHgoZGF0ZTogc3RyaW5nLCBhbW91bnQ6IG51bWJlcik6IFRyYW5zYWN0aW9uIHsKICByZXR1cm4gewogICAgaWQ6IGB0LSR7ZGF0ZX1gLCBkYXRlLCB0eXBlOiAiY2FzaF9pbiIsIGFtb3VudCwgbm90ZXM6ICIiLAogICAgY3JlYXRlZEF0OiBkYXRlLCB1cGRhdGVkQXQ6IGRhdGUsCiAgfTsKfQoKZnVuY3Rpb24gcG9pbnQobW9udGg6IHN0cmluZywgbGFiZWw6IHN0cmluZywgdmFsdWU6IG51bWJlcik6IFZhbHVlSGlzdG9yeVBvaW50IHsKICByZXR1cm4geyBtb250aCwgbGFiZWwsIHZhbHVlIH07Cn0KCmNvbnN0IE5PVyA9IG5ldyBEYXRlKCIyMDI2LTEwLTAzVDEyOjAwOjAwIik7CgpkZXNjcmliZSgiYnVpbGRKb3VybmV5VGltZWxpbmUiLCAoKSA9PiB7CiAgaXQoInJldHVybnMgbnVsbCB3aXRoIG5vIGNvbnRyaWJ1dGlvbnMiLCAoKSA9PiB7CiAgICBleHBlY3QoYnVpbGRKb3VybmV5VGltZWxpbmUoeyB0cmFuc2FjdGlvbnM6IFtdLCB2YWx1ZUhpc3Rvcnk6IG51bGwsIGxvY2FsZTogInZpIiwgbm93OiBOT1cgfSkpLnRvQmVOdWxsKCk7CiAgfSk7CgogIGl0KCJidWlsZHMgc3RhcnQgKyBtaWxlc3RvbmVzICsgbm93IGZyb20gcmVhbCBkYXRhIiwgKCkgPT4gewogICAgY29uc3QgdHhzID0gW3R4KCIyMDI2LTA4LTA1IiwgNjAwKSwgdHgoIjIwMjYtMDktMTAiLCA2MDApXTsKICAgIGNvbnN0IGhpc3RvcnkgPSBbCiAgICAgIHBvaW50KCIyMDI2LTA4IiwgIlQ4IiwgNjAwKSwKICAgICAgcG9pbnQoIjIwMjYtMDkiLCAiVDkiLCAxMjUwKSwKICAgICAgcG9pbnQoIjIwMjYtMTAiLCAiVDEwIiwgMTMwMCksCiAgICBdOwogICAgY29uc3QgZXZlbnRzID0gYnVpbGRKb3VybmV5VGltZWxpbmUoeyB0cmFuc2FjdGlvbnM6IHR4cywgdmFsdWVIaXN0b3J5OiBoaXN0b3J5LCBsb2NhbGU6ICJ2aSIsIG5vdzogTk9XIH0pOwogICAgZXhwZWN0KGV2ZW50cykubm90LnRvQmVOdWxsKCk7CiAgICBleHBlY3QoZXZlbnRzIS5tYXAoKGUpID0+IGUua2luZCkpLnRvRXF1YWwoWyJzdGFydCIsICJtaWxlc3RvbmUiLCAibm93Il0pOwogICAgZXhwZWN0KGV2ZW50cyFbMF0udGl0bGUpLnRvQmUoIkfDs3AgxJHhuqd1IHRpw6puIik7CiAgICBleHBlY3QoZXZlbnRzIVsxXS50aXRsZSkudG9CZSgiUXXhu7kgY2jhuqFtIDEuMDAwIOKCrCIpOwogICAgZXhwZWN0KGV2ZW50cyFbMV0uZGF0ZUxhYmVsKS50b0JlKCJUOSIpOwogICAgZXhwZWN0KGV2ZW50cyFbMl0ua2luZCkudG9CZSgibm93Iik7CiAgfSk7CgogIGl0KCJzdG9wcyBtaWxlc3RvbmVzIGF0IHRoZSBmaXJzdCB1bmNyb3NzZWQgdGhyZXNob2xkIiwgKCkgPT4gewogICAgY29uc3QgdHhzID0gW3R4KCIyMDI2LTA4LTA1IiwgNjAwKV07CiAgICBjb25zdCBoaXN0b3J5ID0gW3BvaW50KCIyMDI2LTA4IiwgIlQ4IiwgNjAwKSwgcG9pbnQoIjIwMjYtMDkiLCAiVDkiLCA2NTApXTsKICAgIGNvbnN0IGV2ZW50cyA9IGJ1aWxkSm91cm5leVRpbWVsaW5lKHsgdHJhbnNhY3Rpb25zOiB0eHMsIHZhbHVlSGlzdG9yeTogaGlzdG9yeSwgbG9jYWxlOiAiZGUiLCBub3c6IE5PVyB9KTsKICAgIC8vIDEwMDAgbm90IGNyb3NzZWQg4oaSIG5vIG1pbGVzdG9uZSBldmVudHMKICAgIGV4cGVjdChldmVudHMhLm1hcCgoZSkgPT4gZS5raW5kKSkudG9FcXVhbChbInN0YXJ0IiwgIm5vdyJdKTsKICAgIGV4cGVjdChldmVudHMhWzBdLnRpdGxlKS50b0JlKCJFcnN0ZSBFaW56YWhsdW5nIik7CiAgfSk7CgogIGl0KCJ3b3JrcyB3aXRob3V0IHZhbHVlIGhpc3RvcnkgKHN0YXJ0ICsgbm93IG9ubHkpIiwgKCkgPT4gewogICAgY29uc3QgdHhzID0gW3R4KCIyMDI2LTA4LTA1IiwgNjAwKV07CiAgICBjb25zdCBldmVudHMgPSBidWlsZEpvdXJuZXlUaW1lbGluZSh7IHRyYW5zYWN0aW9uczogdHhzLCB2YWx1ZUhpc3Rvcnk6IG51bGwsIGxvY2FsZTogInZpIiwgbm93OiBOT1cgfSk7CiAgICBleHBlY3QoZXZlbnRzIS5tYXAoKGUpID0+IGUua2luZCkpLnRvRXF1YWwoWyJzdGFydCIsICJub3ciXSk7CiAgfSk7Cn0pOwo=
+import { describe, expect, it } from "vitest";
+import { buildJourneyTimeline } from "./journeyTimeline";
+import type { Transaction } from "./types";
+import type { ValueHistoryPoint } from "./valueHistory";
+
+function tx(date: string, amount: number): Transaction {
+  return {
+    id: `t-${date}`, date, type: "cash_in", amount, notes: "",
+    createdAt: date, updatedAt: date,
+  };
+}
+
+function point(month: string, label: string, value: number): ValueHistoryPoint {
+  return { month, label, value };
+}
+
+const NOW = new Date("2026-10-03T12:00:00");
+
+describe("buildJourneyTimeline", () => {
+  it("returns null with no contributions", () => {
+    expect(buildJourneyTimeline({ transactions: [], valueHistory: null, locale: "vi", now: NOW })).toBeNull();
+  });
+
+  it("builds start + milestones + now from real data", () => {
+    const txs = [tx("2026-08-05", 600), tx("2026-09-10", 600)];
+    const history = [
+      point("2026-08", "T8", 600),
+      point("2026-09", "T9", 1250),
+      point("2026-10", "T10", 1300),
+    ];
+    const events = buildJourneyTimeline({ transactions: txs, valueHistory: history, locale: "vi", now: NOW });
+    expect(events).not.toBeNull();
+    expect(events!.map((e) => e.kind)).toEqual(["start", "milestone", "now"]);
+    expect(events![0].title).toBe("Góp đầu tiên");
+    expect(events![1].title).toBe("Quỹ chạm 1.000 €");
+    expect(events![1].dateLabel).toBe("T9");
+    expect(events![2].kind).toBe("now");
+  });
+
+  it("stops milestones at the first uncrossed threshold", () => {
+    const txs = [tx("2026-08-05", 600)];
+    const history = [point("2026-08", "T8", 600), point("2026-09", "T9", 650)];
+    const events = buildJourneyTimeline({ transactions: txs, valueHistory: history, locale: "de", now: NOW });
+    // 1000 not crossed → no milestone events
+    expect(events!.map((e) => e.kind)).toEqual(["start", "now"]);
+    expect(events![0].title).toBe("Erste Einzahlung");
+  });
+
+  it("works without value history (start + now only)", () => {
+    const txs = [tx("2026-08-05", 600)];
+    const events = buildJourneyTimeline({ transactions: txs, valueHistory: null, locale: "vi", now: NOW });
+    expect(events!.map((e) => e.kind)).toEqual(["start", "now"]);
+  });
+});
