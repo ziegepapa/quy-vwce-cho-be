@@ -123,6 +123,8 @@ Chọn **Quên mật khẩu** trên màn hình đăng nhập rồi kiểm tra em
 
 Dependency audit không còn là blocker. Readiness vẫn chưa thể nâng vì H4 chưa có behavioral RLS proof, H5 chưa có migration reproducibility proof, và P11.2 chờ independent German tax-expert review. Đây là limitation của readiness hiện tại, **không phải giới hạn vòng đời phần mềm**. Xem [`docs/LONG_TERM_READINESS.md`](./docs/LONG_TERM_READINESS.md) để biết evidence và decision hiện hành. [1]
 
+*Cập nhật 10/2026:* toàn bộ roadmap P1–P3 trong `docs/product-ux-roadmap-2026.md` đã triển khai (time lens, saved views, quality inbox, heartbeat, plan-vs-reality, year-in-review, household handoff, confidence timeline); UI đang được tinh gọn theo đợt rebuild 10/2026 (#296–#301). Đánh giá readiness trên vẫn giữ nguyên.
+
 ## Nguyên tắc dự án
 
 `Correctness > Data integrity > Recovery > Security > Compatibility > Maintainability > UX > New features`
