@@ -124,7 +124,7 @@ describe("Settings initial load state", () => {
     expect(document.body.textContent).toContain("2036");
 
     fireEvent.click(screen.getByRole("button", { name: "Kế hoạch từng năm" }));
-    expect(screen.getByRole("dialog", { name: "Kế hoạch" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Kế hoạch từng năm" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "3 năm" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "5 năm" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "7 năm" })).toBeTruthy();
