@@ -1,1 +1,56 @@
-aW1wb3J0IHsgdXNlTWVtbyB9IGZyb20gInJlYWN0IjsKaW1wb3J0IHR5cGUgeyBDb250cmlidXRpb25IZWF0bWFwIH0gZnJvbSAiLi4vbGliL2NvbnRyaWJ1dGlvbkhlYXRtYXAiOwoKdHlwZSBQcm9wcyA9IHsKICBoZWF0bWFwOiBDb250cmlidXRpb25IZWF0bWFwOwogIC8qKiBTZWN0aW9uIHRpdGxlLCBsb2NhbGUtYXdhcmUuICovCiAgdGl0bGU6IHN0cmluZzsKICAvKiogU3VtbWFyeSBsaW5lLCBsb2NhbGUtYXdhcmUuICovCiAgc3VtbWFyeTogc3RyaW5nOwogIC8qKiBUb29sdGlwIHRlbXBsYXRlOiAobGFiZWwsIGFtb3VudCkgPT4gc3RyaW5nLiAqLwogIHRvb2x0aXA6IChsYWJlbDogc3RyaW5nLCBhbW91bnQ6IHN0cmluZykgPT4gc3RyaW5nOwogIGZvcm1hdEFtb3VudDogKGFtb3VudDogbnVtYmVyKSA9PiBzdHJpbmc7Cn07CgovKioKICogTW9udGhseSBjb250cmlidXRpb24gcmh5dGhtIGFzIGEgcXVpZXQgaGVhdG1hcC4gT25lIGNvbHVtbiBwZXIgbW9udGgsCiAqIGludGVuc2l0eSA9IGFtb3VudCB2cyB0aGUgc3Ryb25nZXN0IG1vbnRoLiBSZWFsIGRhdGEgb25seS4KICovCmV4cG9ydCBkZWZhdWx0IGZ1bmN0aW9uIENvbnRyaWJ1dGlvbkhlYXRtYXAoeyBoZWF0bWFwLCB0aXRsZSwgc3VtbWFyeSwgdG9vbHRpcCwgZm9ybWF0QW1vdW50IH06IFByb3BzKSB7CiAgY29uc3QgbGFiZWxJZHggPSB1c2VNZW1vKCgpID0+IHsKICAgIGNvbnN0IG4gPSBoZWF0bWFwLm1vbnRocy5sZW5ndGg7CiAgICBpZiAobiA8PSA2KSByZXR1cm4gaGVhdG1hcC5tb250aHMubWFwKChfLCBpKSA9PiBpKTsKICAgIGNvbnN0IGlkeCA9IG5ldyBTZXQoWzAsIG4gLSAxXSk7CiAgICBjb25zdCBzdGVwID0gTWF0aC5tYXgoMSwgTWF0aC5mbG9vcihuIC8gNikpOwogICAgZm9yIChsZXQgaSA9IHN0ZXA7IGkgPCBuIC0gMTsgaSArPSBzdGVwKSBpZHguYWRkKGkpOwogICAgcmV0dXJuIFsuLi5pZHhdLnNvcnQoKGEsIGIpID0+IGEgLSBiKTsKICB9LCBbaGVhdG1hcF0pOwoKICByZXR1cm4gKAogICAgPGRpdiBjbGFzc05hbWU9Im92Yy1oZWF0bWFwIj4KICAgICAgPGRpdiBjbGFzc05hbWU9Im92Yy1jYXJkLWhlYWQiPgogICAgICAgIDxoMiBjbGFzc05hbWU9Im92Yy10aXRsZSI+e3RpdGxlfTwvaDI+CiAgICAgICAgPHNwYW4gY2xhc3NOYW1lPSJvdmMtbXV0ZWQiPntzdW1tYXJ5fTwvc3Bhbj4KICAgICAgPC9kaXY+CiAgICAgIDxkaXYKICAgICAgICBjbGFzc05hbWU9Im92Yy1oZWF0bWFwLWdyaWQiCiAgICAgICAgcm9sZT0iaW1nIgogICAgICAgIGFyaWEtbGFiZWw9e2Ake3RpdGxlfSDCtyAke3N1bW1hcnl9YH0KICAgICAgICBzdHlsZT17eyBncmlkVGVtcGxhdGVDb2x1bW5zOiBgcmVwZWF0KCR7aGVhdG1hcC5tb250aHMubGVuZ3RofSwgMWZyKWAgfX0KICAgICAgPgogICAgICAgIHtoZWF0bWFwLm1vbnRocy5tYXAoKG0pID0+ICgKICAgICAgICAgIDxzcGFuCiAgICAgICAgICAgIGtleT17bS5tb250aH0KICAgICAgICAgICAgY2xhc3NOYW1lPXtgb3ZjLWhlYXRtYXAtY2VsbCBsdiR7bS5sZXZlbH1gfQogICAgICAgICAgICB0aXRsZT17dG9vbHRpcChtLmxhYmVsLCBmb3JtYXRBbW91bnQobS5hbW91bnQpKX0KICAgICAgICAgIC8+CiAgICAgICAgKSl9CiAgICAgICAge2hlYXRtYXAubW9udGhzLm1hcCgobSwgaSkgPT4gKAogICAgICAgICAgPHNwYW4ga2V5PXtgJHttLm1vbnRofS1sYmxgfSBjbGFzc05hbWU9Im92Yy1oZWF0bWFwLWxibCIgYXJpYS1oaWRkZW4+CiAgICAgICAgICAgIHtsYWJlbElkeC5pbmNsdWRlcyhpKSA/IG0ubGFiZWwgOiAiIn0KICAgICAgICAgIDwvc3Bhbj4KICAgICAgICApKX0KICAgICAgPC9kaXY+CiAgICA8L2Rpdj4KICApOwp9Cg==
+import { useMemo } from "react";
+import type { ContributionHeatmap } from "../lib/contributionHeatmap";
+
+type Props = {
+  heatmap: ContributionHeatmap;
+  /** Section title, locale-aware. */
+  title: string;
+  /** Summary line, locale-aware. */
+  summary: string;
+  /** Tooltip template: (label, amount) => string. */
+  tooltip: (label: string, amount: string) => string;
+  formatAmount: (amount: number) => string;
+};
+
+/**
+ * Monthly contribution rhythm as a quiet heatmap. One column per month,
+ * intensity = amount vs the strongest month. Real data only.
+ */
+export default function ContributionHeatmap({ heatmap, title, summary, tooltip, formatAmount }: Props) {
+  const labelIdx = useMemo(() => {
+    const n = heatmap.months.length;
+    if (n <= 6) return heatmap.months.map((_, i) => i);
+    const idx = new Set([0, n - 1]);
+    const step = Math.max(1, Math.floor(n / 6));
+    for (let i = step; i < n - 1; i += step) idx.add(i);
+    return [...idx].sort((a, b) => a - b);
+  }, [heatmap]);
+
+  return (
+    <div className="ovc-heatmap">
+      <div className="ovc-card-head">
+        <h2 className="ovc-title">{title}</h2>
+        <span className="ovc-muted">{summary}</span>
+      </div>
+      <div
+        className="ovc-heatmap-grid"
+        role="img"
+        aria-label={`${title} · ${summary}`}
+        style={{ gridTemplateColumns: `repeat(${heatmap.months.length}, 1fr)` }}
+      >
+        {heatmap.months.map((m) => (
+          <span
+            key={m.month}
+            className={`ovc-heatmap-cell lv${m.level}`}
+            title={tooltip(m.label, formatAmount(m.amount))}
+          />
+        ))}
+        {heatmap.months.map((m, i) => (
+          <span key={`${m.month}-lbl`} className="ovc-heatmap-lbl" aria-hidden>
+            {labelIdx.includes(i) ? m.label : ""}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
