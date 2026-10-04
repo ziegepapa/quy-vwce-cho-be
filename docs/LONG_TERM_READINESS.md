@@ -164,6 +164,20 @@ Baseline v1.6.0 đã đạt tiến bộ cụ thể: dependency audit sạch, rel
 
 Vì vậy hệ thống phù hợp trong phạm vi **local-first tracker, owner-controlled backup và broker statement độc lập**. Nó chưa được quảng bá là security-complete, RLS-behavioral-verified, migration-reproducible hoặc thay thế hoàn toàn chứng từ broker.
 
+## 19. Addendum 04/10/2026 — thay đổi sau baseline (không đổi kết luận readiness)
+
+Từ baseline 21-08-2026 (PR #251, app version `1.6.0`) đến 04-10-2026, các thay đổi sau đã merge lên `main` (app version giữ `1.6.0`):
+
+- UI rebuild: redesign v2 cho Overview/Transactions/Simulation (PR #297), Overview story blocks — ContributionHeatmap + JourneyTimeline (PR #298), Transactions + Settings rebuild (PR #300, #301). Không đụng financial core, Dexie schema, sync semantics hay backup format.
+- Thẻ "Hôm nay" (daily briefing, PR #289) đã merge rồi được gỡ bỏ theo quyết định của owner.
+- Branch protection: ruleset "Protect" cho `main` ở trạng thái Active — bắt buộc pull request, required check `test-build`, chặn force push, hạn chế xóa nhánh.
+- Workflow giá VWCE chuyển từ push thẳng `main` sang mở một PR theo ngày (UTC) + auto-merge sau khi required checks xanh, dùng fine-grained PAT (`PRICE_BOT_TOKEN`) — vì ruleset chặn mọi push trực tiếp kể cả `GITHUB_TOKEN` (PR #302).
+- Dọn dead code (SettingsCboWorkspace, CSS thừa) và đồng bộ docs (product roadmap, README).
+
+Không có thay đổi nào thuộc diện financial semantics, schema/Dexie, backup compatibility, sync semantics, migration, quote economics hay tax scope ngoài các PR đã nêu; mọi PR đều đi qua required CI gates (`test-build`, `edge-smoke`, `preview-smoke`).
+
+**Kết luận readiness không đổi:** H4 vẫn `PARTIAL — STATIC POLICY EVIDENCE ONLY`, H5 vẫn `BLOCKED — NO ORDERED BASELINE`, P11.2 vẫn khóa tuyệt đối chờ independent German tax expert review. Hệ thống vẫn ở mức **local-first tracker** như mục 18, chưa phải sole authoritative financial record.
+
 ## References
 
 [1]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/248 "PR #248 — post-baseline documentation consistency"
