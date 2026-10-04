@@ -9,6 +9,10 @@ import type { PortfolioDataHealth, PortfolioDataHealthIssue } from "../../pages/
 import type { DailyBriefing } from "../../pages/dailyBriefing";
 import type { ValueHistoryPoint } from "../../lib/valueHistory";
 import ValueHistoryChart from "../ValueHistoryChart";
+import type { ContributionHeatmap as ContributionHeatmapData } from "../../lib/contributionHeatmap";
+import ContributionHeatmap from "../ContributionHeatmap";
+import type { JourneyEvent } from "../../lib/journeyTimeline";
+import JourneyTimeline from "../JourneyTimeline";
 import "../../styles/overview-clean.css";
 
 type OverviewFrameProps = {
@@ -32,6 +36,8 @@ type OverviewFrameProps = {
   yearReviewYears: number[];
   onYearReviewYearChange: (year: number) => void;
   valueHistory: ValueHistoryPoint[] | null;
+  contributionHeatmap: ContributionHeatmapData | null;
+  journeyTimeline: JourneyEvent[] | null;
 };
 
 function overviewCopy(locale: "vi" | "de") {
@@ -40,6 +46,10 @@ function overviewCopy(locale: "vi" | "de") {
     stalePrice: "Alter Kurs",
     shares: "Anteile",
     valueHistoryLabel: "Portfoliowert pro Monat",
+    rhythmTitle: "Spar-Rhythmus",
+    rhythmSummary: (active: number, total: number) => `${active}/${total} Monaten mit Beiträgen`,
+    rhythmTooltip: (label: string, amount: string) => `${label}: ${amount}`,
+    journeyTitle: "Reise",
     savingsPlan: "Sparplan",
     perMonth: "/Mon.",
     attention: "Zu beachten",
@@ -93,6 +103,10 @@ function overviewCopy(locale: "vi" | "de") {
     stalePrice: "Giá cũ",
     shares: "cổ phần",
     valueHistoryLabel: "Giá trị quỹ theo tháng",
+    rhythmTitle: "Nhịp góp",
+    rhythmSummary: (active: number, total: number) => `${active}/${total} tháng có góp`,
+    rhythmTooltip: (label: string, amount: string) => `${label}: ${amount}`,
+    journeyTitle: "Hành trình",
     savingsPlan: "Khoản góp",
     perMonth: "/th",
     attention: "Cần chú ý",
@@ -224,6 +238,8 @@ export default function OverviewFrame({
   yearReviewYears,
   onYearReviewYearChange,
   valueHistory,
+  contributionHeatmap,
+  journeyTimeline,
 }: OverviewFrameProps) {
   const { locale } = useLocale();
   const text = overviewCopy(locale);
@@ -328,7 +344,27 @@ export default function OverviewFrame({
           ) : null}
         </section>
 
-        {/* 2 — Plan: smart pace line + facts + behavior-based trajectory */}
+        {/* 2 — Heatmap nhịp góp: một ô mỗi tháng, đậm nhạt theo số tiền */}
+        {contributionHeatmap ? (
+          <section className="ovc-card" aria-label={text.rhythmTitle}>
+            <ContributionHeatmap
+              heatmap={contributionHeatmap}
+              title={text.rhythmTitle}
+              summary={text.rhythmSummary(contributionHeatmap.activeMonths, contributionHeatmap.totalMonths)}
+              tooltip={text.rhythmTooltip}
+              formatAmount={(amount) => formatMoney(amount)}
+            />
+          </section>
+        ) : null}
+
+        {/* 3 — Timeline hành trình: góp đầu tiên, các cột mốc, hôm nay */}
+        {journeyTimeline ? (
+          <section className="ovc-card" aria-label={text.journeyTitle}>
+            <JourneyTimeline events={journeyTimeline} title={text.journeyTitle} />
+          </section>
+        ) : null}
+
+        {/* 4 — Plan: smart pace line + facts + behavior-based trajectory */}
         <section className="ovc-card" aria-label={text.currentPlan}>
           <div className="ovc-card-head">
             <h2 className="ovc-title">{text.currentPlan}</h2>
@@ -353,7 +389,7 @@ export default function OverviewFrame({
           </div>
         </section>
 
-        {/* 4 — Attention: merged, only when there is something to do */}
+        {/* 5 — Attention: merged, only when there is something to do */}
         {attentionItems.length > 0 ? (
           <section className="ovc-card ovc-attention" aria-label={text.attention} data-attention-count={attentionItems.length}>
             <h2 className="ovc-title">{text.attention}</h2>
@@ -378,7 +414,7 @@ export default function OverviewFrame({
           </section>
         ) : null}
 
-        {/* 5 — Year review: quiet footer row */}
+        {/* 6 — Year review: quiet footer row */}
         <section className="ovc-foot" aria-label={text.yearReview}>
           <div className="ovc-foot-head">
             <span className="ovc-title">{text.yearReview}</span>

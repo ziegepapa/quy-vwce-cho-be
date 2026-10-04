@@ -395,3 +395,89 @@
 .ov > *:nth-child(3) { animation-delay: 0.1s; }
 .ov > *:nth-child(4) { animation-delay: 0.15s; }
 .ov > *:nth-child(5) { animation-delay: 0.2s; }
+
+/* ---------- Heatmap nhịp góp ---------- */
+.ovc-heatmap-grid {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.ovc-heatmap-cell {
+  aspect-ratio: 1;
+  min-width: 14px;
+  border-radius: 4px;
+  background: var(--surface-sunken);
+}
+.ovc-heatmap-cell.lv1 { background: color-mix(in srgb, var(--primary-600) 22%, transparent); }
+.ovc-heatmap-cell.lv2 { background: color-mix(in srgb, var(--primary-600) 42%, transparent); }
+.ovc-heatmap-cell.lv3 { background: color-mix(in srgb, var(--primary-600) 68%, transparent); }
+.ovc-heatmap-cell.lv4 { background: var(--primary-600); }
+.ovc-heatmap-lbl {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Timeline hành trình ---------- */
+.ovc-journey-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+.ovc-journey-item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 18px;
+}
+.ovc-journey-item:last-child { padding-bottom: 2px; }
+.ovc-journey-item::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 16px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border-subtle);
+  border-radius: 1px;
+}
+.ovc-journey-item:last-child::before { display: none; }
+.ovc-journey-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  border: 2px solid var(--text-tertiary);
+}
+.ovc-journey-item.k-start .ovc-journey-dot {
+  background: var(--primary-600);
+  border-color: var(--primary-600);
+}
+.ovc-journey-item.k-milestone .ovc-journey-dot {
+  background: var(--success-600);
+  border-color: var(--success-600);
+}
+.ovc-journey-item.k-now .ovc-journey-dot {
+  background: var(--surface-raised);
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-600) 18%, transparent);
+}
+.ovc-journey-date {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.ovc-journey-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 1px 0;
+}

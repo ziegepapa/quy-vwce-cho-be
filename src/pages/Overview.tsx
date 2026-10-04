@@ -15,6 +15,8 @@ import { buildYearInReview, yearInReviewYears } from "./yearInReview";
 import { buildPortfolioDataHealth } from "./portfolioDataHealth";
 import { buildDailyBriefing, type BriefingPricePoint, type DailyBriefing } from "./dailyBriefing";
 import { buildValueHistory } from "../lib/valueHistory";
+import { buildContributionHeatmap } from "../lib/contributionHeatmap";
+import { buildJourneyTimeline } from "../lib/journeyTimeline";
 
 function priceHistoryUrl(): string {
   const baseUrl = import.meta.env.BASE_URL as string | undefined;
@@ -299,7 +301,14 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       yearInReview,
       yearReviewYears,
       onYearReviewYearChange: setYearReviewYear,
-      valueHistory: buildValueHistory({ transactions, quotes, locale }),
+      ...(() => {
+        const valueHistory = buildValueHistory({ transactions, quotes, locale });
+        return {
+          valueHistory,
+          contributionHeatmap: buildContributionHeatmap({ transactions, locale }),
+          journeyTimeline: buildJourneyTimeline({ transactions, valueHistory, locale }),
+        };
+      })(),
       goalTargetDate: formatGoalTargetDate(settings.endDate, locale),
       goalHorizon: goalHorizon(settings.endDate, locale, currentDate),
     };
