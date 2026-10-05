@@ -22,3 +22,34 @@ jobs:
           BASE_URL: https://ziegepapa.github.io/quy-vwce-cho-be/
           MAX_QUOTE_AGE_DAYS: "7"
         run: npm run verify:production
+  # Production Health v2: headless Playwright smoke of the real UI routes.
+  # Catches UI-level breakage (blank renders, sheet/modal regressions,
+  # uncaught errors) that the HTTP-level verify above cannot see.
+  route-smoke:
+    runs-on: ubuntu-latest
+    # Browsers + OS libs preinstalled — same image as CI preview-smoke,
+    # so we never run `playwright install --with-deps` / apt here either.
+    # Image tag must match the pinned @playwright/test version (1.62.1).
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-jammy
+      options: --ipc=host
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: npm ci
+      - name: Smoke production UI routes (headless)
+        env:
+          BASE_URL: https://ziegepapa.github.io/quy-vwce-cho-be/
+          SCREENSHOT_DIR: /tmp/prod-route-smoke
+        run: npm run verify:production-routes
+      - name: Upload route failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-route-failure-${{ github.run_id }}
+          path: /tmp/prod-route-smoke/
+          if-no-files-found: ignore
+          retention-days: 14
