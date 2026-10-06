@@ -47,10 +47,28 @@ function shot(page, name) {
 async function dismissOnboardingIfPresent(page) {
   // Fresh profile → Onboarding (single button). Either it or the app main
   // appears after boot; they are mutually exclusive.
-  await Promise.race([
-    page.waitForSelector(".card.disclaimer", { timeout: 20000 }),
-    page.waitForSelector("main[class*='premium-screen-']", { timeout: 20000 }),
-  ]);
+  try {
+    await Promise.race([
+      page.waitForSelector(".card.disclaimer", { timeout: 30000 }),
+      page.waitForSelector("main[class*='premium-screen-']", { timeout: 30000 }),
+    ]);
+  } catch (err) {
+    // Boot diagnostics: distinguish "page never rendered" (slow/blocked
+    // network) from "rendered something unexpected" (app regression).
+    // Screenshot is picked up by CI's failure artifact upload.
+    const diag = await page
+      .evaluate(() => ({
+        readyState: document.readyState,
+        title: document.title,
+        rootChildren: document.getElementById("root")?.childElementCount ?? -1,
+        bodyTextLen: document.body ? document.body.innerText.trim().length : -1,
+        scripts: Array.from(document.scripts).map((s) => s.src.split("/").pop()),
+      }))
+      .catch(() => ({ note: "evaluate failed" }));
+    console.error(`BOOT DIAG: ${JSON.stringify(diag)}`);
+    await shot(page, "boot-timeout");
+    throw err;
+  }
   if (await page.locator(".card.disclaimer").count()) {
     await page.locator(".app-shell button").first().click();
     await page.waitForSelector("main[class*='premium-screen-']", { timeout: 20000 });
