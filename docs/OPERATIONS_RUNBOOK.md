@@ -239,6 +239,75 @@ Dependency update là maintenance có kiểm soát, không phải auto-fix. Tạ
 
 Release baseline hiện hành là `1.6.0`; lifecycle sản phẩm là **vô thời hạn** và không có application end date. `CONDITIONAL — NOT READY` vẫn là readiness chính thức cho sole authoritative financial-record role, do H4 chỉ có static policy evidence, H5 không có ordered migration/reproducibility proof, và P11.2 chờ independent German tax expert review. Người bảo trì phải đọc detailed status trong [`LONG_TERM_READINESS.md`](./LONG_TERM_READINESS.md) trước khi đổi bất kỳ ranh giới nào.
 
+## 14. Automation vận hành và bàn giao cho người/AI mới
+
+> Mục tiêu: repo tự vận hành khi không còn người/AI quản lý cũ. Mọi workflow tự chạy; con người chỉ can thiệp khi đỏ. AI mới vào đọc section này + §13 là tiếp quản được. Dự án dài hạn 16–20 năm — tài liệu này là hợp đồng bàn giao, không phải ghi chú tạm.
+
+### 14.1 Bản đồ workflow (`.github/workflows/`)
+
+| Workflow | Lịch | Việc | Tự động đến đâu |
+|---|---|---|---|
+| `deploy.yml` ("Test and Deploy") | push/PR vào `main` | test, tsc, locale audit, build, bundle, preview-smoke, deploy GitHub Pages | Deploy sau merge `main` |
+| `update-vwce-price.yml` | 19:30 CEST T2–T6 (`30 17 * * 1-5`); catch-up 08:00 T3–T7 (`0 6 * * 2-6`); chạy tay được | Lấy giá đóng cửa VWCE → commit lên nhánh `chore/price-YYYY-MM-DD` → mở PR → auto-merge (squash) | PR giá tự merge, không cần ai |
+| `production-health.yml` | 07:17 CEST hằng ngày (`17 5 * * *`); chạy tay được | job `verify` (HTTP: shell/PWA/quote) + job `route-smoke` (Playwright boot smoke) | Chỉ báo cáo, không tự sửa |
+
+Branch protection (`main`): bắt buộc PR, required check `test-build`, cấm force push và xóa nhánh.
+
+### 14.2 Luồng giá VWCE (PR #302, 10/2026)
+
+- Trước đây workflow push thẳng `main` → bị ruleset chặn (GITHUB_TOKEN không được push) → chuyển sang luồng PR + auto-merge.
+- Mọi thao tác ghi (push nhánh, mở PR, auto-merge) đi qua PAT `PRICE_BOT_TOKEN` (fine-grained: Contents + Pull requests read/write, do owner tạo, lưu trong repo Secrets). Không dùng GITHUB_TOKEN.
+- Kiểm chứng thủ công: (1) có nhánh `chore/price-YYYY-MM-DD` không; (2) PR đã merged chưa (không còn open); (3) entry mới nhất trong `public/data/price-history/IE00BK5BQT80.json` có phải ngày giao dịch gần nhất không.
+- Đã biết (10/2026): GitHub thỉnh thoảng drop lịch scheduled hoặc nghẽn runner (incident 05/10/2026 19:11 UTC) → cron catch-up 08:00 sinh ra cho đúng trường hợp này. Drop một lần lẻ **không phải lỗi config** — đừng "sửa" workflow.
+- Rào cản nền tảng: GitHub App connector của AI **không có quyền `workflows`** → mọi sửa `.github/workflows/*` phải paste tay qua web. Báo trước cho owner, gom thành ít bước nhất.
+
+### 14.3 Production Health v2 (PR #305/#306, sửa #309/#310, 10/2026)
+
+- `verify`: kiểm tra HTTP-level (status 200, title, app shell, quote tươi). Xanh đều = production sống.
+- `route-smoke`: Playwright headless (container `playwright:v1.62.1-jammy`), script `scripts/verify-production-routes.mjs` (npm script `verify:production-routes`). **Đây là boot smoke màn hình đăng nhập — KHÔNG phải test route sau đăng nhập.**
+- Vì sao: production build có Supabase (`auth.configured=true`) nên fresh profile render `<AuthPage />` (form login), không phải Onboarding. Thiết kế đầu (05/10/2026) sai giả định này → fail 2 lần → root-cause từ BOOT DIAG → sửa ở #309 (diagnostics) và #310 (smoke auth gate). **Đừng bao giờ assume fresh profile → Onboarding ở production.**
+- Assert (locale-free, không phụ thuộc chữ Việt/Đức): `.auth-shell .auth-card` + `input[type=email]` + `input[type=password]` + `button[type=submit]`; không pageerror/console.error; không render trắng. Screenshot chỉ khi fail.
+- Đọc BOOT DIAG khi boot fail (`{"readyState","title","rootChildren","bodyTextLen","scripts"}`):
+  - `rootChildren: 0` → JS không chạy (mạng/chặn tải bundle)
+  - body có text đăng nhập (~244 ký tự), title đúng → render đúng AuthPage (nếu script báo fail ở đây thì script sai, không phải app hỏng)
+  - `bodyTextLen` nhỏ + title đúng → kẹt màn hình loading (nghi auth init treo — app không timeout Supabase init, xem §8)
+- Artifact khi fail: `production-route-failure-<run_id>` chứa screenshot.
+
+### 14.4 Bảo mật — trạng thái đã kiểm chứng (10/2026)
+
+- Production **bắt buộc đăng nhập**; không có đường bypass (đã grep toàn bộ `App.tsx`/`main.tsx`; không có param nào skip auth).
+- RLS Supabase: 6 bảng (`profiles`, `app_settings`, `goals`, `transactions`, `annual_checklists`, `monthly_snapshots`) đều bật RLS, mọi policy khóa theo `auth.uid()` — không có policy mở. Chi tiết: [`H4-RLS-EVIDENCE.md`](./H4-RLS-EVIDENCE.md).
+- Đã kiểm chứng behavioral với anonymous (10/2026, chỉ đọc, **không ghi gì lên production**): SELECT cả 6 bảng → `[]` (HTTP 200); INSERT vào `goals` → `42501 RLS violation` (HTTP 401).
+- Chưa làm: test user A vs user B (cần staging hoặc test user trong production — chưa có). **Không tuyên bố pass khi chưa có evidence.**
+
+### 14.5 Quy trình làm việc với repo (AI mới bắt buộc đọc)
+
+1. Đọc kỹ file liên quan trước khi sửa; tìm chỗ đau thật; grep test/phụ thuộc trước khi đụng.
+2. Thay đổi nhỏ nhất giải quyết được việc; verify theo lớp: test liên quan → tsc → locale audit → full suite → build → preview thật.
+3. Commit chỉ gồm file liên quan. Sửa UI phải kiểm tra nhánh render thật (early return, điều kiện hiển thị) + screenshot/test thực tế.
+4. Push: **chỉ qua GitHub connector** (`github` CLI). `git push`/`gh` thuần không có auth trên máy này.
+5. Mỗi thao tác ghi GitHub cần approval riêng → gom việc, verify local xong rồi mới bắt đầu chuỗi write. Không rải approval.
+6. Merge PR: **owner tự merge** (trừ PR giá tự auto-merge). AI không tự ý merge.
+7. Connector không ghi được `.github/workflows/*` → báo rào cản từ đầu, gom phần tay thành ít bước nhất.
+
+**Không làm:** audit repo hằng ngày ([`NO_MORE_DAILY_AUDITS.md`](./NO_MORE_DAILY_AUDITS.md)); đề xuất lại thẻ "Hôm nay" khi chưa được hỏi; rewrite financial core / viết tax engine / thêm AI; merge khi CI đỏ; nói "một chút là xong" rồi trả việc tay lại cho owner.
+
+### 14.6 Nhật ký sự cố đã biết
+
+| Thời gian | Sự cố | Kết luận |
+|---|---|---|
+| 05/10/2026 19:11 UTC | GitHub incident: nghẽn cấp runner | Lịch giá 19:30 bị drop; run tay kẹt "waiting for runner". Không phải lỗi repo. |
+| 05–06/10/2026 | route-smoke fail 2 lần ở boot | Sai giả định Onboarding (xem §14.3). Đã fix ở #310. |
+| 05/10/2026 | Run giá chạy tay đỏ sau 15m5s | Phần lõi (mở PR → auto-merge → giá lên main) vẫn thành công; step đỏ chưa xác định. |
+
+### 14.7 Checklist cho AI/người tiếp quản
+
+- [ ] Đọc README, section này, §13, [`LONG_TERM_READINESS.md`](./LONG_TERM_READINESS.md).
+- [ ] Mở Actions tab: 3 workflow gần nhất có xanh không.
+- [ ] Giá mới nhất trong `public/data/price-history/IE00BK5BQT80.json` có phải ngày giao dịch gần nhất không.
+- [ ] Nói tiếng Việt với owner, xưng mình/bạn, câu ngắn, đi thẳng vào việc; hỏi bằng lựa chọn đánh số, mỗi lần một quyết định thật cần thiết.
+- [ ] Đừng mặc định trọn vòng push → PR → CI → merge: chốt phạm vi ủy quyền theo từng việc.
+
 ## References
 
 [1]: ./LONG_TERM_READINESS.md "Current security, reproducibility and readiness evidence"
