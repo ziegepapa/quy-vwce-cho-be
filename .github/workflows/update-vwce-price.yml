@@ -3,17 +3,16 @@ name: Update VWCE price
 on:
   workflow_dispatch:
   schedule:
-    # 17:30 UTC Mon-Fri = 19:30 Berlin in summer / 18:30 in winter.
-    # Both are after the registry's 18:00 local closed-session gate, while
-    # publishing one hour earlier than the previous 18:30 UTC slot.
-    - cron: "30 17 * * 1-5"
-    # 06:00 UTC Tue-Sat: catch-up for a missed evening run. GitHub schedules are
-    # best-effort and are dropped entirely when the queue is loaded, with no
-    # make-up run, so a single daily slot means one skipped run leaves the feed
-    # two sessions stale. This run still resolves the last CLOSED session, so it
-    # never invents an intraday price, and decideQuoteWrite makes it a no-op
-    # whenever the evening run already wrote the same economics.
-    - cron: "0 6 * * 2-6"
+  # 17:30 UTC Mon-Fri = 19:30 Berlin in summer / 18:30 in winter.
+  # Primary evening run after Xetra close.
+  - cron: "30 17 * * 1-5"
+  # 20:30 UTC Mon-Fri = 22:30 Berlin in summer / 21:30 in winter.
+  # Second evening attempt: GitHub's scheduler is best-effort and has
+  # dropped or mistimed the 17:30 slot (seen 2026-10-05/06).
+  # decideQuoteWrite keeps this a no-op if the first run already wrote.
+  - cron: "30 20 * * 1-5"
+  # 06:00 UTC Tue-Sat: catch-up for a missed evening run. (giữ nguyên phần comment cũ)
+  - cron: "0 6 * * 2-6"
 
 # Least privilege: every write (branch push, PR create, auto-merge) goes
 # through the PRICE_BOT_TOKEN PAT. Events triggered by GITHUB_TOKEN do not
