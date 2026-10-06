@@ -1,25 +1,17 @@
-// Production UI route smoke (Production Health v2).
+// Production boot smoke (Production Health v2).
 //
-// Headless Playwright against the DEPLOYED site. This is a production smoke
-// test, not a replacement for the full Playwright preview-smoke in CI.
+// Headless Playwright against the DEPLOYED site. Production REQUIRES login
+// (Supabase configured): a fresh profile lands on the AuthPage — there is no
+// unauthenticated path into the app, so the authed routes cannot be smoked
+// without credentials. This script asserts the production boot path:
 //
-// Fails on:
-// - navigation errors (goto failure / non-OK document response)
-// - uncaught page errors (pageerror)
-// - console.error
-// - blank render (main landmark without real content)
-// - missing route identity marker or wrong active nav state
+// - the app shell loads and React mounts
+// - the auth gate renders a complete login form (email + password + submit)
+// - no uncaught page errors, no console.error
+// - not a blank render
 //
-// Markers are deliberately locale-free and layout-tolerant:
-// - route identity: `main.premium-screen-<name>`, a class derived from the URL
-//   path, so VI/DE wording changes and UI polish cannot cause false failures
-// - structural hooks (`h1`, `ul`, `section`) instead of text assertions
-// - nav state via `aria-current="page"`, not link labels
-//
-// Fresh browser profile lands on Onboarding (single button); the script
-// completes it through the real UI, then smokes the routes. No login, no data
-// mutation, no Supabase/RLS testing.
-//
+// Markers are locale-free and layout-tolerant (.auth-shell/.auth-card,
+// input types, button[type=submit]); no VI/DE wording assertions.
 // Screenshots are written ONLY on failure (to SCREENSHOT_DIR).
 import { chromium } from "@playwright/test";
 import fs from "node:fs";
@@ -29,26 +21,20 @@ const baseUrl = process.env.BASE_URL ?? "https://ziegepapa.github.io/quy-vwce-ch
 const screenshotDir = process.env.SCREENSHOT_DIR ?? "/tmp/prod-route-smoke";
 const headless = process.env.HEADLESS !== "0";
 
-const ROUTES = [
-  { hash: "#/", screen: "overview", extra: "main h2" },
-  { hash: "#/transactions", screen: "transactions", extra: "main h1" },
-  { hash: "#/settings", screen: "settings", extra: "main h1" },
-  { hash: "#/simulation", screen: "simulation", extra: "main section" },
-];
-
 const failures = [];
-let activeRoute = "(boot)";
 
 function shot(page, name) {
   fs.mkdirSync(screenshotDir, { recursive: true });
   return page.screenshot({ path: path.join(screenshotDir, `${name}.png`) });
 }
 
-async function dismissOnboardingIfPresent(page) {
-  // Fresh profile → Onboarding (single button). Either it or the app main
-  // appears after boot; they are mutually exclusive.
+async function bootToGate(page) {
+  // Fresh profile on production → AuthPage (login required). The other two
+  // branches cover unconfigured builds (Onboarding) and warm profiles.
+  // They are mutually exclusive; whichever renders first wins the race.
   try {
     await Promise.race([
+      page.waitForSelector(".auth-shell .auth-card", { timeout: 30000 }),
       page.waitForSelector(".card.disclaimer", { timeout: 30000 }),
       page.waitForSelector("main[class*='premium-screen-']", { timeout: 30000 }),
     ]);
@@ -69,37 +55,21 @@ async function dismissOnboardingIfPresent(page) {
     await shot(page, "boot-timeout");
     throw err;
   }
-  if (await page.locator(".card.disclaimer").count()) {
-    await page.locator(".app-shell button").first().click();
-    await page.waitForSelector("main[class*='premium-screen-']", { timeout: 20000 });
-  }
 }
 
-async function checkRoute(page, route) {
-  activeRoute = route.hash;
-  // Hash-only change: set location.hash directly (page.goto treats it as a
-  // same-document no-op and React Router may not pick it up reliably).
-  await page.evaluate((h) => {
-    location.hash = h;
-  }, route.hash);
-  await page.waitForFunction((h) => location.hash === h, route.hash, { timeout: 10000 });
-  // 1. Route identity: deterministic class derived from the URL path (locale-free).
-  const main = page.locator(`main.premium-screen-${route.screen}`);
-  await main.waitFor({ state: "visible", timeout: 20000 });
-  // 2. Real content, not a blank render.
-  const textLength = (await main.innerText()).trim().length;
-  if (textLength < 100) {
-    throw new Error(`blank render suspected: main text is only ${textLength} chars`);
+async function checkAuthGate(page) {
+  // Production boot lands here. Assert a COMPLETE login form, not just a div.
+  const card = page.locator(".auth-shell .auth-card");
+  await card.waitFor({ state: "visible", timeout: 15000 });
+  await card.locator('input[type="email"]').waitFor({ state: "visible", timeout: 10000 });
+  await card.locator('input[type="password"]').waitFor({ state: "visible", timeout: 10000 });
+  await card.locator('button[type="submit"]').waitFor({ state: "visible", timeout: 10000 });
+  // Not a blank render: the gate carries brand + form copy.
+  const textLength = (await card.innerText()).trim().length;
+  if (textLength < 50) {
+    throw new Error(`blank auth gate: card text is only ${textLength} chars`);
   }
-  // 3. Router state: this route's nav link is marked current (locale-free).
-  const activeHref = await page.locator('a[aria-current="page"]').first().getAttribute("href");
-  if (activeHref !== `#${route.hash.slice(1)}`) {
-    throw new Error(`active nav mismatch: got ${activeHref}`);
-  }
-  // 4. Characteristic structural marker (locale-free, layout-tolerant).
-  if (route.extra) {
-    await page.waitForSelector(route.extra, { state: "attached", timeout: 15000 });
-  }
+  console.log("OK auth-gate (login form complete)");
 }
 
 const browser = await chromium.launch({ headless });
@@ -111,11 +81,11 @@ const context = await browser.newContext({
 const page = await context.newPage();
 const runtimeErrors = [];
 page.on("pageerror", (err) => {
-  runtimeErrors.push({ route: activeRoute, kind: "pageerror", message: String((err && err.message) || err) });
+  runtimeErrors.push({ kind: "pageerror", message: String((err && err.message) || err) });
 });
 page.on("console", (msg) => {
   if (msg.type() === "error") {
-    runtimeErrors.push({ route: activeRoute, kind: "console.error", message: msg.text() });
+    runtimeErrors.push({ kind: "console.error", message: msg.text() });
   }
 });
 
@@ -133,16 +103,19 @@ try {
   if (bootResponse && !bootResponse.ok()) {
     throw new Error(`navigation failed: HTTP ${bootResponse.status()}`);
   }
-  await dismissOnboardingIfPresent(page);
-  for (const route of ROUTES) {
+  await bootToGate(page);
+  // Production path: assert the login gate. (Onboarding/main branches are
+  // valid boot states for other builds; nothing further to check there.)
+  if (await page.locator(".auth-shell .auth-card").count()) {
     try {
-      await checkRoute(page, route);
-      console.log(`OK ${route.hash}`);
+      await checkAuthGate(page);
     } catch (err) {
-      failures.push({ route: route.hash, error: err.message });
-      await shot(page, route.screen);
-      console.error(`FAIL ${route.hash}: ${err.message}`);
+      failures.push({ check: "auth-gate", error: err.message });
+      await shot(page, "auth-gate");
+      console.error(`FAIL auth-gate: ${err.message}`);
     }
+  } else {
+    console.log("OK boot (non-auth gate)");
   }
   if (runtimeErrors.length) {
     await shot(page, "runtime-errors");
@@ -155,8 +128,8 @@ try {
 }
 
 for (const e of runtimeErrors) {
-  failures.push({ route: e.route, error: `${e.kind}: ${e.message}` });
-  console.error(`FAIL ${e.route}: ${e.kind}: ${e.message}`);
+  failures.push({ check: "runtime", error: `${e.kind}: ${e.message}` });
+  console.error(`FAIL runtime: ${e.kind}: ${e.message}`);
 }
 
 if (bootError || failures.length) {
@@ -164,4 +137,4 @@ if (bootError || failures.length) {
   console.error(`\n${total} failure(s)`);
   process.exit(1);
 }
-console.log(`\nAll ${ROUTES.length} production routes OK`);
+console.log("\nAll production boot checks OK");
