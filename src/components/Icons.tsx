@@ -98,6 +98,18 @@ export function IconSync() {
   return <svg {...s}><path d="M20 7v5h-5" /><path d="M4 17v-5h5" /><path d="M6.2 9A6.5 6.5 0 0 1 17 6l3 1" /><path d="M17.8 15A6.5 6.5 0 0 1 7 18l-3-1" /></svg>;
 }
 
+export function IconCheck() {
+  return <svg {...s}><path d="m4.5 12.5 5 5 10-11" /></svg>;
+}
+
+export function IconAlert() {
+  return <svg {...s}><path d="M12 3.5 21.5 20h-19L12 3.5Z" /><path d="M12 9.5v5" /><path d="M12 17.2h.01" /></svg>;
+}
+
+export function IconCircle() {
+  return <svg {...s}><circle cx="12" cy="12" r="8.5" /></svg>;
+}
+
 export function IconArchive() {
   return <svg {...s}><path d="M4 7h16v13H4z" /><path d="M3 4h18v3H3z" /><path d="M9 12h6" /></svg>;
 }

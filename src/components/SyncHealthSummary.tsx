@@ -1,16 +1,17 @@
 import { useLocale } from "../lib/locale";
 import { syncHealthCopy, type SyncHealth } from "./syncHealth";
+import { IconAlert, IconCheck, IconCircle, IconSync } from "./Icons";
 import "../styles/sync-health.css";
 
-const ICON: Record<SyncHealth["state"], string> = {
-  "signed-out": "○",
-  recovery: "↻",
-  conflict: "!",
-  retry: "↻",
-  offline: "○",
-  syncing: "↻",
-  pending: "↻",
-  synced: "✓",
+const ICON: Record<SyncHealth["state"], () => JSX.Element> = {
+  "signed-out": IconCircle,
+  recovery: IconSync,
+  conflict: IconAlert,
+  retry: IconSync,
+  offline: IconCircle,
+  syncing: IconSync,
+  pending: IconSync,
+  synced: IconCheck,
 };
 
 export function SyncHealthSummary({
@@ -25,6 +26,7 @@ export function SyncHealthSummary({
   const { locale } = useLocale();
   const copy = syncHealthCopy(health, locale);
   const actionable = Boolean(copy.actionLabel && onAction && health.action !== "none");
+  const StatusIcon = ICON[health.state];
   return (
     <section
       className={`sync-health sync-health-${health.tone}${compact ? " sync-health-compact" : ""}`}
@@ -32,7 +34,7 @@ export function SyncHealthSummary({
       aria-live="polite"
       data-sync-health={health.state}
     >
-      <span className={`sync-health-icon${health.state === "syncing" ? " is-running" : ""}`} aria-hidden>{ICON[health.state]}</span>
+      <span className={`sync-health-icon${health.state === "syncing" ? " is-running" : ""}`} aria-hidden><StatusIcon /></span>
       <span className="sync-health-copy">
         <strong>{copy.title}</strong>
         {!compact ? <small>{copy.detail}</small> : null}
