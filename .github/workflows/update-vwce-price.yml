@@ -3,16 +3,19 @@ name: Update VWCE price
 on:
   workflow_dispatch:
   schedule:
-  # 17:30 UTC Mon-Fri = 19:30 Berlin in summer / 18:30 in winter.
-  # Primary evening run after Xetra close.
-  - cron: "30 17 * * 1-5"
-  # 20:30 UTC Mon-Fri = 22:30 Berlin in summer / 21:30 in winter.
-  # Second evening attempt: GitHub's scheduler is best-effort and has
-  # dropped or mistimed the 17:30 slot (seen 2026-10-05/06).
-  # decideQuoteWrite keeps this a no-op if the first run already wrote.
-  - cron: "30 20 * * 1-5"
-  # 06:00 UTC Tue-Sat: catch-up for a missed evening run. (giữ nguyên phần comment cũ)
-  - cron: "0 6 * * 2-6"
+    # 19:17 Europe/Berlin Mon-Fri — primary run after Xetra close (17:30 local).
+    # Timezone-aware: GitHub evaluates the cron in Europe/Berlin, so DST needs
+    # no manual UTC/CEST juggling. Off-peak minute avoids the top-of-hour
+    # scheduler contention that can delay or drop scheduled workflows.
+    - cron: "17 19 * * 1-5"
+      timezone: "Europe/Berlin"
+
+    # 08:17 Europe/Berlin Tue-Sat — catch-up if the evening run was delayed,
+    # dropped, or the runner was temporarily unavailable.
+    # Idempotency is enforced below: the branch is keyed by quote asOf,
+    # existing remote branches are reused, and no duplicate PR is created.
+    - cron: "17 8 * * 2-6"
+      timezone: "Europe/Berlin"
 
 # Least privilege: every write (branch push, PR create, auto-merge) goes
 # through the PRICE_BOT_TOKEN PAT. Events triggered by GITHUB_TOKEN do not
@@ -66,6 +69,7 @@ jobs:
           GH_TOKEN: ${{ secrets.PRICE_BOT_TOKEN }}
         run: |
           set -euo pipefail
+
           QUOTES_PATH="public/data/quotes.json"
           LEGACY_PATH="public/data/vwce-price.json"
           HISTORY_PATH="public/data/price-history/IE00BK5BQT80.json"
@@ -82,26 +86,208 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # One branch per UTC date, so the 06:00 catch-up run reuses (and
-          # updates) the evening run's PR instead of opening a duplicate.
-          BRANCH="chore/price-$(date -u +%F)"
-          git checkout -B "$BRANCH"
+          # Resolve the VWCE/EUR asOf explicitly. Do not assume quotes[0] stays
+          # VWCE forever as more live instruments are added.
+          ASOF=$(node -e '
+            const fs = require("node:fs");
+            const q = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            const row = Array.isArray(q.quotes)
+              ? q.quotes.find(
+                  (x) =>
+                    x?.instrumentIsin === "IE00BK5BQT80" &&
+                    x?.currency === "EUR",
+                )
+              : null;
+            const a = row?.asOf;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(a || "")) {
+              console.error("bad VWCE/EUR asOf: " + a);
+              process.exit(1);
+            }
+            console.log(a);
+          ' "$QUOTES_PATH")
+
+          BRANCH="chore/price-$ASOF"
+          echo "VWCE/EUR quote asOf=$ASOF"
+          echo "Using price branch=$BRANCH"
+
+          # Preserve generated data before changing branches. A remote branch
+          # may already exist from an earlier scheduled slot; checking it out
+          # directly would otherwise discard the generated working-tree files.
+          TMP_DIR="$(mktemp -d)"
+          trap 'rm -rf "$TMP_DIR"' EXIT
+          mkdir -p "$TMP_DIR/generated/public/data/price-history"
+          mkdir -p "$TMP_DIR/branch/public/data/price-history"
+
+          cp -- "$QUOTES_PATH" "$TMP_DIR/generated/$QUOTES_PATH"
+          cp -- "$LEGACY_PATH" "$TMP_DIR/generated/$LEGACY_PATH"
+          if [ -f "$HISTORY_PATH" ]; then
+            cp -- "$HISTORY_PATH" "$TMP_DIR/generated/$HISTORY_PATH"
+            HAVE_HISTORY_COPY="true"
+          else
+            HAVE_HISTORY_COPY="false"
+          fi
+
+          # Fail closed if the update script touched anything outside the
+          # explicitly allowed data files.
+          STATUS_FILE="$TMP_DIR/status.txt"
+          git status --porcelain --untracked-files=all > "$STATUS_FILE"
+          UNEXPECTED=$(awk '{ path = substr($0, 4); if (path != "public/data/quotes.json" && path != "public/data/vwce-price.json" && path != "public/data/price-history/IE00BK5BQT80.json") print $0; }' "$STATUS_FILE")
+
+          if [ -n "$UNEXPECTED" ]; then
+            echo "Unexpected working-tree changes after quote update:"
+            echo "$UNEXPECTED"
+            exit 1
+          fi
+
+          # Put the checkout back onto a clean commit before switching to the
+          # reusable branch. The generated files are safely backed up above.
+          git reset --hard HEAD
+          git fetch origin main "$BRANCH" 2>/dev/null || git fetch origin main
+
+          if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+            # Reuse the remote branch so repeated slots remain fast-forwardable.
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+          else
+            # New price date: branch from the latest main.
+            git checkout -B "$BRANCH" "origin/main"
+          fi
+
+          # Snapshot the existing branch data before overlaying the newly
+          # generated files. This is used for economic idempotency below.
+          cp -- "$QUOTES_PATH" "$TMP_DIR/branch/$QUOTES_PATH"
+          cp -- "$LEGACY_PATH" "$TMP_DIR/branch/$LEGACY_PATH"
+          if [ -f "$HISTORY_PATH" ]; then
+            cp -- "$HISTORY_PATH" "$TMP_DIR/branch/$HISTORY_PATH"
+            HAVE_BRANCH_HISTORY="true"
+          else
+            HAVE_BRANCH_HISTORY="false"
+          fi
+
+          # Overlay the newly generated, validated data onto the selected branch.
+          cp -- "$TMP_DIR/generated/$QUOTES_PATH" "$QUOTES_PATH"
+          cp -- "$TMP_DIR/generated/$LEGACY_PATH" "$LEGACY_PATH"
+          if [ "$HAVE_HISTORY_COPY" = "true" ]; then
+            cp -- "$TMP_DIR/generated/$HISTORY_PATH" "$HISTORY_PATH"
+          fi
 
           git add -- "$QUOTES_PATH" "$LEGACY_PATH"
-          # Stage history file only if it was written and differs from HEAD
           if [ -f "$HISTORY_PATH" ]; then
             git add -- "$HISTORY_PATH"
           fi
 
-          if git diff --cached --quiet; then
+          # Economic idempotency: generatedAt/fetchedAt/provider metadata must
+          # not create a second same-day commit when price/asOf are unchanged.
+          cat > "$TMP_DIR/economic-change.mjs" <<'NODE'
+          import fs from "node:fs";
+
+          const [generatedRoot, branchRoot, ...paths] = process.argv.slice(2);
+          if (paths.length !== 3) {
+            console.error("economic-change: expected 3 data paths");
+            process.exit(1);
+          }
+
+          function readJson(root, rel) {
+            const file = root + "/" + rel;
+            if (!fs.existsSync(file)) return null;
+            return JSON.parse(fs.readFileSync(file, "utf8"));
+          }
+
+          function quoteEconomics(doc) {
+            if (!doc) return null;
+            return (Array.isArray(doc.quotes) ? doc.quotes : [])
+              .map((q) => ({
+                instrumentIsin: q?.instrumentIsin ?? null,
+                currency: q?.currency ?? null,
+                venue: q?.venue ?? null,
+                price: q?.price ?? null,
+                asOf: q?.asOf ?? null,
+              }))
+              .sort((a, b) =>
+                JSON.stringify(a).localeCompare(JSON.stringify(b))
+              );
+          }
+
+          function legacyEconomics(doc) {
+            if (!doc) return null;
+            return {
+              ticker: doc?.ticker ?? null,
+              venue: doc?.venue ?? null,
+              currency: doc?.currency ?? null,
+              price: doc?.price ?? null,
+              asOf: doc?.asOf ?? null,
+            };
+          }
+
+          function historyEconomics(doc) {
+            if (!doc) return null;
+            return (Array.isArray(doc.points) ? doc.points : [])
+              .map((p) => ({
+                date: p?.date ?? null,
+                price: p?.price ?? null,
+              }))
+              .sort((a, b) =>
+                JSON.stringify(a).localeCompare(JSON.stringify(b))
+              );
+          }
+
+          const generatedQuotes = quoteEconomics(
+            readJson(generatedRoot, paths[0]),
+          );
+          const branchQuotes = quoteEconomics(
+            readJson(branchRoot, paths[0]),
+          );
+          const generatedLegacy = legacyEconomics(
+            readJson(generatedRoot, paths[1]),
+          );
+          const branchLegacy = legacyEconomics(
+            readJson(branchRoot, paths[1]),
+          );
+          const generatedHistory = historyEconomics(
+            readJson(generatedRoot, paths[2]),
+          );
+          const branchHistory = historyEconomics(
+            readJson(branchRoot, paths[2]),
+          );
+
+          const same = (a, b) =>
+            JSON.stringify(a) === JSON.stringify(b);
+
+          if (
+            same(generatedQuotes, branchQuotes) &&
+            same(generatedLegacy, branchLegacy) &&
+            same(generatedHistory, branchHistory)
+          ) {
+            process.exit(0);
+          }
+
+          process.exit(2);
+          NODE
+
+          set +e
+          node "$TMP_DIR/economic-change.mjs"             "$TMP_DIR/generated"             "$TMP_DIR/branch"             "$QUOTES_PATH"             "$LEGACY_PATH"             "$HISTORY_PATH"
+          ECONOMIC_CHANGE=$?
+          set -e
+
+          if [ "$ECONOMIC_CHANGE" -eq 0 ]; then
+            echo "No economic data change on $BRANCH"
+
+            PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+            if [ -n "$PR_NUMBER" ]; then
+              echo "PR #$PR_NUMBER already open; ensuring auto-merge"
+              gh pr merge "$PR_NUMBER" --auto --squash
+            fi
+
+            git reset --hard HEAD
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No economic quote changes"
             exit 0
+          elif [ "$ECONOMIC_CHANGE" -ne 2 ]; then
+            echo "Economic comparison failed"
+            exit 1
           fi
 
           # Guard: only the three known data files may be staged.
-          # Any extra file signals an unintended side-effect.
           UNEXPECTED=$(git diff --cached --name-only | grep -vxF "$QUOTES_PATH" | grep -vxF "$LEGACY_PATH" | grep -vxF "$HISTORY_PATH" || true)
+
           if [ -n "$UNEXPECTED" ]; then
             echo "Unexpected staged files:"
             echo "$UNEXPECTED"
@@ -111,16 +297,47 @@ jobs:
           git commit -m "chore(data): update quotes.json, VWCE mirror, and price history"
           git push -u origin "$BRANCH"
 
-          if gh pr view "$BRANCH" --json number --jq .number >/dev/null 2>&1; then
-            echo "PR already open for $BRANCH; branch updated"
+          # Find an existing open PR for this exact head branch.
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "PR #$PR_NUMBER already open for $BRANCH; branch updated"
           else
-            gh pr create \
-              --base main --head "$BRANCH" \
-              --title "chore(data): update VWCE quotes $(date -u +%F)" \
-              --body "Automated daily price update (VWCE close + mirrors). Data-only change, generated and self-checked by the Update VWCE price workflow. Auto-merge is enabled: it merges only after the required CI checks pass, which then triggers the normal test + Pages deploy."
+            # If a previous PR from this branch was closed without merging,
+            # reopen it instead of creating a duplicate PR.
+            EXISTING=$(gh pr list --head "$BRANCH" --base main --state all --json number,state,mergedAt --jq '.[0] // empty')
+
+            if [ -n "$EXISTING" ]; then
+              STATE=$(printf '%s' "$EXISTING" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>console.log(JSON.parse(s).state||""));')
+              EXISTING_NUMBER=$(printf '%s' "$EXISTING" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>console.log(JSON.parse(s).number||""));')
+              MERGED_AT=$(printf '%s' "$EXISTING" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>console.log(JSON.parse(s).mergedAt||""));')
+
+              if [ -n "$MERGED_AT" ]; then
+                echo "PR #$EXISTING_NUMBER already merged; no new PR needed"
+                echo "changed=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+
+              if [ "$STATE" = "CLOSED" ]; then
+                echo "Reopening closed PR #$EXISTING_NUMBER"
+                gh pr reopen "$EXISTING_NUMBER"
+              fi
+
+              PR_NUMBER="$EXISTING_NUMBER"
+            fi
+
+            if [ -z "$PR_NUMBER" ]; then
+              gh pr create --base main --head "$BRANCH" --title "chore(data): update VWCE quotes $ASOF" --body "Automated daily price update (VWCE close + mirrors). Data-only change, generated and self-checked by the Update VWCE price workflow. Auto-merge is enabled: it merges only after the required CI checks pass, which then triggers the normal test + Pages deploy."
+              PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+            fi
           fi
 
-          # Merge once the required checks pass. The PR is opened with the PAT
-          # (not GITHUB_TOKEN) so that CI actually runs on it.
-          gh pr merge "$BRANCH" --auto --squash
+          if [ -z "$PR_NUMBER" ]; then
+            echo "Could not resolve an open PR for $BRANCH"
+            exit 1
+          fi
+
+          # Merge once the required checks pass. The PR is opened/updated with
+          # the PAT (not GITHUB_TOKEN) so CI runs normally.
+          gh pr merge "$PR_NUMBER" --auto --squash
           echo "changed=true" >> "$GITHUB_OUTPUT"
