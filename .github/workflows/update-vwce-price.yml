@@ -115,13 +115,13 @@ jobs:
           # directly would otherwise discard the generated working-tree files.
           TMP_DIR="$(mktemp -d)"
           trap 'rm -rf "$TMP_DIR"' EXIT
-          mkdir -p "$TMP_DIR/public/data/price-history"
+          mkdir -p "$TMP_DIR/generated/public/data/price-history"
+          mkdir -p "$TMP_DIR/branch/public/data/price-history"
 
-          cp -- "$QUOTES_PATH" "$TMP_DIR/$QUOTES_PATH"
-          cp -- "$LEGACY_PATH" "$TMP_DIR/$LEGACY_PATH"
-
+          cp -- "$QUOTES_PATH" "$TMP_DIR/generated/$QUOTES_PATH"
+          cp -- "$LEGACY_PATH" "$TMP_DIR/generated/$LEGACY_PATH"
           if [ -f "$HISTORY_PATH" ]; then
-            cp -- "$HISTORY_PATH" "$TMP_DIR/$HISTORY_PATH"
+            cp -- "$HISTORY_PATH" "$TMP_DIR/generated/$HISTORY_PATH"
             HAVE_HISTORY_COPY="true"
           else
             HAVE_HISTORY_COPY="false"
@@ -152,12 +152,22 @@ jobs:
             git checkout -B "$BRANCH" "origin/main"
           fi
 
-          # Overlay the newly generated, validated data onto the selected branch.
-          cp -- "$TMP_DIR/$QUOTES_PATH" "$QUOTES_PATH"
-          cp -- "$TMP_DIR/$LEGACY_PATH" "$LEGACY_PATH"
+          # Snapshot the existing branch data before overlaying the newly
+          # generated files. This is used for economic idempotency below.
+          cp -- "$QUOTES_PATH" "$TMP_DIR/branch/$QUOTES_PATH"
+          cp -- "$LEGACY_PATH" "$TMP_DIR/branch/$LEGACY_PATH"
+          if [ -f "$HISTORY_PATH" ]; then
+            cp -- "$HISTORY_PATH" "$TMP_DIR/branch/$HISTORY_PATH"
+            HAVE_BRANCH_HISTORY="true"
+          else
+            HAVE_BRANCH_HISTORY="false"
+          fi
 
+          # Overlay the newly generated, validated data onto the selected branch.
+          cp -- "$TMP_DIR/generated/$QUOTES_PATH" "$QUOTES_PATH"
+          cp -- "$TMP_DIR/generated/$LEGACY_PATH" "$LEGACY_PATH"
           if [ "$HAVE_HISTORY_COPY" = "true" ]; then
-            cp -- "$TMP_DIR/$HISTORY_PATH" "$HISTORY_PATH"
+            cp -- "$TMP_DIR/generated/$HISTORY_PATH" "$HISTORY_PATH"
           fi
 
           git add -- "$QUOTES_PATH" "$LEGACY_PATH"
@@ -165,21 +175,114 @@ jobs:
             git add -- "$HISTORY_PATH"
           fi
 
-          if git diff --cached --quiet; then
+          # Economic idempotency: generatedAt/fetchedAt/provider metadata must
+          # not create a second same-day commit when price/asOf are unchanged.
+          cat > "$TMP_DIR/economic-change.mjs" <<'NODE'
+          import fs from "node:fs";
+
+          const [generatedRoot, branchRoot, ...paths] = process.argv.slice(2);
+          if (paths.length !== 3) {
+            console.error("economic-change: expected 3 data paths");
+            process.exit(1);
+          }
+
+          function readJson(root, rel) {
+            const file = root + "/" + rel;
+            if (!fs.existsSync(file)) return null;
+            return JSON.parse(fs.readFileSync(file, "utf8"));
+          }
+
+          function quoteEconomics(doc) {
+            if (!doc) return null;
+            return (Array.isArray(doc.quotes) ? doc.quotes : [])
+              .map((q) => ({
+                instrumentIsin: q?.instrumentIsin ?? null,
+                currency: q?.currency ?? null,
+                venue: q?.venue ?? null,
+                price: q?.price ?? null,
+                asOf: q?.asOf ?? null,
+              }))
+              .sort((a, b) =>
+                JSON.stringify(a).localeCompare(JSON.stringify(b))
+              );
+          }
+
+          function legacyEconomics(doc) {
+            if (!doc) return null;
+            return {
+              ticker: doc?.ticker ?? null,
+              venue: doc?.venue ?? null,
+              currency: doc?.currency ?? null,
+              price: doc?.price ?? null,
+              asOf: doc?.asOf ?? null,
+            };
+          }
+
+          function historyEconomics(doc) {
+            if (!doc) return null;
+            return (Array.isArray(doc.points) ? doc.points : [])
+              .map((p) => ({
+                date: p?.date ?? null,
+                price: p?.price ?? null,
+              }))
+              .sort((a, b) =>
+                JSON.stringify(a).localeCompare(JSON.stringify(b))
+              );
+          }
+
+          const generatedQuotes = quoteEconomics(
+            readJson(generatedRoot, paths[0]),
+          );
+          const branchQuotes = quoteEconomics(
+            readJson(branchRoot, paths[0]),
+          );
+          const generatedLegacy = legacyEconomics(
+            readJson(generatedRoot, paths[1]),
+          );
+          const branchLegacy = legacyEconomics(
+            readJson(branchRoot, paths[1]),
+          );
+          const generatedHistory = historyEconomics(
+            readJson(generatedRoot, paths[2]),
+          );
+          const branchHistory = historyEconomics(
+            readJson(branchRoot, paths[2]),
+          );
+
+          const same = (a, b) =>
+            JSON.stringify(a) === JSON.stringify(b);
+
+          if (
+            same(generatedQuotes, branchQuotes) &&
+            same(generatedLegacy, branchLegacy) &&
+            same(generatedHistory, branchHistory)
+          ) {
+            process.exit(0);
+          }
+
+          process.exit(2);
+          NODE
+
+          set +e
+          node "$TMP_DIR/economic-change.mjs"             "$TMP_DIR/generated"             "$TMP_DIR/branch"             "$QUOTES_PATH"             "$LEGACY_PATH"             "$HISTORY_PATH"
+          ECONOMIC_CHANGE=$?
+          set -e
+
+          if [ "$ECONOMIC_CHANGE" -eq 0 ]; then
             echo "No economic data change on $BRANCH"
 
-            # The data is already present on the branch. If an open PR exists,
-            # make sure auto-merge remains enabled; otherwise this is a clean
-            # idempotent no-op.
             PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
-
             if [ -n "$PR_NUMBER" ]; then
               echo "PR #$PR_NUMBER already open; ensuring auto-merge"
               gh pr merge "$PR_NUMBER" --auto --squash
             fi
 
+            git reset --hard HEAD
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
+          elif [ "$ECONOMIC_CHANGE" -ne 2 ]; then
+            echo "Economic comparison failed"
+            exit 1
           fi
 
           # Guard: only the three known data files may be staged.
