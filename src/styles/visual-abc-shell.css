@@ -100,23 +100,44 @@ body,
   gap: 10px;
 }
 
-.sync-pill {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+.sync-iconbtn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   color: var(--em);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--gb);
-  border-radius: 100px;
-  padding: 5px 12px;
   cursor: pointer;
+  padding: 0;
+}
+.sync-iconbtn svg { width: 16px; height: 16px; }
+.sync-iconbtn.safe { color: var(--em); }
+.sync-iconbtn.info { color: var(--vi); }
+.sync-iconbtn.attention { color: var(--am); }
+.sync-iconbtn.blocked { color: var(--re); }
+
+.sync-iconbtn:active {
+  transform: scale(0.94);
 }
 
-.sync-pill:active {
-  transform: scale(0.94);
+.sync-count {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 100px;
+  background: var(--re);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .bar-clock {
@@ -268,8 +289,8 @@ body,
   --pill-bg: rgba(255, 250, 244, 0.9);
 }
 
-.sync-pill:disabled { cursor: progress; opacity: 0.8; }
-.sync-spin { display: inline-block; animation: sync-spin 0.85s linear infinite; }
+.sync-iconbtn:disabled { cursor: progress; opacity: 0.8; }
+.sync-spin { display: inline-grid; place-items: center; animation: sync-spin 0.85s linear infinite; }
 @keyframes sync-spin { to { transform: rotate(360deg); } }
 
 :root[data-theme="light"] .bar-logo { background: linear-gradient(120deg, #2d1608 0%, var(--vi) 130%); -webkit-background-clip: text; background-clip: text; }
