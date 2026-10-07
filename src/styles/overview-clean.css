@@ -481,3 +481,41 @@
   color: var(--text-primary);
   margin: 1px 0;
 }
+
+/* Growth tree — the fund as a living tree */
+.ovc-tree { text-align: center; padding: 6px 0 2px; }
+.ovc-tree .ovc-card-head { justify-content: center; }
+.ovc-tree-art { width: min(220px, 62vw); height: auto; margin: 2px auto 0; display: block; }
+.ovc-tree-stage {
+  display: inline-block;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--success-600);
+  background: color-mix(in srgb, var(--success-600) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success-600) 32%, transparent);
+  border-radius: 100px; padding: 4px 12px; margin-top: 6px;
+}
+.ovc-tree-value { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-top: 8px; }
+.ovc-tree-next { margin-top: 10px; text-align: left; }
+.ovc-tree-next-label { font-size: 12px; color: var(--text-tertiary); margin-bottom: 6px; }
+.ovc-tree .ovc-bar { height: 8px; border-radius: 100px; background: var(--surface-sunken); overflow: hidden; }
+.ovc-tree .ovc-bar > span {
+  display: block; height: 100%; border-radius: 100px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--success-600) 70%, transparent), var(--success-600));
+  transition: width 0.6s ease;
+}
+
+/* Milestone celebration — gold treatment for reached value milestones */
+.ovc-journey-item.k-milestone .ovc-journey-dot {
+  background: linear-gradient(135deg, #fbbf24, #d97706);
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 4px color-mix(in srgb, #fbbf24 22%, transparent), 0 0 12px color-mix(in srgb, #fbbf24 45%, transparent);
+}
+.ovc-journey-item.k-milestone .ovc-journey-title {
+  color: var(--text-primary);
+}
+.ovc-journey-item.k-milestone .ovc-journey-body {
+  background: linear-gradient(135deg, color-mix(in srgb, #fbbf24 9%, transparent), transparent 70%);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: -8px -10px;
+}
