@@ -396,31 +396,25 @@
 .ov > *:nth-child(4) { animation-delay: 0.15s; }
 .ov > *:nth-child(5) { animation-delay: 0.2s; }
 
-/* ---------- Heatmap nhịp góp ---------- */
-.ovc-heatmap-grid {
-  display: grid;
-  gap: 4px;
-  margin-top: 12px;
-  overflow-x: auto;
-  padding-bottom: 2px;
+/* ---------- Rhythm strip (nhịp góp, dạng sóng) ---------- */
+.ovc-rhythm-years { display: grid; gap: 10px; margin-top: 12px; }
+.ovc-rhythm-year { display: flex; align-items: flex-end; gap: 10px; }
+.ovc-rhythm-year-lbl {
+  flex: none; width: 34px;
+  font-size: 11px; font-weight: 700; color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums; padding-bottom: 2px;
 }
-.ovc-heatmap-cell {
-  aspect-ratio: 1;
-  min-width: 14px;
-  border-radius: 4px;
+.ovc-rhythm-bars { display: flex; align-items: flex-end; gap: 5px; min-height: 30px; }
+.ovc-rhythm-bar {
+  width: 9px; border-radius: 100px;
   background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  height: 6px; opacity: 0.55;
 }
-.ovc-heatmap-cell.lv1 { background: color-mix(in srgb, var(--primary-600) 22%, transparent); }
-.ovc-heatmap-cell.lv2 { background: color-mix(in srgb, var(--primary-600) 42%, transparent); }
-.ovc-heatmap-cell.lv3 { background: color-mix(in srgb, var(--primary-600) 68%, transparent); }
-.ovc-heatmap-cell.lv4 { background: var(--primary-600); }
-.ovc-heatmap-lbl {
-  font-size: 10px;
-  color: var(--text-tertiary);
-  text-align: center;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
+.ovc-rhythm-bar.lv1 { height: 12px; opacity: 1; border-color: transparent; background: color-mix(in srgb, var(--primary-600) 30%, transparent); }
+.ovc-rhythm-bar.lv2 { height: 18px; opacity: 1; border-color: transparent; background: color-mix(in srgb, var(--primary-600) 52%, transparent); }
+.ovc-rhythm-bar.lv3 { height: 24px; opacity: 1; border-color: transparent; background: color-mix(in srgb, var(--primary-600) 76%, transparent); }
+.ovc-rhythm-bar.lv4 { height: 30px; opacity: 1; border-color: transparent; background: var(--primary-600); }
 
 /* ---------- Timeline hành trình ---------- */
 .ovc-journey-list {
