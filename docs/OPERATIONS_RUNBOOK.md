@@ -253,13 +253,19 @@ Release baseline hiện hành là `1.6.0`; lifecycle sản phẩm là **vô th�
 
 Branch protection (`main`): bắt buộc PR, required check `test-build`, cấm force push và xóa nhánh.
 
-### 14.2 Luồng giá VWCE (PR #302, 10/2026)
+### 14.2 Luồng giá VWCE (PR #302, sửa #316, 10/2026)
 
 - Trước đây workflow push thẳng `main` → bị ruleset chặn (GITHUB_TOKEN không được push) → chuyển sang luồng PR + auto-merge.
 - Mọi thao tác ghi (push nhánh, mở PR, auto-merge) đi qua PAT `PRICE_BOT_TOKEN` (fine-grained: Contents + Pull requests read/write, do owner tạo, lưu trong repo Secrets). Không dùng GITHUB_TOKEN.
+- Lịch (timezone-aware, `timezone: "Europe/Berlin"` — GitHub tự xử DST, không quy đổi tay):
+  - `17 19 * * 1-5` — 19:17 Berlin T2–T6, chạy chính sau giờ đóng cửa Xetra (17:30).
+  - `17 8 * * 2-6` — 08:17 Berlin T3–T7, catch-up nếu tối qua bị drop/delay.
+  - Phút 17 để tránh top-of-hour (slot tranh chấp nhất của GitHub scheduler). Slot 22:30 cũ đã bỏ ở #316 — nó chỉ là band-aid và gây race non-fast-forward.
+- Idempotency (PR #316): branch key theo `quote.asOf` (vd `chore/price-2026-10-06`; tìm đúng instrument IE00BK5BQT80 + EUR, không lấy `quotes[0]` mù); remote branch đã có → backup dữ liệu mới → checkout branch → overlay (không mất file vừa generate); giá không đổi thì không tạo commit thứ hai dù metadata (generatedAt/fetchedAt) khác; tìm PR theo open + head chính xác, không sinh PR trùng; PR cũ đóng-chưa-merge thì reopen được.
 - Kiểm chứng thủ công: (1) có nhánh `chore/price-YYYY-MM-DD` không; (2) PR đã merged chưa (không còn open); (3) entry mới nhất trong `public/data/price-history/IE00BK5BQT80.json` có phải ngày giao dịch gần nhất không.
-- Đã biết (10/2026): GitHub thỉnh thoảng drop lịch scheduled hoặc nghẽn runner (incident 05/10/2026 19:11 UTC) → cron catch-up 08:00 sinh ra cho đúng trường hợp này. Drop một lần lẻ **không phải lỗi config** — đừng "sửa" workflow.
+- Đã biết (10/2026): GitHub scheduler best-effort — delay 2.5–5.75h thấy thực tế (#308 tạo 23:15Z 05/10, #313 tạo 19:59Z 06/10), drop lẻ từng xảy ra (05/10). Drop/delay lẻ **không phải lỗi config** — đừng "sửa" workflow vì chuyện đó; nhưng bug orchestration thật (branch/PR race, comment sai về catch-up reuse) đã sửa ở #316.
 - Rào cản nền tảng: GitHub App connector của AI **không có quyền `workflows`** → mọi sửa `.github/workflows/*` phải paste tay qua web. Báo trước cho owner, gom thành ít bước nhất.
+- Bài học 07/10: MCP `get_file_contents` có thể trả bản cache cũ (SHA cũ) trong khi file đã đổi — khi write báo SHA mismatch, lấy blob SHA tươi qua REST `contents` API rồi apply lại, đừng ghi đè mù.
 
 ### 14.3 Production Health v2 (PR #305/#306, sửa #309/#310, 10/2026)
 
