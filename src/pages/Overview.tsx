@@ -282,6 +282,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     return {
       assetsLabel: snapshot.valueComplete ? "Portfolio VWCE" : text.valuedAssets,
       assets: formatMoney(hero.assets),
+      treeValue: hero.assets,
       pnl: pnl == null || pnl === 0 ? null : `${pnl > 0 ? "▲ +" : "▼ −"}${formatMoney(Math.abs(pnl))}`,
       pnlPositive: (pnl ?? 0) >= 0,
       price: vwcePrice > 0
