@@ -24,8 +24,8 @@
   border-radius: 999px;
   color: var(--demo-em, #10b981);
   background: color-mix(in srgb, var(--demo-em, #10b981) 14%, transparent);
-  font-weight: 800;
 }
+.sync-health-icon svg { width: 15px; height: 15px; }
 .sync-health-attention .sync-health-icon { color: var(--demo-ye, #f59e0b); background: color-mix(in srgb, var(--demo-ye, #f59e0b) 14%, transparent); }
 .sync-health-blocked .sync-health-icon { color: var(--demo-re, #ef4444); background: color-mix(in srgb, var(--demo-re, #ef4444) 14%, transparent); }
 .sync-health-info .sync-health-icon { color: var(--demo-vi, #8b5cf6); background: color-mix(in srgb, var(--demo-vi, #8b5cf6) 14%, transparent); }
@@ -40,7 +40,8 @@
 .sync-health-action { white-space: normal; min-height: 34px; padding: 7px 9px; font-size: .76rem; }
 
 .sync-health-compact { padding: 8px 10px; border-radius: 12px; }
-.sync-health-compact .sync-health-icon { width: 22px; height: 22px; font-size: .78rem; }
+.sync-health-compact .sync-health-icon { width: 22px; height: 22px; }
+.sync-health-compact .sync-health-icon svg { width: 13px; height: 13px; }
 .sync-health-compact .sync-health-copy strong { font-size: .76rem; }
 
 @keyframes sync-health-spin { to { transform: rotate(360deg); } }
