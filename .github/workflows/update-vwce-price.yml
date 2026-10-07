@@ -115,7 +115,6 @@ jobs:
           # directly would otherwise discard the generated working-tree files.
           TMP_DIR="$(mktemp -d)"
           trap 'rm -rf "$TMP_DIR"' EXIT
-
           mkdir -p "$TMP_DIR/public/data/price-history"
 
           cp -- "$QUOTES_PATH" "$TMP_DIR/$QUOTES_PATH"
@@ -132,17 +131,7 @@ jobs:
           # explicitly allowed data files.
           STATUS_FILE="$TMP_DIR/status.txt"
           git status --porcelain --untracked-files=all > "$STATUS_FILE"
-
-          UNEXPECTED=$(awk '
-            {
-              path = substr($0, 4);
-              if (
-                path != "public/data/quotes.json" &&
-                path != "public/data/vwce-price.json" &&
-                path != "public/data/price-history/IE00BK5BQT80.json"
-              ) print $0;
-            }
-          ' "$STATUS_FILE")
+          UNEXPECTED=$(awk '{ path = substr($0, 4); if (path != "public/data/quotes.json" && path != "public/data/vwce-price.json" && path != "public/data/price-history/IE00BK5BQT80.json") print $0; }' "$STATUS_FILE")
 
           if [ -n "$UNEXPECTED" ]; then
             echo "Unexpected working-tree changes after quote update:"
@@ -153,7 +142,6 @@ jobs:
           # Put the checkout back onto a clean commit before switching to the
           # reusable branch. The generated files are safely backed up above.
           git reset --hard HEAD
-
           git fetch origin main "$BRANCH" 2>/dev/null || git fetch origin main
 
           if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
@@ -183,7 +171,7 @@ jobs:
             # The data is already present on the branch. If an open PR exists,
             # make sure auto-merge remains enabled; otherwise this is a clean
             # idempotent no-op.
-            PR_NUMBER=$(gh pr list               --head "$BRANCH"               --base main               --state open               --json number               --jq '.[0].number // empty')
+            PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
 
             if [ -n "$PR_NUMBER" ]; then
               echo "PR #$PR_NUMBER already open; ensuring auto-merge"
@@ -195,7 +183,7 @@ jobs:
           fi
 
           # Guard: only the three known data files may be staged.
-          UNEXPECTED=$(git diff --cached --name-only |             grep -vxF "$QUOTES_PATH" |             grep -vxF "$LEGACY_PATH" |             grep -vxF "$HISTORY_PATH" || true)
+          UNEXPECTED=$(git diff --cached --name-only | grep -vxF "$QUOTES_PATH" | grep -vxF "$LEGACY_PATH" | grep -vxF "$HISTORY_PATH" || true)
 
           if [ -n "$UNEXPECTED" ]; then
             echo "Unexpected staged files:"
@@ -207,40 +195,19 @@ jobs:
           git push -u origin "$BRANCH"
 
           # Find an existing open PR for this exact head branch.
-          PR_NUMBER=$(gh pr list             --head "$BRANCH"             --base main             --state open             --json number             --jq '.[0].number // empty')
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
 
           if [ -n "$PR_NUMBER" ]; then
             echo "PR #$PR_NUMBER already open for $BRANCH; branch updated"
           else
             # If a previous PR from this branch was closed without merging,
             # reopen it instead of creating a duplicate PR.
-            EXISTING=$(gh pr list               --head "$BRANCH"               --base main               --state all               --json number,state,mergedAt               --jq '.[0] // empty')
+            EXISTING=$(gh pr list --head "$BRANCH" --base main --state all --json number,state,mergedAt --jq '.[0] // empty')
 
             if [ -n "$EXISTING" ]; then
-              STATE=$(printf '%s' "$EXISTING" | node -e '
-                let s = "";
-                process.stdin.on("data", (d) => (s += d));
-                process.stdin.on("end", () => {
-                  const x = JSON.parse(s);
-                  console.log(x.state || "");
-                });
-              ')
-              EXISTING_NUMBER=$(printf '%s' "$EXISTING" | node -e '
-                let s = "";
-                process.stdin.on("data", (d) => (s += d));
-                process.stdin.on("end", () => {
-                  const x = JSON.parse(s);
-                  console.log(x.number || "");
-                });
-              ')
-              MERGED_AT=$(printf '%s' "$EXISTING" | node -e '
-                let s = "";
-                process.stdin.on("data", (d) => (s += d));
-                process.stdin.on("end", () => {
-                  const x = JSON.parse(s);
-                  console.log(x.mergedAt || "");
-                });
-              ')
+              STATE=$(printf '%s' "$EXISTING" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>console.log(JSON.parse(s).state||""));')
+              EXISTING_NUMBER=$(printf '%s' "$EXISTING" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>console.log(JSON.parse(s).number||""));')
+              MERGED_AT=$(printf '%s' "$EXISTING" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>console.log(JSON.parse(s).mergedAt||""));')
 
               if [ -n "$MERGED_AT" ]; then
                 echo "PR #$EXISTING_NUMBER already merged; no new PR needed"
@@ -257,8 +224,8 @@ jobs:
             fi
 
             if [ -z "$PR_NUMBER" ]; then
-              gh pr create                 --base main                 --head "$BRANCH"                 --title "chore(data): update VWCE quotes $ASOF"                 --body "Automated daily price update (VWCE close + mirrors). Data-only change, generated and self-checked by the Update VWCE price workflow. Auto-merge is enabled: it merges only after the required CI checks pass, which then triggers the normal test + Pages deploy."
-              PR_NUMBER=$(gh pr list                 --head "$BRANCH"                 --base main                 --state open                 --json number                 --jq '.[0].number // empty')
+              gh pr create --base main --head "$BRANCH" --title "chore(data): update VWCE quotes $ASOF" --body "Automated daily price update (VWCE close + mirrors). Data-only change, generated and self-checked by the Update VWCE price workflow. Auto-merge is enabled: it merges only after the required CI checks pass, which then triggers the normal test + Pages deploy."
+              PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
             fi
           fi
 
@@ -270,5 +237,4 @@ jobs:
           # Merge once the required checks pass. The PR is opened/updated with
           # the PAT (not GITHUB_TOKEN) so CI runs normally.
           gh pr merge "$PR_NUMBER" --auto --squash
-
           echo "changed=true" >> "$GITHUB_OUTPUT"
