@@ -13,11 +13,14 @@ import type { ContributionHeatmap as ContributionHeatmapData } from "../../lib/c
 import ContributionHeatmap from "../ContributionHeatmap";
 import type { JourneyEvent } from "../../lib/journeyTimeline";
 import JourneyTimeline from "../JourneyTimeline";
+import GrowthTree from "../GrowthTree";
 import "../../styles/overview-clean.css";
 
 type OverviewFrameProps = {
   assetsLabel: string;
   assets: string;
+  /** Numeric portfolio value in EUR — feeds the growth tree. */
+  treeValue: number;
   pnl: string | null;
   pnlPositive: boolean;
   price: string | null;
@@ -240,6 +243,7 @@ export default function OverviewFrame({
   valueHistory,
   contributionHeatmap,
   journeyTimeline,
+  treeValue,
 }: OverviewFrameProps) {
   const { locale } = useLocale();
   const text = overviewCopy(locale);
@@ -344,7 +348,12 @@ export default function OverviewFrame({
           ) : null}
         </section>
 
-        {/* 2 — Heatmap nhịp góp: một ô mỗi tháng, đậm nhạt theo số tiền */}
+        {/* 2 — Growth tree: the fund as a living tree */}
+        <section className="ovc-card">
+          <GrowthTree value={treeValue} nextMilestone={briefing.nextMilestone} />
+        </section>
+
+        {/* 3 — Heatmap nhịp góp: một ô mỗi tháng, đậm nhạt theo số tiền */}
         {contributionHeatmap ? (
           <section className="ovc-card" aria-label={text.rhythmTitle}>
             <ContributionHeatmap
