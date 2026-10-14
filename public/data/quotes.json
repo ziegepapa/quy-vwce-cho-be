@@ -1,19 +1,19 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-13T21:52:13.170Z",
+  "generatedAt": "2026-10-14T20:43:38.365Z",
   "quotes": [
     {
       "instrumentIsin": "IE00BK5BQT80",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 172.6,
-      "asOf": "2026-10-13",
-      "fetchedAt": "2026-10-13T21:52:12.334Z",
+      "price": 172.48,
+      "asOf": "2026-10-14",
+      "fetchedAt": "2026-10-14T20:43:37.741Z",
       "source": "auto",
       "provider": "yahoo_finance_chart",
       "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
       "crossCheckedWith": "onvista",
-      "crossCheckDifferencePct": 0.1622
+      "crossCheckDifferencePct": 0.5102
     }
   ]
 }
