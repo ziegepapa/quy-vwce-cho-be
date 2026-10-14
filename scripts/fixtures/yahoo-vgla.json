@@ -1,0 +1,49 @@
+{
+ "chart": {
+  "result": [
+   {
+    "meta": {
+     "currency": "EUR",
+     "symbol": "VGLA.DE",
+     "exchangeName": "GER",
+     "fullExchangeName": "XETRA",
+     "instrumentType": "ETF",
+     "longName": "Vanguard Funds PLC - Vanguard FTSE Global All-Cap UCITS ETF USD Acc",
+     "regularMarketPrice": 4.45,
+     "chartPreviousClose": 4.44
+    },
+    "timestamp": [
+     1784617200,
+     1784703600,
+     1784790000,
+     1784876400,
+     1785135600,
+     1785222000,
+     1785308400,
+     1785394800,
+     1785481200,
+     1785740400
+    ],
+    "indicators": {
+     "quote": [
+      {
+       "close": [
+        4.41,
+        4.43,
+        4.4,
+        4.42,
+        4.39,
+        4.41,
+        4.38,
+        4.4,
+        4.42,
+        4.45
+       ]
+      }
+     ]
+    }
+   }
+  ],
+  "error": null
+ }
+}
