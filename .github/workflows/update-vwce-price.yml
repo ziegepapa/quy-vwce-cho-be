@@ -3,11 +3,12 @@ name: Update VWCE price
 on:
   workflow_dispatch:
   schedule:
-    # 19:17 Europe/Berlin Mon-Fri — primary run after Xetra close (17:30 local).
-    # Timezone-aware: GitHub evaluates the cron in Europe/Berlin, so DST needs
-    # no manual UTC/CEST juggling. Off-peak minute avoids the top-of-hour
-    # scheduler contention that can delay or drop scheduled workflows.
-    - cron: "17 19 * * 1-5"
+    # Retry hourly after the Xetra close: 19:17, 20:17, 21:17, 22:17,
+    # and 23:17 Europe/Berlin, Monday-Friday.
+    # GitHub has delayed the single evening run by several hours on multiple
+    # days, while providers sometimes publish the final close later. Re-running
+    # is safe: the data comparison below makes unchanged runs no-ops.
+    - cron: "17 19-23 * * 1-5"
       timezone: "Europe/Berlin"
 
     # 08:17 Europe/Berlin Tue-Sat — catch-up if the evening run was delayed,
@@ -34,6 +35,15 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
+      - name: Report trigger timing
+        env:
+          SCHEDULE_CRON: ${{ github.event.schedule }}
+        run: |
+          echo "Event: $GITHUB_EVENT_NAME"
+          echo "Schedule expression: ${SCHEDULE_CRON:-manual or non-schedule}"
+          echo "Runner UTC: $(date -u --iso-8601=seconds)"
+          echo "Runner Europe/Berlin: $(TZ=Europe/Berlin date --iso-8601=seconds)"
+
       - name: Guard bot token present
         env:
           PRICE_BOT_TOKEN: ${{ secrets.PRICE_BOT_TOKEN }}
