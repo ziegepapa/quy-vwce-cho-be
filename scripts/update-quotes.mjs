@@ -51,6 +51,20 @@ if (isMain) {
             ),
           ),
         },
+        IE000VAHT5T0: {
+          yahooBody: JSON.parse(
+            fs.readFileSync(
+              path.join(__dirname, "fixtures/yahoo-vgla.json"),
+              "utf8",
+            ),
+          ),
+          onvistaBody: JSON.parse(
+            fs.readFileSync(
+              path.join(__dirname, "fixtures/onvista-vgla.json"),
+              "utf8",
+            ),
+          ),
+        },
       };
       if (process.argv.includes("--after-close")) {
         opts.now = new Date("2026-08-03T17:00:00.000Z");
