@@ -36,6 +36,8 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 const REGISTRY = path.join(REPO_ROOT, "scripts", "price-instruments.json");
 const FIX_YAHOO = path.join(__dirname, "fixtures", "yahoo-vwce.json");
 const FIX_ONVISTA = path.join(__dirname, "fixtures", "onvista-vwce.json");
+const FIX_YAHOO_VGLA = path.join(__dirname, "fixtures", "yahoo-vgla.json");
+const FIX_ONVISTA_VGLA = path.join(__dirname, "fixtures", "onvista-vgla.json");
 
 function tmpWorkspace() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "quotes-v2-"));
@@ -43,6 +45,16 @@ function tmpWorkspace() {
     dir,
     quotesPath: path.join(dir, "quotes.json"),
     legacyPath: path.join(dir, "vwce-price.json"),
+    // History dir (per-ISIN <ISIN>.json files) — keeps tests hermetic so
+    // runMultiAssetUpdate never writes into the real price-history dir.
+    historyPath: dir,
+  };
+}
+
+function vglaBodies() {
+  return {
+    yahooBody: JSON.parse(fs.readFileSync(FIX_YAHOO_VGLA, "utf8")),
+    onvistaBody: JSON.parse(fs.readFileSync(FIX_ONVISTA_VGLA, "utf8")),
   };
 }
 
@@ -214,7 +226,7 @@ describe("per-instrument policies", () => {
 
 describe("provider isolation in runMultiAssetUpdate", () => {
   it("one provider failure keeps prior quote and other assets", async () => {
-    const { quotesPath, legacyPath } = tmpWorkspace();
+    const { quotesPath, legacyPath, historyPath } = tmpWorkspace();
     const prior = {
       schemaVersion: 2,
       generatedAt: "2026-08-01T18:00:00.000Z",
@@ -236,12 +248,14 @@ describe("provider isolation in runMultiAssetUpdate", () => {
     const result = await runMultiAssetUpdate({
       quotesPath,
       legacyPath,
+      historyPath,
       registryPath: REGISTRY,
       includeTestOnly: true,
       now: new Date("2026-08-03T17:00:00.000Z"),
       fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
       bodiesByIsin: {
         IE00BK5BQT80: { yahooBody, onvistaBody },
+        IE000VAHT5T0: vglaBodies(),
         // test-only intentionally missing bodies → failure → keep prior
       },
     });
@@ -251,30 +265,35 @@ describe("provider isolation in runMultiAssetUpdate", () => {
       result.quotesDoc.quotes.map((q) => [quoteKey(q.instrumentIsin, q.currency), q]),
     );
     assert.ok(map.has("IE00BK5BQT80|EUR"));
+    assert.ok(map.has("IE000VAHT5T0|EUR"));
     assert.ok(map.has("FR0010315770|EUR"));
     assert.equal(map.get("FR0010315770|EUR").price, 50);
     assert.ok(result.errors.some((e) => e.isin === "FR0010315770"));
   });
 
   it("fixture VWCE resolve writes both quotes.json and legacy mirror", async () => {
-    const { quotesPath, legacyPath } = tmpWorkspace();
+    const { quotesPath, legacyPath, historyPath } = tmpWorkspace();
     const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
     const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
     const result = await runMultiAssetUpdate({
       quotesPath,
       legacyPath,
+      historyPath,
       registryPath: REGISTRY,
       now: new Date("2026-08-03T17:00:00.000Z"),
       fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
       bodiesByIsin: {
         IE00BK5BQT80: { yahooBody, onvistaBody },
+        IE000VAHT5T0: vglaBodies(),
       },
     });
     assert.equal(result.wrote, true);
     assert.equal(result.legacyWrote, true);
     const doc = JSON.parse(fs.readFileSync(quotesPath, "utf8"));
     assert.equal(doc.schemaVersion, 2);
-    assert.equal(doc.quotes[0].instrumentIsin, "IE00BK5BQT80");
+    // Quotes sort by ISIN: VGLA (IE000VAHT5T0) sorts before VWCE (IE00BK5BQT80).
+    const vwceRow = doc.quotes.find((q) => q.instrumentIsin === "IE00BK5BQT80");
+    assert.ok(vwceRow);
     const leg = JSON.parse(fs.readFileSync(legacyPath, "utf8"));
     assert.equal(leg.schemaVersion, 1);
     assert.equal(leg.isin, "IE00BK5BQT80");
@@ -282,16 +301,20 @@ describe("provider isolation in runMultiAssetUpdate", () => {
   });
 
   it("second write with same economics is no-op", async () => {
-    const { quotesPath, legacyPath } = tmpWorkspace();
+    const { quotesPath, legacyPath, historyPath } = tmpWorkspace();
     const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
     const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
     const opts = {
       quotesPath,
       legacyPath,
+      historyPath,
       registryPath: REGISTRY,
       now: new Date("2026-08-03T17:00:00.000Z"),
       fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
-      bodiesByIsin: { IE00BK5BQT80: { yahooBody, onvistaBody } },
+      bodiesByIsin: {
+        IE00BK5BQT80: { yahooBody, onvistaBody },
+        IE000VAHT5T0: vglaBodies(),
+      },
     };
     const first = await runMultiAssetUpdate(opts);
     assert.equal(first.wrote, true);
@@ -323,10 +346,139 @@ describe("registry", () => {
     assert.ok(vwce);
     assert.equal(vwce.primaryProvider.symbol, "VWCE.DE");
   });
+  it("live registry includes VGLA (VALL) with its own guards, not VWCE's", () => {
+    const reg = loadRegistry(REGISTRY);
+    const vgla = reg.liveEnabled.find((i) => i.isin === "IE000VAHT5T0");
+    assert.ok(vgla, "VGLA must be a live registry instrument");
+    assert.equal(vgla.ticker, "VGLA");
+    assert.equal(vgla.primaryProvider.symbol, "VGLA.DE");
+    assert.equal(
+      vgla.primaryProvider.url,
+      "https://query1.finance.yahoo.com/v8/finance/chart/VGLA.DE?interval=1d&range=10d",
+    );
+    assert.equal(
+      vgla.crossCheckProvider.url,
+      "https://api.onvista.de/api/v1/funds/ISIN:IE000VAHT5T0/snapshot",
+    );
+    // VGLA trades near 4.45 € — VWCE's 20–400 band would reject it outright.
+    assert.equal(vgla.priceMin, 1);
+    assert.equal(vgla.priceMax, 50);
+    assert.deepEqual(vgla.primaryProvider.longNameMustInclude, [
+      "vanguard",
+      "ftse",
+      "global",
+      "all-cap",
+    ]);
+  });
   it("test-only second ISIN is not live", () => {
     const reg = loadRegistry(REGISTRY, { includeTestOnly: true });
     assert.ok(reg.testOnlyInstruments.some((i) => i.isin === "FR0010315770"));
     assert.ok(!reg.liveEnabled.some((i) => i.isin === "FR0010315770"));
+  });
+});
+
+describe("VGLA (VALL) fixture", () => {
+  it("parseYahooChart validates VGLA fixture at ~4.45 €", () => {
+    const body = JSON.parse(fs.readFileSync(FIX_YAHOO_VGLA, "utf8"));
+    const reg = loadRegistry(REGISTRY);
+    const vgla = reg.liveEnabled.find((i) => i.isin === "IE000VAHT5T0");
+    const y = parseYahooChart(body, new Date("2026-08-03T17:00:00Z"), vgla);
+    assert.equal(y.asOf, "2026-08-03");
+    assert.equal(y.price, 4.45);
+  });
+
+  it("VGLA resolves with Yahoo primary + onvista cross-check at diff 0", async () => {
+    const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO_VGLA, "utf8"));
+    const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA_VGLA, "utf8"));
+    const reg = loadRegistry(REGISTRY);
+    const vgla = reg.liveEnabled.find((i) => i.isin === "IE000VAHT5T0");
+    const resolved = await resolveInstrumentQuote(vgla, {
+      now: new Date("2026-08-03T17:00:00.000Z"),
+      fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
+      yahooBody,
+      onvistaBody,
+    });
+    assert.equal(resolved.provider, "yahoo_finance_chart");
+    assert.equal(resolved.price, 4.45);
+    assert.equal(resolved.asOf, "2026-08-03");
+    assert.equal(resolved.crossCheckedWith, "onvista");
+    assert.equal(resolved.crossCheckDifferencePct, 0);
+    assert.equal(resolved.degraded, false);
+  });
+
+  it("VWCE guards would reject a 4.45 € close — VGLA needs its own band", () => {
+    const body = JSON.parse(fs.readFileSync(FIX_YAHOO_VGLA, "utf8"));
+    const reg = loadRegistry(REGISTRY);
+    const vwce = reg.liveEnabled.find((i) => i.isin === "IE00BK5BQT80");
+    // Same body, VWCE's 20–400 band: the 4.45 close is out of range.
+    // (Symbol check runs first, so point the fixture at VWCE.DE for this.)
+    const vwceBody = JSON.parse(JSON.stringify(body));
+    vwceBody.chart.result[0].meta.symbol = "VWCE.DE";
+    vwceBody.chart.result[0].meta.longName =
+      "Vanguard FTSE All-World UCITS ETF USD Accumulation";
+    assert.throws(
+      () => parseYahooChart(vwceBody, new Date("2026-08-03T17:00:00Z"), vwce),
+      /outside 20–400/,
+    );
+  });
+});
+
+describe("per-ISIN history (PRICE-HISTORY-PERSIST-001 r2)", () => {
+  it("runMultiAssetUpdate writes one history file per instrument", async () => {
+    const { quotesPath, legacyPath, historyPath } = tmpWorkspace();
+    const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
+    const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
+    const result = await runMultiAssetUpdate({
+      quotesPath,
+      legacyPath,
+      historyPath,
+      registryPath: REGISTRY,
+      now: new Date("2026-08-03T17:00:00.000Z"),
+      fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
+      bodiesByIsin: {
+        IE00BK5BQT80: { yahooBody, onvistaBody },
+        IE000VAHT5T0: vglaBodies(),
+      },
+    });
+    assert.equal(result.wrote, true);
+
+    const vwceHist = JSON.parse(
+      fs.readFileSync(path.join(historyPath, "IE00BK5BQT80.json"), "utf8"),
+    );
+    assert.equal(vwceHist.isin, "IE00BK5BQT80");
+    assert.deepEqual(vwceHist.points, [
+      { date: "2026-08-03", price: 164.36, source: "cron" },
+    ]);
+
+    const vglaHist = JSON.parse(
+      fs.readFileSync(path.join(historyPath, "IE000VAHT5T0.json"), "utf8"),
+    );
+    assert.equal(vglaHist.isin, "IE000VAHT5T0");
+    assert.deepEqual(vglaHist.points, [
+      { date: "2026-08-03", price: 4.45, source: "cron" },
+    ]);
+  });
+
+  it("legacy mirror still mirrors VWCE only, never VGLA", async () => {
+    const { quotesPath, legacyPath, historyPath } = tmpWorkspace();
+    const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
+    const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
+    await runMultiAssetUpdate({
+      quotesPath,
+      legacyPath,
+      historyPath,
+      registryPath: REGISTRY,
+      now: new Date("2026-08-03T17:00:00.000Z"),
+      fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
+      bodiesByIsin: {
+        IE00BK5BQT80: { yahooBody, onvistaBody },
+        IE000VAHT5T0: vglaBodies(),
+      },
+    });
+    const leg = JSON.parse(fs.readFileSync(legacyPath, "utf8"));
+    assert.equal(leg.isin, "IE00BK5BQT80");
+    assert.equal(leg.ticker, "VWCE");
+    assert.ok(leg.price > 160);
   });
 });
 
@@ -478,17 +630,19 @@ describe("provider contract B1/B2 — cross-check + URL", () => {
   });
 
   it("runMultiAssetUpdate VWCE row carries crossCheckedWith onvista", async () => {
-    const { quotesPath, legacyPath } = tmpWorkspace();
+    const { quotesPath, legacyPath, historyPath } = tmpWorkspace();
     const yahooBody = JSON.parse(fs.readFileSync(FIX_YAHOO, "utf8"));
     const onvistaBody = JSON.parse(fs.readFileSync(FIX_ONVISTA, "utf8"));
     const result = await runMultiAssetUpdate({
       quotesPath,
       legacyPath,
+      historyPath,
       registryPath: REGISTRY,
       now: new Date("2026-08-03T17:00:00.000Z"),
       fetchedAt: new Date("2026-08-03T17:05:00.000Z"),
       bodiesByIsin: {
         IE00BK5BQT80: { yahooBody, onvistaBody },
+        IE000VAHT5T0: vglaBodies(),
       },
     });
     assert.equal(result.wrote, true);

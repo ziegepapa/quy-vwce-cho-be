@@ -118,6 +118,24 @@ function tmpWorkspace() {
   return {
     quotesPath: path.join(dir, "quotes.json"),
     legacyPath: path.join(dir, "vwce-price.json"),
+    // History dir (per-ISIN <ISIN>.json files) — keeps tests hermetic.
+    historyPath: dir,
+  };
+}
+
+function vglaBrokenBodies() {
+  // Same broken shapes as VWCE's: Yahoo chart.error + onvista ISIN mismatch.
+  return { yahooBody: BROKEN_YAHOO, onvistaBody: BROKEN_ONVISTA };
+}
+
+function vglaHealthyBodies() {
+  return {
+    yahooBody: JSON.parse(
+      fs.readFileSync(path.join(__dirname, "fixtures", "yahoo-vgla.json"), "utf8"),
+    ),
+    onvistaBody: JSON.parse(
+      fs.readFileSync(path.join(__dirname, "fixtures", "onvista-vgla.json"), "utf8"),
+    ),
   };
 }
 
@@ -290,7 +308,7 @@ describe("FIX_3 — onvista takes over when Yahoo is down", () => {
 
 describe("FIX_4 — every source down keeps the previous quote", () => {
   it("writes nothing, says why, and leaves the file untouched", async () => {
-    const { quotesPath, legacyPath } = tmpWorkspace();
+    const { quotesPath, legacyPath, historyPath } = tmpWorkspace();
     writeJsonAtomic(
       {
         schemaVersion: 2,
@@ -303,18 +321,23 @@ describe("FIX_4 — every source down keeps the previous quote", () => {
     const result = await runMultiAssetUpdate({
       quotesPath,
       legacyPath,
+      historyPath,
       registryPath: REGISTRY,
       now: AFTER_CLOSE,
       fetchedAt: FETCHED_AT,
       bodiesByIsin: {
         IE00BK5BQT80: { yahooBody: BROKEN_YAHOO, onvistaBody: BROKEN_ONVISTA },
+        // VGLA sources down too — every live instrument fails.
+        IE000VAHT5T0: vglaBrokenBodies(),
       },
     });
 
     assert.equal(result.wrote, false);
     assert.equal(result.degraded, true);
     assert.match(result.reason, /All price sources failed/i);
-    assert.equal(result.errors.length, 1);
+    assert.equal(result.errors.length, 2);
+    assert.ok(result.errors.some((e) => e.isin === "IE00BK5BQT80"));
+    assert.ok(result.errors.some((e) => e.isin === "IE000VAHT5T0"));
     assert.equal(result.quotesDoc.quotes.length, 1);
     assert.equal(result.quotesDoc.quotes[0].price, 160);
 
@@ -325,10 +348,11 @@ describe("FIX_4 — every source down keeps the previous quote", () => {
   });
 
   it("a healthy run still reports the ordinary quiet day differently", async () => {
-    const { quotesPath, legacyPath } = tmpWorkspace();
+    const { quotesPath, legacyPath, historyPath } = tmpWorkspace();
     const opts = {
       quotesPath,
       legacyPath,
+      historyPath,
       registryPath: REGISTRY,
       now: AFTER_CLOSE,
       fetchedAt: FETCHED_AT,
@@ -337,6 +361,7 @@ describe("FIX_4 — every source down keeps the previous quote", () => {
           yahooBody: yahooFixture(),
           onvistaBody: BROKEN_ONVISTA,
         },
+        IE000VAHT5T0: vglaHealthyBodies(),
       },
     };
     const first = await runMultiAssetUpdate(opts);
