@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "isin": "IE000VAHT5T0",
+  "currency": "EUR",
+  "points": [
+    {
+      "date": "2026-10-14",
+      "price": 4.417,
+      "source": "cron"
+    }
+  ]
+}
