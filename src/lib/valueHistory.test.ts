@@ -43,6 +43,29 @@ describe("buildValueHistory", () => {
     expect(points![2].value).toBeCloseTo(121 + 121.5, 2);
   });
 
+  it("sums VWCE + VALL positions at their own prices", () => {
+    const txs = [
+      tx("t1", "2026-08-05", "cash_in", 120),
+      tx("t2", "2026-08-06", "buy_vwce", 118.5, { unitPrice: 118.5, quantity: 1, fee: 1 }),
+      tx("t3", "2026-09-05", "cash_in", 120),
+      tx("t4", "2026-09-06", "buy_security", 44.5, { instrumentIsin: "IE000VAHT5T0", unitPrice: 4.45, quantity: 10, fee: 0 }),
+    ];
+    const quotes = [
+      quote("2026-08-29", 118),
+      quote("2026-09-30", 121),
+      { ...quote("2026-09-30", 4.5), id: "q-vall-2026-09-30", instrumentIsin: "IE000VAHT5T0" },
+    ];
+    const points = buildValueHistory({ transactions: txs, quotes, locale: "vi", now: new Date("2026-10-03") });
+    expect(points).not.toBeNull();
+    expect(points!.map((p) => p.month)).toEqual(["2026-08", "2026-09", "2026-10"]);
+    // Aug: VWCE only (VALL not bought yet): 1 @118 + cash (120 - 118.5 = 1.5)
+    expect(points![0].value).toBeCloseTo(118 + 1.5, 2);
+    // Sep: VWCE 1 @121 + VALL 10 @4.5 + cash (1.5 + 120 - 44.5 = 77)
+    expect(points![1].value).toBeCloseTo(121 + 45 + 77, 2);
+    // Oct: no new quote -> each instrument falls back to its own latest price
+    expect(points![2].value).toBeCloseTo(121 + 45 + 77, 2);
+  });
+
   it("ignores deleted transactions", () => {
     const txs = [
       tx("t1", "2026-08-05", "cash_in", 120, { deletedAt: "2026-09-01T00:00:00Z" }),

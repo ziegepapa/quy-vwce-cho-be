@@ -169,14 +169,21 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       legacyVwcePriceAsOf: settings.latestPriceDate ?? "",
     });
     const { portfolio, market, totalQuantity, vwcePrice } = snapshot;
-    const vwceValue = vwcePrice > 0 ? portfolio.vwceQty * vwcePrice : null;
+    // PnL covers every held position, not VWCE alone: total cost basis across
+    // all ISINs, and total market value (null when any held position lacks a
+    // price, so PnL is suppressed instead of stated on a partial value).
+    const totalCostBasis = Object.values(portfolio.positions).reduce(
+      (sum, pos) => sum + Math.max(0, pos.costBasis),
+      0,
+    );
+    const positionValue = market.missingIsins.length === 0 ? market.securities : null;
     const hero = buildOverviewHero({
       securitiesValue: market.securities,
       cashBalance: portfolio.cashBalance,
       missingPriceCount: market.missingIsins.length,
       totalQuantity,
-      costBasis: portfolio.vwceCostBasis,
-      positionValue: vwceValue,
+      costBasis: totalCostBasis,
+      positionValue,
       transactionCount: transactions.length,
       trackInAppCash: settings.trackInAppCash ?? true,
     });
@@ -282,7 +289,6 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     return {
       assetsLabel: snapshot.valueComplete ? "Portfolio VWCE" : text.valuedAssets,
       assets: formatMoney(hero.assets),
-      treeValue: hero.assets,
       pnl: pnl == null || pnl === 0 ? null : `${pnl > 0 ? "▲ +" : "▼ −"}${formatMoney(Math.abs(pnl))}`,
       pnlPositive: (pnl ?? 0) >= 0,
       price: vwcePrice > 0

@@ -1,4 +1,5 @@
 import { replayTransactions } from "./calc";
+import { VWCE_ISIN } from "./types";
 import type { Quote, Transaction } from "./types";
 
 export type ValueHistoryPoint = {
@@ -59,7 +60,16 @@ export function buildValueHistory(input: {
     .filter((q) => Number.isFinite(q.price) && q.price > 0 && /^\d{4}-\d{2}-\d{2}/.test(q.asOf))
     .slice()
     .sort((a, b) => (a.asOf < b.asOf ? -1 : a.asOf > b.asOf ? 1 : 0));
-  const latestPrice = sortedQuotes.length > 0 ? sortedQuotes[sortedQuotes.length - 1].price : 0;
+
+  // Group quotes by ISIN (each group stays sorted by asOf). Legacy quotes
+  // without an ISIN are VWCE, matching the transaction alias rule.
+  const quotesByIsin = new Map<string, Quote[]>();
+  for (const q of sortedQuotes) {
+    const isin = q.instrumentIsin || VWCE_ISIN;
+    const list = quotesByIsin.get(isin);
+    if (list) list.push(q);
+    else quotesByIsin.set(isin, [q]);
+  }
 
   const labels = locale === "de" ? MONTH_LABEL_DE : MONTH_LABEL_VI;
   const points: ValueHistoryPoint[] = [];
@@ -67,13 +77,21 @@ export function buildValueHistory(input: {
   for (const { year, monthIndex } of months) {
     const cutoff = lastDayOfMonth(year, monthIndex);
     const state = replayTransactions(dated.filter((t) => t.date <= cutoff));
-    let price = 0;
-    for (const q of sortedQuotes) {
-      if (q.asOf <= cutoff) price = q.price;
-      else break;
+    // Sum every held position at its own price on the cutoff date. A position
+    // held before its first quote falls back to that instrument's latest
+    // price; an instrument with no quotes at all contributes 0.
+    let value = Math.max(0, state.cashBalance);
+    for (const [isin, pos] of Object.entries(state.positions)) {
+      if (pos.qty <= 0) continue;
+      const series = quotesByIsin.get(isin) ?? [];
+      let price = 0;
+      for (const q of series) {
+        if (q.asOf <= cutoff) price = q.price;
+        else break;
+      }
+      if (price <= 0 && series.length > 0) price = series[series.length - 1].price;
+      value += Math.max(0, pos.qty) * price;
     }
-    if (price <= 0) price = latestPrice;
-    const value = Math.max(0, state.vwceQty) * price + Math.max(0, state.cashBalance);
     points.push({
       month: monthKey(year, monthIndex),
       label: labels[monthIndex],
