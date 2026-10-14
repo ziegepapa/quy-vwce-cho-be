@@ -47,17 +47,19 @@ export const LEGACY_VWCE_PATH = path.join(
   "vwce-price.json",
 );
 /**
- * PRICE-HISTORY-PERSIST-001 r1: daily price series for VWCE.
- * One point per trading day, appended by the cron after each successful write.
- * Served as a static file from gh-pages; no Dexie bump required.
+ * PRICE-HISTORY-PERSIST-001 r2: daily price series, one file per ISIN.
+ * One point per trading day per instrument, appended by the cron after each
+ * successful write. Served as static files from gh-pages; no Dexie bump
+ * required. Files live in HISTORY_DIR as <ISIN>.json.
  */
-export const HISTORY_PATH = path.join(
+export const HISTORY_DIR = path.join(
   REPO_ROOT,
   "public",
   "data",
   "price-history",
-  "IE00BK5BQT80.json",
 );
+/** Legacy VWCE history file path (HISTORY_DIR + VWCE ISIN). Kept for callers. */
+export const HISTORY_PATH = path.join(HISTORY_DIR, "IE00BK5BQT80.json");
 export const VWCE_ISIN = "IE00BK5BQT80";
 
 /** Human readable Yahoo quote page, used only when the registry pins no providerUrl. */
@@ -362,7 +364,10 @@ export async function resolveInstrumentQuote(instrument, options = {}) {
  * @param {object} [options]
  * @param {string} [options.quotesPath]
  * @param {string} [options.legacyPath]
- * @param {string} [options.historyPath] - overrides HISTORY_PATH (tests)
+ * @param {string} [options.historyPath] - history directory holding per-ISIN
+ *   `<ISIN>.json` files (tests; defaults to HISTORY_DIR). Previously the
+ *   VWCE file path; no caller relied on the file form, and the canonical
+ *   VWCE file is HISTORY_DIR/IE00BK5BQT80.json either way.
  * @param {string} [options.registryPath]
  * @param {Date} [options.now]
  * @param {Date} [options.fetchedAt]
@@ -503,25 +508,29 @@ export async function runMultiAssetUpdate(options = {}) {
     legacyWrote = true;
   }
 
-  // PRICE-HISTORY-PERSIST-001 r1: upsert one point per trading day for VWCE.
-  // Non-fatal: the quote write already succeeded. If history fails, log and
-  // continue -- the cron result is the quote file, not the history file.
-  if (vwceQuote) {
-    const hPath = options.historyPath || HISTORY_PATH;
-    try {
-      upsertHistoryPoint(
-        hPath,
-        VWCE_ISIN,
-        "EUR",
-        vwceQuote.asOf,
-        vwceQuote.price,
-        "cron",
-      );
-    } catch (histErr) {
-      console.warn(
-        "History persist failed (non-fatal):",
-        histErr?.message || histErr,
-      );
+  // PRICE-HISTORY-PERSIST-001 r2: upsert one point per trading day per
+  // instrument (one <ISIN>.json file each). Non-fatal: the quote write
+  // already succeeded. If history fails, log and continue -- the cron
+  // result is the quote file, not the history file.
+  {
+    const historyDir = options.historyPath || HISTORY_DIR;
+    for (const q of quotesDoc.quotes) {
+      const hPath = path.join(historyDir, `${q.instrumentIsin}.json`);
+      try {
+        upsertHistoryPoint(
+          hPath,
+          q.instrumentIsin,
+          q.currency,
+          q.asOf,
+          q.price,
+          "cron",
+        );
+      } catch (histErr) {
+        console.warn(
+          "History persist failed (non-fatal):",
+          histErr?.message || histErr,
+        );
+      }
     }
   }
 

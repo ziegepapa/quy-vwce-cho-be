@@ -34,6 +34,40 @@
         "expectedExchangeCodes": ["GER", "_GER"],
         "expectedCurrency": "EUR"
       }
+    },
+    {
+      "isin": "IE000VAHT5T0",
+      "ticker": "VGLA",
+      "displayName": "Vanguard FTSE Global All-Cap UCITS ETF (USD) Accumulating",
+      "currency": "EUR",
+      "venue": "XETRA",
+      "timezone": "Europe/Berlin",
+      "closeHourLocal": 18,
+      "enabled": true,
+      "live": true,
+      "priceMin": 1,
+      "priceMax": 50,
+      "maxDayChangePct": 20,
+      "maxAsOfAgeDays": 7,
+      "crossCheckMaxPct": 2,
+      "primaryProvider": {
+        "id": "yahoo_finance_chart",
+        "symbol": "VGLA.DE",
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/VGLA.DE?interval=1d&range=10d",
+        "providerUrl": "https://finance.yahoo.com/quote/VGLA.DE",
+        "expectedCurrency": "EUR",
+        "expectedVenues": ["XETRA", "GER"],
+        "expectedInstrumentType": "ETF",
+        "longNameMustInclude": ["vanguard", "ftse", "global", "all-cap"]
+      },
+      "crossCheckProvider": {
+        "id": "onvista",
+        "url": "https://api.onvista.de/api/v1/funds/ISIN:IE000VAHT5T0/snapshot",
+        "expectedIsin": "IE000VAHT5T0",
+        "expectedMarketNames": ["Xetra"],
+        "expectedExchangeCodes": ["GER", "_GER"],
+        "expectedCurrency": "EUR"
+      }
     }
   ],
   "testOnlyInstruments": [

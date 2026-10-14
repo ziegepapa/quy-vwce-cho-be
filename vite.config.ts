@@ -51,6 +51,13 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2,json,webmanifest}"],
+        // Price data changes daily and is fetched fresh on every app boot /
+        // refresh (fetch uses cache: "no-store"). Precaching it would serve
+        // the build-time price until the service worker updates, which is
+        // exactly the "app cập nhật chậm" symptom. The app already falls
+        // back to local IndexedDB data when offline, so no data file needs
+        // to be precached.
+        globIgnores: ["**/data/**"],
         navigateFallback: "/quy-vwce-cho-be/index.html",
         cleanupOutdatedCaches: true,
         clientsClaim: true,

@@ -84,7 +84,7 @@ await Promise.all([
 ]);
 
 assert.match(serviceWorker, /index\.html/, "App shell is not precached");
-assert.match(serviceWorker, /data\/quotes\.json/, "Quote feed is not precached");
+assert.doesNotMatch(serviceWorker, /data\//, "Live data feeds must not be precached");
 assert.match(serviceWorker, /icon-maskable-512\.png/, "Maskable icon is not precached");
 assert.match(serviceWorker, /pwa-update-recovery\.js/, "P26 recovery hook is not imported by the worker");
 assert.match(serviceWorker, /pwa-final-runtime-recovery\.js/, "P27 final runtime recovery hook is not imported by the worker");

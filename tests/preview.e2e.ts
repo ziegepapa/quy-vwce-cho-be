@@ -278,7 +278,10 @@ test("preview exposes an installable PWA and consistent quote feeds", async ({ r
 
   const serviceWorkerResponse = await request.get("./sw.js");
   expect(serviceWorkerResponse.ok()).toBe(true);
-  expect(await serviceWorkerResponse.text()).toContain("data/quotes.json");
+  // Live price feeds are network-only (never precached), so the worker must
+  // not reference any /data/ file. The feed itself is fetched fresh below.
+  const swText = await serviceWorkerResponse.text();
+  expect(swText).not.toContain("data/");
 
   const quotesResponse = await request.get("./data/quotes.json");
   const legacyResponse = await request.get("./data/vwce-price.json");
