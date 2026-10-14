@@ -3,18 +3,17 @@ name: Update VWCE price
 on:
   workflow_dispatch:
   schedule:
-    # 19:17 Europe/Berlin Mon-Fri — primary run after Xetra close (17:30 local).
-    # Timezone-aware: GitHub evaluates the cron in Europe/Berlin, so DST needs
-    # no manual UTC/CEST juggling. Off-peak minute avoids the top-of-hour
-    # scheduler contention that can delay or drop scheduled workflows.
-    - cron: "17 19 * * 1-5"
+    # Retry every hour from 19:17 through 23:17 Europe/Berlin on weekdays.
+    # The first slot is the normal run after Xetra close; later slots provide
+    # extra opportunities if GitHub delays or drops an earlier scheduled event.
+    # Repeated runs are safe: branch selection is keyed by quote asOf and the
+    # workflow compares economic fields before making a commit or PR.
+    - cron: "17 19-23 * * 1-5"
       timezone: "Europe/Berlin"
 
-    # 08:17 Europe/Berlin Tue-Sat — catch-up if the evening run was delayed,
-    # dropped, or the runner was temporarily unavailable.
-    # Idempotency is enforced below: the branch is keyed by quote asOf,
-    # existing remote branches are reused, and no duplicate PR is created.
-    - cron: "17 8 * * 2-6"
+    # Morning catch-up Monday-Saturday. Monday is included so a missed Friday
+    # close can still be recorded after the weekend; Sunday has no Xetra close.
+    - cron: "17 8 * * 1-6"
       timezone: "Europe/Berlin"
 
 # Least privilege: every write (branch push, PR create, auto-merge) goes
@@ -42,6 +41,16 @@ jobs:
             echo "::error::Repository secret PRICE_BOT_TOKEN is not set. Create a fine-grained PAT (this repo only; Contents: read+write, Pull requests: read+write) and add it as the PRICE_BOT_TOKEN secret."
             exit 1
           fi
+
+      - name: Log schedule trigger and runner start
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_CRON: ${{ github.event.schedule || 'workflow_dispatch' }}
+        run: |
+          echo "event=$EVENT_NAME"
+          echo "schedule_cron=$SCHEDULE_CRON"
+          echo "runner_started_utc=$(date -u --iso-8601=seconds)"
+          echo "runner_started_berlin=$(TZ=Europe/Berlin date --iso-8601=seconds)"
 
       - name: Checkout
         uses: actions/checkout@v5
