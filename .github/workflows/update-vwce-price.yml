@@ -72,7 +72,7 @@ jobs:
 
           QUOTES_PATH="public/data/quotes.json"
           LEGACY_PATH="public/data/vwce-price.json"
-          HISTORY_PATH="public/data/price-history/IE00BK5BQT80.json"
+          HISTORY_DIR="public/data/price-history"
 
           if [ ! -f "$QUOTES_PATH" ]; then
             echo "quotes.json missing after update script"
@@ -120,8 +120,8 @@ jobs:
 
           cp -- "$QUOTES_PATH" "$TMP_DIR/generated/$QUOTES_PATH"
           cp -- "$LEGACY_PATH" "$TMP_DIR/generated/$LEGACY_PATH"
-          if [ -f "$HISTORY_PATH" ]; then
-            cp -- "$HISTORY_PATH" "$TMP_DIR/generated/$HISTORY_PATH"
+          if [ -d "$HISTORY_DIR" ]; then
+            cp -r -- "$HISTORY_DIR/." "$TMP_DIR/generated/$HISTORY_DIR/"
             HAVE_HISTORY_COPY="true"
           else
             HAVE_HISTORY_COPY="false"
@@ -131,7 +131,7 @@ jobs:
           # explicitly allowed data files.
           STATUS_FILE="$TMP_DIR/status.txt"
           git status --porcelain --untracked-files=all > "$STATUS_FILE"
-          UNEXPECTED=$(awk '{ path = substr($0, 4); if (path != "public/data/quotes.json" && path != "public/data/vwce-price.json" && path != "public/data/price-history/IE00BK5BQT80.json") print $0; }' "$STATUS_FILE")
+          UNEXPECTED=$(awk '{ path = substr($0, 4); if (path != "public/data/quotes.json" && path != "public/data/vwce-price.json" && !(path ~ /^public\/data\/price-history\/[^\/]+\.json$/)) print $0; }' "$STATUS_FILE")
 
           if [ -n "$UNEXPECTED" ]; then
             echo "Unexpected working-tree changes after quote update:"
@@ -156,8 +156,8 @@ jobs:
           # generated files. This is used for economic idempotency below.
           cp -- "$QUOTES_PATH" "$TMP_DIR/branch/$QUOTES_PATH"
           cp -- "$LEGACY_PATH" "$TMP_DIR/branch/$LEGACY_PATH"
-          if [ -f "$HISTORY_PATH" ]; then
-            cp -- "$HISTORY_PATH" "$TMP_DIR/branch/$HISTORY_PATH"
+          if [ -d "$HISTORY_DIR" ]; then
+            cp -r -- "$HISTORY_DIR/." "$TMP_DIR/branch/$HISTORY_DIR/"
             HAVE_BRANCH_HISTORY="true"
           else
             HAVE_BRANCH_HISTORY="false"
@@ -167,13 +167,10 @@ jobs:
           cp -- "$TMP_DIR/generated/$QUOTES_PATH" "$QUOTES_PATH"
           cp -- "$TMP_DIR/generated/$LEGACY_PATH" "$LEGACY_PATH"
           if [ "$HAVE_HISTORY_COPY" = "true" ]; then
-            cp -- "$TMP_DIR/generated/$HISTORY_PATH" "$HISTORY_PATH"
+            cp -r -- "$TMP_DIR/generated/$HISTORY_DIR/." "$HISTORY_DIR/"
           fi
 
-          git add -- "$QUOTES_PATH" "$LEGACY_PATH"
-          if [ -f "$HISTORY_PATH" ]; then
-            git add -- "$HISTORY_PATH"
-          fi
+          git add -- "$QUOTES_PATH" "$LEGACY_PATH" "$HISTORY_DIR"
 
           # Economic idempotency: generatedAt/fetchedAt/provider metadata must
           # not create a second same-day commit when price/asOf are unchanged.
@@ -218,16 +215,31 @@ jobs:
             };
           }
 
-          function historyEconomics(doc) {
-            if (!doc) return null;
-            return (Array.isArray(doc.points) ? doc.points : [])
-              .map((p) => ({
-                date: p?.date ?? null,
-                price: p?.price ?? null,
-              }))
-              .sort((a, b) =>
-                JSON.stringify(a).localeCompare(JSON.stringify(b))
-              );
+          function historyEconomics(historyDir) {
+            // One <ISIN>.json file per instrument. Missing dir = no history.
+            let names = [];
+            try {
+              names = fs
+                .readdirSync(historyDir)
+                .filter((n) => n.endsWith(".json"))
+                .sort();
+            } catch {
+              names = [];
+            }
+            return names.map((n) => {
+              const doc = readJson(historyDir, n);
+              return {
+                file: n,
+                points: (Array.isArray(doc?.points) ? doc.points : [])
+                  .map((p) => ({
+                    date: p?.date ?? null,
+                    price: p?.price ?? null,
+                  }))
+                  .sort((a, b) =>
+                    JSON.stringify(a).localeCompare(JSON.stringify(b))
+                  ),
+              };
+            });
           }
 
           const generatedQuotes = quoteEconomics(
@@ -243,10 +255,10 @@ jobs:
             readJson(branchRoot, paths[1]),
           );
           const generatedHistory = historyEconomics(
-            readJson(generatedRoot, paths[2]),
+            generatedRoot + "/" + paths[2],
           );
           const branchHistory = historyEconomics(
-            readJson(branchRoot, paths[2]),
+            branchRoot + "/" + paths[2],
           );
 
           const same = (a, b) =>
@@ -264,7 +276,7 @@ jobs:
           NODE
 
           set +e
-          node "$TMP_DIR/economic-change.mjs"             "$TMP_DIR/generated"             "$TMP_DIR/branch"             "$QUOTES_PATH"             "$LEGACY_PATH"             "$HISTORY_PATH"
+          node "$TMP_DIR/economic-change.mjs"             "$TMP_DIR/generated"             "$TMP_DIR/branch"             "$QUOTES_PATH"             "$LEGACY_PATH"             "$HISTORY_DIR"
           ECONOMIC_CHANGE=$?
           set -e
 
@@ -285,8 +297,9 @@ jobs:
             exit 1
           fi
 
-          # Guard: only the three known data files may be staged.
-          UNEXPECTED=$(git diff --cached --name-only | grep -vxF "$QUOTES_PATH" | grep -vxF "$LEGACY_PATH" | grep -vxF "$HISTORY_PATH" || true)
+          # Guard: only the known data files may be staged (quotes, legacy
+          # mirror, and any per-ISIN history file under price-history/).
+          UNEXPECTED=$(git diff --cached --name-only | grep -vxF "$QUOTES_PATH" | grep -vxF "$LEGACY_PATH" | grep -v "^public/data/price-history/[^/]*\.json$" || true)
 
           if [ -n "$UNEXPECTED" ]; then
             echo "Unexpected staged files:"
