@@ -26,7 +26,7 @@ VWCE Vault là PWA mobile-first để gia đình ghi nhận giao dịch, khoản
 
 ## 2. Vòng đời vô thời hạn
 
-Hệ thống có **vòng đời vô thời hạn**. Mốc 2042, nếu có trong kế hoạch gia đình, là mốc mục tiêu tài chính; không phải ngày hết hạn phần mềm, mốc xóa dữ liệu hay giới hạn hoạt động được hard-code. Mọi thay đổi tương lai phải ưu tiên tính đúng, toàn vẹn dữ liệu và khả năng khôi phục hơn tính năng mới. [3]
+Hệ thống có **vòng đời vô thời hạn**. Không có ngày đích cố định: 2042 từng được dùng làm ví dụ (năm Bé tròn 18 tuổi), không phải mục tiêu hay hạn kết thúc; không phải ngày hết hạn phần mềm, mốc xóa dữ liệu hay giới hạn hoạt động được hard-code. Mọi thay đổi tương lai phải ưu tiên tính đúng, toàn vẹn dữ liệu và khả năng khôi phục hơn tính năng mới. [3]
 
 ## 3. Kiến trúc và release hiện tại
 
