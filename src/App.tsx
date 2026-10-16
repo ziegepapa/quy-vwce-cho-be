@@ -41,7 +41,8 @@ import "./styles/recovery-banner.css";
 const LOGOUT_CLEANUP_PENDING_KEY = "vwce:logout-cleanup-pending";
 
 function RouteLoading({ label }: { label: string }) {
-  return <div className="app-shell" aria-busy="true" aria-live="polite"><p className="muted">{label}</p></div>;
+  // Bọc trong app-layout để glow nền hiện ngay cả lúc đang tải — không còn màn hình đen trơn.
+  return <div className="app-layout"><div className="app-shell" aria-busy="true" aria-live="polite"><p className="muted">{label}</p></div></div>;
 }
 
 function appStrings(locale: AppLocale) {
@@ -389,7 +390,7 @@ export default function App() {
 
   // Auth provider not ready yet — only true cold start.
   if (!auth.ready) {
-    return <div className="app-shell"><p className="muted">{text.loading}</p></div>;
+    return <RouteLoading label={text.loading} />;
   }
 
   // Password recovery must reach AuthPage even when vaultReady is false and the
@@ -401,7 +402,7 @@ export default function App() {
   }
 
   if (!ready || (auth.user && (!auth.mfaReady || !recoveryChecked))) {
-    return <div className="app-shell"><p className="muted">{text.loading}</p></div>;
+    return <RouteLoading label={text.loading} />;
   }
   if (logoutGate || logoutCleanupPending) return <div className="app-shell" role={logoutCleanupPending ? "alert" : "status"}><div className={logoutCleanupPending ? "banner error" : "banner"}><h1 className="page-title">{logoutCleanupPending ? text.cloudSessionEnded : text.closingVault}</h1><p>{logoutNotice ?? text.finishingCloudSession}</p>{logoutCleanupPending ? <button type="button" className="secondary" disabled={logoutRetrying} onClick={() => void retryLogoutCleanup()}>{logoutRetrying ? text.cleanupRetrying : text.cleanupRetry}</button> : null}</div></div>;
   if (migrationError) return <div className="app-shell" role="alert"><h1>{text.migrationTitle}</h1><p className="muted">{text.migrationBody}</p><p>{migrationError}</p><button type="button" className="btn primary" onClick={() => void reload()}>{text.retryMigration}</button></div>;
@@ -422,7 +423,7 @@ export default function App() {
   }
 
   if (!recoveryActive && !settings?.onboardingDone) return <Suspense fallback={<RouteLoading label={text.loading} />}><Onboarding onDone={async () => { await ensureInitialized(false); await reload(); }} /></Suspense>;
-  if (!settings) return <div className="app-shell"><p className="muted">{text.loading}</p></div>;
+  if (!settings) return <RouteLoading label={text.loading} />;
 
   const displayName = (auth.user?.user_metadata?.display_name as string) || auth.user?.email?.split("@")[0] || settings.planName;
   const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
