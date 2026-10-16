@@ -16,6 +16,17 @@ import JourneyTimeline from "../JourneyTimeline";
 import GrowthTree from "../GrowthTree";
 import "../../styles/overview-clean.css";
 
+/** One held fund in the hero breakdown: ticker, shares, close price, value. */
+export type HeroHolding = {
+  isin: string;
+  ticker: string;
+  shares: string;
+  price: string | null;
+  value: string | null;
+  asOfLabel: string | null;
+  dayChange: { direction: "up" | "down" | "flat"; pct: number } | null;
+};
+
 type OverviewFrameProps = {
   assetsLabel: string;
   assets: string;
@@ -23,10 +34,8 @@ type OverviewFrameProps = {
   treeValue: number;
   pnl: string | null;
   pnlPositive: boolean;
-  price: string | null;
-  priceAsOf: string | null;
+  holdings: HeroHolding[];
   stale: boolean;
-  shares: string | null;
   savingsPlan: string | null;
   heartbeat: PortfolioHeartbeat;
   dataHealth: PortfolioDataHealth;
@@ -225,10 +234,8 @@ export default function OverviewFrame({
   assets,
   pnl,
   pnlPositive,
-  price,
-  priceAsOf,
+  holdings,
   stale,
-  shares,
   savingsPlan,
   heartbeat,
   dataHealth,
@@ -272,19 +279,17 @@ export default function OverviewFrame({
       : countdownDays != null && savingsPlan
         ? text.planNextContribution(`${savingsPlan}${text.perMonth}`, countdownDays)
         : text.planNotStarted;
-  const todayPricePct = briefing.priceChange == null
-    ? null
-    : `${briefing.priceChange.pct > 0 ? "+" : ""}${briefing.priceChange.pct.toFixed(1).replace(".", ",")}%`;
-  const todayPriceArrow = briefing.priceChange == null
-    ? "—"
-    : briefing.priceChange.direction === "up"
-      ? "▲"
-      : briefing.priceChange.direction === "down"
-        ? "▼"
-        : "■";
-  const todayPriceDirectionClass = briefing.priceChange == null
-    ? "flat"
-    : briefing.priceChange.direction;
+  // Per-holding day move (VWCE only for now — other funds show none until
+  // their own price history supports one). Formatted here so Overview only
+  // passes the raw direction + pct.
+  const dayChangeParts = (dayChange: HeroHolding["dayChange"]) => {
+    if (dayChange == null) return null;
+    return {
+      label: `${dayChange.pct > 0 ? "+" : ""}${dayChange.pct.toFixed(1).replace(".", ",")}%`,
+      arrow: dayChange.direction === "up" ? "▲" : dayChange.direction === "down" ? "▼" : "■",
+      className: dayChange.direction,
+    };
+  };
   const goalMeta = goalTargetDate
     ? `${text.targetDate}: ${goalTargetDate}${goalHorizon ? ` · ${text.timeHorizon} ${goalHorizon}` : ""}`
     : text.targetUnknown;
@@ -333,15 +338,31 @@ export default function OverviewFrame({
             </span>
           </div>
           <div className="ovc-meta">
-            <span className="ovc-price">
-              {price ?? "—"}
-              {todayPricePct ? (
-                <span className={`ovc-daypct ${todayPriceDirectionClass}`}>{todayPriceArrow} {todayPricePct}</span>
-              ) : null}
-            </span>
-            {priceAsOf ? <span>{priceAsOf}</span> : null}
+            {holdings.length === 0 ? (
+              <div className="ovc-holding">
+                <span className="ovc-price">—</span>
+                <span>— {text.shares}</span>
+              </div>
+            ) : (
+              holdings.map((holding) => {
+                const day = dayChangeParts(holding.dayChange);
+                return (
+                  <div key={holding.isin} className="ovc-holding">
+                    <span className="ovc-holding-ticker">{holding.ticker}</span>
+                    <span>{holding.shares} {text.shares}</span>
+                    <span className="ovc-price">
+                      {holding.price ?? "—"}
+                      {day ? (
+                        <span className={`ovc-daypct ${day.className}`}>{day.arrow} {day.label}</span>
+                      ) : null}
+                    </span>
+                    {holding.asOfLabel ? <span>{holding.asOfLabel}</span> : null}
+                    <span className="ovc-holding-value">{holding.value ?? "—"}</span>
+                  </div>
+                );
+              })
+            )}
             {stale ? <span className="ovc-stale-tag">{text.stalePrice}</span> : null}
-            <span>{shares ?? "—"} {text.shares}</span>
           </div>
           {valueHistory ? (
             <ValueHistoryChart points={valueHistory} label={text.valueHistoryLabel} />

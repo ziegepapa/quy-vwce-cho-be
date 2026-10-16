@@ -312,3 +312,4 @@ export type QuoteMigrationMeta = {
 };
 
 export const VWCE_ISIN = "IE00BK5BQT80";
+export const VALL_ISIN = "IE000VAHT5T0";
