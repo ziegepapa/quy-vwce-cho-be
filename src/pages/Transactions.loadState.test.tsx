@@ -288,6 +288,46 @@ describe("Transactions load and empty states", () => {
     expect(screen.getByRole("button", { name: "Toàn bộ" }).getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("hides the bottom dock while a transaction detail sheet is open so its pinned actions stay reachable", async () => {
+    dbMocks.listTransactions.mockResolvedValue([{
+      id: "tx-vall-test",
+      date: "2026-10-15",
+      type: "buy_security",
+      instrumentIsin: "IE000VAHT5T0",
+      amount: 120,
+      quantity: 28.436,
+      unitPrice: 4.22,
+      fee: 0,
+      tax: 0,
+      notes: "",
+      createdAt: "2026-10-15T00:00:00.000Z",
+      updatedAt: "2026-10-15T00:00:00.000Z",
+    }]);
+    const dock = document.createElement("nav");
+    dock.className = "pill bottom-dock";
+    document.body.append(dock);
+    render(createElement(Transactions));
+
+    // Open the detail sheet from the row.
+    fireEvent.click(await screen.findByRole("button", { name: /Mua chứng khoán khác/ }));
+    expect(document.querySelector(".txv2-detail")).toBeTruthy();
+    // Pinned actions are rendered in the sheet.
+    expect(document.querySelector(".txv2-detail-actions")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Xóa" })).toBeTruthy();
+    // The dock is hidden + inert while the sheet owns the screen.
+    expect(dock.classList.contains("is-hidden")).toBe(true);
+    expect(dock.hasAttribute("inert")).toBe(true);
+    expect(dock.getAttribute("aria-hidden")).toBe("true");
+    expect(document.body.classList.contains("tx-detail-open")).toBe(true);
+
+    // Close the sheet: the dock comes back.
+    fireEvent.click(screen.getByRole("button", { name: "Đóng chi tiết" }));
+    expect(document.querySelector(".txv2-detail")).toBeNull();
+    expect(dock.classList.contains("is-hidden")).toBe(false);
+    expect(dock.hasAttribute("inert")).toBe(false);
+    expect(document.body.classList.contains("tx-detail-open")).toBe(false);
+  });
+
   it("opens the compact header add flow with the default VWCE transaction type", async () => {
     dbMocks.listTransactions.mockResolvedValue([]);
     render(createElement(Transactions));
