@@ -2,7 +2,7 @@
 
 **VWCE Vault** là PWA **local-first** để theo dõi, ghi nhận và mô phỏng kế hoạch đầu tư gia đình với **Vanguard FTSE All-World UCITS ETF (VWCE, ISIN IE00BK5BQT80)**.
 
-> **Mốc 2042 chỉ là mục tiêu hiện tại của kế hoạch đầu tư cho bé.** VWCE Vault có **vòng đời vô thời hạn** (*indefinite lifecycle*), không có application end date, và được thiết kế để tiếp tục sử dụng cho các mục tiêu, năm và kế hoạch trong tương lai.
+> **Không có ngày đích cố định.** 2042 từng được dùng làm ví dụ (năm Bé tròn 18 tuổi), không phải mục tiêu hay hạn kết thúc — quỹ góp dài hạn, mở đầu, cứ góp 120 €/tháng. VWCE Vault có **vòng đời vô thời hạn** (*indefinite lifecycle*), không có application end date, và được thiết kế để tiếp tục sử dụng cho các mục tiêu, năm và kế hoạch trong tương lai.
 
 ## Production
 
