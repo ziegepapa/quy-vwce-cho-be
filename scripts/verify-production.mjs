@@ -56,7 +56,10 @@ assert.ok(
   ),
   "Production manifest has no maskable PNG icon",
 );
-assert.match(serviceWorker, /data\/quotes\.json/, "Production service worker does not precache quotes");
+// Data feeds are network-only since #329 (SW does not precache /data/*),
+// so the production SW must NOT contain data paths. Freshness is checked
+// separately by fetching quotes.json over the network below.
+assert.doesNotMatch(serviceWorker, /data\//, "Live data feeds must not be precached");
 const current = assertQuoteConsistency(quotes, legacy);
 
 console.log(
