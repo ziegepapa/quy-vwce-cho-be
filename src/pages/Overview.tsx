@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { db, getSettings, listQuotes, listTransactions } from "../lib/db";
 import { formatMoney } from "../lib/calc";
+import { VALL_ISIN, VWCE_ISIN } from "../lib/types";
+import { normalizeIsin } from "../lib/instrument";
 import { buildOverviewHero } from "../lib/overviewNumbers";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import { computeHeroLifetimeContribution } from "../lib/heroLifetime";
@@ -42,6 +44,7 @@ function readPriceHistory(payload: unknown): BriefingPricePoint[] {
 function overviewPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     valuedAssets: "Bewertetes Vermögen",
+    portfolioLabel: "Gesamtportfolio",
     updated: "Stand",
     priceToday: "Schlusskurs heute",
     priceYesterday: "Schlusskurs gestern",
@@ -51,6 +54,7 @@ function overviewPageCopy(locale: "vi" | "de") {
     retry: "Erneut versuchen",
   } : {
     valuedAssets: "Tài sản đã định giá",
+    portfolioLabel: "Tổng danh mục",
     updated: "Cập nhật",
     priceToday: "Giá đóng cửa hôm nay",
     priceYesterday: "Giá đóng cửa hôm qua",
@@ -59,6 +63,14 @@ function overviewPageCopy(locale: "vi" | "de") {
     deviceDataSafe: "Dữ liệu trên thiết bị vẫn được giữ nguyên.",
     retry: "Thử lại",
   };
+}
+
+// Display ticker for a held ISIN. Unknown ISINs fall back to the ISIN itself
+// so a new fund never renders as a blank label.
+function instrumentTicker(isin: string): string {
+  if (isin === VWCE_ISIN) return "VWCE";
+  if (isin === VALL_ISIN) return "VALL";
+  return isin;
 }
 
 function monthsFromStart(startDate: string, now: Date): number {
@@ -235,6 +247,36 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
           : null,
       now: currentDate,
     });
+    // Per-holding breakdown for the hero: one row per held ISIN (ticker,
+    // shares, close price, value) so the hero total is the visible sum of
+    // its rows — never a single-instrument price next to a multi-fund total.
+    // The day move is VWCE-only (the briefing computes it from the VWCE
+    // price history); other funds show no day move until their own history
+    // supports one.
+    const asOfByIsin = new Map(
+      quotes.map((q) => [normalizeIsin(q.instrumentIsin), q.asOf]),
+    );
+    const numberFormat = new Intl.NumberFormat(locale === "de" ? "de-DE" : "vi-VN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const sharesFormat = new Intl.NumberFormat(locale === "de" ? "de-DE" : "vi-VN", {
+      maximumFractionDigits: 4,
+    });
+    const holdings = Object.entries(market.byIsin)
+      .filter(([, row]) => row.qty > 0)
+      .sort(([a], [b]) =>
+        a === VWCE_ISIN ? -1 : b === VWCE_ISIN ? 1 : a.localeCompare(b),
+      )
+      .map(([isin, row]) => ({
+        isin,
+        ticker: instrumentTicker(isin),
+        shares: sharesFormat.format(row.qty),
+        price: row.price != null ? `€${numberFormat.format(row.price)}` : null,
+        value: row.value != null ? formatMoney(row.value) : null,
+        asOfLabel: relativePriceAsOf(asOfByIsin.get(isin) ?? "", text, currentDate),
+        dayChange: isin === VWCE_ISIN ? briefing.priceChange : null,
+      }));
     const planToday = currentDate.toISOString().slice(0, 10);
     const yearReviewYears = yearInReviewYears({
       today: planToday,
@@ -287,19 +329,13 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     });
 
     return {
-      assetsLabel: snapshot.valueComplete ? "Portfolio VWCE" : text.valuedAssets,
+      assetsLabel: snapshot.valueComplete ? text.portfolioLabel : text.valuedAssets,
       assets: formatMoney(hero.assets),
       treeValue: hero.assets,
       pnl: pnl == null || pnl === 0 ? null : `${pnl > 0 ? "▲ +" : "▼ −"}${formatMoney(Math.abs(pnl))}`,
       pnlPositive: (pnl ?? 0) >= 0,
-      price: vwcePrice > 0
-        ? `€${vwcePrice.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        : null,
-      priceAsOf: relativePriceAsOf(snapshot.vwceAsOf, text, currentDate),
+      holdings,
       stale: snapshot.stalePriceIsins.length > 0,
-      shares: portfolio.vwceQty > 0
-        ? portfolio.vwceQty.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 4 })
-        : null,
       savingsPlan: Number.isFinite(plannedContribution) && plannedContribution > 0 ? formatMoney(plannedContribution) : null,
       heartbeat,
       dataHealth,
