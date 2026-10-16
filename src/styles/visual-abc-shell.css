@@ -185,6 +185,28 @@ body,
 .bar-sync-dot.offline { background: #64748b; }
 .bar-sync-dot.conflict { background: var(--re); }
 
+/* Dock hide (sheets): the dock hides when a sheet owns the screen
+   (Transactions filter/import/detail, Settings child). This rule lives
+   here — not dock.css, which is not imported — so it actually reaches
+   the screen. */
+.pill.bottom-dock.is-hidden,
+.bottom-dock.is-hidden {
+  transform: translateX(-50%) translateY(120%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No sliding for reduced motion — hide instantly, in place. */
+  .pill.bottom-dock.is-hidden,
+  .bottom-dock.is-hidden {
+    transform: translateX(-50%);
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
 .pill {
   position: fixed;
   z-index: var(--z-dock);

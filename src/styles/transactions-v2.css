@@ -642,7 +642,19 @@ html.tx-filter-open .app-shell::after {
 .tx-wrap .txv2-detail-card dt { color: var(--text-tertiary); flex: none; }
 .tx-wrap .txv2-detail-card dd { margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
 .tx-wrap .txv2-detail-card dd.mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12.5px; }
-.tx-wrap .txv2-detail-actions { display: flex; gap: 10px; }
+/* Actions pinned to the sheet bottom: Sửa/Xóa stay reachable on a phone
+   no matter how tall the detail card is — never below the fold, never
+   hidden behind the bottom dock. The sheet content scrolls under this bar. */
+.tx-wrap .txv2-detail-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg-base);
+  border-top: 1px solid var(--border-subtle);
+  box-shadow: 0 -8px 20px rgba(15, 18, 30, .10);
+}
 .tx-wrap .txv2-detail-actions button { flex: 1; min-height: 50px; border: none; border-radius: 14px; cursor: pointer; font: inherit; font-size: 15px; font-weight: 700; }
 .tx-wrap .txv2-detail-actions button.primary { background: var(--primary-600); color: #fff; }
 .tx-wrap .txv2-detail-actions button.danger { background: var(--danger-050); color: var(--danger-600); }

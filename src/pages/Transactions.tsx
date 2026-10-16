@@ -227,21 +227,22 @@ export default function Transactions() {
     }
   }, [searchParams]);
 
+  const detailOpen = detailId != null;
   useEffect(() => {
     const dock = document.querySelector(".bottom-dock");
     document.documentElement.classList.toggle("tx-filter-open", filterSheetOpen);
     document.body.classList.toggle("tx-filter-open", filterSheetOpen);
     document.documentElement.classList.toggle("tx-import-open", pdfToolsOpen);
     document.body.classList.toggle("tx-import-open", pdfToolsOpen);
+    // The detail sheet owns the full screen while open: hide the bottom
+    // dock so it can never cover the pinned Sửa/Xóa actions.
+    document.documentElement.classList.toggle("tx-detail-open", detailOpen);
+    document.body.classList.toggle("tx-detail-open", detailOpen);
+    const anySheetOpen = filterSheetOpen || pdfToolsOpen || detailOpen;
     if (dock) {
-      dock.classList.toggle("is-hidden", filterSheetOpen);
-      dock.toggleAttribute("inert", filterSheetOpen);
-      dock.setAttribute("aria-hidden", String(filterSheetOpen));
-      if (pdfToolsOpen && !filterSheetOpen) {
-        dock.classList.add("is-hidden");
-        dock.toggleAttribute("inert", true);
-        dock.setAttribute("aria-hidden", "true");
-      }
+      dock.classList.toggle("is-hidden", anySheetOpen);
+      dock.toggleAttribute("inert", anySheetOpen);
+      dock.setAttribute("aria-hidden", String(anySheetOpen));
     }
     if (filterSheetOpen) requestAnimationFrame(() => filterSheetRef.current?.focus());
     return () => {
@@ -249,12 +250,14 @@ export default function Transactions() {
       document.body.classList.remove("tx-filter-open");
       document.documentElement.classList.remove("tx-import-open");
       document.body.classList.remove("tx-import-open");
+      document.documentElement.classList.remove("tx-detail-open");
+      document.body.classList.remove("tx-detail-open");
       const currentDock = document.querySelector(".bottom-dock");
       currentDock?.classList.remove("is-hidden");
       currentDock?.removeAttribute("inert");
       currentDock?.removeAttribute("aria-hidden");
     };
-  }, [filterSheetOpen, pdfToolsOpen]);
+  }, [filterSheetOpen, pdfToolsOpen, detailOpen]);
 
   const [sort, setSort] = useState<TransactionSort>("newest");
   const [savedViews, setSavedViews] = useState<SavedTransactionView[]>(() => readTransactionSavedViews());
