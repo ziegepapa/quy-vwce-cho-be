@@ -387,3 +387,50 @@ describe("Overview clean hierarchy", () => {
     expect(planCard?.textContent).not.toContain("Mốc tiếp theo");
   });
 });
+
+describe("Overview multi-fund hero", () => {
+  it("shows one row per held fund so the hero total is the visible sum of its rows", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([
+      cashIn("tx-cash-multi", "2026-08-01", 220),
+      buyVwce("tx-vwce-multi", "2026-08-01"),
+      {
+        id: "tx-vall-multi",
+        date: "2026-10-15",
+        type: "buy_security",
+        instrumentIsin: "IE000VAHT5T0",
+        amount: 120,
+        quantity: 28.436,
+        unitPrice: 4.22,
+        fee: 0,
+        tax: 0,
+        notes: "",
+        createdAt: TX_STAMP,
+        updatedAt: TX_STAMP,
+      },
+    ]);
+    dbMocks.listQuotes.mockResolvedValue([
+      { id: "q-vwce-multi", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 170.94, asOf: "2026-10-15", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP },
+      { id: "q-vall-multi", instrumentIsin: "IE000VAHT5T0", currency: "EUR", price: 4.4045, asOf: "2026-10-15", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP },
+    ]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".ovc-hero")).toBeTruthy());
+    // Label is the total portfolio, never a single fund.
+    expect(container.querySelector(".ovc-hero .ovc-eyebrow")?.textContent).toBe("Tổng danh mục");
+    expect(container.querySelector(".ovc-hero")?.textContent).not.toContain("Portfolio VWCE");
+    const rows = container.querySelectorAll(".ovc-holding");
+    expect(rows.length).toBe(2);
+    // VWCE first: 1 × 170,94 = 170,94.
+    expect(rows[0]?.textContent).toContain("VWCE");
+    expect(rows[0]?.textContent).toContain("170,94");
+    // VALL: 28,436 × 4,40 = 125,25.
+    expect(rows[1]?.textContent).toContain("VALL");
+    expect(rows[1]?.textContent).toContain("28,436");
+    expect(rows[1]?.textContent).toContain("4,40");
+    expect(rows[1]?.textContent).toContain("125,25");
+    // Hero total is the sum of the rows: 170,94 + 125,25 = 296,19.
+    expect(container.querySelector(".ovc-hero .ovc-value")?.textContent).toContain("296,19");
+  });
+});
