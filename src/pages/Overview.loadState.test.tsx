@@ -233,6 +233,9 @@ describe("Overview clean hierarchy", () => {
     expect(container.textContent).not.toContain("2 mục dữ liệu cần rà soát");
     const healthLink = container.querySelector(".ovc-attention a");
     expect(healthLink?.getAttribute("href")).toBe("#/transactions?quality=needs_review");
+    // The year footer is stats only (count + fees) — the missing-notes
+    // item lives once, in the Attention card above, not duplicated here.
+    expect(container.querySelector(".ovc-foot")?.textContent).not.toContain("ghi chú còn thiếu");
   });
 
 
