@@ -22,8 +22,11 @@ describe("tx filter sheet safe-area regression", () => {
   });
   it("makes the bottom navigation inert and visually hidden while the filter sheet is open", () => {
     expect(tx).toMatch(/tx-filter-open/);
-    expect(tx).toMatch(/classList\.toggle\("is-hidden", filterSheetOpen\)/);
-    expect(tx).toMatch(/toggleAttribute\("inert", filterSheetOpen\)/);
+    // Any open sheet (filter, import, or detail) hides the dock; the
+    // filter sheet is one of the conditions feeding anySheetOpen.
+    expect(tx).toMatch(/const anySheetOpen = filterSheetOpen \|\| pdfToolsOpen \|\| detailOpen/);
+    expect(tx).toMatch(/classList\.toggle\("is-hidden", anySheetOpen\)/);
+    expect(tx).toMatch(/toggleAttribute\("inert", anySheetOpen\)/);
     expect(dockComponent).toMatch(/className="pill bottom-dock"/);
     expect(css).toMatch(/html\.tx-filter-open \.bottom-dock[\s\S]*visibility:\s*hidden/);
     expect(css).toMatch(/body\.tx-filter-open\s*\{\s*overflow:\s*hidden/);
