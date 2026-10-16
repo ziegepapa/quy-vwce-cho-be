@@ -37,6 +37,27 @@ function isValidPoint(point: BriefingPricePoint): boolean {
   );
 }
 
+/**
+ * Day move from a fund's own price history: latest close vs the previous
+ * close. Null when fewer than 2 valid points exist (e.g. a fund whose
+ * history just started) — the row then shows no day move instead of a
+ * made-up one. Shared by the VWCE briefing and the per-fund hero rows.
+ */
+export function dayChangeFromPoints(
+  history: ReadonlyArray<BriefingPricePoint>,
+): DailyBriefing["priceChange"] {
+  const points = [...history].filter(isValidPoint).sort((a, b) => a.date.localeCompare(b.date));
+  const latest = points.length > 0 ? points[points.length - 1] : null;
+  const previous = points.length > 1 ? points[points.length - 2] : null;
+  if (!latest || !previous) return null;
+  const delta = latest.price - previous.price;
+  const pct = previous.price > 0 ? (delta / previous.price) * 100 : 0;
+  return {
+    direction: delta > 0 ? "up" : delta < 0 ? "down" : "flat",
+    pct,
+  };
+}
+
 function nextContributionDate(dayOfMonth: number, now: Date): Date | null {
   if (!Number.isInteger(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 28) return null;
   const next = new Date(now.getFullYear(), now.getMonth(), dayOfMonth, 12, 0, 0);
@@ -64,15 +85,10 @@ export function buildDailyBriefing(input: {
   const latest = points.length > 0 ? points[points.length - 1] : null;
   const previous = points.length > 1 ? points[points.length - 2] : null;
 
-  let priceChange: DailyBriefing["priceChange"] = null;
+  const priceChange = dayChangeFromPoints(input.priceHistory);
   let valueDeltaEstimate: number | null = null;
   if (latest && previous) {
     const delta = latest.price - previous.price;
-    const pct = previous.price > 0 ? (delta / previous.price) * 100 : 0;
-    priceChange = {
-      direction: delta > 0 ? "up" : delta < 0 ? "down" : "flat",
-      pct,
-    };
     if (Number.isFinite(input.vwceQty) && input.vwceQty > 0) {
       valueDeltaEstimate = input.vwceQty * delta;
     }
