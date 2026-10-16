@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { db, getSettings, listQuotes, listTransactions } from "../lib/db";
 import { formatMoney } from "../lib/calc";
 import { VALL_ISIN, VWCE_ISIN } from "../lib/types";
-import { normalizeIsin } from "../lib/instrument";
+import { normalizeIsin, resolveInstrumentIsin } from "../lib/instrument";
 import { buildOverviewHero } from "../lib/overviewNumbers";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import { computeHeroLifetimeContribution } from "../lib/heroLifetime";
@@ -15,15 +15,15 @@ import { buildLifetimePlan, buildPlanVsReality } from "./planVsReality";
 import { buildTrajectory } from "./trajectory";
 import { buildYearInReview, yearInReviewYears } from "./yearInReview";
 import { buildPortfolioDataHealth } from "./portfolioDataHealth";
-import { buildDailyBriefing, type BriefingPricePoint, type DailyBriefing } from "./dailyBriefing";
+import { buildDailyBriefing, dayChangeFromPoints, type BriefingPricePoint, type DailyBriefing } from "./dailyBriefing";
 import { buildValueHistory } from "../lib/valueHistory";
 import { buildContributionHeatmap } from "../lib/contributionHeatmap";
 import { buildJourneyTimeline } from "../lib/journeyTimeline";
 
-function priceHistoryUrl(): string {
+function priceHistoryUrl(isin: string): string {
   const baseUrl = import.meta.env.BASE_URL as string | undefined;
   const base = baseUrl && baseUrl.endsWith("/") ? baseUrl : `${baseUrl || "/"}/`;
-  return `${base}data/price-history/IE00BK5BQT80.json`;
+  return `${base}data/price-history/${isin}.json`;
 }
 
 function readPriceHistory(payload: unknown): BriefingPricePoint[] {
@@ -113,7 +113,9 @@ function relativePriceAsOf(
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   if (asOf === day(now)) return text.priceToday;
-  if (asOf === day(yesterday)) return text.priceYesterday;
+  // Yesterday's close carries its exact date: on a Monday the feed still
+  // shows Friday's close, and a bare "yesterday" would mislead.
+  if (asOf === day(yesterday)) return `${text.priceYesterday} · ${asOf.slice(8, 10)}/${asOf.slice(5, 7)}`;
   return `${text.updated} ${asOf.slice(8, 10)}/${asOf.slice(5, 7)}`;
 }
 
@@ -137,7 +139,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
   const [transactions, setTransactions] = useState<Awaited<ReturnType<typeof listTransactions>>>([]);
   const [quotes, setQuotes] = useState<Awaited<ReturnType<typeof listQuotes>>>([]);
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
-  const [priceHistory, setPriceHistory] = useState<BriefingPricePoint[]>([]);
+  const [priceHistories, setPriceHistories] = useState<Map<string, BriefingPricePoint[]>>(new Map());
   const [yearReviewYear, setYearReviewYear] = useState<number | null>(null);
 
   useEffect(() => {
@@ -158,19 +160,48 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       .finally(() => {
         if (alive) setLoading(false);
       });
-    // Daily briefing price history: best effort, never blocks the overview.
-    void fetch(priceHistoryUrl())
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload) => {
-        if (alive) setPriceHistory(readPriceHistory(payload));
-      })
-      .catch(() => {
-        if (alive) setPriceHistory([]);
-      });
     return () => {
       alive = false;
     };
   }, [refreshKey, loadAttempt]);
+
+  // Per-fund price histories (one fetch per held ISIN): best effort, never
+  // blocks the overview. Each hero row computes its own day move from its
+  // own history, so a fund shows a % as soon as it has 2 closes.
+  useEffect(() => {
+    let alive = true;
+    // resolveInstrumentIsin covers legacy buy_vwce/sell_vwce without an
+    // explicit ISIN — they are VWCE, not "no instrument".
+    const isins = [...new Set(
+      transactions
+        .filter((tx) => !tx.deletedAt)
+        .map((tx) => resolveInstrumentIsin(tx))
+        .filter((isin) => isin !== ""),
+    )];
+    if (isins.length === 0) {
+      setPriceHistories(new Map());
+      return;
+    }
+    void Promise.allSettled(
+      isins.map(async (isin) => {
+        const response = await fetch(priceHistoryUrl(isin));
+        const payload = response.ok ? await response.json() : null;
+        return [isin, readPriceHistory(payload)] as const;
+      }),
+    ).then((results) => {
+      if (!alive) return;
+      const next = new Map<string, BriefingPricePoint[]>();
+      for (const result of results) {
+        if (result.status === "fulfilled") next.set(result.value[0], result.value[1]);
+      }
+      setPriceHistories(next);
+    }).catch(() => {
+      if (alive) setPriceHistories(new Map());
+    });
+    return () => {
+      alive = false;
+    };
+  }, [transactions, refreshKey, loadAttempt]);
 
   const view = useMemo(() => {
     if (!settings) return null;
@@ -234,6 +265,8 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       lastBackupAt,
     });
     // Daily briefing: display-only, feeds on already computed numbers.
+    // The briefing's VWCE history comes from the same per-fund map.
+    const priceHistory = priceHistories.get(VWCE_ISIN) ?? [];
     const streak = computeContributionStreak(transactions);
     const contributionDay = Number(settings.startDate.slice(8, 10));
     const briefing: DailyBriefing = buildDailyBriefing({
@@ -250,9 +283,8 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     // Per-holding breakdown for the hero: one row per held ISIN (ticker,
     // shares, close price, value) so the hero total is the visible sum of
     // its rows — never a single-instrument price next to a multi-fund total.
-    // The day move is VWCE-only (the briefing computes it from the VWCE
-    // price history); other funds show no day move until their own history
-    // supports one.
+    // Each row's day move comes from its own price history; a fund with
+    // fewer than 2 closes shows no day move instead of a made-up one.
     const asOfByIsin = new Map(
       quotes.map((q) => [normalizeIsin(q.instrumentIsin), q.asOf]),
     );
@@ -275,7 +307,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
         price: row.price != null ? `€${numberFormat.format(row.price)}` : null,
         value: row.value != null ? formatMoney(row.value) : null,
         asOfLabel: relativePriceAsOf(asOfByIsin.get(isin) ?? "", text, currentDate),
-        dayChange: isin === VWCE_ISIN ? briefing.priceChange : null,
+        dayChange: dayChangeFromPoints(priceHistories.get(isin) ?? []),
       }));
     const planToday = currentDate.toISOString().slice(0, 10);
     const yearReviewYears = yearInReviewYears({
@@ -356,7 +388,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       goalTargetDate: formatGoalTargetDate(settings.endDate, locale),
       goalHorizon: goalHorizon(settings.endDate, locale, currentDate),
     };
-  }, [lastBackupAt, locale, yearReviewYear, settings, text, transactions, quotes, priceHistory]);
+  }, [lastBackupAt, locale, yearReviewYear, settings, text, transactions, quotes, priceHistories]);
 
   if (loading) return <main className="demo-v10-screen" role="status" aria-label={text.loading} aria-busy="true" />;
   if (failed || !view) {

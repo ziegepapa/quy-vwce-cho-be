@@ -93,6 +93,7 @@ function overviewCopy(locale: "vi" | "de") {
     trajectoryPaceBare: (pace: string) => `Tempo ${pace}/Mon.`,
     trajectoryLabel: "Voraussichtlich",
     trajectoryYear: (year: number) => `bis ${year}`,
+    trajectoryProgress: (pct: string) => `${pct}% erreicht`,
     trajectoryAssumption: (pace: string, rate: string) => `Bei Tempo ${pace}/Mon. · Annahme ${rate}/Jahr · nur eine Schätzung`,
     planMonths: (planned: number, recorded: number) => `${recorded}/${planned} Monate erfasst`,
     planFrom: (label: string) => `seit ${label}`,
@@ -150,6 +151,7 @@ function overviewCopy(locale: "vi" | "de") {
     trajectoryPaceBare: (pace: string) => `Nhịp ${pace}/tháng`,
     trajectoryLabel: "Ước đạt",
     trajectoryYear: (year: number) => `vào ${year}`,
+    trajectoryProgress: (pct: string) => `Đã đạt ${pct}%`,
     trajectoryAssumption: (pace: string, rate: string) => `Giữ nhịp ${pace}/tháng · giả định ${rate}/năm · chỉ là ước tính`,
     planMonths: (planned: number, recorded: number) => `Đã ghi nhận ${recorded}/${planned} tháng`,
     planFrom: (label: string) => `từ ${label}`,
@@ -279,8 +281,8 @@ export default function OverviewFrame({
       : countdownDays != null && savingsPlan
         ? text.planNextContribution(`${savingsPlan}${text.perMonth}`, countdownDays)
         : text.planNotStarted;
-  // Per-holding day move (VWCE only for now — other funds show none until
-  // their own price history supports one). Formatted here so Overview only
+  // Per-holding day move (each fund from its own price history; a fund
+  // with fewer than 2 closes shows none). Formatted here so Overview only
   // passes the raw direction + pct.
   const dayChangeParts = (dayChange: HeroHolding["dayChange"]) => {
     if (dayChange == null) return null;
@@ -299,12 +301,12 @@ export default function OverviewFrame({
       ? text.yearReviewMissingNotes(yearInReview.missingNoteCount)
       : text.yearReviewQuality(yearInReview.qualityIssueCount);
   // Slim footer display: no "đã góp" (the plan card owns the lifetime figure)
-  // and no price snapshot (the hero owns the price). The export below keeps
-  // the full detail.
+  // and no price snapshot (the hero owns the price). Quality lives in the
+  // Attention card above (with its Rà soát action) — repeating it here
+  // just duplicates the same item. The export below keeps the full detail.
   const yearReviewDisplay = [
     `${yearInReview.transactionCount} ${text.yearReviewTransactions}`,
     `${text.yearReviewFees} ${formatMoney(yearInReview.fees)}`,
-    yearReviewQualityLabel,
   ].join(" · ");
   const yearReviewLine = useMemo(() => [
     `${text.yearReview} ${yearInReview.year}`,
@@ -405,10 +407,13 @@ export default function OverviewFrame({
             <div className="ovc-trajectory">
               <div className="ovc-row">
                 <span>{text.trajectoryLabel} <strong>~{formatMoney(trajectory.projected)}</strong></span>
-                <span className="ovc-muted">{text.trajectoryYear(trajectory.targetYear)}</span>
+                <span className="ovc-muted">{text.trajectoryProgress(trajectory.progressPct.toFixed(1).replace(".", ","))} · {text.trajectoryYear(trajectory.targetYear)}</span>
               </div>
               <div className="ovc-bar" role="progressbar" aria-valuenow={Math.round(trajectory.progressPct)} aria-valuemin={0} aria-valuemax={100}>
-                <span style={{ width: `${trajectory.progressPct}%` }} />
+                {/* Min 2% fill when progress > 0: a true 1,6% bar is a
+                    dot that reads as broken; the % label above states the
+                    real figure. */}
+                <span style={{ width: `${trajectory.progressPct > 0 ? Math.max(trajectory.progressPct, 2) : 0}%` }} />
               </div>
               <p className="ovc-muted">{text.trajectoryAssumption(formatMoney(trajectory.pace), `${(trajectory.annualReturn * 100).toFixed(0).replace(".", ",")}%`)}</p>
             </div>

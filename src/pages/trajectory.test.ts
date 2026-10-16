@@ -65,6 +65,33 @@ describe("buildTrajectory", () => {
     expect(t!.pace).toBeCloseTo(200 / 33, 8);
   });
 
+  it("uses the latest contributed month as the forward pace, not the window mean", () => {
+    // Jul 80 (partial first month) + Aug 120 + Sep 120: the mean would be
+    // 106,67 and understate the future, but the user is now on 120/month.
+    // Today is 2026-10-03 in `base`, so Sep 2026 is the latest completed
+    // month and Oct (current month) is excluded.
+    const transactions = [
+      monthly("tx-jul", 2026, 7, 80),
+      monthly("tx-aug", 2026, 8, 120),
+      monthly("tx-sep", 2026, 9, 120),
+    ];
+    const t = buildTrajectory({ ...base, transactions });
+    expect(t).not.toBeNull();
+    expect(t!.pace).toBeCloseTo(120, 8);
+    expect(t!.windowMonths).toBe(3);
+  });
+
+  it("keeps the last non-zero month when the latest completed month was skipped", () => {
+    const transactions = [
+      monthly("tx-jul", 2026, 7, 120),
+      monthly("tx-aug", 2026, 8, 120),
+      // Sep 2026: no contribution (skipped) — pace stays 120, not 0.
+    ];
+    const t = buildTrajectory({ ...base, transactions });
+    expect(t).not.toBeNull();
+    expect(t!.pace).toBeCloseTo(120, 8);
+  });
+
   it("never double-counts a funding leg with its security buy", () => {
     const transactions = [
       { date: "2026-09-15", type: "cash_in", amount: 100 },

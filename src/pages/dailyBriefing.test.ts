@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDailyBriefing } from "./dailyBriefing";
+import { buildDailyBriefing, dayChangeFromPoints } from "./dailyBriefing";
 
 const HISTORY = [
   { date: "2026-09-28", price: 168.0 },
@@ -147,5 +147,25 @@ describe("buildDailyBriefing", () => {
       contributionDay: 31,
     });
     expect(invalid.daysToNextContribution).toBeNull();
+  });
+});
+
+describe("dayChangeFromPoints", () => {
+  it("computes the day move from a fund's own history", () => {
+    const change = dayChangeFromPoints([
+      { date: "2026-10-14", price: 4.4 },
+      { date: "2026-10-15", price: 4.4045 },
+    ]);
+    expect(change?.direction).toBe("up");
+    expect(change?.pct).toBeCloseTo(((4.4045 - 4.4) / 4.4) * 100, 6);
+  });
+
+  it("returns null with fewer than 2 valid closes", () => {
+    expect(dayChangeFromPoints([{ date: "2026-10-15", price: 4.4045 }])).toBeNull();
+    expect(dayChangeFromPoints([])).toBeNull();
+    expect(dayChangeFromPoints([
+      { date: "2026-10-14", price: 0 },
+      { date: "2026-10-15", price: 4.4045 },
+    ])).toBeNull();
   });
 });

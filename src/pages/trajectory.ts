@@ -13,7 +13,15 @@ export type TrajectoryTransaction = {
 };
 
 export type Trajectory = {
-  /** Average monthly contribution over the recent window — actual behavior. */
+  /**
+   * Forward-looking monthly pace: the most recent completed month that
+   * actually had contributions — the current Sparplan rate, not a
+   * backward average. A mean over the window would drag the pace down
+   * with a partial first month (e.g. 80 + 120 + 120 -> 106,67) even
+   * though the user now pays 120/month, and the projection would then
+   * understate the future. A single skipped month does not zero the
+   * pace: the latest non-zero month in the window is used.
+   */
   pace: number;
   /** Calendar months covered by the recent window (max 12). */
   windowMonths: number;
@@ -86,16 +94,35 @@ export function buildTrajectory(input: {
       (lastCompleted.getMonth() - startMonth.getMonth()) +
       1,
   );
-  let windowSum = 0;
+  // Monthly sums inside the window (completed months only). The forward
+  // pace is the latest month that actually had contributions — the rate
+  // the user is on now — not the window mean.
+  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const monthlySums = new Map<string, number>();
   for (const p of points) {
-    if (p.date >= startMonth && p.date < thisMonth) windowSum += p.amount;
+    if (p.date >= startMonth && p.date < thisMonth) {
+      const key = monthKey(p.date);
+      monthlySums.set(key, (monthlySums.get(key) ?? 0) + p.amount);
+    }
   }
+  const windowSum = [...monthlySums.values()].reduce((sum, v) => sum + v, 0);
   // Paused longer than the window: fall back to the whole-history average
   // instead of showing a €0 pace.
   let pace: number;
   let months: number;
   if (windowSum > 0) {
-    pace = windowSum / windowMonths;
+    // Walk the window newest-first: the first month with contributions
+    // is the current pace. A skipped recent month does not zero it.
+    let latestNonZero: number | null = null;
+    for (let i = windowMonths - 1; i >= 0; i--) {
+      const cursor = new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1, 12, 0, 0);
+      const sum = monthlySums.get(monthKey(cursor)) ?? 0;
+      if (sum > 0) {
+        latestNonZero = sum;
+        break;
+      }
+    }
+    pace = latestNonZero ?? windowSum / windowMonths;
     months = windowMonths;
   } else {
     const total = points.reduce((sum, p) => sum + p.amount, 0);
