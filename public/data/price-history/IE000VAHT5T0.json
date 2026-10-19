@@ -12,6 +12,11 @@
       "date": "2026-10-16",
       "price": 4.3905,
       "source": "cron"
+    },
+    {
+      "date": "2026-10-19",
+      "price": 4.401,
+      "source": "cron"
     }
   ]
 }
