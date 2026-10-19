@@ -55,6 +55,11 @@ type OverviewFrameProps = {
 function overviewCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     pageLabel: "Übersicht",
+    pageSubtitle: "Vermögen, Entwicklung und langfristiger Plan auf einen Blick.",
+    trackedFunds: "Gehaltene Fonds",
+    monthlySavings: "Monatlicher Sparplan",
+    chartCaption: "Monatlich erfasster Portfoliowert — ohne künstliche Hochrechnung.",
+    chartInsufficientData: "Für den Verlauf werden mindestens zwei Monatswerte benötigt.",
     stalePrice: "Alter Kurs",
     shares: "Anteile",
     valueHistoryLabel: "Portfoliowert pro Monat",
@@ -113,6 +118,11 @@ function overviewCopy(locale: "vi" | "de") {
     yearReviewFees: "Gebühren",
   } : {
     pageLabel: "Tổng quan",
+    pageSubtitle: "Giá trị danh mục, diễn biến và kế hoạch dài hạn của bé.",
+    trackedFunds: "Số quỹ đang nắm giữ",
+    monthlySavings: "Khoản góp định kỳ",
+    chartCaption: "Giá trị danh mục theo các mốc tháng đã ghi nhận, không phải dự báo.",
+    chartInsufficientData: "Cần ít nhất hai mốc tháng để hiển thị biểu đồ.",
     stalePrice: "Giá cũ",
     shares: "cổ phần",
     valueHistoryLabel: "Giá trị quỹ theo tháng",
@@ -329,6 +339,13 @@ export default function OverviewFrame({
   return (
     <main className="ovc-screen" aria-label={text.pageLabel}>
       <div className="ov">
+        <header className="ovc-page-head">
+          <div>
+            <h1 className="ovc-page-title">{text.pageLabel}</h1>
+            <p className="ovc-page-subtitle">{text.pageSubtitle}</p>
+          </div>
+        </header>
+
         {/* 1 — Hero: one number, one story */}
         <section className="ovc-hero" aria-label={assetsLabel}>
           <div className="ovc-eyebrow">{assetsLabel}</div>
@@ -366,19 +383,43 @@ export default function OverviewFrame({
             )}
             {stale ? <span className="ovc-stale-tag">{text.stalePrice}</span> : null}
           </div>
-          {valueHistory ? (
+          <div className="ovc-hero-support">
+            <div className="ovc-support-metric">
+              <span className="ovc-support-label">{text.trackedFunds}</span>
+              <strong>{holdings.length}</strong>
+            </div>
+            <div className="ovc-support-metric">
+              <span className="ovc-support-label">{text.monthlySavings}</span>
+              <strong>{savingsPlan ? `${savingsPlan}${text.perMonth}` : "—"}</strong>
+            </div>
+            <div className="ovc-support-metric ovc-support-goal">
+              <span className="ovc-support-label">{text.targetDate}</span>
+              <strong>{goalTargetDate ?? text.targetUnknown}</strong>
+              {goalHorizon ? <small>{text.timeHorizon} · {goalHorizon}</small> : null}
+            </div>
+          </div>
+        </section>
+
+        <section className="ovc-card ovc-chart-card" aria-label={text.valueHistoryLabel}>
+          <div className="ovc-card-head">
+            <h2 className="ovc-title">{text.valueHistoryLabel}</h2>
+          </div>
+          <p className="ovc-chart-caption">{text.chartCaption}</p>
+          {valueHistory && valueHistory.length >= 2 ? (
             <ValueHistoryChart points={valueHistory} label={text.valueHistoryLabel} />
-          ) : null}
+          ) : (
+            <p className="ovc-chart-empty">{text.chartInsufficientData}</p>
+          )}
         </section>
 
         {/* 2 — Growth tree: the fund as a living tree */}
-        <section className="ovc-card">
+        <section className="ovc-card ovc-tree-panel">
           <GrowthTree value={treeValue} nextMilestone={briefing.nextMilestone} />
         </section>
 
         {/* 3 — Heatmap nhịp góp: một ô mỗi tháng, đậm nhạt theo số tiền */}
         {contributionHeatmap ? (
-          <section className="ovc-card" aria-label={text.rhythmTitle}>
+          <section className="ovc-card ovc-rhythm-panel" aria-label={text.rhythmTitle}>
             <ContributionHeatmap
               heatmap={contributionHeatmap}
               title={text.rhythmTitle}
@@ -391,13 +432,13 @@ export default function OverviewFrame({
 
         {/* 3 — Timeline hành trình: góp đầu tiên, các cột mốc, hôm nay */}
         {journeyTimeline ? (
-          <section className="ovc-card" aria-label={text.journeyTitle}>
+          <section className="ovc-card ovc-journey-panel" aria-label={text.journeyTitle}>
             <JourneyTimeline events={journeyTimeline} title={text.journeyTitle} />
           </section>
         ) : null}
 
         {/* 4 — Plan: smart pace line + facts + behavior-based trajectory */}
-        <section className="ovc-card" aria-label={text.currentPlan}>
+        <section className="ovc-card ovc-plan-panel" aria-label={text.currentPlan}>
           <div className="ovc-card-head">
             <h2 className="ovc-title">{text.currentPlan}</h2>
           </div>
@@ -426,7 +467,7 @@ export default function OverviewFrame({
 
         {/* 5 — Attention: merged, only when there is something to do */}
         {attentionItems.length > 0 ? (
-          <section className="ovc-card ovc-attention" aria-label={text.attention} data-attention-count={attentionItems.length}>
+          <section className="ovc-card ovc-attention ovc-attention-panel" aria-label={text.attention} data-attention-count={attentionItems.length}>
             <h2 className="ovc-title">{text.attention}</h2>
             <ul className="ovc-attention-list">
               {attentionItems.map((item) => (
@@ -450,7 +491,7 @@ export default function OverviewFrame({
         ) : null}
 
         {/* 6 — Year review: quiet footer row */}
-        <section className="ovc-foot" aria-label={text.yearReview}>
+        <section className="ovc-foot ovc-year-panel" aria-label={text.yearReview}>
           <div className="ovc-foot-head">
             <span className="ovc-title">{text.yearReview}</span>
             <label className="ovc-year-label">
