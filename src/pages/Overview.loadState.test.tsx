@@ -30,10 +30,6 @@ function renderGermanOverview() {
 const TX_STAMP = "2026-08-01T00:00:00.000Z";
 const MISSING_PRICE_ISIN = "IE00B5BMR087";
 
-function cashIn(id: string, date: string, amount: number) {
-  return { id, date, type: "cash_in", amount, notes: "", createdAt: TX_STAMP, updatedAt: TX_STAMP };
-}
-
 function buyVwce(id: string, date: string) {
   return {
     id,
@@ -71,6 +67,13 @@ function buyMissingQuoteComplete(id: string, date: string) {
   return { ...buyWithoutPrice(id, date), notes: "Đã kiểm tra" };
 }
 
+function quoteVwce(price: number, asOf: string) {
+  return {
+    id: `quote-${asOf}`, instrumentIsin: "IE00BK5BQT80", currency: "EUR",
+    price, asOf, source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   dbMocks.listQuotes.mockResolvedValue([]);
@@ -93,7 +96,7 @@ describe("Overview load state", () => {
     const status = screen.getByRole("status");
     expect(status.getAttribute("aria-busy")).toBe("true");
     expect(status.getAttribute("aria-label")).toBe("Đang tải Tổng quan");
-    expect(document.querySelector(".ov")).toBeNull();
+    expect(document.querySelector(".ovb2")).toBeNull();
 
     resolveSettings(defaultSettings());
     await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
@@ -106,11 +109,11 @@ describe("Overview load state", () => {
 
     expect(await screen.findByRole("heading", { name: "Không tải được Tổng quan" })).toBeTruthy();
     expect(screen.getByRole("alert")).toBeTruthy();
-    expect(document.querySelector(".ov")).toBeNull();
+    expect(document.querySelector(".ovb2")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
 
-    await waitFor(() => expect(document.querySelector(".ov")).toBeTruthy());
+    await waitFor(() => expect(document.querySelector(".ovb2")).toBeTruthy());
     expect(dbMocks.getSettings).toHaveBeenCalledTimes(2);
     expect(dbMocks.listTransactions).toHaveBeenCalledTimes(2);
   });
@@ -119,95 +122,115 @@ describe("Overview load state", () => {
 describe("Overview German locale", () => {
   it("does not leak Vietnamese overview labels when Deutsch is active", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([cashIn("tx-cash-1", "2026-08-01", 1000)]);
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-de-1", "2026-08-01")]);
 
     renderGermanOverview();
 
-    // Price shown inline without a redundant label; shares inline.
-    expect(await screen.findByText(/Anteile/)).toBeTruthy();
-    expect(screen.getByText(/Nächster Beitrag/)).toBeTruthy();
+    expect(await screen.findByText("Gesamtvermögen")).toBeTruthy();
+    expect(screen.getByText(/Nächster Meilenstein/)).toBeTruthy();
     expect(screen.getByLabelText("Zu beachten")).toBeTruthy();
-    expect(screen.getByLabelText("Langfristplan")).toBeTruthy();
-    expect(screen.getByText(/Zieltermin:/)).toBeTruthy();
     expect(screen.getByLabelText("Jahresrückblick")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Bericht exportieren" })).toBeTruthy();
-    expect(screen.getAllByText("Noch nicht bewertbar").length).toBeGreaterThan(0);
-    expect(document.body.textContent).not.toMatch(/tháng góp|Giá VWCE|Cập nhật|Cổ phần|Chuỗi góp|Hiệu suất danh mục|Vốn góp|Nhịp danh mục|Kỳ góp tiếp theo|Cần chú ý|Tình trạng dữ liệu|Kế hoạch dài hạn hiện tại|Tổng kết năm|Xuất báo cáo|Hôm nay|Biến động giá|Nhịp |Ước đạt/);
+    expect(document.body.textContent).not.toMatch(/Tổng giá trị|Cột mốc tiếp theo|Cần chú ý|Tổng kết năm|Xuất báo cáo|Đã góp|Thị trường thêm/);
   });
 });
 
-describe("Overview clean hierarchy", () => {
-  it("renders a calm portfolio-state hierarchy without duplicating the transaction dashboard", async () => {
+describe("Overview bản 2", () => {
+  it("renders the hero with total, contributions and real gain", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-hero-1", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(150, "2026-08-19")]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
-    expect(container.querySelector(".ovc-hero .ovc-eyebrow")).toBeTruthy();
-    expect(container.querySelector(".ovc-meta .ovc-price")).toBeTruthy();
-    expect(container.querySelector(".ovc-plan-meta")).toBeTruthy();
-    // No "Hôm nay" card anymore: the day move lives in the hero meta and the
-    // contribution countdown lives in the plan smart line.
-    expect(container.querySelector(".ovc-today-grid")).toBeNull();
-    expect(container.querySelector(".ovc-smart")).toBeTruthy();
-    expect(container.querySelector(".ovc-attention .ovc-attention-list")).toBeTruthy();
-    expect(container.querySelector(".data-health-list")).toBeNull();
-    expect(container.querySelector('[aria-label="Kế hoạch dài hạn"]')).toBeTruthy();
-    expect(container.querySelector(".ovc-foot")).toBeTruthy();
-    expect(container.querySelector(".streak-card")).toBeNull();
-    expect(container.querySelector(".perf-card")).toBeNull();
-    expect(container.querySelector(".ovc-plan-meta")?.textContent).toContain("Mục tiêu");
-    expect(container.querySelector(".ovc-smart")?.textContent).toContain("100,00");
-    expect(container.querySelector(".ovc-smart")?.textContent).toContain("/th");
-    expect(container.querySelector(".ovc-pnl-pct")?.textContent).toBe("Chưa định giá");
-    // Footer no longer duplicates the plan card ("đã góp") or the hero (price).
-    expect(container.querySelector(".ovc-foot .ovc-muted")?.textContent).not.toContain("Giá gần nhất");
+    await waitFor(() => expect(container.querySelector(".ovb2-hero")).toBeTruthy());
+    expect(container.querySelector(".ovb2-big")?.textContent).toContain("150,00");
+    // Composition: contributed vs real gain, never a single "growth" number.
+    const comp = container.querySelector(".ovb2-comp")?.textContent ?? "";
+    expect(comp).toContain("Bạn đã góp");
+    expect(comp).toContain("100,00");
+    expect(comp).toContain("Thị trường thêm");
+    expect(comp).toContain("+50,00");
   });
 
-  it("binds the current portfolio value without inventing a PnL badge or contribution streak", async () => {
+  it("draws the honest two-line chart: value vs contributions", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([cashIn("tx-cash-1", "2026-08-01", 1000)]);
+    dbMocks.listTransactions.mockResolvedValue([
+      buyVwce("tx-ch-1", "2026-07-15"),
+      buyVwce("tx-ch-2", "2026-08-15"),
+      buyVwce("tx-ch-3", "2026-09-15"),
+    ]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(110, "2026-09-30")]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".ovc-hero")).toBeTruthy());
-    expect(container.querySelector(".ovc-value")?.textContent?.trim()).not.toBe("");
-    expect(container.querySelector(".ovc-pnl-row .ovc-pnl")?.textContent?.trim()).toBe("—");
-    expect(container.querySelector(".hero-ring")).toBeNull();
-    expect(container.querySelector(".streak-card")).toBeNull();
+    await waitFor(() => expect(container.querySelector(".ovb2-chart")).toBeTruthy());
+    expect(screen.getByText("Giá trị vs Đã góp")).toBeTruthy();
+    // Two lines: solid value + dashed contributions.
+    const paths = container.querySelectorAll(".ovb2-chart path");
+    expect(paths.length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelector(".ovb2-chart [stroke-dasharray]")).toBeTruthy();
+  });
+
+  it("shows the next value milestone without a fixed target or 2042", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-ms-1", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(110, "2026-08-19")]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".ovb2-mile")).toBeTruthy());
+    expect(screen.getByText(/Cột mốc tiếp theo/)).toBeTruthy();
+    expect(container.querySelector(".ovb2-mile")?.textContent).toContain("1.000");
+    // No fixed target date, no 2042 framing anywhere on the page.
+    expect(document.body.textContent).not.toContain("2042");
+    expect(document.body.textContent).not.toMatch(/Mục tiêu dài hạn|Đã đạt .*% · vào/);
+  });
+
+  it("lists holdings without comparing the two funds' returns", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([
+      buyVwce("tx-tbl-1", "2026-08-01"),
+      {
+        id: "tx-tbl-vall", date: "2026-10-15", type: "buy_security",
+        instrumentIsin: "IE000VAHT5T0", amount: 120, quantity: 28.436,
+        unitPrice: 4.22, fee: 0, tax: 0, notes: "",
+        createdAt: TX_STAMP, updatedAt: TX_STAMP,
+      },
+    ]);
+    dbMocks.listQuotes.mockResolvedValue([
+      quoteVwce(170.94, "2026-10-15"),
+      { ...quoteVwce(4.4045, "2026-10-15"), id: "q-vall", instrumentIsin: "IE000VAHT5T0" },
+    ]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
+    const tableText = container.querySelector(".ovb2-table-card")?.textContent ?? "";
+    expect(tableText).toContain("VWCE");
+    expect(tableText).toContain("VALL");
+    expect(tableText).toContain("Vanguard FTSE All-World");
+    expect(tableText).toContain("Vanguard FTSE Global All-Cap");
+    // No per-fund profit % — never compare the two funds' returns.
+    expect(tableText).not.toMatch(/\+\d+,\d+%/);
+    expect(tableText).not.toContain("VanEck");
   });
 
   it("renders one merged attention list that links to the existing review surfaces", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-health", "2026-08-01")]);
-    dbMocks.listQuotes.mockResolvedValue([{ id: "quote-health", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(110, "2026-08-19")]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".ovc-attention")).toBeTruthy());
+    await waitFor(() => expect(container.querySelector(".ovb2-attention")).toBeTruthy());
     expect(screen.getByLabelText("Cần chú ý")).toBeTruthy();
-    const links = container.querySelectorAll<HTMLAnchorElement>(".ovc-attention a");
+    const links = container.querySelectorAll<HTMLAnchorElement>(".ovb2-attention a");
     expect(links).toHaveLength(2);
     expect(links[0]?.getAttribute("href")).toBe("#/transactions?quality=needs_review");
     expect(links[0]?.textContent).toContain("1 mục dữ liệu cần rà soát");
     expect(links[1]?.getAttribute("href")).toBe("#/settings");
     expect(links[1]?.textContent).toContain("Chưa ghi nhận sao lưu");
-    expect(container.querySelector(".data-health-list")).toBeNull();
-  });
-
-  it("folds a data-quality attention signal into the merged list without duplicating it", async () => {
-    dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-quality", "2026-08-01")]);
-    dbMocks.listQuotes.mockResolvedValue([{ id: "quote-quality", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
-
-    const { container } = renderOverview();
-
-    await waitFor(() => expect(container.querySelector(".ovc-attention")).toBeTruthy());
-    // One row only: the heartbeat signal and the data-health issue describe the
-    // same underlying signal, so they must not appear twice.
-    expect(container.querySelectorAll(".ovc-attention a[href='#/transactions?quality=needs_review']")).toHaveLength(1);
-    expect(container.querySelector(".ovc-attention")?.textContent).toContain("1 mục dữ liệu cần rà soát");
-    expect(container.querySelector(".ovc-attention")?.textContent).not.toContain("1 giao dịch cần rà soát");
   });
 
   it("uses precise missing-notes wording when Data Health only has missing notes", async () => {
@@ -217,27 +240,12 @@ describe("Overview clean hierarchy", () => {
       buyVwce("tx-note-1", "2026-08-01"),
       buyVwce("tx-note-2", "2026-08-02"),
     ]);
-    dbMocks.listQuotes.mockResolvedValue([{
-      id: "quote-notes",
-      instrumentIsin: "IE00BK5BQT80",
-      currency: "EUR",
-      price: 110,
-      asOf: "2026-08-19",
-      source: "manual",
-      createdAt: TX_STAMP,
-      updatedAt: TX_STAMP,
-    }]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(110, "2026-08-19")]);
     const { container } = renderOverview();
-    await waitFor(() => expect(container.querySelector(".ovc-attention")).toBeTruthy());
+    await waitFor(() => expect(container.querySelector(".ovb2-attention")).toBeTruthy());
     expect(container.textContent).toContain("2 ghi chú còn thiếu");
     expect(container.textContent).not.toContain("2 mục dữ liệu cần rà soát");
-    const healthLink = container.querySelector(".ovc-attention a");
-    expect(healthLink?.getAttribute("href")).toBe("#/transactions?quality=needs_review");
-    // The year footer is stats only (count + fees) — the missing-notes
-    // item lives once, in the Attention card above, not duplicated here.
-    expect(container.querySelector(".ovc-foot")?.textContent).not.toContain("ghi chú còn thiếu");
   });
-
 
   it("routes a missing-price attention signal to Settings when transaction data is complete", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
@@ -245,195 +253,41 @@ describe("Overview clean hierarchy", () => {
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".ovc-attention")).toBeTruthy());
+    await waitFor(() => expect(container.querySelector(".ovb2-attention")).toBeTruthy());
     expect(screen.getByRole("link", { name: /Thiếu giá cho 1 mã/ }).getAttribute("href")).toBe("#/settings");
-    // The heartbeat signal and the data-health issue are the same signal:
-    // the price row appears exactly once, next to the unrelated backup row.
-    const links = container.querySelectorAll(".ovc-attention a");
-    expect(links).toHaveLength(2);
-    expect(Array.from(links).filter((a) => /Thiếu giá cho 1 mã/.test(a.textContent ?? ""))).toHaveLength(1);
   });
 
-  it("keeps a factual gain state in the hero without a second performance dashboard", async () => {
+  it("keeps a factual gain state in the hero", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-gain", "2026-08-01")]);
-    dbMocks.listQuotes.mockResolvedValue([{ id: "quote-gain", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 150, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(150, "2026-08-19")]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".ovc-pnl-pct")?.textContent).toBe("+50,0%"));
-    expect(container.querySelector(".ovc-pnl-pct")?.className).toContain("gain");
-    expect(container.querySelector(".ovc-pnl")?.className).toContain("up");
-    expect(container.querySelector(".perf-card")).toBeNull();
+    await waitFor(() => expect(container.querySelector(".ovb2-comp")).toBeTruthy());
+    expect(container.querySelector(".ovb2-comp")?.textContent).toContain("+50,00");
+    expect(container.querySelector(".ovb2-comp .up")).toBeTruthy();
   });
 
-  it("keeps a factual loss state in the hero without an inferred chart", async () => {
-    dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-loss", "2026-08-01")]);
-    dbMocks.listQuotes.mockResolvedValue([{ id: "quote-loss", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 80, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
-
-    const { container } = renderOverview();
-
-    await waitFor(() => expect(container.querySelector(".ovc-pnl-pct")?.textContent).toBe("-20,0%"));
-    expect(container.querySelector(".ovc-pnl-pct")?.className).toContain("loss");
-    expect(container.querySelector(".ovc-pnl")?.className).toContain("down");
-    expect(container.querySelector(".perf-card")).toBeNull();
-  });
-
-  it("marks performance as unavailable instead of inventing gain or loss without a quote", async () => {
+  it("marks gain as unavailable instead of inventing it without a quote", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-unvalued", "2026-08-01")]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".ovc-pnl-pct")?.textContent).toBe("Chưa định giá"));
-    expect(container.querySelector(".ovc-pnl-pct")?.className).toContain("unavailable");
-    expect(container.querySelector(".perf-card")).toBeNull();
+    await waitFor(() => expect(container.querySelector(".ovb2-hero")).toBeTruthy());
+    expect(container.querySelector(".ovb2-comp")?.textContent).toContain("Chưa định giá");
   });
 
-  it("shows a factual current price without adding a performance comparison chart", async () => {
+  it("shows recent updates with correct fund names and prices", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-vwce-1", "2026-08-01")]);
-    dbMocks.listQuotes.mockResolvedValue([{ id: "quote-vwce", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP }]);
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-upd-1", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(110, "2026-08-19")]);
 
     const { container } = renderOverview();
 
-    await waitFor(() => expect(container.querySelector(".ovc-meta")).toBeTruthy());
-    expect(container.querySelector(".ovc-price")?.textContent).toContain("110,00");
-    expect(container.querySelector(".sparkline-svg")).toBeNull();
-    expect(container.querySelector(".perf-card")).toBeNull();
-  });
-
-  it("preserves the valuation-incomplete label while retaining demo card geometry", async () => {
-    dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([
-      cashIn("tx-cash-1", "2026-08-01", 1000),
-      cashIn("tx-cash-2", "2026-08-02", 500),
-      buyWithoutPrice("tx-buy-1", "2026-08-03"),
-    ]);
-
-    const { container } = renderOverview();
-
-    await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
-    expect(screen.getByText("Tài sản đã định giá")).toBeTruthy();
-    expect(container.querySelector(".ovc-pnl-pct")?.textContent?.trim()).toBe("Chưa định giá");
-    expect(container.querySelector(".ovc-meta")).toBeTruthy();
-    expect(container.querySelector(".ovc-plan-meta")).toBeTruthy();
-  });
-
-  it("shows lifetime plan progress from the plan start instead of a yearly slice", async () => {
-    dbMocks.getSettings.mockResolvedValue({ ...defaultSettings(), startDate: "2025-01-15" });
-    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-life-1", "2025-03-15")]);
-
-    const { container } = renderOverview();
-
-    await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
-    const planCard = container.querySelector('[aria-label="Kế hoạch dài hạn"]');
-    expect(planCard).toBeTruthy();
-    // Lifetime horizon: anchored at the plan start, no yearly slice selector.
-    expect(planCard?.textContent).toContain("từ 01/2025");
-    expect(planCard?.querySelector("select")).toBeNull();
-    expect(planCard?.textContent).toContain("Đã ghi nhận");
-  });
-
-  it("folds the day move into the hero and the countdown into the plan smart line", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ points: [
-        { date: "2026-08-18", price: 100 },
-        { date: "2026-08-19", price: 110 },
-      ] }),
-    }));
-    dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-day-1", "2026-08-01")]);
-    dbMocks.listQuotes.mockResolvedValue([
-      { id: "q-day-2", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 110, asOf: "2026-08-19", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP },
-    ]);
-
-    const { container } = renderOverview();
-
-    await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
-    // No separate "Hôm nay" card anymore.
-    expect(container.querySelector(".ovc-today-grid")).toBeNull();
-    expect(screen.queryByText("Hôm nay")).toBeNull();
-    // The day move lives in the hero meta line.
-    await waitFor(() => expect(container.querySelector(".ovc-daypct")).toBeTruthy());
-    expect(container.querySelector(".ovc-meta")?.textContent).toContain("+10,0%");
-    // The contribution countdown lives in the plan smart line.
-    expect(container.querySelector(".ovc-smart")?.textContent).toContain("Kỳ góp");
-    expect(container.querySelector(".ovc-smart")?.textContent).toContain("Nhịp");
-    expect(container.querySelector(".ovc-smart")?.textContent).toContain("/tháng");
-    vi.unstubAllGlobals();
-  });
-
-  it("shows a behavior-based trajectory instead of a fixed-plan verdict", async () => {
-    dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([
-      buyVwce("tx-tj-1", "2026-07-15"),
-      buyVwce("tx-tj-2", "2026-08-15"),
-      buyVwce("tx-tj-3", "2026-09-15"),
-    ]);
-
-    const { container } = renderOverview();
-
-    await waitFor(() => expect(container.querySelector(".ov")).toBeTruthy());
-    const planCard = container.querySelector('[aria-label="Kế hoạch dài hạn"]');
-    expect(planCard).toBeTruthy();
-    // Trajectory from actual behavior, tied to the (changeable) target year.
-    await waitFor(() => expect(planCard?.querySelector(".ovc-trajectory")).toBeTruthy());
-    expect(planCard?.textContent).toContain("Ước đạt");
-    expect(planCard?.textContent).toContain("2042");
-    expect(planCard?.textContent).toContain("Nhịp 100,00");
-    // No fixed-plan verdict anymore: the contribution settings are a soft guess.
-    expect(planCard?.textContent).not.toContain("Chưa đạt mức kế hoạch");
-    expect(planCard?.textContent).not.toContain("Đã đạt mức kế hoạch");
-    expect(planCard?.textContent).not.toContain("Mốc tiếp theo");
-  });
-});
-
-describe("Overview multi-fund hero", () => {
-  it("shows one row per held fund so the hero total is the visible sum of its rows", async () => {
-    dbMocks.getSettings.mockResolvedValue(defaultSettings());
-    dbMocks.listTransactions.mockResolvedValue([
-      cashIn("tx-cash-multi", "2026-08-01", 220),
-      buyVwce("tx-vwce-multi", "2026-08-01"),
-      {
-        id: "tx-vall-multi",
-        date: "2026-10-15",
-        type: "buy_security",
-        instrumentIsin: "IE000VAHT5T0",
-        amount: 120,
-        quantity: 28.436,
-        unitPrice: 4.22,
-        fee: 0,
-        tax: 0,
-        notes: "",
-        createdAt: TX_STAMP,
-        updatedAt: TX_STAMP,
-      },
-    ]);
-    dbMocks.listQuotes.mockResolvedValue([
-      { id: "q-vwce-multi", instrumentIsin: "IE00BK5BQT80", currency: "EUR", price: 170.94, asOf: "2026-10-15", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP },
-      { id: "q-vall-multi", instrumentIsin: "IE000VAHT5T0", currency: "EUR", price: 4.4045, asOf: "2026-10-15", source: "manual", createdAt: TX_STAMP, updatedAt: TX_STAMP },
-    ]);
-
-    const { container } = renderOverview();
-
-    await waitFor(() => expect(container.querySelector(".ovc-hero")).toBeTruthy());
-    // Label is the total portfolio, never a single fund.
-    expect(container.querySelector(".ovc-hero .ovc-eyebrow")?.textContent).toBe("Tổng danh mục");
-    expect(container.querySelector(".ovc-hero")?.textContent).not.toContain("Portfolio VWCE");
-    const rows = container.querySelectorAll(".ovc-holding");
-    expect(rows.length).toBe(2);
-    // VWCE first: 1 × 170,94 = 170,94.
-    expect(rows[0]?.textContent).toContain("VWCE");
-    expect(rows[0]?.textContent).toContain("170,94");
-    // VALL: 28,436 × 4,40 = 125,25.
-    expect(rows[1]?.textContent).toContain("VALL");
-    expect(rows[1]?.textContent).toContain("28,436");
-    expect(rows[1]?.textContent).toContain("4,40");
-    expect(rows[1]?.textContent).toContain("125,25");
-    // Hero total is the sum of the rows: 170,94 + 125,25 = 296,19.
-    expect(container.querySelector(".ovc-hero .ovc-value")?.textContent).toContain("296,19");
+    await waitFor(() => expect(container.querySelector(".ovb2-updates")).toBeTruthy());
+    expect(screen.getByText(/Cập nhật gần nhất/)).toBeTruthy();
+    expect(container.querySelector(".ovb2-updates")?.textContent).toContain("VWCE: 110,00 €");
   });
 });

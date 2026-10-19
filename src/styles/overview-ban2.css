@@ -1,0 +1,288 @@
+/* Overview "bản 2" — light theme, scoped under .ovb2 so the dark app shell
+   (nav, dock, other pages) is untouched. Mobile-first stacking; two columns
+   on desktop. */
+
+.ovb2 {
+  background: #f3f7f4;
+  color: #0f172a;
+  min-height: 100%;
+  padding: 18px 16px 28px;
+  font-size: 14px;
+}
+
+.ovb2-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  max-width: 1280px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.ovb2-main,
+.ovb2-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.ovb2-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.ovb2-card h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.ovb2-card h4 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.ovb2-sub {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.ovb2-muted { color: #64748b; }
+.ovb2-link { color: #16a34a; font-weight: 600; font-size: 13px; }
+
+/* Hero */
+.ovb2-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.ovb2-art {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 44%;
+  height: 58%;
+  pointer-events: none;
+}
+
+.ovb2-k {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 600;
+  position: relative;
+}
+
+.ovb2-big {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 6px 0;
+  position: relative;
+}
+
+.ovb2-comp {
+  font-size: 14px;
+  color: #334155;
+  position: relative;
+}
+
+.ovb2-comp .up { color: #16a34a; font-weight: 700; }
+.ovb2-comp .down { color: #dc2626; font-weight: 700; }
+.ovb2-comp .muted { color: #94a3b8; }
+
+.ovb2-ministats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+  position: relative;
+}
+
+.ovb2-ministats > div span {
+  display: block;
+  font-size: 11.5px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.ovb2-ministats > div b {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Chart + donut row */
+.ovb2-mid {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 18px;
+}
+
+.ovb2-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 12.5px;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.ovb2-legend i {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.ovb2-legend i.dashed {
+  background-image: linear-gradient(90deg, #94a3b8 55%, transparent 45%);
+  background-size: 6px 3px;
+  background-color: transparent;
+}
+
+.ovb2-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Donut */
+.ovb2-donutwrap {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.ovb2-alloc { flex: 1; min-width: 0; }
+
+.ovb2-allocrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ovb2-allocrow:first-child { margin-top: 0; }
+
+.ovb2-sw {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.ovb2-allocname { flex: 1; min-width: 0; font-weight: 600; font-size: 13px; }
+.ovb2-allocname small { display: block; color: #94a3b8; font-size: 11px; font-weight: 400; }
+
+.ovb2-allocval { text-align: right; font-weight: 700; font-size: 13.5px; white-space: nowrap; }
+.ovb2-allocval small { display: block; color: #94a3b8; font-weight: 400; font-size: 11px; }
+
+/* Table */
+.ovb2-cardhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.ovb2-tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.ovb2-tbl th {
+  text-align: left; color: #94a3b8; font-weight: 600; font-size: 12px;
+  padding: 10px 12px; border-bottom: 1px solid #eef2f7;
+}
+.ovb2-tbl th.num, .ovb2-tbl td.num { text-align: right; }
+.ovb2-tbl td { padding: 12px; border-bottom: 1px solid #f4f6fa; vertical-align: middle; }
+.ovb2-tbl tr:last-child td { border-bottom: 0; }
+.ovb2-fund { display: flex; gap: 10px; align-items: center; }
+.ovb2-badge {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: 14px; flex-shrink: 0;
+}
+.ovb2-fname { font-weight: 700; }
+.ovb2-fsub { font-size: 11.5px; color: #94a3b8; }
+.ovb2-tbl td.num b { font-weight: 700; }
+.ovb2-tbl td.num small { display: block; color: #94a3b8; font-weight: 400; font-size: 11.5px; }
+
+/* Milestone */
+.ovb2-bar {
+  height: 8px; background: #e2e8f0; border-radius: 99px;
+  margin: 12px 0 8px; overflow: hidden;
+}
+.ovb2-bar i { display: block; height: 100%; background: #16a34a; border-radius: 99px; }
+.ovb2-row { display: flex; justify-content: space-between; font-size: 13px; }
+.ovb2-row.muted { color: #64748b; margin-top: 6px; }
+
+/* Journey */
+.ovb2-journey { background: #e9f8ef; }
+.ovb2-journey h4 { color: #15803d; }
+.ovb2-journey p { font-size: 12.5px; color: #3f6212; line-height: 1.55; margin: 0; }
+
+/* Updates */
+.ovb2-update {
+  display: flex; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9; font-size: 13px; line-height: 1.5;
+}
+.ovb2-update:last-of-type { border-bottom: 0; }
+.ovb2-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #22c55e; margin-top: 5px; flex-shrink: 0;
+}
+.ovb2-updates .ovb2-link { display: inline-block; margin-top: 10px; }
+
+/* Attention */
+.ovb2-attention ul { list-style: none; margin: 0; padding: 0; }
+.ovb2-attention li { padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13.5px; }
+.ovb2-attention li:last-child { border-bottom: 0; }
+.ovb2-attention a, .ovb2-attention .ovb2-static {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; color: inherit; text-decoration: none;
+}
+.ovb2-go { color: #16a34a; font-weight: 600; font-size: 13px; white-space: nowrap; }
+
+/* Year review footer */
+.ovb2-foot { padding: 4px 6px; }
+.ovb2-foothead {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+}
+.ovb2-title { font-size: 13px; font-weight: 700; }
+.ovb2-foothead select {
+  font-size: 13px; padding: 4px 8px; border-radius: 8px;
+  border: 1px solid #e2e8f0; background: #fff; color: #0f172a;
+}
+.ovb2-export {
+  font-size: 13px; color: #16a34a; font-weight: 600;
+  background: none; border: none; cursor: pointer; padding: 4px 0;
+}
+.ovb2-foot .ovb2-muted { font-size: 12.5px; margin: 0; }
+
+/* Responsive: stack everything on small screens, milestone right after hero */
+@media (max-width: 1023px) {
+  .ovb2-grid { display: flex; flex-direction: column; }
+  .ovb2-main, .ovb2-side, .ovb2-mid { display: contents; }
+  .ovb2-hero { order: 1; }
+  .ovb2-mile { order: 2; }
+  .ovb2-chart-card { order: 3; }
+  .ovb2-donut-card { order: 4; }
+  .ovb2-table-card { order: 5; }
+  .ovb2-updates { order: 6; }
+  .ovb2-journey { order: 7; }
+  .ovb2-attention { order: 8; }
+  .ovb2-foot { order: 9; }
+  .ovb2-mid { gap: 0; }
+}
+
+@media (max-width: 640px) {
+  .ovb2 { padding: 14px 12px 24px; }
+  .ovb2-big { font-size: 36px; }
+  .ovb2-ministats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ovb2-art { width: 52%; height: 46%; opacity: 0.9; }
+  .ovb2-donutwrap { flex-direction: column; }
+  .ovb2-tbl th:nth-child(4), .ovb2-tbl td:nth-child(4) { display: none; }
+}

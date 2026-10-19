@@ -11,7 +11,7 @@ function tx(date: string, amount: number): Transaction {
 }
 
 function point(month: string, label: string, value: number): ValueHistoryPoint {
-  return { month, label, value };
+  return { month, label, value, contributed: value };
 }
 
 const NOW = new Date("2026-10-03T12:00:00");

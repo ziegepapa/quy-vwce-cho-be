@@ -44,6 +44,71 @@ function validDate(value: string): Date | null {
 }
 
 /**
+ * Recent monthly contribution pace from ACTUAL behavior: the most recent
+ * completed month that had contributions (not a backward average). Used by
+ * the Overview hero's contribution pace without the forward projection.
+ * Pure: no Date.now(), no storage, no network.
+ */
+export function computeRecentPace(input: {
+  transactions: readonly TrajectoryTransaction[];
+  trackInAppCash: boolean | null | undefined;
+  today: Date;
+}): number | null {
+  const today = input.today;
+  const mode = heroLifetimeMode(input.trackInAppCash);
+  const countedTypes =
+    mode === "cash_first" ? CASH_FIRST_CONTRIBUTION_TYPES : SECURITIES_FIRST_CONTRIBUTION_TYPES;
+
+  const points: { date: Date; amount: number }[] = [];
+  for (const tx of input.transactions ?? []) {
+    if (!tx || tx.deletedAt || !countedTypes.includes(tx.type)) continue;
+    const date = validDate(tx.date);
+    if (!date || date > today) continue;
+    if (!Number.isFinite(tx.amount) || tx.amount <= 0) continue;
+    points.push({ date, amount: tx.amount });
+  }
+  if (points.length === 0) return null;
+
+  const firstTx = points.reduce((a, b) => (a.date < b.date ? a : b)).date;
+  const lastCompleted = new Date(today.getFullYear(), today.getMonth() - 1, 1, 12, 0, 0);
+  const windowFloor = new Date(lastCompleted.getFullYear(), lastCompleted.getMonth() - 11, 1, 12, 0, 0);
+  const firstTxMonth = new Date(firstTx.getFullYear(), firstTx.getMonth(), 1, 12, 0, 0);
+  const startMonth = firstTxMonth > windowFloor ? firstTxMonth : windowFloor;
+  const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1, 12, 0, 0);
+  const windowMonths = Math.max(
+    1,
+    (lastCompleted.getFullYear() - startMonth.getFullYear()) * 12 +
+      (lastCompleted.getMonth() - startMonth.getMonth()) +
+      1,
+  );
+  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const monthlySums = new Map<string, number>();
+  for (const p of points) {
+    if (p.date >= startMonth && p.date < thisMonth) {
+      const key = monthKey(p.date);
+      monthlySums.set(key, (monthlySums.get(key) ?? 0) + p.amount);
+    }
+  }
+  const windowSum = [...monthlySums.values()].reduce((sum, v) => sum + v, 0);
+  if (windowSum > 0) {
+    for (let i = windowMonths - 1; i >= 0; i--) {
+      const cursor = new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1, 12, 0, 0);
+      const sum = monthlySums.get(monthKey(cursor)) ?? 0;
+      if (sum > 0) return sum;
+    }
+    return windowSum / windowMonths;
+  }
+  const total = points.reduce((sum, p) => sum + p.amount, 0);
+  const spanMonths = Math.max(
+    1,
+    (lastCompleted.getFullYear() - firstTxMonth.getFullYear()) * 12 +
+      (lastCompleted.getMonth() - firstTxMonth.getMonth()) +
+      1,
+  );
+  return total / spanMonths;
+}
+
+/**
  * Forward-looking trajectory for the long-term card. The old card judged
  * reality against contribution settings the user typed once ("below plan") —
  * but those settings are a soft guess, not a commitment, so the verdict was
