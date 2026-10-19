@@ -46,7 +46,7 @@ function validDate(value: string): Date | null {
 /**
  * Recent monthly contribution pace from ACTUAL behavior: the most recent
  * completed month that had contributions (not a backward average). Used by
- * the Overview hero's "Nhịp góp" without the forward projection.
+ * the Overview hero's contribution pace without the forward projection.
  * Pure: no Date.now(), no storage, no network.
  */
 export function computeRecentPace(input: {
