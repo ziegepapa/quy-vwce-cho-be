@@ -41,6 +41,29 @@ describe("buildValueHistory", () => {
     expect(points![1].value).toBeCloseTo(121 + 121.5, 2);
     // Oct: no new quote -> falls back to latest (121)
     expect(points![2].value).toBeCloseTo(121 + 121.5, 2);
+    // Contributed (securities-first default): only the buy_vwce counts
+    expect(points![0].contributed).toBeCloseTo(118.5, 2);
+    expect(points![1].contributed).toBeCloseTo(118.5, 2);
+    expect(points![2].contributed).toBeCloseTo(118.5, 2);
+  });
+
+  it("contributed follows the hero definition per mode", () => {
+    const txs = [
+      tx("t1", "2026-08-05", "cash_in", 120),
+      tx("t2", "2026-08-06", "buy_vwce", 118.5, { unitPrice: 118.5, quantity: 1, fee: 1 }),
+      tx("t3", "2026-09-05", "cash_in", 120),
+    ];
+    const quotes = [quote("2026-08-29", 118), quote("2026-09-30", 121)];
+    // cash-first: cash_in only
+    const cashFirst = buildValueHistory({ transactions: txs, quotes, locale: "vi", trackInAppCash: true, now: new Date("2026-10-03") });
+    expect(cashFirst![0].contributed).toBeCloseTo(120, 2);
+    expect(cashFirst![1].contributed).toBeCloseTo(240, 2);
+    expect(cashFirst![2].contributed).toBeCloseTo(240, 2);
+    // securities-first: buys only
+    const secFirst = buildValueHistory({ transactions: txs, quotes, locale: "vi", trackInAppCash: false, now: new Date("2026-10-03") });
+    expect(secFirst![0].contributed).toBeCloseTo(118.5, 2);
+    expect(secFirst![1].contributed).toBeCloseTo(118.5, 2);
+    expect(secFirst![2].contributed).toBeCloseTo(118.5, 2);
   });
 
   it("sums VWCE + VALL positions at their own prices", () => {

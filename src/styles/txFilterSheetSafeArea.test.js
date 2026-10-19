@@ -47,7 +47,9 @@ describe("tx filter sheet safe-area regression", () => {
 describe("data review exact wording contract", () => {
   it("uses precise missing-notes copy instead of generic data-problem wording", () => {
     expect(overview).toMatch(/ghi chú còn thiếu/);
-    expect(overview).toMatch(/Giá gần nhất/);
     expect(overview).not.toMatch(/Snapshot giá/);
+    // Bản 2: footer năm chỉ còn thống kê (số giao dịch + phí) — giá gần nhất
+    // đã có ở hero, không lặp lại ở đây.
+    expect(overview).not.toMatch(/Giá gần nhất/);
   });
 });

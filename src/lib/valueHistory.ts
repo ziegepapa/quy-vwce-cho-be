@@ -1,4 +1,5 @@
 import { replayTransactions } from "./calc";
+import { computeHeroLifetimeContribution } from "./heroLifetime";
 import { VWCE_ISIN } from "./types";
 import type { Quote, Transaction } from "./types";
 
@@ -9,6 +10,12 @@ export type ValueHistoryPoint = {
   label: string;
   /** Portfolio value at month end (securities + non-negative cash). */
   value: number;
+  /**
+   * Cumulative contributions up to month end — the SAME definition as the
+   * hero's "Đã góp" (computeHeroLifetimeContribution). The honest chart draws
+   * this next to `value`; the gap between the two lines is the real gain.
+   */
+  contributed: number;
 };
 
 const MONTH_LABEL_VI = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"];
@@ -33,9 +40,11 @@ export function buildValueHistory(input: {
   transactions: readonly Transaction[];
   quotes: readonly Quote[];
   locale: "vi" | "de";
+  /** settings.trackInAppCash — picks the contribution mode, same as the hero. */
+  trackInAppCash?: boolean | null;
   now?: Date;
 }): ValueHistoryPoint[] | null {
-  const { transactions, quotes, locale } = input;
+  const { transactions, quotes, locale, trackInAppCash } = input;
   const now = input.now ?? new Date();
 
   const dated = transactions.filter((t) => !t.deletedAt && /^\d{4}-\d{2}-\d{2}/.test(t.date));
@@ -92,10 +101,18 @@ export function buildValueHistory(input: {
       if (price <= 0 && series.length > 0) price = series[series.length - 1].price;
       value += Math.max(0, pos.qty) * price;
     }
+    // Cumulative contributions up to this cutoff — same definition as the
+    // hero's lifetime figure, so the chart's "Đã góp" line always agrees
+    // with the hero.
+    const contributed = computeHeroLifetimeContribution({
+      transactions: dated.filter((t) => t.date <= cutoff),
+      trackInAppCash,
+    }).amount;
     points.push({
       month: monthKey(year, monthIndex),
       label: labels[monthIndex],
       value: Math.round(value * 100) / 100,
+      contributed: Math.round(contributed * 100) / 100,
     });
   }
 

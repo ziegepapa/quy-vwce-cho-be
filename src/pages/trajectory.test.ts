@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTrajectory } from "./trajectory";
+import { buildTrajectory, computeRecentPace } from "./trajectory";
 
 const base = {
   trackInAppCash: false,
@@ -107,5 +107,30 @@ describe("buildTrajectory", () => {
   it("reports progress of current value vs projected", () => {
     const t = buildTrajectory({ ...base, transactions: recentYear, currentValue: 5000 });
     expect(t!.progressPct).toBeCloseTo((5000 / t!.projected) * 100, 8);
+  });
+});
+
+describe("computeRecentPace", () => {
+  it("uses the most recent month with contributions, not the average", () => {
+    const transactions = [
+      monthly("a", 2026, 7, 100),
+      monthly("b", 2026, 8, 100),
+      monthly("c", 2026, 9, 120),
+    ];
+    // Today 19/10/2026: Oct is in progress, so pace comes from Sep (120).
+    const pace = computeRecentPace({
+      transactions,
+      trackInAppCash: false,
+      today: new Date("2026-10-19T12:00:00"),
+    });
+    expect(pace).toBeCloseTo(120, 8);
+  });
+
+  it("returns null with no contributions", () => {
+    expect(computeRecentPace({
+      transactions: [],
+      trackInAppCash: false,
+      today: new Date("2026-10-19T12:00:00"),
+    })).toBeNull();
   });
 });
