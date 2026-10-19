@@ -62,9 +62,9 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
         <g key={t}>
           <line
             x1={PAD_L} y1={geometry.y(t)} x2={W - PAD_R + 8} y2={geometry.y(t)}
-            stroke="#e8edf1" strokeWidth="1"
+            className="gridline" strokeWidth="1"
           />
-          <text x={PAD_L - 8} y={geometry.y(t) + 4} textAnchor="end" fontSize="10" fill="#94a3b8">
+          <text x={PAD_L - 8} y={geometry.y(t) + 4} textAnchor="end" fontSize="10">
             {compact(t)} €
           </text>
         </g>
@@ -72,7 +72,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
       <path d={geometry.area} fill={`url(#${gradientId})`} />
       <path
         d={geometry.contribLine}
-        fill="none" stroke="#94a3b8" strokeWidth="2"
+        fill="none" className="contrib-line" strokeWidth="2"
         strokeDasharray="6,5" strokeLinecap="round"
       />
       <path
@@ -95,7 +95,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
       <text
         x={geometry.x(points.length - 1) + 8}
         y={geometry.y(geometry.last.contributed) + 14}
-        fontSize="12" fill="#64748b"
+        fontSize="12" className="contrib-label"
       >
         {geometry.last.contributed.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
       </text>
@@ -105,7 +105,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
           x={geometry.x(i)}
           y={H - 6}
           textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}
-          fontSize="11" fill="#94a3b8"
+          fontSize="11"
         >
           {points[i].label}
         </text>

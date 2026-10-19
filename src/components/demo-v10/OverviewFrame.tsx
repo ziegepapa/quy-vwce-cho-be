@@ -257,8 +257,8 @@ function AllocationDonut({ allocation, totalLabel, totalSub }: {
   });
   return (
     <div className="ovb2-donutwrap">
-      <svg width="132" height="132" viewBox="0 0 132 132" role="img" aria-label={totalSub}>
-        <circle cx="66" cy="66" r={r} fill="none" stroke="#eef2f7" strokeWidth="20" />
+      <svg width="132" height="132" viewBox="0 0 132 132" role="img" aria-label={totalSub} className="ovb2-donut">
+        <circle cx="66" cy="66" r={r} fill="none" className="ovb2-donut-track" strokeWidth="20" />
         {segs.map((s) => (
           <circle
             key={s.isin}
@@ -269,8 +269,8 @@ function AllocationDonut({ allocation, totalLabel, totalSub }: {
             transform="rotate(-90 66 66)"
           />
         ))}
-        <text x="66" y="63" textAnchor="middle" fontSize="15" fontWeight="800" fill="#0f172a">{totalLabel}</text>
-        <text x="66" y="80" textAnchor="middle" fontSize="10" fill="#94a3b8">{totalSub}</text>
+        <text x="66" y="63" textAnchor="middle" fontSize="15" fontWeight="800" className="ovb2-donut-total">{totalLabel}</text>
+        <text x="66" y="80" textAnchor="middle" fontSize="10" className="ovb2-donut-sub">{totalSub}</text>
       </svg>
       <div className="ovb2-alloc">
         {segs.map((s) => (
@@ -367,7 +367,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
             <section className="ovb2-card ovb2-table-card" aria-label={text.portfolio}>
               <div className="ovb2-cardhead">
                 <h3>📄 {text.portfolio}</h3>
-                <span className="ovb2-link">{text.viewDetails}</span>
+                <a className="ovb2-link" href="#/transactions">{text.viewDetails}</a>
               </div>
               <table className="ovb2-tbl">
                 <thead>
@@ -467,7 +467,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                   <span><b>{u.dateLabel}</b> — {u.title}<br /><span className="ovb2-muted">{u.detail}</span></span>
                 </div>
               ))}
-              <span className="ovb2-link">{text.viewFullHistory}</span>
+              <a className="ovb2-link" href="#/transactions">{text.viewFullHistory}</a>
             </section>
           ) : null}
         </div>
