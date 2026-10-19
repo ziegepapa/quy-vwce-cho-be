@@ -1,32 +1,32 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-16T19:58:56.261Z",
+  "generatedAt": "2026-10-19T21:34:43.278Z",
   "quotes": [
     {
       "instrumentIsin": "IE000VAHT5T0",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 4.3905,
-      "asOf": "2026-10-16",
-      "fetchedAt": "2026-10-16T19:58:56.121Z",
+      "price": 4.401,
+      "asOf": "2026-10-19",
+      "fetchedAt": "2026-10-19T21:34:43.108Z",
       "source": "auto",
       "provider": "yahoo_finance_chart",
       "providerUrl": "https://finance.yahoo.com/quote/VGLA.DE",
       "crossCheckedWith": "onvista",
-      "crossCheckDifferencePct": 0.6833
+      "crossCheckDifferencePct": 0.0341
     },
     {
       "instrumentIsin": "IE00BK5BQT80",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 170.44,
-      "asOf": "2026-10-16",
-      "fetchedAt": "2026-10-16T19:58:55.415Z",
+      "price": 170.88,
+      "asOf": "2026-10-19",
+      "fetchedAt": "2026-10-19T21:34:42.291Z",
       "source": "auto",
       "provider": "yahoo_finance_chart",
       "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
       "crossCheckedWith": "onvista",
-      "crossCheckDifferencePct": 0.7862
+      "crossCheckDifferencePct": 0.2809
     }
   ]
 }
