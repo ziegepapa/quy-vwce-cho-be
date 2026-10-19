@@ -417,27 +417,7 @@ export default function OverviewFrame({
           <GrowthTree value={treeValue} nextMilestone={briefing.nextMilestone} />
         </section>
 
-        {/* 3 — Heatmap nhịp góp: một ô mỗi tháng, đậm nhạt theo số tiền */}
-        {contributionHeatmap ? (
-          <section className="ovc-card ovc-rhythm-panel" aria-label={text.rhythmTitle}>
-            <ContributionHeatmap
-              heatmap={contributionHeatmap}
-              title={text.rhythmTitle}
-              summary={text.rhythmSummary(contributionHeatmap.activeMonths, contributionHeatmap.totalMonths)}
-              tooltip={text.rhythmTooltip}
-              formatAmount={(amount) => formatMoney(amount)}
-            />
-          </section>
-        ) : null}
-
-        {/* 3 — Timeline hành trình: góp đầu tiên, các cột mốc, hôm nay */}
-        {journeyTimeline ? (
-          <section className="ovc-card ovc-journey-panel" aria-label={text.journeyTitle}>
-            <JourneyTimeline events={journeyTimeline} title={text.journeyTitle} />
-          </section>
-        ) : null}
-
-        {/* 4 — Plan: smart pace line + facts + behavior-based trajectory */}
+        {/* Kế hoạch dài hạn — nhịp góp thực tế và ước tính có điều kiện */}
         <section className="ovc-card ovc-plan-panel" aria-label={text.currentPlan}>
           <div className="ovc-card-head">
             <h2 className="ovc-title">{text.currentPlan}</h2>
@@ -465,7 +445,7 @@ export default function OverviewFrame({
           </div>
         </section>
 
-        {/* 5 — Attention: merged, only when there is something to do */}
+        {/* Cảnh báo — chỉ hiện khi thực sự cần chú ý */}
         {attentionItems.length > 0 ? (
           <section className="ovc-card ovc-attention ovc-attention-panel" aria-label={text.attention} data-attention-count={attentionItems.length}>
             <h2 className="ovc-title">{text.attention}</h2>
@@ -487,6 +467,26 @@ export default function OverviewFrame({
                 </li>
               ))}
             </ul>
+          </section>
+        ) : null}
+
+        {/* Nhịp góp — một ô mỗi tháng, đậm nhạt theo số tiền */}
+        {contributionHeatmap ? (
+          <section className="ovc-card ovc-rhythm-panel" aria-label={text.rhythmTitle}>
+            <ContributionHeatmap
+              heatmap={contributionHeatmap}
+              title={text.rhythmTitle}
+              summary={text.rhythmSummary(contributionHeatmap.activeMonths, contributionHeatmap.totalMonths)}
+              tooltip={text.rhythmTooltip}
+              formatAmount={(amount) => formatMoney(amount)}
+            />
+          </section>
+        ) : null}
+
+        {/* Hành trình — khoản góp đầu tiên, cột mốc và hôm nay */}
+        {journeyTimeline ? (
+          <section className="ovc-card ovc-journey-panel" aria-label={text.journeyTitle}>
+            <JourneyTimeline events={journeyTimeline} title={text.journeyTitle} />
           </section>
         ) : null}
 
