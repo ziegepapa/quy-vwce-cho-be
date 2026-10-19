@@ -34,10 +34,11 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
     const valueLine = lineFor((p) => p.value);
     const contribLine = lineFor((p) => p.contributed);
     const area = `${valueLine} L${x(points.length - 1).toFixed(1)},${(H - PAD_BOTTOM).toFixed(1)} L${x(0).toFixed(1)},${(H - PAD_BOTTOM).toFixed(1)} Z`;
-    const ticks = [0, max / 2, max];
-    const labelIdx = points.length <= 6
-      ? points.map((_, i) => i)
-      : [0, Math.floor((points.length - 1) / 2), points.length - 1];
+    const ticks = [0, max / 4, max / 2, (max * 3) / 4, max];
+    const labelCount = Math.min(6, points.length);
+    const labelIdx = Array.from({ length: labelCount }, (_, i) =>
+      Math.round((i * (points.length - 1)) / Math.max(1, labelCount - 1)),
+    ).filter((idx, i, all) => all.indexOf(idx) === i);
     const last = points[points.length - 1];
     return { valueLine, contribLine, area, x, y, ticks, labelIdx, last, max };
   }, [points]);
@@ -64,7 +65,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
             x1={PAD_L} y1={geometry.y(t)} x2={W - PAD_R + 8} y2={geometry.y(t)}
             stroke="#e8edf1" strokeWidth="1"
           />
-          <text x={PAD_L - 8} y={geometry.y(t) + 4} textAnchor="end" fontSize="10" fill="#94a3b8">
+          <text x={PAD_L - 8} y={geometry.y(t) + 4} textAnchor="end" fontSize="10.5" fill="#64748b">
             {compact(t)} €
           </text>
         </g>
@@ -88,7 +89,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
       <text
         x={geometry.x(points.length - 1) + 8}
         y={geometry.y(geometry.last.value) - 6}
-        fontSize="12" fontWeight="700" fill="#16a34a"
+        fontSize="11" fontWeight="700" fill="#16856f"
       >
         {geometry.last.value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
       </text>
@@ -105,7 +106,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
           x={geometry.x(i)}
           y={H - 6}
           textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}
-          fontSize="11" fill="#94a3b8"
+          fontSize="11" fill="#64748b"
         >
           {points[i].label}
         </text>
