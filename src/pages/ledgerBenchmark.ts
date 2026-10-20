@@ -1,6 +1,7 @@
 import type { Transaction } from "../lib/types";
 import {
   buildTransactionListWindow,
+  TRANSACTION_INITIAL_WINDOW,
   TRANSACTION_WINDOW_SIZE,
   type TransactionListFilters,
 } from "./transactionsListWindow";
@@ -63,11 +64,11 @@ export function measureLedgerWindow(
   filters: TransactionListFilters = LEDGER_BENCHMARK_SCENARIOS[0].filters,
 ): LedgerBenchmarkReport {
   const initialStart = performance.now();
-  const initial = buildTransactionListWindow(transactions, filters, TRANSACTION_WINDOW_SIZE);
+  const initial = buildTransactionListWindow(transactions, filters, TRANSACTION_INITIAL_WINDOW);
   const initialDurationMs = performance.now() - initialStart;
 
   const expandedStart = performance.now();
-  const expanded = buildTransactionListWindow(transactions, filters, TRANSACTION_WINDOW_SIZE * 2);
+  const expanded = buildTransactionListWindow(transactions, filters, TRANSACTION_INITIAL_WINDOW + TRANSACTION_WINDOW_SIZE);
   const expandedDurationMs = performance.now() - expandedStart;
   const expandedIds = expanded.groups.flatMap((group) => group.transactions.map((transaction) => transaction.id));
   const initialIds = new Set(initial.groups.flatMap((group) => group.transactions.map((transaction) => transaction.id)));
