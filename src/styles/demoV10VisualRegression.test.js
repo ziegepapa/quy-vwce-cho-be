@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const overviewCss = readFileSync(new URL("./demo-v10-overview.css", import.meta.url), "utf8");
 const settingsCss = readFileSync(new URL("./demo-v10-settings.css", import.meta.url), "utf8");
 const overviewBan2Css = readFileSync(new URL("./overview-ban2.css", import.meta.url), "utf8");
+const premiumCommandCss = readFileSync(new URL("./premium-command-layout.css", import.meta.url), "utf8");
 const transactionsCss = readFileSync(new URL("./transactions-v2.css", import.meta.url), "utf8");
 const shellCss = readFileSync(new URL("./visual-abc-shell.css", import.meta.url), "utf8");
 const demoPrimitivesCss = readFileSync(new URL("./demo-v10-primitives.css", import.meta.url), "utf8");
@@ -21,6 +22,14 @@ describe("demo v10 visual regression contracts", () => {
     expect(overviewBan2Css).toContain("var(--primary-600)");
     expect(overviewBan2Css).toContain("var(--success-600)");
     expect(overviewBan2Css).not.toMatch(/#[0-9a-f]{3,8}\\b/i);
+    // Overview cards must not use the former independent navy/cyan palette.
+    expect(premiumCommandCss).toContain("--command-card-border: var(--border-subtle)");
+    expect(premiumCommandCss).toContain("--command-card-bg: var(--surface-raised)");
+    expect(premiumCommandCss).toContain("--command-muted-bg: var(--surface-sunken)");
+    expect(premiumCommandCss).not.toContain("rgba(16, 25, 40, 0.97)");
+    expect(premiumCommandCss).not.toContain("#07111e");
+    expect(premiumCommandCss).not.toContain("#10283a");
+    expect(premiumCommandCss).not.toContain("#182d4b");
   });
 
   it("aligns Overview desktop card rows and gives mobile a deliberate single-column order", () => {
