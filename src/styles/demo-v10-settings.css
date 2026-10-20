@@ -150,13 +150,13 @@ html.settings-child-open,body.settings-child-open { overflow: hidden; }.bottom-d
 
 /* P31 comparison candidate — intentionally isolated behind Settings `?view=next`. */
 .set-wrap.settings-next {
-  --next-ink: #12242e;
-  --next-night: #102c38;
-  --next-paper: #f7f6f0;
-  --next-line: color-mix(in srgb, var(--demo-sub) 17%, transparent);
-  --next-lime: #dff45b;
-  --next-coral: #fb7b63;
-  --next-blue: #87d1e7;
+  --next-ink: var(--text-primary);
+  --next-night: var(--hero-from);
+  --next-paper: var(--surface-raised);
+  --next-line: var(--border-subtle);
+  --next-lime: var(--primary-600);
+  --next-coral: var(--danger-600);
+  --next-blue: var(--primary-500);
   position: relative;
   isolation: isolate;
   width: min(100%, 880px);
