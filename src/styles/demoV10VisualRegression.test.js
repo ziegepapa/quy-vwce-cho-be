@@ -11,6 +11,7 @@ const visualScreensCss = readFileSync(new URL("./visual-abc-screens.css", import
 const overviewV10Css = readFileSync(new URL("./overview-v10.css", import.meta.url), "utf8");
 const demoOverviewCss = readFileSync(new URL("./demo-v10-overview.css", import.meta.url), "utf8");
 const demoSettingsCss = readFileSync(new URL("./demo-v10-settings.css", import.meta.url), "utf8");
+const mainEntrypoint = readFileSync(new URL("../main.tsx", import.meta.url), "utf8");
 
 describe("demo v10 visual regression contracts", () => {
   it("keeps the redesigned Overview attached to the active app theme", () => {
@@ -29,6 +30,7 @@ describe("demo v10 visual regression contracts", () => {
     expect(overviewBan2Css).toContain(".ovb2-main,.ovb2-side,.ovb2-mid {display:contents}");
   });
   it("uses tokens.css as the single theme source for shell and legacy screen styles", () => {
+    expect(mainEntrypoint).toContain('import "./lib/theme"');
     expect(shellCss).toContain("--bg: var(--bg-base)");
     expect(shellCss).toContain("--vi: var(--primary-600)");
     expect(shellCss).toContain("--text: var(--text-primary)");
