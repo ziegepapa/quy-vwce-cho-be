@@ -331,6 +331,7 @@ export default function Transactions() {
   );
 
   const activeFilterCount = Number(Boolean(q.trim())) + Number(yearFilter !== "all") + Number(typeFilter !== "all") + Number(activityFilter !== "all") + Number(timeLens !== "all") + Number(instrumentFilter !== "all") + Number(qualityFilter !== "all") + Number(sort !== "newest");
+  // The selected year has its own tab below; don't duplicate it as a removable chip.
   const currentViewFilters: TransactionViewFilters = { query: q, year: yearFilter, type: typeFilter, activity: activityFilter, timeLens, sort };
   const savedViewCompatible = instrumentFilter === "all" && qualityFilter === "all";
   const activeSavedViewId = savedViewCompatible
@@ -361,24 +362,34 @@ export default function Transactions() {
 
   const monthlyBars = useMemo(() => {
     const now = new Date();
-    const months: Array<{ key: string; year: number; month: number; value: number }> = [];
-    for (let i = 23; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, year: d.getFullYear(), month: d.getMonth() + 1, value: 0 });
-    }
+    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const sixMonthFloor = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const historyFloor = new Date(now.getFullYear(), now.getMonth() - 23, 1);
     const sums = new Map<string, number>();
+
     for (const tx of txs) {
-      if (tx.deletedAt) continue;
-      if (!contributionTypes.includes(tx.type)) continue;
+      if (tx.deletedAt || !contributionTypes.includes(tx.type)) continue;
       if (typeof tx.amount !== "number" || !Number.isFinite(tx.amount) || tx.amount <= 0) continue;
       const key = tx.date.slice(0, 7);
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) continue;
       sums.set(key, (sums.get(key) ?? 0) + tx.amount);
     }
-    let max = 0;
-    for (const m of months) {
-      m.value = sums.get(m.key) ?? 0;
-      if (m.value > max) max = m.value;
+
+    const earliestKey = [...sums.keys()].sort()[0];
+    const earliestMonth = earliestKey
+      ? new Date(Number(earliestKey.slice(0, 4)), Number(earliestKey.slice(5, 7)) - 1, 1)
+      : sixMonthFloor;
+    // Follow actual contribution history when recent; keep six months of context,
+    // and cap older records at 24 months so the chart stays readable on mobile.
+    const start = new Date(Math.max(historyFloor.getTime(), Math.min(sixMonthFloor.getTime(), earliestMonth.getTime())));
+    const months: Array<{ key: string; year: number; month: number; value: number }> = [];
+    for (let d = start; d <= currentMonth; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      months.push({ key, year: d.getFullYear(), month: d.getMonth() + 1, value: sums.get(key) ?? 0 });
     }
+
+    let max = 0;
+    for (const m of months) if (m.value > max) max = m.value;
     return { months, max: max > 0 ? max : 1 };
   }, [txs, contributionTypes]);
 
@@ -784,10 +795,16 @@ export default function Transactions() {
             />
           ))}
         </div>
-        <div className="txv2-bars-lbl" aria-hidden="true">
-          {[...new Set(monthlyBars.months.map((m) => m.year))].map((y) => (
-            <span key={y}>{y}</span>
-          ))}
+        <div className={"txv2-bars-lbl" + (monthlyBars.months.length <= 8 ? " months" : "")} aria-hidden="true">
+          {monthlyBars.months.length <= 8
+            ? monthlyBars.months.map((m) => (
+                <span key={m.key}>
+                  {new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", { month: "short" }).format(new Date(m.year, m.month - 1, 1))}
+                </span>
+              ))
+            : [...new Set(monthlyBars.months.map((m) => m.year))].map((y) => (
+                <span key={y}>{y}</span>
+              ))}
         </div>
       </section>
 
@@ -802,11 +819,10 @@ export default function Transactions() {
         </button>
       </div>
 
-      {activeFilterCount ? (
+      {activeFilterCount - Number(yearFilter !== "all") > 0 ? (
         <div className="tx-active-filter-chips" aria-label={text.activeFilterChips}>
           {q.trim() ? <button type="button" onClick={() => setQ("")}>{q.trim()} ×</button> : null}
           {timeLens !== "all" ? <button type="button" onClick={() => setTimeLens("all")}>{timeLens === "this_month" ? text.thisMonth : timeLens === "last_90_days" ? text.last90Days : timeLens === "this_year" ? text.thisYear : text.lastYear} ×</button> : null}
-          {yearFilter !== "all" ? <button type="button" onClick={() => selectYear(latestYear)}>{yearFilter} ×</button> : null}
           {typeFilter !== "all" ? <button type="button" onClick={() => setTypeFilter("all")}>{types.find((type) => type.value === typeFilter)?.label ?? typeFilter} ×</button> : null}
           {activityFilter !== "all" ? <button type="button" onClick={() => setActivityFilter("all")}>{activityFilter === "trade" ? text.tradeActivity : activityFilter === "funding" ? text.fundingActivity : text.outflowActivity} ×</button> : null}
           {instrumentFilter !== "all" ? <button type="button" onClick={() => setInstrumentFilter("all")}>{instrumentFilter === "vwce" ? text.instrumentVwce : text.instrumentOther} ×</button> : null}
