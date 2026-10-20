@@ -263,7 +263,7 @@ export default function Transactions() {
   const [savedViews, setSavedViews] = useState<SavedTransactionView[]>(() => readTransactionSavedViews());
   const [savedViewName, setSavedViewName] = useState("");
   const [savedViewError, setSavedViewError] = useState("");
-  const [visibleLimit, setVisibleLimit] = useState(5);
+  const [visibleWindow, setVisibleWindow] = useState<{ filterKey: string; limit: number }>({ filterKey: "", limit: 5 });
   const deferredQuery = useDeferredValue(q);
   const [qtyError, setQtyError] = useState("");
   const [isinError, setIsinError] = useState("");
@@ -278,7 +278,7 @@ export default function Transactions() {
         getSettings().catch(() => null),
       ]);
       setTxs(nextTransactions);
-      setVisibleLimit(5);
+      setVisibleWindow({ filterKey: "", limit: 5 });
       setQuotes(nextQuotes);
     setTrackInAppCash(settings?.trackInAppCash);
     setLoadError(false);
@@ -309,9 +309,12 @@ export default function Transactions() {
   const qualityIssues = useMemo(() => findTransactionQualityIssues(txs), [txs]);
   const qualityTransactionIds = useMemo(() => new Set(qualityIssues.map((issue) => issue.transactionId)), [qualityIssues]);
 
-  useEffect(() => {
-    setVisibleLimit(5);
-  }, [activityFilter, deferredQuery, instrumentFilter, qualityFilter, sort, timeLens, typeFilter, yearFilter]);
+  // Scope the paging limit to the active filters. This avoids a race where a pending
+  // filter-reset effect can overwrite a fast "Load more" click after initial year selection.
+  const listFilterKey = JSON.stringify([
+    activityFilter, deferredQuery, instrumentFilter, qualityFilter, sort, timeLens, typeFilter, yearFilter,
+  ]);
+  const visibleLimit = visibleWindow.filterKey === listFilterKey ? visibleWindow.limit : 5;
 
   const listWindow = useMemo(
     () => buildTransactionListWindow(txs, {
@@ -902,7 +905,7 @@ export default function Transactions() {
                 <button
                   type="button"
                   className="txv2-more"
-                  onClick={() => setVisibleLimit((limit) => limit + TRANSACTION_WINDOW_SIZE)}
+                  onClick={() => setVisibleWindow((current) => ({ filterKey: listFilterKey, limit: (current.filterKey === listFilterKey ? current.limit : 5) + TRANSACTION_WINDOW_SIZE }))
                 >
                   {text.loadMore.replace("{count}", String(Math.min(TRANSACTION_WINDOW_SIZE, listWindow.remaining)))}
                 </button>
