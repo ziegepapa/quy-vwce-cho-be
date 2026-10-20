@@ -908,7 +908,6 @@ export default function Transactions() {
             </>
           )}
         </section>
-      </div>
       {filterSheetOpen ? (
         <div className="tx-filter-backdrop" role="presentation" onMouseDown={closeFilterSheet}>
           <section
