@@ -55,7 +55,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#16a34a" stopOpacity="0.18" />
+          <stop offset="0%" stopColor="var(--success-600)" stopOpacity="0.18" />
           <stop offset="100%" stopColor="#16a34a" stopOpacity="0" />
         </linearGradient>
       </defs>
@@ -63,9 +63,9 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
         <g key={t}>
           <line
             x1={PAD_L} y1={geometry.y(t)} x2={W - PAD_R + 8} y2={geometry.y(t)}
-            stroke="#e8edf1" strokeWidth="1"
+            stroke="var(--border-subtle)" strokeWidth="1"
           />
-          <text x={PAD_L - 8} y={geometry.y(t) + 4} textAnchor="end" fontSize="10.5" fill="#64748b">
+          <text x={PAD_L - 8} y={geometry.y(t) + 4} textAnchor="end" fontSize="10.5" fill="var(--text-secondary)">
             {compact(t)} €
           </text>
         </g>
@@ -84,7 +84,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
       <circle
         cx={geometry.x(points.length - 1)}
         cy={geometry.y(geometry.last.value)}
-        r="4.5" fill="#16a34a" stroke="#fff" strokeWidth="2"
+        r="4.5" fill="var(--success-600)" stroke="var(--surface-raised)" strokeWidth="2"
       />
       <text
         x={geometry.x(points.length - 1) + 8}
