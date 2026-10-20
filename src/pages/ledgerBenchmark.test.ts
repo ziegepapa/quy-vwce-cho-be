@@ -11,8 +11,8 @@ describe("ledger benchmark harness", () => {
 
     expect(report.transactionCount).toBe(1000);
     expect(report.filteredCount).toBe(1000);
-    expect(report.initialVisible).toBe(60);
-    expect(report.expandedVisible).toBe(120);
+    expect(report.initialVisible).toBe(20);
+    expect(report.expandedVisible).toBe(45);
     expect(report.initialGroupCount).toBeGreaterThan(0);
     expect(report.expandedGroupCount).toBeGreaterThan(0);
     expect(report.uniqueExpandedRows).toBe(true);
@@ -26,8 +26,8 @@ describe("ledger benchmark harness", () => {
 
     for (const scenario of LEDGER_BENCHMARK_SCENARIOS) {
       const report = measureLedgerWindow(ledger, scenario.filters);
-      const expectedInitial = Math.min(60, report.filteredCount);
-      const expectedExpanded = Math.min(120, report.filteredCount);
+      const expectedInitial = Math.min(20, report.filteredCount);
+      const expectedExpanded = Math.min(45, report.filteredCount);
 
       expect(report.transactionCount).toBe(10_000);
       expect(report.filteredCount).toBeGreaterThan(0);
