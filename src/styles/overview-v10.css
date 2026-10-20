@@ -211,7 +211,7 @@
   font-size: 17px;
   font-weight: 900;
   letter-spacing: -0.03em;
-  color: #fff;
+  color: var(--text-primary);
   text-shadow: 0 0 12px color-mix(in srgb, var(--vi, #8b5cf6) 60%, transparent);
 }
 .ov.v10-pixel .v10-hr-pct.empty {
@@ -340,7 +340,7 @@
   background: linear-gradient(128deg, var(--warning-600), var(--text-primary) 80%);
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
-.ov.v10-pixel .v10-sc-unit { font-size: 11px; font-weight: 600; color: var(--sub, rgba(240, 238, 255, 0.55)); }
+.ov.v10-pixel .v10-sc-unit { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
 .ov.v10-pixel .v10-sc-title { font-size: 10px; color: var(--dim, rgba(240, 238, 255, 0.28)); margin-top: 3px; }
 .ov.v10-pixel .v10-sc-right { text-align: right; }
 .ov.v10-pixel .v10-sc-next-lbl {
@@ -354,7 +354,7 @@
 .ov.v10-pixel .v10-perf-top {
   display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 13px;
 }
-.ov.v10-pixel .v10-perf-title { font-size: 12px; font-weight: 700; color: var(--sub, rgba(240, 238, 255, 0.55)); }
+.ov.v10-pixel .v10-perf-title { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
 .ov.v10-pixel .v10-perf-return {
   font-size: 22px; font-weight: 900; letter-spacing: -0.03em;
   background: linear-gradient(128deg, #fff, var(--em, #10b981));
