@@ -767,7 +767,7 @@ export default function Transactions() {
               <small>{locale === "de" ? "im gesamten Verlauf" : "trong toàn bộ lịch sử"}</small>
             </div>
             <div className="tx-ledger-stat">
-              <span>{locale === "de" ? "Wertpapier" : "Đầu tư"}</span>
+              <span>{locale === "de" ? "Trades" : "Lệnh mua/bán"}</span>
               <strong>{securityTransactionCount}</strong>
               <small>{locale === "de" ? "Käufe & Verkäufe" : "mua và bán"}</small>
             </div>
