@@ -661,3 +661,119 @@ html.tx-filter-open .app-shell::after {
 
 /* Sheet handle dùng chung */
 .tx-wrap .sheet-handle { width: 40px; height: 5px; border-radius: 3px; background: var(--border-strong); margin: 2px auto 12px; }
+
+
+/* Demo refinement: share the app shell palette instead of a competing page palette.
+   Scope these design-token aliases to Transactions only. */
+.txv2-screen {
+  --bg-base: var(--bg);
+  --surface: var(--g);
+  --surface-raised: var(--g);
+  --surface-sunken: color-mix(in srgb, var(--bg) 76%, var(--g));
+  --text-primary: var(--text);
+  --text-secondary: var(--sub);
+  --text-tertiary: var(--dim);
+  --border-subtle: var(--gb);
+  --border-strong: color-mix(in srgb, var(--vi) 30%, var(--gb));
+  --primary-600: var(--vi);
+  --primary-500: color-mix(in srgb, var(--vi) 84%, var(--bg));
+  --primary-050: color-mix(in srgb, var(--vi) 12%, transparent);
+  --success-600: var(--em);
+  --success-050: color-mix(in srgb, var(--em) 12%, transparent);
+  --warning-600: var(--am);
+  --warning-050: color-mix(in srgb, var(--am) 12%, transparent);
+  --danger-600: var(--re);
+  --danger-050: color-mix(in srgb, var(--re) 12%, transparent);
+  --focus-ring: var(--vi);
+  --color-bg: var(--bg);
+  --color-surface: var(--g);
+  --color-surface-2: var(--surface-sunken);
+  --color-surface-raised: var(--g);
+  --color-border: var(--gb);
+  --color-border-subtle: var(--gb);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-secondary: var(--sub);
+  --color-text-muted: var(--dim);
+  --color-text-tertiary: var(--dim);
+  --color-primary: var(--vi);
+  --color-primary-hover: color-mix(in srgb, var(--vi) 82%, var(--bg));
+  --color-primary-muted: color-mix(in srgb, var(--vi) 12%, transparent);
+  --color-accent: var(--em);
+  --color-accent-muted: color-mix(in srgb, var(--em) 12%, transparent);
+  --color-success: var(--em);
+  --color-success-bg: color-mix(in srgb, var(--em) 12%, transparent);
+  --color-warning: var(--am);
+  --color-warning-bg: color-mix(in srgb, var(--am) 12%, transparent);
+  --color-danger: var(--re);
+  --color-danger-bg: color-mix(in srgb, var(--re) 12%, transparent);
+  --hairline: var(--gb);
+  --shadow-raised: 0 8px 28px color-mix(in srgb, var(--bg) 12%, transparent);
+  --shadow-overlay: 0 14px 40px color-mix(in srgb, var(--bg) 30%, transparent);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.tx-wrap .txv2-hero { padding: 16px 16px 12px; border-radius: 18px; }
+.tx-wrap .txv2-hero-amt { font-size: clamp(30px, 8vw, 34px); }
+.tx-wrap .txv2-bars {
+  height: 50px;
+  margin-top: 11px;
+  justify-content: space-between;
+  gap: 0;
+}
+.tx-wrap .txv2-bars span { flex: 0 1 14px; width: 14px; max-width: 14px; }
+.tx-wrap .txv2-bars-lbl.months {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0;
+  text-align: center;
+}
+.tx-wrap .txv2-bars-lbl.months span { min-width: 0; white-space: nowrap; }
+
+.tx-wrap .txv2-ypill.on {
+  color: var(--vi);
+  background: color-mix(in srgb, var(--vi) 14%, var(--g));
+  border: 1px solid color-mix(in srgb, var(--vi) 25%, var(--gb));
+}
+.tx-wrap .txv2-row {
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 140ms ease;
+}
+.tx-wrap .txv2-row:hover { background: color-mix(in srgb, var(--vi) 8%, var(--g)); }
+.tx-wrap .txv2-row:active { background: color-mix(in srgb, var(--vi) 14%, var(--g)); }
+.tx-wrap .txv2-row:focus-visible {
+  background: color-mix(in srgb, var(--vi) 7%, var(--g));
+  outline-color: var(--vi);
+}
+.tx-wrap .txv2-filterbtn:hover,
+.tx-wrap .txv2-more:hover,
+.tx-wrap .txv2-add-first:hover {
+  background: color-mix(in srgb, var(--vi) 10%, var(--g));
+  color: var(--vi);
+}
+.tx-wrap .txv2-add {
+  background: var(--vi);
+  color: var(--bg);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--vi) 22%, transparent);
+}
+.tx-wrap .txv2-add:hover { background: color-mix(in srgb, var(--vi) 84%, var(--bg)); }
+.tx-wrap .txv2-add-first { background: var(--vi); color: var(--bg); }
+
+@media (max-width: 899px) {
+  .txv2-screen .tx-wrap {
+    padding-bottom: max(176px, calc(136px + env(safe-area-inset-bottom, 0px)));
+  }
+}
+@media (max-width: 640px) {
+  .tx-wrap .txv2-hero { padding: 15px 15px 11px; }
+  .tx-wrap .txv2-bars { height: 46px; margin-top: 9px; }
+  .tx-wrap .txv2-row { gap: 11px; padding: 12px 14px; }
+  .tx-wrap .txv2-ico { width: 40px; height: 40px; }
+  .tx-wrap .txv2-name { font-size: 14px; }
+  .tx-wrap .txv2-amt { font-size: 14px; }
+  .tx-wrap .txv2-years { gap: 6px; }
+}
