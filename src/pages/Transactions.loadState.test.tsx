@@ -162,10 +162,11 @@ describe("Transactions load and empty states", () => {
     expect(screen.getByRole("group", { name: "Dòng tiền" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Nhật ký giao dịch" })).toBeTruthy();
     expect(document.querySelectorAll(".txv2-bars span")).toHaveLength(0);
-    expect(document.querySelectorAll(".tx-ledger-date")).toHaveLength(4);
+    expect(document.querySelectorAll(".tx-ledger-row")).toHaveLength(4);
+    expect(document.querySelectorAll(".tx-ledger-month-group")).toHaveLength(4);
   });
 
-  it("renders a bounded 60-row window and progressively expands a 1,000-row ledger", async () => {
+  it("renders 20 rows initially, groups by month and adds 25 at a time for a 1,000-row ledger", async () => {
     dbMocks.listTransactions.mockResolvedValue(Array.from({ length: 1000 }, (_, index) => ({
       id: `tx-${index}`,
       date: `2026-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 28) + 1).padStart(2, "0")}`,
@@ -179,11 +180,16 @@ describe("Transactions load and empty states", () => {
     render(createElement(Transactions));
 
     expect(await screen.findByText("1000 giao dịch trong năm 2026")).toBeTruthy();
-    expect(document.querySelectorAll(".txv2-row")).toHaveLength(5);
+    expect(document.querySelectorAll(".tx-ledger-row")).toHaveLength(20);
+    const monthGroups = Array.from(document.querySelectorAll<HTMLElement>(".tx-ledger-month-group"));
+    expect(monthGroups.length).toBeGreaterThan(1);
+    const monthKeys = monthGroups.map((group) => group.dataset.monthKey);
+    expect(new Set(monthKeys).size).toBe(monthKeys.length);
 
-    fireEvent.click(screen.getByRole("button", { name: "Tải thêm 60 giao dịch" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tải thêm 25 giao dịch" }));
 
-    await waitFor(() => expect(document.querySelectorAll(".txv2-row")).toHaveLength(65));
+    await waitFor(() => expect(document.querySelectorAll(".tx-ledger-row")).toHaveLength(45));
+    expect(screen.getByText("Đang hiển thị 45/1000 giao dịch")).toBeTruthy();
   });
 
   it("applies activity filters in the compact Filter sheet without changing ledger rows", async () => {
