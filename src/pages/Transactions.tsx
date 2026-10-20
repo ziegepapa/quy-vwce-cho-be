@@ -47,6 +47,7 @@ import {
 } from "./transactionsSavedViews";
 import {
   buildTransactionListWindow,
+  TRANSACTION_INITIAL_WINDOW,
   TRANSACTION_WINDOW_SIZE,
   type TransactionActivity,
   type TransactionInstrumentLens,
@@ -84,9 +85,13 @@ const emptyForm = () => ({
   notes: "",
 });
 
-function monthLabel(key: string) {
-  const [y, m] = key.split("-");
-  return `${m}/${y}`;
+function monthGroupTitle(key: string, locale: "vi" | "de") {
+  if (key === "__amount_desc__") return locale === "de" ? "Nach Betrag sortiert" : "Sắp xếp theo số tiền";
+  const [year, month] = key.split("-").map(Number);
+  return new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(year, month - 1, 1, 12));
 }
 
 function iconClass(type: TxType): string {
@@ -263,7 +268,7 @@ export default function Transactions() {
   const [savedViews, setSavedViews] = useState<SavedTransactionView[]>(() => readTransactionSavedViews());
   const [savedViewName, setSavedViewName] = useState("");
   const [savedViewError, setSavedViewError] = useState("");
-  const [visibleWindow, setVisibleWindow] = useState<{ filterKey: string; limit: number }>({ filterKey: "", limit: 5 });
+  const [visibleWindow, setVisibleWindow] = useState<{ filterKey: string; limit: number }>({ filterKey: "", limit: TRANSACTION_INITIAL_WINDOW });
   const deferredQuery = useDeferredValue(q);
   const [qtyError, setQtyError] = useState("");
   const [isinError, setIsinError] = useState("");
@@ -278,7 +283,7 @@ export default function Transactions() {
         getSettings().catch(() => null),
       ]);
       setTxs(nextTransactions);
-      setVisibleWindow({ filterKey: "", limit: 5 });
+      setVisibleWindow({ filterKey: "", limit: TRANSACTION_INITIAL_WINDOW });
       setQuotes(nextQuotes);
     setTrackInAppCash(settings?.trackInAppCash);
     setLoadError(false);
@@ -314,7 +319,7 @@ export default function Transactions() {
   const listFilterKey = JSON.stringify([
     activityFilter, deferredQuery, instrumentFilter, qualityFilter, sort, timeLens, typeFilter, yearFilter,
   ]);
-  const visibleLimit = visibleWindow.filterKey === listFilterKey ? visibleWindow.limit : 5;
+  const visibleLimit = visibleWindow.filterKey === listFilterKey ? visibleWindow.limit : TRANSACTION_INITIAL_WINDOW;
 
   const listWindow = useMemo(
     () => buildTransactionListWindow(txs, {
@@ -848,11 +853,18 @@ export default function Transactions() {
               </button>
             ))}
           </div>
-          <p className="txv2-ysum" role="status" aria-live="polite">
-            {yearFilter !== "all"
-              ? text.yearSummary.replace("{count}", String(listWindow.total)).replace("{year}", yearFilter)
-              : text.allYearsSummary.replace("{count}", String(listWindow.total))}
-          </p>
+          <div className="tx-ledger-result-meta">
+            <p className="txv2-ysum" role="status" aria-live="polite">
+              {yearFilter !== "all"
+                ? text.yearSummary.replace("{count}", String(listWindow.total)).replace("{year}", yearFilter)
+                : text.allYearsSummary.replace("{count}", String(listWindow.total))}
+            </p>
+            <span className="tx-ledger-visible-count" aria-live="polite">
+              {listWindow.hasMore
+                ? text.visibleCount.replace("{visible}", String(listWindow.visible)).replace("{total}", String(listWindow.total))
+                : text.allVisible.replace("{total}", String(listWindow.total))}
+            </span>
+          </div>
 
           {listWindow.total === 0 ? (
             <section className="txv2-empty">
@@ -866,41 +878,52 @@ export default function Transactions() {
             </section>
           ) : (
             <>
-              <ul className="txv2-list tx-ledger-list">
-                {flatVisible.map((tx) => {
-                  const meta = types.find((t) => t.value === tx.type);
-                  const sign = meta?.sign ?? "~";
-                  const dateParts = /^\d{4}-\d{2}-\d{2}$/.test(tx.date) ? tx.date.split("-") : null;
-                  const monthShort = dateParts
-                    ? locale === "de"
-                      ? new Intl.DateTimeFormat("de-DE", { month: "short" }).format(new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]), 12))
-                      : `T${Number(dateParts[1])}`
-                    : "—";
+              <div className="tx-ledger-months">
+                {listWindow.groups.map((group) => {
+                  const groupTitle = monthGroupTitle(group.key, locale);
                   return (
-                    <li key={tx.id}>
-                      <button
-                        type="button"
-                        className="txv2-row tx-ledger-row"
-                        onClick={() => setDetailId(tx.id)}
-                        aria-label={`${meta?.label ?? tx.type}, ${formatDisplayDate(tx.date, locale)}, ${formatDisplayMoney(tx.amount, locale)}`}
-                      >
-                        <span className="tx-ledger-date" aria-hidden="true">
-                          <strong>{dateParts ? Number(dateParts[2]) : "—"}</strong>
-                          <small>{monthShort}</small>
+                    <section key={group.key} className="tx-ledger-month-group" data-month-key={group.key} aria-label={groupTitle}>
+                      <header className="tx-ledger-month-heading">
+                        <div className="tx-ledger-month-title">
+                          <span className="tx-ledger-month-dot" aria-hidden="true" />
+                          <h3>{groupTitle}</h3>
+                        </div>
+                        <span className="tx-ledger-month-count">
+                          {group.transactions.length} {locale === "de" ? "Buchungen" : "giao dịch"}
                         </span>
-                        <span className={`txv2-ico ${iconClass(tx.type)}`} aria-hidden="true">{iconGlyph(tx.type)}</span>
-                        <span className="txv2-main">
-                          <span className="txv2-name">{meta?.label ?? tx.type}</span>
-                          <span className="txv2-date">{formatDisplayDate(tx.date, locale)}</span>
-                        </span>
-                        <span className={"txv2-amt" + (sign === "+" ? " pos" : sign === "-" ? " neg" : "")}>
-                          {sign === "-" ? "−" : sign === "+" ? "+" : ""}{formatDisplayMoney(tx.amount, locale)}
-                        </span>
-                      </button>
-                    </li>
+                      </header>
+                      <ul className="txv2-list tx-ledger-list">
+                        {group.transactions.map((tx) => {
+                          const meta = types.find((t) => t.value === tx.type);
+                          const sign = meta?.sign ?? "~";
+                          return (
+                            <li key={tx.id}>
+                              <button
+                                type="button"
+                                className="txv2-row tx-ledger-row"
+                                onClick={() => setDetailId(tx.id)}
+                                aria-label={`${meta?.label ?? tx.type}, ${formatDisplayDate(tx.date, locale)}, ${formatDisplayMoney(tx.amount, locale)}`}
+                              >
+                                <span className={`txv2-ico tx-ledger-kind ${iconClass(tx.type)}`} aria-hidden="true">{iconGlyph(tx.type)}</span>
+                                <span className="txv2-main">
+                                  <span className="txv2-name">{meta?.label ?? tx.type}</span>
+                                  <span className="txv2-date">{formatDisplayDate(tx.date, locale)}</span>
+                                </span>
+                                <span className="tx-ledger-amount-cell">
+                                  <span className={"txv2-amt" + (sign === "+" ? " pos" : sign === "-" ? " neg" : "")}>
+                                    {sign === "-" ? "−" : sign === "+" ? "+" : ""}{formatDisplayMoney(tx.amount, locale)}
+                                  </span>
+                                  <span className="tx-ledger-chevron" aria-hidden="true">›</span>
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
                   );
                 })}
-              </ul>
+              </div>
               {listWindow.hasMore ? (
                 <button
                   type="button"
@@ -908,7 +931,7 @@ export default function Transactions() {
                   onClick={() =>
                     setVisibleWindow((current) => ({
                       filterKey: listFilterKey,
-                      limit: (current.filterKey === listFilterKey ? current.limit : 5) + TRANSACTION_WINDOW_SIZE,
+                      limit: (current.filterKey === listFilterKey ? current.limit : TRANSACTION_INITIAL_WINDOW) + TRANSACTION_WINDOW_SIZE,
                     }))
                   }
                 >

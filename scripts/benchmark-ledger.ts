@@ -7,6 +7,7 @@ import {
   measureLedgerWindow,
   type LedgerBenchmarkScenario,
 } from "../src/pages/ledgerBenchmark";
+import { TRANSACTION_INITIAL_WINDOW, TRANSACTION_WINDOW_SIZE } from "../src/pages/transactionsListWindow";
 
 type Sample = {
   initialDurationMs: number;
@@ -49,8 +50,8 @@ const reports = transactionCounts.flatMap((transactionCount) => {
     const samples: Sample[] = [];
     for (let run = 0; run < runCount; run += 1) {
       const report = measureLedgerWindow(transactions, scenario.filters);
-      const expectedInitial = Math.min(60, report.filteredCount);
-      const expectedExpanded = Math.min(120, report.filteredCount);
+      const expectedInitial = Math.min(TRANSACTION_INITIAL_WINDOW, report.filteredCount);
+      const expectedExpanded = Math.min(TRANSACTION_INITIAL_WINDOW + TRANSACTION_WINDOW_SIZE, report.filteredCount);
       if (
         report.initialVisible !== expectedInitial
         || report.expandedVisible !== expectedExpanded
