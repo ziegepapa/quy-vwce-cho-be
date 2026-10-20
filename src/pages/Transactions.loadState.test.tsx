@@ -128,6 +128,18 @@ describe("Transactions load and empty states", () => {
     expect(dbMocks.listTransactions).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps the selected year in one place rather than showing a duplicate removable chip", async () => {
+    dbMocks.listTransactions.mockResolvedValue([
+      { id: "tx-year-1", date: "2026-09-19", type: "buy_vwce", amount: 120, notes: "", createdAt: "2026-09-19T00:00:00Z", updatedAt: "2026-09-19T00:00:00Z", source: "manual" },
+    ]);
+    render(createElement(Transactions));
+
+    expect(await screen.findByText("1 giao dịch trong năm 2026")).toBeTruthy();
+    const yearTab = screen.getByRole("tab", { name: "2026" });
+    expect(yearTab.getAttribute("aria-selected")).toBe("true");
+    expect(document.querySelector(".tx-active-filter-chips")).toBeNull();
+  });
+
   it("renders a bounded 60-row window and progressively expands a 1,000-row ledger", async () => {
     dbMocks.listTransactions.mockResolvedValue(Array.from({ length: 1000 }, (_, index) => ({
       id: `tx-${index}`,
