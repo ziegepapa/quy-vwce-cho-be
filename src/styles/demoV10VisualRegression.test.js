@@ -50,9 +50,18 @@ describe("demo v10 visual regression contracts", () => {
     expect(demoSettingsCss).toContain("linear-gradient(138deg, var(--hero-from), var(--hero-mid) 58%, var(--hero-to))");
     expect(demoSettingsCss).not.toContain("#071d25");
     expect(demoSettingsCss).not.toContain("#0e3134");
+    expect(demoSettingsCss).toContain("--next-ink: var(--text-primary)");
+    expect(demoSettingsCss).toContain("--next-paper: var(--surface-raised)");
+    expect(demoSettingsCss).toContain("--next-lime: var(--primary-600)");
+    expect(demoSettingsCss).toContain("--next-coral: var(--danger-600)");
+    expect(demoSettingsCss).not.toContain("--next-lime: #dff45b");
+    expect(demoSettingsCss).not.toContain("--next-blue: #87d1e7");
     expect(overviewV10Css).toContain("var(--text-primary) 0%");
     expect(overviewV10Css).toContain("color: var(--text-tertiary)");
     expect(overviewV10Css).not.toContain("rgba(240, 238, 255, 0.18)");
+    expect(overviewV10Css).not.toContain("color: #fff;");
+    expect(overviewV10Css).not.toContain("rgba(240, 238, 255, 0.35)");
+    expect(overviewV10Css).not.toContain("rgba(240, 238, 255, 0.55)");
     expect(demoOverviewCss).toContain("color: var(--text-primary)");
     expect(demoOverviewCss).toContain("color: var(--success-600)");
     expect(demoOverviewCss).toContain("color: var(--warning-600)");
