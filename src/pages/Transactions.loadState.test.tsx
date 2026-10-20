@@ -129,15 +129,37 @@ describe("Transactions load and empty states", () => {
   });
 
   it("keeps the selected year in one place rather than showing a duplicate removable chip", async () => {
+    const year = String(new Date().getFullYear());
+    const date = `${year}-09-19`;
     dbMocks.listTransactions.mockResolvedValue([
-      { id: "tx-year-1", date: "2026-09-19", type: "buy_vwce", amount: 120, notes: "", createdAt: "2026-09-19T00:00:00Z", updatedAt: "2026-09-19T00:00:00Z", source: "manual" },
+      { id: "tx-year-1", date, type: "buy_vwce", amount: 120, notes: "", createdAt: `${date}T00:00:00Z`, updatedAt: `${date}T00:00:00Z`, source: "manual" },
     ]);
     render(createElement(Transactions));
 
-    expect(await screen.findByText("1 giao dịch trong năm 2026")).toBeTruthy();
-    const yearTab = screen.getByRole("tab", { name: "2026" });
+    expect(await screen.findByText(`1 giao dịch trong năm ${year}`)).toBeTruthy();
+    const yearTab = screen.getByRole("tab", { name: year });
     expect(yearTab.getAttribute("aria-selected")).toBe("true");
     expect(document.querySelector(".tx-active-filter-chips")).toBeNull();
+  });
+
+  it("shows a compact six-month contribution chart for recent-only transaction history", async () => {
+    const now = new Date();
+    const recentDate = (monthsAgo: number) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 15);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-15`;
+    };
+    dbMocks.listTransactions.mockResolvedValue([0, 1, 2, 3].map((monthsAgo) => {
+      const date = recentDate(monthsAgo);
+      return {
+        id: `tx-chart-${monthsAgo}`, date, type: "buy_vwce", amount: 120,
+        notes: "", createdAt: `${date}T00:00:00Z`, updatedAt: `${date}T00:00:00Z`, source: "manual",
+      };
+    }));
+    render(createElement(Transactions));
+
+    await screen.findByText(/4 giao dịch trong năm/);
+    expect(document.querySelectorAll(".txv2-bars span")).toHaveLength(6);
+    expect(document.querySelectorAll(".txv2-bars-lbl.months span")).toHaveLength(6);
   });
 
   it("renders a bounded 60-row window and progressively expands a 1,000-row ledger", async () => {
