@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { HashRouter } from "react-router-dom";
 import { AuthProvider } from "./lib/auth";
 import { LocaleProvider } from "./lib/locale";
+import "./lib/theme"; // Apply the saved theme before the first page renders.
 import App from "./App";
 import AppFailureBoundary from "./components/AppFailureBoundary";
 import ModalAccessibilityManager from "./components/ModalAccessibilityManager";

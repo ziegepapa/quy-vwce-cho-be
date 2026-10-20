@@ -5,6 +5,13 @@ const overviewCss = readFileSync(new URL("./demo-v10-overview.css", import.meta.
 const settingsCss = readFileSync(new URL("./demo-v10-settings.css", import.meta.url), "utf8");
 const overviewBan2Css = readFileSync(new URL("./overview-ban2.css", import.meta.url), "utf8");
 const transactionsCss = readFileSync(new URL("./transactions-v2.css", import.meta.url), "utf8");
+const shellCss = readFileSync(new URL("./visual-abc-shell.css", import.meta.url), "utf8");
+const demoPrimitivesCss = readFileSync(new URL("./demo-v10-primitives.css", import.meta.url), "utf8");
+const visualScreensCss = readFileSync(new URL("./visual-abc-screens.css", import.meta.url), "utf8");
+const overviewV10Css = readFileSync(new URL("./overview-v10.css", import.meta.url), "utf8");
+const demoOverviewCss = readFileSync(new URL("./demo-v10-overview.css", import.meta.url), "utf8");
+const demoSettingsCss = readFileSync(new URL("./demo-v10-settings.css", import.meta.url), "utf8");
+const mainEntrypoint = readFileSync(new URL("../main.tsx", import.meta.url), "utf8");
 
 describe("demo v10 visual regression contracts", () => {
   it("keeps the redesigned Overview attached to the active app theme", () => {
@@ -22,7 +29,50 @@ describe("demo v10 visual regression contracts", () => {
     expect(overviewBan2Css).toContain('grid-template-areas:"hero" "mile" "chart" "donut" "table" "updates" "journey" "attention" "foot"');
     expect(overviewBan2Css).toContain(".ovb2-main,.ovb2-side,.ovb2-mid {display:contents}");
   });
-  it("keeps Transactions aligned with the shared shell theme and uses a restrained touch state", () => {
+  it("uses tokens.css as the single theme source for shell and legacy screen styles", () => {
+    expect(mainEntrypoint).toContain('import "./lib/theme"');
+    expect(shellCss).toContain("--bg: var(--bg-base)");
+    expect(shellCss).toContain("--vi: var(--primary-600)");
+    expect(shellCss).toContain("--text: var(--text-primary)");
+    expect(shellCss).not.toContain("--bg: #fff8ef");
+    expect(shellCss).not.toContain("--vi: #e85d04");
+    expect(shellCss).not.toContain(':root[data-theme="light"] {');
+
+    expect(demoPrimitivesCss).toContain("--demo-bg: var(--bg-base)");
+    expect(demoPrimitivesCss).toContain("--demo-vi: var(--primary-600)");
+    expect(demoPrimitivesCss).toContain("--demo-text: var(--text-primary)");
+    expect(demoPrimitivesCss).not.toContain("--demo-bg: #fff8ef");
+    expect(demoPrimitivesCss).not.toContain(':root[data-theme="dark"] {');
+    expect(demoPrimitivesCss).not.toContain(':root[data-theme="light"] {');
+
+    expect(visualScreensCss).toContain("background: var(--surface-sunken) !important");
+    expect(visualScreensCss).toContain("background: color-mix(in srgb, var(--surface-raised) 86%, transparent) !important");
+    expect(demoSettingsCss).toContain("linear-gradient(138deg, var(--hero-from), var(--hero-mid) 58%, var(--hero-to))");
+    expect(demoSettingsCss).not.toContain("#071d25");
+    expect(demoSettingsCss).not.toContain("#0e3134");
+    expect(demoSettingsCss).toContain("--next-ink: var(--text-primary)");
+    expect(demoSettingsCss).toContain("--next-paper: var(--surface-raised)");
+    expect(demoSettingsCss).toContain("--next-lime: var(--primary-600)");
+    expect(demoSettingsCss).toContain("--next-coral: var(--danger-600)");
+    expect(demoSettingsCss).not.toContain("--next-lime: #dff45b");
+    expect(demoSettingsCss).not.toContain("--next-blue: #87d1e7");
+    expect(overviewV10Css).toContain("var(--text-primary) 0%");
+    expect(overviewV10Css).toContain("color: var(--text-tertiary)");
+    expect(overviewV10Css).not.toContain("rgba(240, 238, 255, 0.18)");
+    expect(overviewV10Css).toContain(".ov.v10-pixel .v10-hr-pct {\n  font-size: 17px;\n  font-weight: 900;\n  letter-spacing: -0.03em;\n  color: var(--text-primary);");
+    expect(overviewV10Css).toContain(".ov.v10-pixel .v10-hr-pct.empty {\n  color: var(--text-tertiary);");
+    expect(overviewV10Css).toContain(".ov.v10-pixel .v10-hr-pct-unit {\n  font-size: 9px;\n  font-weight: 700;\n  letter-spacing: 0.04em;\n  color: var(--text-secondary);");
+    expect(overviewV10Css).not.toContain("rgba(240, 238, 255, 0.35)");
+    expect(overviewV10Css).not.toContain("rgba(240, 238, 255, 0.55)");
+    expect(demoOverviewCss).toContain("color: var(--text-primary)");
+    expect(demoOverviewCss).toContain("color: var(--success-600)");
+    expect(demoOverviewCss).toContain("color: var(--warning-600)");
+    expect(demoOverviewCss).not.toContain("#7c2d12");
+    expect(demoOverviewCss).not.toContain("color: #047857");
+    expect(demoOverviewCss).not.toContain("color: #b45309");
+  });
+
+  it("keeps Transactions on canonical theme tokens with its own ledger-first layout", () => {
     expect(transactionsCss).toContain("background: var(--bg-base)");
     expect(transactionsCss).toContain("color: var(--text-primary)");
     expect(transactionsCss).toContain("background: var(--primary-050)");

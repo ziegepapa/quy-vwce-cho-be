@@ -1,22 +1,23 @@
 :root {
-  --bg: #06060a;
-  --g: rgba(255, 255, 255, 0.042);
-  --gb: rgba(255, 255, 255, 0.09);
-  --text: #f0eeff;
-  --sub: rgba(240, 238, 255, 0.55);
-  --dim: rgba(240, 238, 255, 0.28);
-  --vi: #8b5cf6;
-  --vi2: #5b21b6;
-  --em: #10b981;
-  --am: #f59e0b;
-  --re: #f87171;
-  --gv: rgba(139, 92, 246, 0.28);
-  --ge: rgba(16, 185, 129, 0.22);
-  --au1: rgba(91, 33, 182, 0.5);
-  --au2: rgba(16, 185, 129, 0.2);
-  --au3: rgba(139, 92, 246, 0.16);
-  --bar-bg: rgba(6, 6, 10, 0.8);
-  --pill-bg: rgba(8, 5, 20, 0.86);
+  /* Legacy shell names bridge to the single Design System V9 theme in tokens.css. */
+  --bg: var(--bg-base);
+  --g: color-mix(in srgb, var(--surface-raised) 92%, var(--surface));
+  --gb: var(--border-subtle);
+  --text: var(--text-primary);
+  --sub: var(--text-secondary);
+  --dim: var(--text-tertiary);
+  --vi: var(--primary-600);
+  --vi2: var(--primary-500);
+  --em: var(--success-600);
+  --am: var(--warning-600);
+  --re: var(--danger-600);
+  --gv: color-mix(in srgb, var(--primary-600) 28%, transparent);
+  --ge: color-mix(in srgb, var(--success-600) 18%, transparent);
+  --au1: color-mix(in srgb, var(--primary-600) 16%, transparent);
+  --au2: color-mix(in srgb, var(--success-600) 10%, transparent);
+  --au3: color-mix(in srgb, var(--primary-600) 8%, transparent);
+  --bar-bg: color-mix(in srgb, var(--surface-raised) 86%, transparent);
+  --pill-bg: color-mix(in srgb, var(--surface-raised) 92%, transparent);
   --demo-bar-h: 52px;
 }
 
@@ -43,7 +44,7 @@ body,
     radial-gradient(ellipse 80% 55% at 15% -10%, var(--au1) 0%, transparent 58%),
     radial-gradient(ellipse 55% 38% at 92% 10%, var(--au2) 0%, transparent 52%),
     radial-gradient(ellipse 45% 45% at 5% 90%, var(--au3) 0%, transparent 52%);
-  animation: visual-abc-au 14s ease-in-out infinite alternate;
+  animation: none;
 }
 
 @keyframes visual-abc-au {
@@ -88,7 +89,7 @@ body,
   font-size: 16px;
   font-weight: 900;
   letter-spacing: -0.03em;
-  background: linear-gradient(120deg, #fff 0%, var(--vi) 130%);
+  background: linear-gradient(120deg, var(--text-primary) 0%, var(--primary-600) 130%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -108,7 +109,7 @@ body,
   height: 32px;
   border-radius: 50%;
   color: var(--em);
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--surface-raised) 82%, transparent);
   border: 1px solid var(--gb);
   cursor: pointer;
   padding: 0;
@@ -167,7 +168,7 @@ body,
   color: #fff;
   font-size: 12px;
   font-weight: 800;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent);
 }
 
 .bar-sync-dot {
@@ -220,9 +221,9 @@ body,
   padding: 5px;
   box-sizing: border-box;
   background: var(--pill-bg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle);
   border-radius: 100px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.07) inset;
+  box-shadow: var(--shadow-dock);
   backdrop-filter: blur(30px) saturate(2.2);
   -webkit-backdrop-filter: blur(30px) saturate(2.2);
 }
@@ -269,51 +270,13 @@ body,
   .pb { animation: none; transition: none; }
 }
 
-:root[data-theme="dark"] {
-  --bg: #031217;
-  --g: rgba(8, 45, 54, 0.48);
-  --gb: rgba(103, 232, 249, 0.18);
-  --text: #e7fbff;
-  --sub: rgba(205, 246, 255, 0.68);
-  --dim: rgba(185, 232, 242, 0.42);
-  --vi: #22d3ee;
-  --vi2: #0e7490;
-  --em: #2dd4bf;
-  --am: #fbbf24;
-  --re: #fb7185;
-  --gv: rgba(34, 211, 238, 0.28);
-  --ge: rgba(45, 212, 191, 0.22);
-  --au1: rgba(8, 145, 178, 0.44);
-  --au2: rgba(20, 184, 166, 0.25);
-  --au3: rgba(14, 116, 144, 0.2);
-  --bar-bg: rgba(3, 18, 23, 0.84);
-  --pill-bg: rgba(4, 29, 37, 0.9);
-}
+/* Theme colors are inherited from tokens.css; do not redeclare them here. */
 
-:root[data-theme="light"] {
-  --bg: #fff8ef;
-  --g: rgba(255, 255, 255, 0.68);
-  --gb: rgba(116, 50, 15, 0.15);
-  --text: #2d1608;
-  --sub: rgba(74, 34, 12, 0.7);
-  --dim: rgba(86, 43, 18, 0.52);
-  --vi: #e85d04;
-  --vi2: #9a3412;
-  --em: #047857;
-  --am: #b45309;
-  --re: #dc2626;
-  --gv: rgba(232, 93, 4, 0.24);
-  --ge: rgba(4, 120, 87, 0.18);
-  --au1: rgba(251, 146, 60, 0.24);
-  --au2: rgba(253, 186, 116, 0.28);
-  --au3: rgba(234, 88, 12, 0.13);
-  --bar-bg: rgba(255, 248, 239, 0.82);
-  --pill-bg: rgba(255, 250, 244, 0.9);
-}
+
 
 .sync-iconbtn:disabled { cursor: progress; opacity: 0.8; }
 .sync-spin { display: inline-grid; place-items: center; animation: sync-spin 0.85s linear infinite; }
 @keyframes sync-spin { to { transform: rotate(360deg); } }
 
-:root[data-theme="light"] .bar-logo { background: linear-gradient(120deg, #2d1608 0%, var(--vi) 130%); -webkit-background-clip: text; background-clip: text; }
-:root[data-theme="light"] .pill { box-shadow: 0 10px 30px rgba(119, 59, 16, 0.16), 0 1px 0 rgba(255,255,255,.7) inset; }
+.bar-logo { background: linear-gradient(120deg, var(--text-primary) 0%, var(--primary-600) 130%); -webkit-background-clip: text; background-clip: text; }
+.pill { box-shadow: var(--shadow-dock); }
