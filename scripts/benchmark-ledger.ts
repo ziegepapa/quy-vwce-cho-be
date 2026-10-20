@@ -3,6 +3,8 @@ import { dirname, resolve } from "node:path";
 import {
   LEDGER_BENCHMARK_SCENARIOS,
   LEDGER_WINDOW_PERFORMANCE_BUDGET_MS,
+  TRANSACTION_INITIAL_WINDOW,
+  TRANSACTION_WINDOW_SIZE,
   buildDeterministicLedger,
   measureLedgerWindow,
   type LedgerBenchmarkScenario,
@@ -49,8 +51,8 @@ const reports = transactionCounts.flatMap((transactionCount) => {
     const samples: Sample[] = [];
     for (let run = 0; run < runCount; run += 1) {
       const report = measureLedgerWindow(transactions, scenario.filters);
-      const expectedInitial = Math.min(60, report.filteredCount);
-      const expectedExpanded = Math.min(120, report.filteredCount);
+      const expectedInitial = Math.min(TRANSACTION_INITIAL_WINDOW, report.filteredCount);
+      const expectedExpanded = Math.min(TRANSACTION_INITIAL_WINDOW + TRANSACTION_WINDOW_SIZE, report.filteredCount);
       if (
         report.initialVisible !== expectedInitial
         || report.expandedVisible !== expectedExpanded
