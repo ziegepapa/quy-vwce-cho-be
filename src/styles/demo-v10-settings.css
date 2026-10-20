@@ -435,3 +435,91 @@ html.settings-child-open,body.settings-child-open { overflow: hidden; }.bottom-d
   .settings-plan-studio-metrics { grid-template-columns: 1fr; }
   .settings-plan-studio-metrics > div:last-child { grid-column: auto; }
 }
+
+
+/* Final theme-unification overrides.
+   P31 was a separately styled candidate; keep its layout, but not a second palette. */
+.set-wrap.vault-atelier .set-avatar {
+  color: var(--color-text-inverse);
+  border-color: color-mix(in srgb, var(--primary-600) 44%, var(--border-subtle));
+  background: linear-gradient(145deg, var(--primary-500), var(--primary-600));
+  box-shadow: var(--shadow-raised);
+}
+.set-wrap.vault-atelier .set-atelier-sync {
+  color: var(--color-text-inverse);
+  border: 1px solid color-mix(in srgb, var(--primary-600) 42%, var(--atelier-line));
+  background: linear-gradient(105deg, var(--primary-600), var(--primary-500));
+  box-shadow: 0 12px 25px color-mix(in srgb, var(--primary-600) 22%, transparent);
+}
+.set-wrap.vault-atelier .set-atelier-sync .set-row-icon {
+  color: var(--color-text-inverse);
+  border-color: color-mix(in srgb, var(--color-text-inverse) 24%, transparent);
+  background: color-mix(in srgb, var(--surface-raised) 20%, transparent);
+}
+.set-wrap.vault-atelier .set-atelier-sync .sr-name { color: var(--color-text-inverse); }
+.set-wrap.vault-atelier .set-atelier-sync .sr-sub {
+  color: color-mix(in srgb, var(--color-text-inverse) 78%, transparent);
+}
+.set-wrap.vault-atelier .set-atelier-orbit span:nth-child(3) {
+  border-color: color-mix(in srgb, var(--primary-600) 56%, transparent);
+}
+
+/* Optional Settings comparison view uses the same selected theme as every other page. */
+.set-wrap.settings-next {
+  --next-ink: var(--text-primary);
+  --next-night: var(--hero-from);
+  --next-paper: var(--surface-raised);
+  --next-line: var(--border-subtle);
+  --next-lime: var(--primary-600);
+  --next-coral: var(--danger-600);
+  --next-blue: var(--primary-500);
+}
+.set-wrap.settings-next::before {
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--primary-600) 18%, transparent), transparent 34%),
+    radial-gradient(circle at 91% 9%, color-mix(in srgb, var(--primary-500) 15%, transparent), transparent 31%);
+}
+.set-wrap.settings-next .settings-next-console {
+  color: #fff;
+  border-color: color-mix(in srgb, var(--primary-500) 43%, var(--border-subtle));
+  background:
+    radial-gradient(circle at 86% 12%, var(--hero-glow), transparent 42%),
+    linear-gradient(134deg, var(--hero-from), var(--hero-mid) 56%, var(--hero-to));
+  box-shadow: var(--shadow-raised);
+}
+.set-wrap.settings-next .settings-next-sync {
+  color: var(--color-text-inverse);
+  background: var(--primary-600);
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--primary-600) 22%, transparent);
+}
+.set-wrap.settings-next .set-section-head { color: var(--text-secondary); }
+.set-wrap.settings-next .set-section-head::before { background: var(--primary-600); }
+.set-wrap.settings-next .set-security-cluster .set-section-head::before { background: var(--danger-600); }
+.set-wrap.settings-next .set-data-cluster .set-section-head::before { background: var(--primary-500); }
+.set-wrap.settings-next .set-personalize-cluster .set-section-head::before { background: var(--success-600); }
+.set-wrap.settings-next .set-row-icon.teal { color: var(--primary-600); }
+.set-wrap.settings-next .set-row-icon.security { color: var(--danger-600); }
+.set-wrap.settings-next .set-row:active { background: color-mix(in srgb, var(--primary-600) 12%, transparent); }
+.set-wrap.settings-next .set-row:hover { background: color-mix(in srgb, var(--primary-500) 8%, transparent); }
+.set-wrap.settings-next .set-advanced > summary::before {
+  color: var(--color-text-inverse);
+  border-color: color-mix(in srgb, var(--primary-600) 35%, transparent);
+  background: var(--primary-600);
+}
+.set-wrap.settings-next .settings-plan-studio {
+  color: var(--text-primary);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--primary-600) 12%, var(--surface-raised)),
+    color-mix(in srgb, var(--primary-500) 10%, var(--surface-raised))
+  );
+}
+.set-wrap.settings-next .settings-plan-studio-metrics > div,
+.set-wrap.settings-next .settings-plan-studio-edit > label {
+  border-color: var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-raised) 76%, transparent);
+}
+.set-wrap.settings-next .settings-plan-studio-note {
+  border-left-color: var(--primary-600);
+  background: color-mix(in srgb, var(--surface-raised) 33%, transparent);
+}
