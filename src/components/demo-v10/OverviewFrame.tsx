@@ -260,7 +260,7 @@ function AllocationDonut({ allocation, totalLabel, totalSub }: {
   return (
     <div className="ovb2-donutwrap">
       <svg width="132" height="132" viewBox="0 0 132 132" role="img" aria-label={totalSub}>
-        <circle cx="66" cy="66" r={r} fill="none" stroke="#eef2f7" strokeWidth="20" />
+        <circle cx="66" cy="66" r={r} fill="none" stroke="var(--border-subtle)" strokeWidth="20" />
         {segs.map((s) => (
           <circle
             key={s.isin}
@@ -271,8 +271,8 @@ function AllocationDonut({ allocation, totalLabel, totalSub }: {
             transform="rotate(-90 66 66)"
           />
         ))}
-        <text x="66" y="63" textAnchor="middle" fontSize="15" fontWeight="800" fill="#0f172a">{totalLabel}</text>
-        <text x="66" y="80" textAnchor="middle" fontSize="10" fill="#94a3b8">{totalSub}</text>
+        <text x="66" y="63" textAnchor="middle" fontSize="15" fontWeight="800" fill="var(--text-primary)">{totalLabel}</text>
+        <text x="66" y="80" textAnchor="middle" fontSize="10" fill="var(--text-tertiary)">{totalSub}</text>
       </svg>
       <div className="ovb2-alloc">
         {segs.map((s) => (
@@ -349,7 +349,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                 <h3>{text.valueVsContributed}</h3>
                 <p className="ovb2-sub">{text.honestCaption}</p>
                 <div className="ovb2-legend">
-                  <span><i style={{ background: "#16a34a" }} />{text.valueLine}</span>
+                  <span><i style={{ background: "var(--success-600)" }} />{text.valueLine}</span>
                   <span><i className="dashed" />{text.contributedLine}</span>
                 </div>
                 <ValueHistoryChart points={valueHistory} label={text.valueVsContributed} />
