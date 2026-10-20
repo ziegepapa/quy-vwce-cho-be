@@ -139,8 +139,8 @@
 .ov .perf-bar-track { position: relative; height: 10px; overflow: hidden; border-radius: 5px; background: color-mix(in srgb, var(--demo-gb) 48%, transparent); }
 .ov .perf-bar-base, .ov .perf-bar-gain, .ov .perf-bar-loss { position: absolute; top: 0; bottom: 0; transition: width .38s cubic-bezier(.23, 1, .32, 1), left .38s cubic-bezier(.23, 1, .32, 1); }
 .ov .perf-bar-base { left: 0; border-radius: 5px 0 0 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--perf-contribution) 72%, transparent), color-mix(in srgb, var(--perf-contribution) 42%, transparent)); }
-.ov .perf-bar-gain { border-radius: 0 5px 5px 0; background: linear-gradient(90deg, var(--perf-gain), color-mix(in srgb, var(--perf-gain) 70%, #fff)); }
-.ov .perf-bar-loss { right: 0; z-index: 1; border-radius: 0 5px 5px 0; background: linear-gradient(90deg, color-mix(in srgb, var(--perf-loss) 74%, #991b1b), var(--perf-loss)); }
+.ov .perf-bar-gain { border-radius: 0 5px 5px 0; background: linear-gradient(90deg, var(--perf-gain), color-mix(in srgb, var(--perf-gain) 70%, var(--text-primary))); }
+.ov .perf-bar-loss { right: 0; z-index: 1; border-radius: 0 5px 5px 0; background: linear-gradient(90deg, color-mix(in srgb, var(--perf-loss) 74%, var(--danger-600)), var(--perf-loss)); }
 .ov .perf-legend { display: flex; gap: 16px; margin-top: 9px; }
 .ov .pl-item { display: flex; align-items: center; gap: 5px; }
 .ov .pl-dot { width: 8px; height: 8px; border-radius: 50%; }
