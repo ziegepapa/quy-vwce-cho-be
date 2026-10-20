@@ -215,14 +215,14 @@
   text-shadow: 0 0 12px color-mix(in srgb, var(--vi, #8b5cf6) 60%, transparent);
 }
 .ov.v10-pixel .v10-hr-pct.empty {
-  color: rgba(240, 238, 255, 0.35);
+  color: var(--text-tertiary);
   font-weight: 600;
 }
 .ov.v10-pixel .v10-hr-pct-unit {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: rgba(240, 238, 255, 0.55);
+  color: var(--text-secondary);
   margin-top: 1px;
 }
 
