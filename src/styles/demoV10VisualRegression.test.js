@@ -8,6 +8,8 @@ const transactionsCss = readFileSync(new URL("./transactions-v2.css", import.met
 const shellCss = readFileSync(new URL("./visual-abc-shell.css", import.meta.url), "utf8");
 const demoPrimitivesCss = readFileSync(new URL("./demo-v10-primitives.css", import.meta.url), "utf8");
 const visualScreensCss = readFileSync(new URL("./visual-abc-screens.css", import.meta.url), "utf8");
+const overviewV10Css = readFileSync(new URL("./overview-v10.css", import.meta.url), "utf8");
+const demoOverviewCss = readFileSync(new URL("./demo-v10-overview.css", import.meta.url), "utf8");
 const demoSettingsCss = readFileSync(new URL("./demo-v10-settings.css", import.meta.url), "utf8");
 
 describe("demo v10 visual regression contracts", () => {
@@ -46,6 +48,15 @@ describe("demo v10 visual regression contracts", () => {
     expect(demoSettingsCss).toContain("linear-gradient(138deg, var(--hero-from), var(--hero-mid) 58%, var(--hero-to))");
     expect(demoSettingsCss).not.toContain("#071d25");
     expect(demoSettingsCss).not.toContain("#0e3134");
+    expect(overviewV10Css).toContain("var(--text-primary) 0%");
+    expect(overviewV10Css).toContain("color: var(--text-tertiary)");
+    expect(overviewV10Css).not.toContain("rgba(240, 238, 255, 0.18)");
+    expect(demoOverviewCss).toContain("color: var(--text-primary)");
+    expect(demoOverviewCss).toContain("color: var(--success-600)");
+    expect(demoOverviewCss).toContain("color: var(--warning-600)");
+    expect(demoOverviewCss).not.toContain("#7c2d12");
+    expect(demoOverviewCss).not.toContain("color: #047857");
+    expect(demoOverviewCss).not.toContain("color: #b45309");
   });
 
   it("keeps Transactions on canonical theme tokens with its own ledger-first layout", () => {
