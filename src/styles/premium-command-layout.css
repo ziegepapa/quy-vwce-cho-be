@@ -41,9 +41,7 @@
     border: 1px solid var(--command-card-border);
     border-radius: var(--command-card-radius);
     background: var(--command-card-bg);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.038) inset,
-      0 16px 38px -30px rgba(0, 3, 12, 0.96);
+    box-shadow: var(--shadow-raised);
   }
 
   :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen :is(
@@ -334,7 +332,7 @@
   :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-transactions .tx-body .muted {
     display: -webkit-box;
     overflow: hidden;
-    color: #7e96aa;
+    color: var(--text-tertiary);
     font-size: 11px;
     line-height: 1.35;
     -webkit-box-orient: vertical;
@@ -352,12 +350,12 @@
     overflow: hidden;
     margin: 0;
     padding: 18px;
-    border-color: rgba(160, 228, 241, 0.16);
+    border-color: color-mix(in srgb, var(--primary-600) 24%, var(--border-subtle));
     border-radius: 24px;
     background:
-      radial-gradient(75% 105% at 100% 0%, rgba(91, 224, 236, 0.21), transparent 62%),
-      linear-gradient(145deg, #08121f, #10283b 58%, #172c4b);
-    box-shadow: var(--shadow-overlay);
+      radial-gradient(75% 105% at 100% 0%, var(--hero-glow), transparent 62%),
+      linear-gradient(145deg, var(--hero-from), var(--hero-mid) 58%, var(--hero-to));
+    box-shadow: var(--shadow-raised);
   }
 
   :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero .progress-ring {
@@ -366,7 +364,7 @@
   }
 
   :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .goals-hero .hero-money {
-    color: #f5fbfd !important;
+    color: var(--text-primary) !important;
     font-size: clamp(30px, 8vw, 38px) !important;
     font-weight: 760;
     line-height: 1.05;
@@ -377,7 +375,7 @@
     padding: 12px 14px;
     border: 1px solid var(--command-card-border);
     border-radius: 16px;
-    background: rgba(71, 186, 206, 0.07);
+    background: var(--primary-050);
   }
 
   :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-goals .timeline {
@@ -421,7 +419,7 @@
     padding: 4px !important;
     border: 1px solid var(--command-card-border);
     border-radius: 16px !important;
-    background: rgba(7, 13, 23, 0.80) !important;
+    background: var(--surface-sunken) !important;
     box-shadow: var(--shadow-raised);
   }
 
@@ -435,9 +433,9 @@
   }
 
   :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tab"][aria-selected="true"] {
-    border: 1px solid rgba(176, 235, 245, 0.16);
-    background: linear-gradient(135deg, rgba(88, 213, 231, 0.18), rgba(84, 137, 230, 0.12));
-    color: #c9f7fb;
+    border: 1px solid color-mix(in srgb, var(--primary-600) 28%, var(--border-subtle));
+    background: color-mix(in srgb, var(--primary-600) 16%, var(--surface-raised));
+    color: var(--primary-500);
   }
 
   :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tablist"] + div {
@@ -447,11 +445,9 @@
     border: 1px solid rgba(160, 228, 241, 0.16);
     border-radius: 22px;
     background:
-      radial-gradient(75% 115% at 100% 0%, rgba(91, 224, 236, 0.20), transparent 62%),
-      linear-gradient(145deg, rgba(9, 20, 34, 0.97), rgba(17, 40, 58, 0.97) 58%, rgba(24, 45, 75, 0.97)) !important;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.06) inset,
-      0 20px 48px -34px rgba(52, 203, 224, 0.58) !important;
+      radial-gradient(75% 115% at 100% 0%, var(--hero-glow), transparent 62%),
+      linear-gradient(145deg, var(--hero-from), var(--hero-mid) 58%, var(--hero-to)) !important;
+    box-shadow: var(--shadow-raised) !important;
   }
 
   :root:is([data-theme="premium"], [data-theme="dark"]) .premium-screen-simulation [role="tablist"] + div > div:first-child {
@@ -471,7 +467,7 @@
     display: flex;
     align-items: center;
     min-height: 44px !important;
-    color: #c8d8e4;
+    color: var(--text-secondary);
     font-weight: 680;
   }
 
