@@ -1,22 +1,26 @@
 /* Literal visual primitives from demo-visual.html. Page rebuilds use only these classes. */
 :root,
 .theme-vault {
-  --demo-bg: #06060a;
-  --demo-g: rgba(255, 255, 255, 0.042);
-  --demo-gb: rgba(255, 255, 255, 0.09);
-  --demo-text: #f0eeff;
-  --demo-sub: rgba(240, 238, 255, 0.55);
-  --demo-dim: rgba(240, 238, 255, 0.28);
-  --demo-vi: #8b5cf6;
-  --demo-vi2: #5b21b6;
-  --demo-em: #10b981;
-  --demo-am: #f59e0b;
-  --demo-re: #f87171;
-  --demo-au1: rgba(91, 33, 182, 0.5);
-  --demo-au2: rgba(16, 185, 129, 0.2);
-  --demo-au3: rgba(139, 92, 246, 0.16);
-  --demo-bar-bg: rgba(6, 6, 10, 0.8);
-  --demo-pill-bg: rgba(8, 5, 20, 0.86);
+  /* Compatibility aliases: all pages read the canonical tokens.css palette. */
+  --demo-bg: var(--bg-base);
+  --demo-g: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+  --demo-gb: var(--border-subtle);
+  --demo-text: var(--text-primary);
+  --demo-sub: var(--text-secondary);
+  --demo-dim: var(--text-tertiary);
+  --demo-vi: var(--primary-600);
+  --demo-vi2: var(--primary-500);
+  --demo-em: var(--success-600);
+  --demo-am: var(--warning-600);
+  --demo-re: var(--danger-600);
+  --demo-b: var(--surface-sunken);
+  --demo-card: var(--surface-raised);
+  --demo-ye: var(--warning-600);
+  --demo-au1: color-mix(in srgb, var(--primary-600) 16%, transparent);
+  --demo-au2: color-mix(in srgb, var(--success-600) 10%, transparent);
+  --demo-au3: color-mix(in srgb, var(--primary-600) 8%, transparent);
+  --demo-bar-bg: var(--color-surface-overlay);
+  --demo-pill-bg: var(--color-surface-overlay);
 }
 
 .demo-v10-screen {
@@ -55,7 +59,7 @@
   position: absolute;
   inset: 0 0 auto;
   height: 1px;
-  background: linear-gradient(90deg, transparent 5%, rgba(255, 255, 255, 0.13) 50%, transparent 95%);
+  background: linear-gradient(90deg, transparent 5%, color-mix(in srgb, var(--demo-text) 14%, transparent) 50%, transparent 95%);
 }
 
 .demo-v10-section-title {
@@ -82,7 +86,7 @@
   padding: 4px;
   border: 1px solid var(--demo-gb);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--demo-gb) 30%, transparent);
 }
 
 .demo-v10-tab {
@@ -108,7 +112,7 @@
   gap: 12px;
   min-height: 60px;
   padding: 13px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid color-mix(in srgb, var(--demo-gb) 50%, transparent);
 }
 
 .demo-v10-row:first-child { border-top: 0; }
@@ -129,7 +133,7 @@
   font-size: 16px;
   font-weight: 800;
   text-align: right;
-  background: rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--demo-bg) 72%, var(--demo-g));
   border: 1px solid var(--demo-gb);
   border-radius: 10px;
 }
@@ -141,44 +145,10 @@
 }
 
 /* Theme choices persist through data-theme on <html>. The default block above is Vault. */
-:root[data-theme="dark"] {
-  --demo-bg: #031217;
-  --demo-g: rgba(8, 45, 54, 0.48);
-  --demo-gb: rgba(103, 232, 249, 0.18);
-  --demo-text: #e7fbff;
-  --demo-sub: rgba(205, 246, 255, 0.68);
-  --demo-dim: rgba(185, 232, 242, 0.42);
-  --demo-vi: #22d3ee;
-  --demo-vi2: #0e7490;
-  --demo-em: #2dd4bf;
-  --demo-am: #fbbf24;
-  --demo-re: #fb7185;
-  --demo-au1: rgba(8, 145, 178, 0.44);
-  --demo-au2: rgba(20, 184, 166, 0.25);
-  --demo-au3: rgba(14, 116, 144, 0.2);
-  --demo-bar-bg: rgba(3, 18, 23, 0.84);
-  --demo-pill-bg: rgba(4, 29, 37, 0.9);
-}
+/* Theme palette is inherited from tokens.css. */
 
-:root[data-theme="light"] {
-  --demo-bg: #fff8ef;
-  --demo-g: rgba(255, 255, 255, 0.68);
-  --demo-gb: rgba(116, 50, 15, 0.15);
-  --demo-text: #2d1608;
-  --demo-sub: rgba(74, 34, 12, 0.7);
-  --demo-dim: rgba(86, 43, 18, 0.52);
-  --demo-vi: #e85d04;
-  --demo-vi2: #9a3412;
-  --demo-em: #047857;
-  --demo-am: #b45309;
-  --demo-re: #dc2626;
-  --demo-au1: rgba(251, 146, 60, 0.24);
-  --demo-au2: rgba(253, 186, 116, 0.28);
-  --demo-au3: rgba(234, 88, 12, 0.13);
-  --demo-bar-bg: rgba(255, 248, 239, 0.82);
-  --demo-pill-bg: rgba(255, 250, 244, 0.9);
-}
 
-:root[data-theme="light"] .demo-v10-gl::before {
-  background: linear-gradient(90deg, transparent 5%, rgba(120, 66, 20, 0.16) 50%, transparent 95%);
+
+.demo-v10-gl::before {
+  background: linear-gradient(90deg, transparent 5%, color-mix(in srgb, var(--demo-text) 14%, transparent) 50%, transparent 95%);
 }
