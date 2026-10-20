@@ -2,7 +2,8 @@ import type { Transaction, TxType } from "../lib/types";
 import { resolveInstrumentIsin } from "../lib/instrument";
 import { VWCE_ISIN } from "../lib/types";
 
-export const TRANSACTION_WINDOW_SIZE = 60;
+export const TRANSACTION_INITIAL_WINDOW = 20;
+export const TRANSACTION_WINDOW_SIZE = 25;
 
 export type TransactionActivity = "all" | "trade" | "funding" | "outflow";
 export type TransactionSort = "newest" | "oldest" | "amount_desc";
@@ -135,7 +136,7 @@ export function buildTransactionListWindow(
   const visible = Math.min(Math.max(0, visibleLimit), total);
   const map = new Map<string, Transaction[]>();
   for (const tx of filtered.slice(0, visible)) {
-    const key = monthKey(tx.date);
+    const key = sort === "amount_desc" ? "__amount_desc__" : monthKey(tx.date);
     const rows = map.get(key) ?? [];
     rows.push(tx);
     map.set(key, rows);
