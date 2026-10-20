@@ -3,12 +3,11 @@ import { dirname, resolve } from "node:path";
 import {
   LEDGER_BENCHMARK_SCENARIOS,
   LEDGER_WINDOW_PERFORMANCE_BUDGET_MS,
-  TRANSACTION_INITIAL_WINDOW,
-  TRANSACTION_WINDOW_SIZE,
   buildDeterministicLedger,
   measureLedgerWindow,
   type LedgerBenchmarkScenario,
 } from "../src/pages/ledgerBenchmark";
+import { TRANSACTION_INITIAL_WINDOW, TRANSACTION_WINDOW_SIZE } from "../src/pages/transactionsListWindow";
 
 type Sample = {
   initialDurationMs: number;
