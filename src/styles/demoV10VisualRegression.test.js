@@ -3,8 +3,24 @@ import { describe, expect, it } from "vitest";
 
 const overviewCss = readFileSync(new URL("./demo-v10-overview.css", import.meta.url), "utf8");
 const settingsCss = readFileSync(new URL("./demo-v10-settings.css", import.meta.url), "utf8");
+const overviewBan2Css = readFileSync(new URL("./overview-ban2.css", import.meta.url), "utf8");
 
 describe("demo v10 visual regression contracts", () => {
+  it("keeps the redesigned Overview attached to the active app theme", () => {
+    expect(overviewBan2Css).toContain("background:var(--bg-base)");
+    expect(overviewBan2Css).toContain("color:var(--text-primary)");
+    expect(overviewBan2Css).toContain("background:var(--command-card-bg,var(--surface-raised))");
+    expect(overviewBan2Css).toContain("var(--primary-600)");
+    expect(overviewBan2Css).toContain("var(--success-600)");
+    expect(overviewBan2Css).not.toMatch(/#[0-9a-f]{3,8}\\b/i);
+  });
+
+  it("aligns Overview desktop card rows and gives mobile a deliberate single-column order", () => {
+    expect(overviewBan2Css).toContain('"hero mile" "mid journey" "table updates" "attention foot"');
+    expect(overviewBan2Css).toContain('@media (max-width:1023px)');
+    expect(overviewBan2Css).toContain('grid-template-areas:"hero" "mile" "chart" "donut" "table" "updates" "journey" "attention" "foot"');
+    expect(overviewBan2Css).toContain(".ovb2-main,.ovb2-side,.ovb2-mid {display:contents}");
+  });
   it("inherits the demo theme palette and changes every performance visual by data state", () => {
     expect(overviewCss).toContain("--perf-contribution: var(--demo-vi)");
     expect(overviewCss).toContain("--perf-gain: var(--demo-em)");
