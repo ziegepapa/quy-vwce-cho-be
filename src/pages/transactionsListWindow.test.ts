@@ -85,6 +85,8 @@ describe("transactionsListWindow", () => {
 
     expect(visibleIds(byAmount)[0]).toBe("tx-0999");
     expect(byAmount.visible).toBe(60);
+    expect(byAmount.groups).toHaveLength(1);
+    expect(byAmount.groups[0].key).toBe("__amount_desc__");
     expect(localizedSearch.total).toBe(500);
     expect(visibleIds(localizedSearch).every((id) => Number(id.slice(3)) % 2 === 0)).toBe(true);
   });
