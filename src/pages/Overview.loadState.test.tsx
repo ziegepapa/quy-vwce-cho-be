@@ -187,6 +187,24 @@ describe("Overview bản 2", () => {
     expect(document.body.textContent).not.toMatch(/Mục tiêu dài hạn|Đã đạt .*% · vào/);
   });
 
+  it("makes overview action labels navigate to existing pages", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-actions-1", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(110, "2026-08-19")]);
+
+    const { container } = renderOverview();
+
+    const detailsLink = await screen.findByRole("link", { name: "Xem chi tiết →" });
+    const historyLink = await screen.findByRole("link", { name: "Xem lịch sử đầy đủ →" });
+    await waitFor(() => expect(container.querySelector(".ovb2-mile")).toBeTruthy());
+
+    expect(detailsLink.getAttribute("href")).toBe("/transactions");
+    expect(historyLink.getAttribute("href")).toBe("/timeline");
+    const milestoneLink = container.querySelector<HTMLAnchorElement>(".ovb2-mile");
+    expect(milestoneLink?.tagName).toBe("A");
+    expect(milestoneLink?.getAttribute("href")).toBe("/goals");
+  });
+
   it("lists holdings without comparing the two funds' returns", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([

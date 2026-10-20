@@ -169,3 +169,45 @@
 @media (prefers-reduced-motion:reduce) {
   .ovb2 *,.ovb2 *::before,.ovb2 *::after {scroll-behavior:auto!important}
 }
+
+
+/* Visible overview actions are actual links; preserve keyboard and touch feedback. */
+.ovb2 a.ovb2-link {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  width:fit-content;
+  max-width:100%;
+  color:var(--primary-600);
+  text-decoration:none;
+  text-underline-offset:3px;
+  cursor:pointer;
+}
+.ovb2 a.ovb2-link:hover {text-decoration:underline}
+.ovb2 a.ovb2-link:focus-visible,
+.ovb2-mile:focus-visible {
+  outline:2px solid var(--focus-ring);
+  outline-offset:3px;
+}
+.ovb2-mile {
+  color:var(--text-primary);
+  text-decoration:none;
+  cursor:pointer;
+  transition:border-color 150ms ease, transform 150ms ease;
+}
+.ovb2-mile:hover {
+  border-color:color-mix(in srgb,var(--primary-600) 42%,var(--border-subtle));
+}
+.ovb2-mile:active {transform:translateY(1px)}
+.ovb2-milehead {display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ovb2-milehead h3 {min-width:0;margin:0}
+.ovb2-action-arrow {
+  flex:0 0 auto;
+  color:var(--primary-600);
+  font-size:20px;
+  line-height:1;
+}
+@media (prefers-reduced-motion:reduce) {
+  .ovb2-mile {transition:none}
+  .ovb2-mile:active {transform:none}
+}

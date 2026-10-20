@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useLocale } from "../../lib/locale";
 import { formatMoney } from "../../lib/calc";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
@@ -369,7 +370,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
             <section className="ovb2-card ovb2-table-card" aria-label={text.portfolio}>
               <div className="ovb2-cardhead">
                 <h3>📄 {text.portfolio}</h3>
-                <span className="ovb2-link">{text.viewDetails}</span>
+                <Link to="/transactions" className="ovb2-link">{text.viewDetails}</Link>
               </div>
               <table className="ovb2-tbl">
                 <thead>
@@ -444,13 +445,16 @@ export default function OverviewFrame(props: OverviewFrameProps) {
         <div className="ovb2-side">
           {/* Next milestone — value-based, no fixed target */}
           {milestone ? (
-            <section className="ovb2-card ovb2-mile" aria-label={text.nextMilestone}>
-              <h3>🎯 {text.nextMilestone}</h3>
+            <Link to="/goals" className="ovb2-card ovb2-mile" aria-label={text.nextMilestone}>
+              <div className="ovb2-milehead">
+                <h3>🎯 {text.nextMilestone}</h3>
+                <span className="ovb2-action-arrow" aria-hidden="true">↗</span>
+              </div>
               <p className="ovb2-sub">{text.noFixedTarget}</p>
               <div className="ovb2-bar"><i style={{ width: `${Math.min(100, Math.max(0, milestone.progressPct))}%` }} /></div>
               <div className="ovb2-row"><span>{text.milestone} <b>{milestone.targetLabel}</b></span><span>{text.reached} <b>{milestone.progressPct.toFixed(1).replace(".", ",")}%</b></span></div>
               <div className="ovb2-row muted"><span>{text.remaining}</span><span><b>{milestone.remainingLabel}</b></span></div>
-            </section>
+            </Link>
           ) : null}
 
           {/* Motivational */}
@@ -469,7 +473,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                   <span><b>{u.dateLabel}</b> — {u.title}<br /><span className="ovb2-muted">{u.detail}</span></span>
                 </div>
               ))}
-              <span className="ovb2-link">{text.viewFullHistory}</span>
+              <Link to="/timeline" className="ovb2-link">{text.viewFullHistory}</Link>
             </section>
           ) : null}
         </div>
