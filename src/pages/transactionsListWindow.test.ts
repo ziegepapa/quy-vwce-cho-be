@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Transaction } from "../lib/types";
-import { buildTransactionListWindow, TRANSACTION_WINDOW_SIZE } from "./transactionsListWindow";
+import { buildTransactionListWindow, TRANSACTION_INITIAL_WINDOW, TRANSACTION_WINDOW_SIZE } from "./transactionsListWindow";
 
 function ledger(count: number): Transaction[] {
   return Array.from({ length: count }, (_, index) => {
@@ -24,28 +24,28 @@ function visibleIds(window: ReturnType<typeof buildTransactionListWindow>) {
 }
 
 describe("transactionsListWindow", () => {
-  it("bounds the first mobile render to 60 rows for a 1,000-row ledger", () => {
-    const result = buildTransactionListWindow(ledger(1000), { query: "", year: "all", type: "all" }, TRANSACTION_WINDOW_SIZE);
+  it("shows 20 rows initially for a 1,000-row ledger", () => {
+    const result = buildTransactionListWindow(ledger(1000), { query: "", year: "all", type: "all" }, TRANSACTION_INITIAL_WINDOW);
 
     expect(result.total).toBe(1000);
-    expect(result.visible).toBe(60);
-    expect(result.remaining).toBe(940);
+    expect(result.visible).toBe(20);
+    expect(result.remaining).toBe(980);
     expect(result.hasMore).toBe(true);
-    expect(visibleIds(result)).toHaveLength(60);
+    expect(visibleIds(result)).toHaveLength(20);
     expect(result.groups.every((group) => group.transactions.length > 0)).toBe(true);
   });
 
-  it("reveals the next chronological window without duplicating or losing rows", () => {
+  it("reveals 25 more chronological rows without duplicating or losing rows", () => {
     const transactions = ledger(1000);
-    const first = buildTransactionListWindow(transactions, { query: "", year: "all", type: "all" }, 60);
-    const expanded = buildTransactionListWindow(transactions, { query: "", year: "all", type: "all" }, 120);
+    const first = buildTransactionListWindow(transactions, { query: "", year: "all", type: "all" }, TRANSACTION_INITIAL_WINDOW);
+    const expanded = buildTransactionListWindow(transactions, { query: "", year: "all", type: "all" }, TRANSACTION_INITIAL_WINDOW + TRANSACTION_WINDOW_SIZE);
     const firstIds = visibleIds(first);
     const expandedIds = visibleIds(expanded);
 
-    expect(expandedIds).toHaveLength(120);
-    expect(new Set(expandedIds)).toHaveLength(120);
-    expect(expandedIds.slice(0, 60)).toEqual(firstIds);
-    expect(expandedIds[60]).not.toBe(firstIds[59]);
+    expect(expandedIds).toHaveLength(45);
+    expect(new Set(expandedIds)).toHaveLength(45);
+    expect(expandedIds.slice(0, 20)).toEqual(firstIds);
+    expect(expandedIds[20]).not.toBe(firstIds[19]);
   });
 
   it("filters before windowing and keeps the result deterministic", () => {
