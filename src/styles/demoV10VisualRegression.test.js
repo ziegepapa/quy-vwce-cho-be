@@ -23,12 +23,15 @@ describe("demo v10 visual regression contracts", () => {
     expect(overviewBan2Css).toContain(".ovb2-main,.ovb2-side,.ovb2-mid {display:contents}");
   });
   it("keeps Transactions aligned with the shared shell theme and uses a restrained touch state", () => {
-    expect(transactionsCss).toContain("--bg-base: var(--bg)");
-    expect(transactionsCss).toContain("--primary-600: var(--vi)");
-    expect(transactionsCss).toContain("--color-primary: var(--vi)");
-    expect(transactionsCss).toContain(".tx-wrap .txv2-row:hover { background: color-mix(in srgb, var(--vi) 8%, var(--g)); }");
-    expect(transactionsCss).toContain(".tx-wrap .txv2-row:active { background: color-mix(in srgb, var(--vi) 14%, var(--g)); }");
+    expect(transactionsCss).toContain("background: var(--bg-base)");
+    expect(transactionsCss).toContain("color: var(--text-primary)");
+    expect(transactionsCss).toContain("background: var(--primary-050)");
+    expect(transactionsCss).toContain(".tx-wrap .txv2-row:active");
+    expect(transactionsCss).toContain("background: var(--surface-sunken)");
     expect(transactionsCss).toContain("padding-bottom: max(176px, calc(136px + env(safe-area-inset-bottom, 0px)))");
+    expect(transactionsCss).toContain("Small ledger summary, not a large Overview asset/PnL hero");
+    expect(transactionsCss).not.toContain("var(--vi)");
+    expect(transactionsCss).not.toContain("var(--g)");
   });
 
   it("inherits the demo theme palette and changes every performance visual by data state", () => {
