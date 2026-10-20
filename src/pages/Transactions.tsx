@@ -355,44 +355,6 @@ export default function Transactions() {
     }
   }, [loading, loadError, years]);
 
-  const contributionTypes = useMemo(
-    () => (analysis.contributionMode === "cash_first" ? ["cash_in"] : ["buy_vwce", "buy_security"]),
-    [analysis.contributionMode],
-  );
-
-  const monthlyBars = useMemo(() => {
-    const now = new Date();
-    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const sixMonthFloor = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-    const historyFloor = new Date(now.getFullYear(), now.getMonth() - 23, 1);
-    const sums = new Map<string, number>();
-
-    for (const tx of txs) {
-      if (tx.deletedAt || !contributionTypes.includes(tx.type)) continue;
-      if (typeof tx.amount !== "number" || !Number.isFinite(tx.amount) || tx.amount <= 0) continue;
-      const key = tx.date.slice(0, 7);
-      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) continue;
-      sums.set(key, (sums.get(key) ?? 0) + tx.amount);
-    }
-
-    const earliestKey = [...sums.keys()].sort()[0];
-    const earliestMonth = earliestKey
-      ? new Date(Number(earliestKey.slice(0, 4)), Number(earliestKey.slice(5, 7)) - 1, 1)
-      : sixMonthFloor;
-    // Follow actual contribution history when recent; keep six months of context,
-    // and cap older records at 24 months so the chart stays readable on mobile.
-    const start = new Date(Math.max(historyFloor.getTime(), Math.min(sixMonthFloor.getTime(), earliestMonth.getTime())));
-    const months: Array<{ key: string; year: number; month: number; value: number }> = [];
-    for (let d = start; d <= currentMonth; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      months.push({ key, year: d.getFullYear(), month: d.getMonth() + 1, value: sums.get(key) ?? 0 });
-    }
-
-    let max = 0;
-    for (const m of months) if (m.value > max) max = m.value;
-    return { months, max: max > 0 ? max : 1 };
-  }, [txs, contributionTypes]);
-
   const quoteByIsin = useMemo(() => {
     const map = new Map<string, Quote>();
     for (const q of quotes) {
@@ -767,139 +729,187 @@ export default function Transactions() {
     );
   }
 
+  const securityTransactionCount = txs.filter((tx) => isSecurityTx(tx.type)).length;
+  const incomingCount = txs.filter((tx) => tx.type === "cash_in").length;
+  const outgoingCount = txs.filter((tx) => tx.type === "cash_out" || tx.type === "fee" || tx.type === "tax").length;
+
   return (
-    <main className="txv2-screen" aria-label={text.title}>
+    <main className="txv2-screen tx-ledger-redesign" aria-label={text.title}>
       <div className="tx-wrap">
-      <div className="txv2-head">
-        <h1 className="txv2-title">{text.title}</h1>
-        <div className="txv2-head-actions">
-          {!readOnly ? (
-            <details className="tx-import-tools" onToggle={(event) => setPdfToolsOpen(event.currentTarget.open)}>
-              <summary>{pdfImportLabel}</summary>
-              {pdfToolsOpen ? <Suspense fallback={<p className="tx-tool-loading" role="status">{text.loading}</p>}><TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /></Suspense> : null}
-            </details>
-          ) : null}
-          <button type="button" className="txv2-add" onClick={() => openCreate()} aria-label={text.addTransaction}>+</button>
-        </div>
-      </div>
-
-      <section className="txv2-hero" aria-label={text.contributed}>
-        <div className="txv2-hero-amt">{formatDisplayMoney(analysis.contributed, locale)}</div>
-        <div className="txv2-hero-sub">{text.heroContributed} · {text.heroTxCount.replace("{count}", String(txs.length))}</div>
-        <div className="txv2-bars" aria-hidden="true">
-          {monthlyBars.months.map((m, i) => (
-            <span
-              key={m.key}
-              style={{ height: `${Math.max(3, Math.round((m.value / monthlyBars.max) * 100))}%` }}
-              className={(m.value > 0 ? "on " : "") + (i === monthlyBars.months.length - 1 ? "cur" : "")}
-            />
-          ))}
-        </div>
-        <div className={"txv2-bars-lbl" + (monthlyBars.months.length <= 8 ? " months" : "")} aria-hidden="true">
-          {monthlyBars.months.length <= 8
-            ? monthlyBars.months.map((m) => (
-                <span key={m.key}>
-                  {new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", { month: "short" }).format(new Date(m.year, m.month - 1, 1))}
-                </span>
-              ))
-            : [...new Set(monthlyBars.months.map((m) => m.year))].map((y) => (
-                <span key={y}>{y}</span>
-              ))}
-        </div>
-      </section>
-
-      <div className="txv2-tools">
-        <label className="tx-search-field">
-          <span className="sr-only">{text.searchLedger}</span>
-          <input value={q} onChange={(event) => setQ(event.target.value)} placeholder={text.searchPlaceholder} aria-label={text.searchLedger} />
-        </label>
-        <button type="button" className="txv2-filterbtn" aria-expanded={filterSheetOpen} aria-controls="tx-filter-sheet" onClick={openFilterSheet}>
-          <span aria-hidden="true">⧩</span> {text.tools}{activeFilterCount ? ` · ${activeFilterCount}` : ""}
-          {qualityIssues.length > 0 ? <i className="txv2-qdot" title={text.qualityInbox} /> : null}
-        </button>
-      </div>
-
-      {activeFilterCount - Number(yearFilter !== "all") > 0 ? (
-        <div className="tx-active-filter-chips" aria-label={text.activeFilterChips}>
-          {q.trim() ? <button type="button" onClick={() => setQ("")}>{q.trim()} ×</button> : null}
-          {timeLens !== "all" ? <button type="button" onClick={() => setTimeLens("all")}>{timeLens === "this_month" ? text.thisMonth : timeLens === "last_90_days" ? text.last90Days : timeLens === "this_year" ? text.thisYear : text.lastYear} ×</button> : null}
-          {typeFilter !== "all" ? <button type="button" onClick={() => setTypeFilter("all")}>{types.find((type) => type.value === typeFilter)?.label ?? typeFilter} ×</button> : null}
-          {activityFilter !== "all" ? <button type="button" onClick={() => setActivityFilter("all")}>{activityFilter === "trade" ? text.tradeActivity : activityFilter === "funding" ? text.fundingActivity : text.outflowActivity} ×</button> : null}
-          {instrumentFilter !== "all" ? <button type="button" onClick={() => setInstrumentFilter("all")}>{instrumentFilter === "vwce" ? text.instrumentVwce : text.instrumentOther} ×</button> : null}
-          {qualityFilter !== "all" ? <button type="button" onClick={() => setQualityFilter("all")}>{qualityFilter === "normal" ? text.statusNormal : text.statusReview} ×</button> : null}
-          {sort !== "newest" ? <button type="button" onClick={() => setSort("newest")}>{sort === "oldest" ? text.oldest : text.amountDesc} ×</button> : null}
-        </div>
-      ) : null}
-
-      <div className="txv2-years" role="tablist" aria-label={text.yearPills}>
-        {years.map((year) => (
-          <button
-            key={year}
-            type="button"
-            role="tab"
-            aria-selected={yearFilter === year}
-            className={"txv2-ypill" + (yearFilter === year ? " on" : "")}
-            onClick={() => selectYear(year)}
-          >
-            {year}
-          </button>
-        ))}
-      </div>
-      <p className="txv2-ysum" role="status" aria-live="polite">
-        {yearFilter !== "all"
-          ? text.yearSummary.replace("{count}", String(listWindow.total)).replace("{year}", yearFilter)
-          : text.allYearsSummary.replace("{count}", String(listWindow.total))}
-      </p>
-
-      {listWindow.total === 0 ? (
-        <section className="txv2-empty">
-          <p>{txs.length === 0 ? text.noTransactions : text.noMatches}</p>
-          {txs.length === 0 && !readOnly ? (
-            <button type="button" className="txv2-add-first" onClick={() => openCreate()}>
-              + {text.quickBuy}
+        <header className="txv2-head tx-ledger-head">
+          <div className="tx-ledger-heading">
+            <span className="tx-ledger-kicker">{locale === "de" ? "DEIN INVESTMENT-LOGBUCH" : "SỔ NHẬT KÝ ĐẦU TƯ"}</span>
+            <h1 className="txv2-title">{text.title}</h1>
+            <p>{locale === "de" ? "Käufe, Verkäufe und Geldflüsse — chronologisch an einem Ort." : "Mỗi lần mua, bán và dòng tiền — được ghi lại theo thời gian."}</p>
+          </div>
+          <div className="txv2-head-actions tx-ledger-actions">
+            {!readOnly ? (
+              <details className="tx-import-tools" onToggle={(event) => setPdfToolsOpen(event.currentTarget.open)}>
+                <summary>{pdfImportLabel}</summary>
+                {pdfToolsOpen ? <Suspense fallback={<p className="tx-tool-loading" role="status">{text.loading}</p>}><TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /></Suspense> : null}
+              </details>
+            ) : null}
+            <button type="button" className="txv2-add tx-ledger-add" onClick={() => openCreate()} aria-label={text.addTransaction}>
+              <span aria-hidden="true">＋</span><span>{text.add}</span>
             </button>
-          ) : null}
+          </div>
+        </header>
+
+        <section className="tx-ledger-pulse" aria-label={text.journal}>
+          <div className="tx-ledger-pulse-top">
+            <span>{locale === "de" ? "AKTIVITÄT" : "HOẠT ĐỘNG"}</span>
+            <span className="tx-ledger-record-count"><i />{txs.length} {locale === "de" ? "Einträge" : "bản ghi"}</span>
+          </div>
+          <div className="tx-ledger-pulse-grid">
+            <div className="tx-ledger-stat tx-ledger-stat-primary">
+              <span>{locale === "de" ? "Buchungen" : "Giao dịch"}</span>
+              <strong>{txs.length}</strong>
+              <small>{locale === "de" ? "im gesamten Verlauf" : "trong toàn bộ lịch sử"}</small>
+            </div>
+            <div className="tx-ledger-stat">
+              <span>{locale === "de" ? "Trades" : "Lệnh mua/bán"}</span>
+              <strong>{securityTransactionCount}</strong>
+              <small>{locale === "de" ? "Käufe & Verkäufe" : "mua và bán"}</small>
+            </div>
+            <div className="tx-ledger-stat">
+              <span>{locale === "de" ? "Geldbewegung" : "Dòng tiền"}</span>
+              <strong>{incomingCount + outgoingCount}</strong>
+              <small>{locale === "de" ? "Ein- und Ausgänge" : "tiền vào và chi ra"}</small>
+            </div>
+          </div>
         </section>
-      ) : (
-        <>
-          <ul className="txv2-list">
-            {flatVisible.map((tx) => {
-              const meta = types.find((t) => t.value === tx.type);
-              const sign = meta?.sign ?? "~";
-              return (
-                <li key={tx.id}>
-                  <button
-                    type="button"
-                    className="txv2-row"
-                    onClick={() => setDetailId(tx.id)}
-                    aria-label={`${meta?.label ?? tx.type}, ${formatDisplayDate(tx.date, locale)}, ${formatDisplayMoney(tx.amount, locale)}`}
-                  >
-                    <span className={`txv2-ico ${iconClass(tx.type)}`} aria-hidden="true">
-                      {iconGlyph(tx.type)}
-                    </span>
-                    <span className="txv2-main">
-                      <span className="txv2-name">{meta?.label ?? tx.type}</span>
-                      <span className="txv2-date">{formatDisplayDate(tx.date, locale)}</span>
-                    </span>
-                    <span className={"txv2-amt" + (sign === "+" ? " pos" : sign === "-" ? " neg" : "")}>
-                      {sign === "-" ? "−" : sign === "+" ? "+" : ""}{formatDisplayMoney(tx.amount, locale)}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          {listWindow.hasMore ? (
-            <button
-              type="button"
-              className="txv2-more"
-              onClick={() => setVisibleLimit((limit) => limit + TRANSACTION_WINDOW_SIZE)}
-            >
-              {text.loadMore.replace("{count}", String(Math.min(TRANSACTION_WINDOW_SIZE, listWindow.remaining)))}
+
+        <section className="tx-ledger-workspace" aria-label={text.journal}>
+          <div className="tx-ledger-workspace-head">
+            <div>
+              <span className="tx-ledger-section-kicker">{locale === "de" ? "ARCHIV" : "TRA CỨU"}</span>
+              <h2>{text.journal}</h2>
+            </div>
+            <span className="tx-ledger-total">{listWindow.total} {locale === "de" ? "Treffer" : "kết quả"}</span>
+          </div>
+
+          <div className="txv2-tools tx-ledger-tools">
+            <label className="tx-search-field">
+              <span className="sr-only">{text.searchLedger}</span>
+              <span className="tx-ledger-search-icon" aria-hidden="true">⌕</span>
+              <input value={q} onChange={(event) => setQ(event.target.value)} placeholder={text.searchPlaceholder} aria-label={text.searchLedger} />
+            </label>
+            <button type="button" className="txv2-filterbtn" aria-expanded={filterSheetOpen} aria-controls="tx-filter-sheet" onClick={openFilterSheet}>
+              <span aria-hidden="true">⧩</span> {text.tools}{activeFilterCount ? ` · ${activeFilterCount}` : ""}
+              {qualityIssues.length > 0 ? <i className="txv2-qdot" title={text.qualityInbox} /> : null}
             </button>
+          </div>
+
+          <div className="tx-ledger-activity-tabs" role="group" aria-label={text.activity}>
+            {(["all", "trade", "funding", "outflow"] as TransactionActivity[]).map((activity) => (
+              <button
+                key={activity}
+                type="button"
+                className={activityFilter === activity ? "active" : ""}
+                aria-pressed={activityFilter === activity}
+                onClick={() => setActivityFilter(activity)}
+              >
+                <span className={"tx-ledger-tab-mark " + activity} aria-hidden="true" />
+                {activity === "all" ? text.all : activity === "trade" ? text.tradeActivity : activity === "funding" ? text.fundingActivity : text.outflowActivity}
+              </button>
+            ))}
+          </div>
+
+          {activeFilterCount - Number(yearFilter !== "all") > 0 ? (
+            <div className="tx-active-filter-chips" aria-label={text.activeFilterChips}>
+              {q.trim() ? <button type="button" onClick={() => setQ("")}>{q.trim()} ×</button> : null}
+              {timeLens !== "all" ? <button type="button" onClick={() => setTimeLens("all")}>{timeLens === "this_month" ? text.thisMonth : timeLens === "last_90_days" ? text.last90Days : timeLens === "this_year" ? text.thisYear : text.lastYear} ×</button> : null}
+              {typeFilter !== "all" ? <button type="button" onClick={() => setTypeFilter("all")}>{types.find((type) => type.value === typeFilter)?.label ?? typeFilter} ×</button> : null}
+              {activityFilter !== "all" ? <button type="button" onClick={() => setActivityFilter("all")}>{activityFilter === "trade" ? text.tradeActivity : activityFilter === "funding" ? text.fundingActivity : text.outflowActivity} ×</button> : null}
+              {instrumentFilter !== "all" ? <button type="button" onClick={() => setInstrumentFilter("all")}>{instrumentFilter === "vwce" ? text.instrumentVwce : text.instrumentOther} ×</button> : null}
+              {qualityFilter !== "all" ? <button type="button" onClick={() => setQualityFilter("all")}>{qualityFilter === "normal" ? text.statusNormal : text.statusReview} ×</button> : null}
+              {sort !== "newest" ? <button type="button" onClick={() => setSort("newest")}>{sort === "oldest" ? text.oldest : text.amountDesc} ×</button> : null}
+            </div>
           ) : null}
-        </>
-      )}
+
+          <div className="tx-ledger-years-head">
+            <h3>{locale === "de" ? "Nach Jahr" : "Duyệt theo năm"}</h3>
+            <span>{yearFilter === "all" ? text.all : yearFilter}</span>
+          </div>
+          <div className="txv2-years" role="tablist" aria-label={text.yearPills}>
+            {years.map((year) => (
+              <button
+                key={year}
+                type="button"
+                role="tab"
+                aria-selected={yearFilter === year}
+                className={"txv2-ypill" + (yearFilter === year ? " on" : "")}
+                onClick={() => selectYear(year)}
+              >
+                {year}
+              </button>
+            ))}
+          </div>
+          <p className="txv2-ysum" role="status" aria-live="polite">
+            {yearFilter !== "all"
+              ? text.yearSummary.replace("{count}", String(listWindow.total)).replace("{year}", yearFilter)
+              : text.allYearsSummary.replace("{count}", String(listWindow.total))}
+          </p>
+
+          {listWindow.total === 0 ? (
+            <section className="txv2-empty">
+              <span className="tx-ledger-empty-mark" aria-hidden="true">↗</span>
+              <p>{txs.length === 0 ? text.noTransactions : text.noMatches}</p>
+              {txs.length === 0 && !readOnly ? (
+                <button type="button" className="txv2-add-first" onClick={() => openCreate()}>
+                  + {text.quickBuy}
+                </button>
+              ) : null}
+            </section>
+          ) : (
+            <>
+              <ul className="txv2-list tx-ledger-list">
+                {flatVisible.map((tx) => {
+                  const meta = types.find((t) => t.value === tx.type);
+                  const sign = meta?.sign ?? "~";
+                  const dateParts = /^\d{4}-\d{2}-\d{2}$/.test(tx.date) ? tx.date.split("-") : null;
+                  const monthShort = dateParts
+                    ? locale === "de"
+                      ? new Intl.DateTimeFormat("de-DE", { month: "short" }).format(new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]), 12))
+                      : `T${Number(dateParts[1])}`
+                    : "—";
+                  return (
+                    <li key={tx.id}>
+                      <button
+                        type="button"
+                        className="txv2-row tx-ledger-row"
+                        onClick={() => setDetailId(tx.id)}
+                        aria-label={`${meta?.label ?? tx.type}, ${formatDisplayDate(tx.date, locale)}, ${formatDisplayMoney(tx.amount, locale)}`}
+                      >
+                        <span className="tx-ledger-date" aria-hidden="true">
+                          <strong>{dateParts ? Number(dateParts[2]) : "—"}</strong>
+                          <small>{monthShort}</small>
+                        </span>
+                        <span className={`txv2-ico ${iconClass(tx.type)}`} aria-hidden="true">{iconGlyph(tx.type)}</span>
+                        <span className="txv2-main">
+                          <span className="txv2-name">{meta?.label ?? tx.type}</span>
+                          <span className="txv2-date">{formatDisplayDate(tx.date, locale)}</span>
+                        </span>
+                        <span className={"txv2-amt" + (sign === "+" ? " pos" : sign === "-" ? " neg" : "")}>
+                          {sign === "-" ? "−" : sign === "+" ? "+" : ""}{formatDisplayMoney(tx.amount, locale)}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              {listWindow.hasMore ? (
+                <button
+                  type="button"
+                  className="txv2-more"
+                  onClick={() => setVisibleLimit((limit) => limit + TRANSACTION_WINDOW_SIZE)}
+                >
+                  {text.loadMore.replace("{count}", String(Math.min(TRANSACTION_WINDOW_SIZE, listWindow.remaining)))}
+                </button>
+              ) : null}
+            </>
+          )}
+        </section>
       {filterSheetOpen ? (
         <div className="tx-filter-backdrop" role="presentation" onMouseDown={closeFilterSheet}>
           <section

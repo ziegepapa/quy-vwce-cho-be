@@ -2,7 +2,7 @@
 import { createElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
 import { TRANSACTION_SAVED_VIEWS_KEY } from "./transactionsSavedViews";
 
@@ -142,7 +142,7 @@ describe("Transactions load and empty states", () => {
     expect(document.querySelector(".tx-active-filter-chips")).toBeNull();
   });
 
-  it("shows a compact six-month contribution chart for recent-only transaction history", async () => {
+  it("uses a ledger-first activity layout instead of duplicating the Overview growth chart", async () => {
     const now = new Date();
     const recentDate = (monthsAgo: number) => {
       const date = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 15);
@@ -151,15 +151,18 @@ describe("Transactions load and empty states", () => {
     dbMocks.listTransactions.mockResolvedValue([0, 1, 2, 3].map((monthsAgo) => {
       const date = recentDate(monthsAgo);
       return {
-        id: `tx-chart-${monthsAgo}`, date, type: "buy_vwce", amount: 120,
+        id: `tx-ledger-${monthsAgo}`, date, type: "buy_vwce", amount: 120,
         notes: "", createdAt: `${date}T00:00:00Z`, updatedAt: `${date}T00:00:00Z`, source: "manual",
       };
     }));
     render(createElement(Transactions));
 
     await screen.findByText(/4 giao dịch trong năm/);
-    expect(document.querySelectorAll(".txv2-bars span")).toHaveLength(6);
-    expect(document.querySelectorAll(".txv2-bars-lbl.months span")).toHaveLength(6);
+    expect(screen.getByText("SỔ NHẬT KÝ ĐẦU TƯ")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Dòng tiền" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Nhật ký giao dịch" })).toBeTruthy();
+    expect(document.querySelectorAll(".txv2-bars span")).toHaveLength(0);
+    expect(document.querySelectorAll(".tx-ledger-date")).toHaveLength(4);
   });
 
   it("renders a bounded 60-row window and progressively expands a 1,000-row ledger", async () => {
@@ -192,7 +195,7 @@ describe("Transactions load and empty states", () => {
 
     await screen.findByText("2 giao dịch trong năm 2026");
     fireEvent.click(screen.getByRole("button", { name: /Lọc/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Đầu tư" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Bộ lọc" })).getByRole("button", { name: "Đầu tư" }));
     expect(document.querySelectorAll(".txv2-row")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
 
