@@ -30,6 +30,15 @@ describe("demo v10 visual regression contracts", () => {
     expect(premiumCommandCss).not.toContain("#07111e");
     expect(premiumCommandCss).not.toContain("#10283a");
     expect(premiumCommandCss).not.toContain("#182d4b");
+    expect(premiumCommandCss).toContain("color: var(--text-tertiary)");
+    expect(premiumCommandCss).toContain("color: var(--text-primary) !important");
+    expect(premiumCommandCss).toContain("background: var(--surface-sunken) !important");
+    expect(premiumCommandCss).toContain("linear-gradient(145deg, var(--hero-from), var(--hero-mid) 58%, var(--hero-to))");
+    expect(premiumCommandCss).not.toContain("#08121f");
+    expect(premiumCommandCss).not.toContain("#10283b");
+    expect(premiumCommandCss).not.toContain("#172c4b");
+    expect(premiumCommandCss).not.toContain("rgba(91, 224, 236, 0.21)");
+    expect(premiumCommandCss).not.toContain("rgba(88, 213, 231, 0.18)");
   });
 
   it("aligns Overview desktop card rows and gives mobile a deliberate single-column order", () => {
