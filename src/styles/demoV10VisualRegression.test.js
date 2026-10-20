@@ -59,7 +59,9 @@ describe("demo v10 visual regression contracts", () => {
     expect(overviewV10Css).toContain("var(--text-primary) 0%");
     expect(overviewV10Css).toContain("color: var(--text-tertiary)");
     expect(overviewV10Css).not.toContain("rgba(240, 238, 255, 0.18)");
-    expect(overviewV10Css).not.toContain("color: #fff;");
+    expect(overviewV10Css).toContain(".ov.v10-pixel .v10-hr-pct {\n  font-size: 17px;\n  font-weight: 900;\n  letter-spacing: -0.03em;\n  color: var(--text-primary);");
+    expect(overviewV10Css).toContain(".ov.v10-pixel .v10-hr-pct.empty {\n  color: var(--text-tertiary);");
+    expect(overviewV10Css).toContain(".ov.v10-pixel .v10-hr-pct-unit {\n  font-size: 9px;\n  font-weight: 700;\n  letter-spacing: 0.04em;\n  color: var(--text-secondary);");
     expect(overviewV10Css).not.toContain("rgba(240, 238, 255, 0.35)");
     expect(overviewV10Css).not.toContain("rgba(240, 238, 255, 0.55)");
     expect(demoOverviewCss).toContain("color: var(--text-primary)");
