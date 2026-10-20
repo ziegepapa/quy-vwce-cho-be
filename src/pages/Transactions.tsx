@@ -905,7 +905,12 @@ export default function Transactions() {
                 <button
                   type="button"
                   className="txv2-more"
-                  onClick={() => setVisibleWindow((current) => ({ filterKey: listFilterKey, limit: (current.filterKey === listFilterKey ? current.limit : 5) + TRANSACTION_WINDOW_SIZE }))
+                  onClick={() =>
+                    setVisibleWindow((current) => ({
+                      filterKey: listFilterKey,
+                      limit: (current.filterKey === listFilterKey ? current.limit : 5) + TRANSACTION_WINDOW_SIZE,
+                    }))
+                  }
                 >
                   {text.loadMore.replace("{count}", String(Math.min(TRANSACTION_WINDOW_SIZE, listWindow.remaining)))}
                 </button>
