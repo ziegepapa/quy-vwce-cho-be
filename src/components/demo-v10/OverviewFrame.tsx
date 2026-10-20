@@ -71,8 +71,9 @@ function overviewCopy(locale: "vi" | "de") {
     marketAdded: "Markt dazu",
     gainUnavailable: "Noch nicht bewertbar",
     fundCount: "Fonds",
-    pace: "Sparrate",
-    nextContribution: "Nächster Beitrag",
+    pace: "Eingezahltes Kapital",
+    nextContribution: "Geschätzter Gewinn",
+    growthValue: "Wert des Wachstumsbaums",
     inDays: (days: number) => days === 0 ? "heute" : `in ${days} Tagen`,
     priceUpdated: "Kurse aktualisiert",
     stalePrice: "Alter Kurs",
@@ -124,8 +125,9 @@ function overviewCopy(locale: "vi" | "de") {
     marketAdded: "Thị trường thêm",
     gainUnavailable: "Chưa định giá",
     fundCount: "Số quỹ",
-    pace: "Nhịp góp",
-    nextContribution: "Kỳ góp tới",
+    pace: "Tổng vốn gốc",
+    nextContribution: "Lợi nhuận tạm tính",
+    growthValue: "Giá trị cây tăng trưởng",
     inDays: (days: number) => days === 0 ? "hôm nay" : `trong ${days} ngày`,
     priceUpdated: "Giá cập nhật",
     stalePrice: "Giá cũ",
@@ -333,10 +335,10 @@ export default function OverviewFrame(props: OverviewFrameProps) {
               )}
             </div>
             <div className="ovb2-ministats">
+              <div><span>{text.pace}</span><b>{contributedLabel}</b></div>
+              <div><span>{text.nextContribution}</span><b>{gainLabel ?? text.gainUnavailable}{gainPctLabel ? ` (${gainPctLabel})` : ""}</b></div>
+              <div><span>{text.growthValue}</span><b>{milestone?.targetLabel ?? "—"}</b></div>
               <div><span>{text.fundCount}</span><b>{fundCount}</b></div>
-              <div><span>{text.pace}</span><b>{paceLabel ?? "—"}</b></div>
-              <div><span>{text.nextContribution}</span><b>{daysToNext != null ? text.inDays(daysToNext) : "—"}</b></div>
-              <div><span>{text.priceUpdated}</span><b>{priceDateLabel ?? "—"}{stale ? ` · ${text.stalePrice}` : ""}</b></div>
             </div>
           </section>
 
