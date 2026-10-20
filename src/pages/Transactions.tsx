@@ -779,7 +779,7 @@ export default function Transactions() {
           </div>
         </section>
 
-        <section className="tx-ledger-workspace" aria-label={text.searchLedger}>
+        <section className="tx-ledger-workspace" aria-label={text.journal}>
           <div className="tx-ledger-workspace-head">
             <div>
               <span className="tx-ledger-section-kicker">{locale === "de" ? "ARCHIV" : "TRA CỨU"}</span>
