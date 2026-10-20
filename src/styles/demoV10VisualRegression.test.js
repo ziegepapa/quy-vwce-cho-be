@@ -5,6 +5,10 @@ const overviewCss = readFileSync(new URL("./demo-v10-overview.css", import.meta.
 const settingsCss = readFileSync(new URL("./demo-v10-settings.css", import.meta.url), "utf8");
 const overviewBan2Css = readFileSync(new URL("./overview-ban2.css", import.meta.url), "utf8");
 const transactionsCss = readFileSync(new URL("./transactions-v2.css", import.meta.url), "utf8");
+const shellCss = readFileSync(new URL("./visual-abc-shell.css", import.meta.url), "utf8");
+const demoPrimitivesCss = readFileSync(new URL("./demo-v10-primitives.css", import.meta.url), "utf8");
+const visualScreensCss = readFileSync(new URL("./visual-abc-screens.css", import.meta.url), "utf8");
+const demoSettingsCss = readFileSync(new URL("./demo-v10-settings.css", import.meta.url), "utf8");
 
 describe("demo v10 visual regression contracts", () => {
   it("keeps the redesigned Overview attached to the active app theme", () => {
@@ -22,7 +26,29 @@ describe("demo v10 visual regression contracts", () => {
     expect(overviewBan2Css).toContain('grid-template-areas:"hero" "mile" "chart" "donut" "table" "updates" "journey" "attention" "foot"');
     expect(overviewBan2Css).toContain(".ovb2-main,.ovb2-side,.ovb2-mid {display:contents}");
   });
-  it("keeps Transactions aligned with the shared shell theme and uses a restrained touch state", () => {
+  it("uses tokens.css as the single theme source for shell and legacy screen styles", () => {
+    expect(shellCss).toContain("--bg: var(--bg-base)");
+    expect(shellCss).toContain("--vi: var(--primary-600)");
+    expect(shellCss).toContain("--text: var(--text-primary)");
+    expect(shellCss).not.toContain("--bg: #fff8ef");
+    expect(shellCss).not.toContain("--vi: #e85d04");
+    expect(shellCss).not.toContain(':root[data-theme="light"] {');
+
+    expect(demoPrimitivesCss).toContain("--demo-bg: var(--bg-base)");
+    expect(demoPrimitivesCss).toContain("--demo-vi: var(--primary-600)");
+    expect(demoPrimitivesCss).toContain("--demo-text: var(--text-primary)");
+    expect(demoPrimitivesCss).not.toContain("--demo-bg: #fff8ef");
+    expect(demoPrimitivesCss).not.toContain(':root[data-theme="dark"] {');
+    expect(demoPrimitivesCss).not.toContain(':root[data-theme="light"] {');
+
+    expect(visualScreensCss).toContain("background: var(--surface-sunken) !important");
+    expect(visualScreensCss).toContain("background: color-mix(in srgb, var(--surface-raised) 86%, transparent) !important");
+    expect(demoSettingsCss).toContain("linear-gradient(138deg, var(--hero-from), var(--hero-mid) 58%, var(--hero-to))");
+    expect(demoSettingsCss).not.toContain("#071d25");
+    expect(demoSettingsCss).not.toContain("#0e3134");
+  });
+
+  it("keeps Transactions on canonical theme tokens with its own ledger-first layout", () => {
     expect(transactionsCss).toContain("background: var(--bg-base)");
     expect(transactionsCss).toContain("color: var(--text-primary)");
     expect(transactionsCss).toContain("background: var(--primary-050)");
