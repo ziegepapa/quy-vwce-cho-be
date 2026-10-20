@@ -869,7 +869,9 @@ export default function Transactions() {
                   const sign = meta?.sign ?? "~";
                   const dateParts = /^\d{4}-\d{2}-\d{2}$/.test(tx.date) ? tx.date.split("-") : null;
                   const monthShort = dateParts
-                    ? new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", { month: "short" }).format(new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]), 12))
+                    ? locale === "de"
+                      ? new Intl.DateTimeFormat("de-DE", { month: "short" }).format(new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]), 12))
+                      : `T${Number(dateParts[1])}`
                     : "—";
                   return (
                     <li key={tx.id}>
