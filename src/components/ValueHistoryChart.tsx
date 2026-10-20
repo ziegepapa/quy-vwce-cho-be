@@ -56,7 +56,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="var(--success-600)" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#16a34a" stopOpacity="0" />
+          <stop offset="100%" stopColor="var(--success-600)" stopOpacity="0" />
         </linearGradient>
       </defs>
       {geometry.ticks.map((t) => (
@@ -89,14 +89,14 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
       <text
         x={geometry.x(points.length - 1) + 8}
         y={geometry.y(geometry.last.value) - 6}
-        fontSize="11" fontWeight="700" fill="#16856f"
+        fontSize="11" fontWeight="700" fill="var(--success-600)"
       >
         {geometry.last.value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
       </text>
       <text
         x={geometry.x(points.length - 1) + 8}
         y={geometry.y(geometry.last.contributed) + 14}
-        fontSize="12" fill="#64748b"
+        fontSize="12" fill="var(--text-secondary)"
       >
         {geometry.last.contributed.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
       </text>
@@ -106,7 +106,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
           x={geometry.x(i)}
           y={H - 6}
           textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}
-          fontSize="11" fill="#64748b"
+          fontSize="11" fill="var(--text-secondary)"
         >
           {points[i].label}
         </text>
