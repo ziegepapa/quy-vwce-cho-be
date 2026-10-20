@@ -2,7 +2,7 @@
 import { createElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { LOCALE_KEY, LocaleProvider } from "../lib/locale";
 import { TRANSACTION_SAVED_VIEWS_KEY } from "./transactionsSavedViews";
 
@@ -195,7 +195,7 @@ describe("Transactions load and empty states", () => {
 
     await screen.findByText("2 giao dịch trong năm 2026");
     fireEvent.click(screen.getByRole("button", { name: /Lọc/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Đầu tư" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Bộ lọc" })).getByRole("button", { name: "Đầu tư" }));
     expect(document.querySelectorAll(".txv2-row")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Áp dụng" }));
 
