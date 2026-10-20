@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const overviewCss = readFileSync(new URL("./demo-v10-overview.css", import.meta.url), "utf8");
 const settingsCss = readFileSync(new URL("./demo-v10-settings.css", import.meta.url), "utf8");
 const overviewBan2Css = readFileSync(new URL("./overview-ban2.css", import.meta.url), "utf8");
+const transactionsCss = readFileSync(new URL("./transactions-v2.css", import.meta.url), "utf8");
 
 describe("demo v10 visual regression contracts", () => {
   it("keeps the redesigned Overview attached to the active app theme", () => {
@@ -21,6 +22,15 @@ describe("demo v10 visual regression contracts", () => {
     expect(overviewBan2Css).toContain('grid-template-areas:"hero" "mile" "chart" "donut" "table" "updates" "journey" "attention" "foot"');
     expect(overviewBan2Css).toContain(".ovb2-main,.ovb2-side,.ovb2-mid {display:contents}");
   });
+  it("keeps Transactions aligned with the shared shell theme and uses a restrained touch state", () => {
+    expect(transactionsCss).toContain("--bg-base: var(--bg)");
+    expect(transactionsCss).toContain("--primary-600: var(--vi)");
+    expect(transactionsCss).toContain("--color-primary: var(--vi)");
+    expect(transactionsCss).toContain(".tx-wrap .txv2-row:hover { background: color-mix(in srgb, var(--vi) 8%, var(--g)); }");
+    expect(transactionsCss).toContain(".tx-wrap .txv2-row:active { background: color-mix(in srgb, var(--vi) 14%, var(--g)); }");
+    expect(transactionsCss).toContain("padding-bottom: max(176px, calc(136px + env(safe-area-inset-bottom, 0px)))");
+  });
+
   it("inherits the demo theme palette and changes every performance visual by data state", () => {
     expect(overviewCss).toContain("--perf-contribution: var(--demo-vi)");
     expect(overviewCss).toContain("--perf-gain: var(--demo-em)");
