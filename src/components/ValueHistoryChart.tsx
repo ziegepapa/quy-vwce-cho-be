@@ -73,12 +73,12 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
       <path d={geometry.area} fill={`url(#${gradientId})`} />
       <path
         d={geometry.contribLine}
-        fill="none" stroke="#94a3b8" strokeWidth="2"
+        fill="none" stroke="var(--text-tertiary)" strokeWidth="2"
         strokeDasharray="6,5" strokeLinecap="round"
       />
       <path
         d={geometry.valueLine}
-        fill="none" stroke="#16a34a" strokeWidth="2.5"
+        fill="none" stroke="var(--success-600)" strokeWidth="2.5"
         strokeLinecap="round" strokeLinejoin="round"
       />
       <circle
