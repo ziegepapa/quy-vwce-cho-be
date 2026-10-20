@@ -71,9 +71,9 @@ function overviewCopy(locale: "vi" | "de") {
     marketAdded: "Markt dazu",
     gainUnavailable: "Noch nicht bewertbar",
     fundCount: "Fonds",
-    pace: "Eingezahltes Kapital",
-    nextContribution: "Geschätzter Gewinn",
-    growthValue: "Wert des Wachstumsbaums",
+    pace: "Kumuliert eingezahlt",
+    nextContribution: "Geschätzter Gewinn / Verlust",
+    growthValue: "Nächster Meilenstein",
     inDays: (days: number) => days === 0 ? "heute" : `in ${days} Tagen`,
     priceUpdated: "Kurse aktualisiert",
     stalePrice: "Alter Kurs",
@@ -125,9 +125,9 @@ function overviewCopy(locale: "vi" | "de") {
     marketAdded: "Thị trường thêm",
     gainUnavailable: "Chưa định giá",
     fundCount: "Số quỹ",
-    pace: "Tổng vốn gốc",
-    nextContribution: "Lợi nhuận tạm tính",
-    growthValue: "Giá trị cây tăng trưởng",
+    pace: "Đã góp lũy kế",
+    nextContribution: "Lãi / lỗ tạm tính",
+    growthValue: "Cột mốc tiếp theo",
     inDays: (days: number) => days === 0 ? "hôm nay" : `trong ${days} ngày`,
     priceUpdated: "Giá cập nhật",
     stalePrice: "Giá cũ",
@@ -227,10 +227,10 @@ function buildAttentionItems(
 function LandscapeArt() {
   return (
     <svg className="ovb2-art" viewBox="0 0 400 220" preserveAspectRatio="xMaxYMax slice" aria-hidden="true">
-      <circle cx="330" cy="42" r="26" fill="#fde68a" />
-      <path d="M0 150 L90 70 L170 140 L250 60 L340 140 L400 90 L400 220 L0 220 Z" fill="#bbf7d0" opacity=".7" />
-      <path d="M0 175 L120 110 L230 170 L330 120 L400 160 L400 220 L0 220 Z" fill="#86efac" opacity=".8" />
-      <g fill="#16a34a" opacity=".85">
+      <circle cx="330" cy="42" r="26" fill="var(--warning-050)" />
+      <path d="M0 150 L90 70 L170 140 L250 60 L340 140 L400 90 L400 220 L0 220 Z" fill="var(--success-050)" opacity=".7" />
+      <path d="M0 175 L120 110 L230 170 L330 120 L400 160 L400 220 L0 220 Z" fill="var(--success-050)" opacity=".8" />
+      <g fill="var(--success-600)" opacity=".58">
         <circle cx="60" cy="170" r="14" /><rect x="58" y="170" width="4" height="18" />
         <circle cx="150" cy="160" r="18" /><rect x="148" y="160" width="4" height="22" />
         <circle cx="250" cy="168" r="15" /><rect x="248" y="168" width="4" height="20" />
@@ -241,7 +241,7 @@ function LandscapeArt() {
 }
 
 /** Donut of the allocation. Colors cycle blue → green → amber → purple. */
-const DONUT_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#8b5cf6"];
+const DONUT_COLORS = ["var(--primary-600)", "var(--success-600)", "var(--warning-600)", "var(--danger-600)"];
 function AllocationDonut({ allocation, totalLabel, totalSub }: {
   allocation: AllocationSlice[];
   totalLabel: string;
