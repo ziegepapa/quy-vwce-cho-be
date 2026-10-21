@@ -19,7 +19,7 @@
     "test:bundle": "node --test scripts/analyze-bundle.test.mjs",
     "test:pwa-update-lifecycle": "node --test scripts/pwa-update-lifecycle.test.mjs",
     "test:locale-audit": "node --test scripts/audit-ui-localization.test.mjs",
-    "test:price": "node --test scripts/update-vwce-price.test.mjs scripts/update-quotes.test.mjs scripts/price-fallback.test.mjs scripts/price-history.test.mjs scripts/price-legacy-honesty.test.mjs scripts/dispatch-price-workflow.test.mjs",
+    "test:price": "node --test scripts/update-vwce-price.test.mjs scripts/update-quotes.test.mjs scripts/price-fallback.test.mjs scripts/price-history.test.mjs scripts/price-legacy-honesty.test.mjs scripts/dispatch-price-workflow.test.mjs scripts/price-dispatch-install.test.mjs",
     "test:preview": "playwright test",
     "test:release": "node scripts/verify-release.mjs",
     "test:edge-smoke": "node scripts/smoke-ai-edge.mjs",
