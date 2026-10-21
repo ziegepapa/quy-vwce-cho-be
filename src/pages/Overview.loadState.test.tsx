@@ -150,6 +150,11 @@ describe("Overview German locale", () => {
     expect(screen.getByRole("button", { name: "Kennzahl: Seit Kauf (%)" })).toBeTruthy();
     expect(document.body.textContent).toContain("Seit Kauf (%)");
     expect(document.querySelector(".ovb2-metric-toolbar")?.textContent).not.toMatch(/Từ lúc mua|So với phiên trước|Chỉ số/);
+    fireEvent.click(screen.getByRole("button", { name: "Kennzahl: Seit Kauf (%)" }));
+    expect(screen.getByRole("option", { name: /Seit Kauf \(€\)/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /Tagesänderung \(%\)/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /Tagesänderung \(€\)/ })).toBeTruthy();
+    expect(document.querySelector(".ovb2-metric-toolbar")?.textContent).not.toMatch(/Từ lúc mua|So với phiên trước/);
     expect(document.body.textContent).not.toMatch(/Tổng giá trị|Cột mốc tiếp theo|Cần chú ý|Tổng kết năm|Xuất báo cáo|Đã góp|Thị trường thêm/);
   });
 });
@@ -258,10 +263,7 @@ describe("Overview bản 2", () => {
     expect(screen.getByRole("option", { name: /So với phiên trước \(%\)/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /So với phiên trước \(€\)/ })).toBeTruthy();
     expect(document.querySelector(".ovb2-metric-toolbar")?.textContent).not.toMatch(/Seit Kauf|Tagesänderung|Kennzahl/);
-    expect(screen.getByRole("option", { name: /Seit Kauf \(€\)/ })).toBeTruthy();
-    expect(screen.getByRole("option", { name: /Tagesänderung \(%\)/ })).toBeTruthy();
-    expect(screen.getByRole("option", { name: /Tagesänderung \(€\)/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole("option", { name: /Seit Kauf \(€\)/ }));
+    fireEvent.click(screen.getByRole("option", { name: /Từ lúc mua \(€\)/ }));
     const absoluteText = container.querySelector(".ovb2-table-card")?.textContent?.replace(/\u00a0/g, " ") ?? "";
     expect(absoluteText).toContain("+70,94 €");
     expect(absoluteText).toContain("+5,25 €");
@@ -292,11 +294,11 @@ describe("Overview bản 2", () => {
     await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
 
     fireEvent.click(screen.getByRole("button", { name: /^Chỉ số:/ }));
-    fireEvent.click(screen.getByRole("option", { name: /Tagesänderung \(%\)/ }));
+    fireEvent.click(screen.getByRole("option", { name: /So với phiên trước \(%\)/ }));
     await waitFor(() => expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("−0,30%"));
 
     fireEvent.click(screen.getByRole("button", { name: /^Chỉ số:/ }));
-    fireEvent.click(screen.getByRole("option", { name: /Tagesänderung \(€\)/ }));
+    fireEvent.click(screen.getByRole("option", { name: /So với phiên trước \(€\)/ }));
     await waitFor(() => expect(container.querySelector(".ovb2-pnl.down")?.textContent?.replace(/\u00a0/g, " ")).toContain("−0,52 €"));
   });
 
