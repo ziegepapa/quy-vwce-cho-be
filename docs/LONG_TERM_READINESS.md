@@ -1,5 +1,7 @@
 # Long-Term Stable Baseline v1 — Báo cáo Readiness
 
+> **Evidence refresh addendum:** Bản đánh giá chi tiết ban đầu bên dưới được lập ngày 21-08-2026 và vẫn là historical baseline. Addendum mới nhất nằm ở cuối tài liệu; không sử dụng SHA, giá thị trường hoặc trạng thái môi trường trong baseline tháng 8 như bằng chứng hiện hành.
+
 **Tác giả:** Manus AI
 
 **Phiên bản ứng dụng:** `1.6.0`
@@ -203,3 +205,27 @@ Không có thay đổi nào thuộc diện financial semantics, schema/Dexie, ba
 [21]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/247 "PR #247 — harden password recovery callback"
 [22]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/251 "PR #251 — streamline settings and complete password recovery UX"
 [23]: https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/32514368955 "Main CI and GitHub Pages deploy after PR #251"
+
+
+---
+
+## 20. Evidence refresh — 21-10-2026
+
+**Mốc mã nguồn được rà soát trước đợt thay đổi tiếp theo:** `7268aaa2d16e8a35bfed56540b9ee95af14b84a7` (PR #357). Đây là mốc kiểm tra đã deploy thành công qua GitHub Actions run [39639941852](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39639941852). Mốc này không thay thế production evidence cho bất kỳ commit nào về sau.
+
+### Evidence được cập nhật
+
+- Simulation hiện dùng chung adapter định giá danh mục cho số dư đầu kỳ, thay vì chỉ dựa vào VWCE; giá thiếu/đã cũ được thể hiện rõ.
+- Regression tests bao phủ giá trị đầu kỳ nhiều ISIN, trạng thái giá thiếu/cũ, lợi suất âm, khoản lỗ, mục tiêu không đạt trong 40 năm và cách hiển thị số dư tiền.
+- Simulation vẫn là mô hình minh họa danh nghĩa/sức mua, không phải dự báo hay lời khuyên đầu tư; không có tax engine.
+- CI của mốc trên đã đạt `test-build`, `preview-smoke`, `edge-smoke` và deploy. Các cổng frontend này không đóng H4/H5.
+
+### Readiness decision — không thay đổi
+
+| Gate | Trạng thái tại lần rà soát này | Bằng chứng còn cần |
+|---|---|---|
+| H4 — behavioral Supabase RLS | `PARTIAL — STATIC POLICY EVIDENCE ONLY` | Environment Supabase Auth/PostgREST/Postgres cô lập; request thật qua JWT của User A, User B và anonymous; kiểm tra owner isolation cho mọi bảng sync. |
+| H5 — migration reproducibility | `BLOCKED — NO ORDERED BASELINE` | Baseline migration đã được đối chiếu/duyệt, blank bootstrap, upgrade từ trạng thái hỗ trợ, RLS và backup/sync compatibility, rollback/recovery drill trong môi trường cô lập. |
+| P11.2 — thuế Đức | `BLOCKED` | Review độc lập của chuyên gia thuế Đức trước khi cân nhắc mở rộng phạm vi; không thuộc đợt này. |
+
+**Kết luận:** vẫn phù hợp với vai trò local-first tracker có backup do owner quản lý và sao kê broker độc lập. Không tuyên bố là sổ cái authoritative duy nhất, RLS behavior đã xác minh, hoặc migration đã tái lập được. Xem [kế hoạch đóng H4/H5](./H4-H5-CLOSEOUT-PLAN-2026-10-21.md) để biết entry/exit criteria và các bước tiếp theo.
