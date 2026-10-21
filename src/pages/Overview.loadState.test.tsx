@@ -205,7 +205,7 @@ describe("Overview bản 2", () => {
     expect(milestoneLink?.getAttribute("href")).toBe("/goals");
   });
 
-  it("lists holdings without comparing the two funds' returns", async () => {
+  it("lists current holding value and gain/loss since purchase without changing the total", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([
       buyVwce("tx-tbl-1", "2026-08-01"),
@@ -229,8 +229,11 @@ describe("Overview bản 2", () => {
     expect(tableText).toContain("VALL");
     expect(tableText).toContain("Vanguard FTSE All-World");
     expect(tableText).toContain("Vanguard FTSE Global All-Cap");
-    // No per-fund profit % — never compare the two funds' returns.
-    expect(tableText).not.toMatch(/\+\d+,\d+%/);
+    // Per-fund performance is shown separately; the aggregate asset calculation stays unchanged.
+    expect(tableText).toContain("Từ lúc mua");
+    expect(tableText).toContain("+70,94");
+    expect(tableText).toContain("+5,26");
+    expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,20");
     expect(tableText).not.toContain("VanEck");
   });
 
