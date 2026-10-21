@@ -929,9 +929,7 @@ export default function SettingsPage({
             <span className={`set-save-state ${saveState}`} role="status" aria-live="polite">
               {saveState === "saved" ? text.savedLocal : saveState === "saving" ? text.savingLocal : text.changesPending}
             </span>
-            <button type="button" className="set-compare-link" onClick={() => setSearchParams({ ...(showAdvanced ? { tab: "advanced" } : {}), view: "horizon" }, { replace: true })}>
-              {locale === "de" ? "Horizon ansehen" : "Xem HORIZON"}
-            </button>
+            <span className="set-settings-scope">{locale === "de" ? "Persönliche Einstellungen" : "Thiết lập cá nhân"}</span>
           </div>
         </header>
       )}
@@ -1005,7 +1003,7 @@ export default function SettingsPage({
           <div className="set-atelier-orbit" aria-hidden><span /><span /><span /></div>
           <div className="set-identity set-atelier-identity">
             <div className="set-avatar" aria-hidden><IconUser /></div>
-            <div className="set-identity-copy"><strong>{text.vaultName}</strong><span>{auth.user?.email ?? t("syncNeedsSignIn")}</span><small>{text.lastLogin} · {auth.user?.last_sign_in_at ? localDateTime(auth.user.last_sign_in_at, locale) : text.lastLoginUnavailable}</small></div>
+            <div className="set-identity-copy"><strong>{text.vaultName}</strong><span>{auth.user?.email ?? t("syncNeedsSignIn")}</span><small>{locale === "de" ? "Lokales Portfolio · sicher verwaltet" : "Danh mục lưu trên thiết bị · quản lý an toàn"}</small></div>
           </div>
           <button type="button" className="set-sync-primary set-atelier-sync" disabled={syncingNow} onClick={() => void runVisibleSync()}>
             <span className="set-row-icon teal"><IconSync /></span><span className="sr-body"><span className="sr-name">{syncingNow ? t("syncing") : t("syncNow")}</span><span className="sr-sub">{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : auth.user?.id ? syncLabel : t("syncNeedsSignIn")}</span></span><span className="set-row-status">{syncingNow ? "…" : syncLabel}</span>

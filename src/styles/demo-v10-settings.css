@@ -523,3 +523,4 @@ html.settings-child-open,body.settings-child-open { overflow: hidden; }.bottom-d
   border-left-color: var(--primary-600);
   background: color-mix(in srgb, var(--surface-raised) 33%, transparent);
 }
+
