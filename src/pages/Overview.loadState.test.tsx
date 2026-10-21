@@ -224,22 +224,19 @@ describe("Overview bản 2", () => {
     const { container } = renderOverview();
 
     await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
-    const tableText = container.querySelector(".ovb2-table-card")?.textContent ?? "";
+    const tableText = container.querySelector(".ovb2-table-card")?.textContent?.replace(/\u00a0/g, " ") ?? "";
     expect(tableText).toContain("VWCE");
     expect(tableText).toContain("VALL");
     expect(tableText).toContain("Vanguard FTSE All-World");
     expect(tableText).toContain("Vanguard FTSE Global All-Cap");
-    // Each holding shows only a positive/negative sign; aggregate assets stay unchanged.
-    const signs = [...container.querySelectorAll(".ovb2-pnl")].map((node) => node.textContent?.trim());
-    expect(signs).toEqual(["+", "+"]);
-    expect(tableText).not.toContain("Từ lúc mua");
-    expect(tableText).not.toContain("+70,94");
-    expect(tableText).not.toContain("+5,25");
+    // Each holding gets a clear amount and percentage, while aggregate assets stay unchanged.
+    expect(tableText).toContain("Từ lúc mua: +70,94 € (+70,9%)");
+    expect(tableText).toContain("Từ lúc mua: +5,25 € (+4,4%)");
     expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,19");
     expect(tableText).not.toContain("VanEck");
   });
 
-  it("shows a minus sign when a holding is below its cost basis", async () => {
+  it("shows a clearly labelled negative return when a holding is below cost basis", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-loss-sign", "2026-08-01")]);
     dbMocks.listQuotes.mockResolvedValue([quoteVwce(90, "2026-10-15")]);
@@ -247,8 +244,8 @@ describe("Overview bản 2", () => {
     const { container } = renderOverview();
 
     await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
-    const signs = [...container.querySelectorAll(".ovb2-pnl")].map((node) => node.textContent?.trim());
-    expect(signs).toEqual(["−"]);
+    const lossLabel = container.querySelector(".ovb2-pnl.down")?.textContent?.replace(/\u00a0/g, " ") ?? "";
+    expect(lossLabel).toContain("Từ lúc mua: −10,00 € (−10,0%)");
     expect(container.querySelector(".ovb2-pnl.down")).toBeTruthy();
     expect(container.querySelector(".ovb2-big")?.textContent).toContain("90,00");
   });

@@ -234,6 +234,10 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     const sharesFormat = new Intl.NumberFormat(locale === "de" ? "de-DE" : "vi-VN", {
       maximumFractionDigits: 4,
     });
+    const percentageFormat = new Intl.NumberFormat(locale === "de" ? "de-DE" : "vi-VN", {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
     const allocation: AllocationSlice[] = Object.entries(market.byIsin)
       .filter(([, row]) => row.qty > 0 && (row.value ?? 0) > 0)
       .sort(([, a], [, b]) => (b.value ?? 0) - (a.value ?? 0))
@@ -241,6 +245,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
         const value = row.value ?? 0;
         const costBasis = portfolio.positions[isin]?.costBasis ?? 0;
         const pnl = Number.isFinite(costBasis) && costBasis > 0 ? value - costBasis : null;
+        const pnlPct = pnl == null ? null : (pnl / costBasis) * 100;
         return {
           isin,
           ticker: instrumentTicker(isin),
@@ -252,6 +257,8 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
             ? `${numberFormat.format(row.price)} €/${locale === "de" ? "Ant." : "cp"}`
             : null,
           valueLabel: formatMoney(value),
+          pnlLabel: pnl == null ? null : (pnl > 0 ? "+" : pnl < 0 ? "−" : "") + formatMoney(Math.abs(pnl)),
+          pnlPctLabel: pnlPct == null ? null : (pnlPct > 0 ? "+" : pnlPct < 0 ? "−" : "") + percentageFormat.format(Math.abs(pnlPct)) + "%",
           pnlPositive: pnl == null ? null : pnl >= 0,
         };
       });
