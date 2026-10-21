@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   parseDate,
   parseDecimal,
-  replayTransactions,
   round2,
 } from "../lib/calc";
-import { getSettings, listGoals, listTransactions, saveSettings } from "../lib/db";
+import { getSettings, listGoals, listQuotes, listTransactions, saveSettings } from "../lib/db";
+import { buildSimulationStartValue } from "../lib/simulation/portfolioStart";
+import { VALL_ISIN, VWCE_ISIN } from "../lib/types";
 import {
   DEFAULT_TER,
   MAX_YEARS,
@@ -15,7 +16,7 @@ import {
   projectEnd,
   purchasingPower,
 } from "../lib/simulation/engine";
-import type { Mode, ProjectOutput, Scenario, YearPoint } from "../lib/simulation/engine";
+import type { Mode } from "../lib/simulation/engine";
 import type { AppSettings, Goal, Transaction } from "../lib/types";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
@@ -33,9 +34,13 @@ const UNDO_MS = 12_000;
 
 function simulationPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
-    cautious: "Vorsichtig", base: "Basis", bull: "Günstig", setYearOne: (value: string) => `Jahr 1 wurde auf ${value} gesetzt`, setFromYearTwo: (value: string) => `Beitrag ab Jahr 2 wurde auf ${value} gesetzt`, setReturn: (value: string) => `VWCE-Rendite wurde auf ${value} gesetzt`, yearOne: (value: string) => `Jahr 1 = ${value}`, fromYearTwo: (value: string) => `Beitrag ab Jahr 2 = ${value}`, return: (value: string) => `VWCE-Rendite = ${value}`, savedChanges: (count: number) => `${count} Änderungen wurden gespeichert`, noSelection: "Keine Auswahl", saveOne: "1 Änderung speichern", saveMany: (count: number) => `${count} Änderungen speichern`, presentValue: "heutige Kaufkraft", nominal: "nominal", range: "Bandbreite", inflation: (value: string) => `Inflation ${value}%`, contributionGrowth: (value: string) => `Beitrag ${value}% / Jahr`, terFee: (value: string) => `TER ${value}%/Jahr`, advanced: (parts: string) => `Erweiterte Optionen · ${parts}`,
+    cautious: "Vorsichtig", base: "Basis", bull: "Günstig",
+    missingPrices: (funds: string) => `Startwert unvollständig: Für ${funds} fehlt ein verwendbarer Kurs; der nicht bewertete Anteil ist nicht enthalten.`,
+    stalePrices: (funds: string) => `Veraltete Kurse für ${funds}; die Projektion nutzt den letzten verfügbaren Stand.`, setYearOne: (value: string) => `Jahr 1 wurde auf ${value} gesetzt`, setFromYearTwo: (value: string) => `Beitrag ab Jahr 2 wurde auf ${value} gesetzt`, setReturn: (value: string) => `VWCE-Rendite wurde auf ${value} gesetzt`, yearOne: (value: string) => `Jahr 1 = ${value}`, fromYearTwo: (value: string) => `Beitrag ab Jahr 2 = ${value}`, return: (value: string) => `VWCE-Rendite = ${value}`, savedChanges: (count: number) => `${count} Änderungen wurden gespeichert`, noSelection: "Keine Auswahl", saveOne: "1 Änderung speichern", saveMany: (count: number) => `${count} Änderungen speichern`, presentValue: "heutige Kaufkraft", nominal: "nominal", range: "Bandbreite", inflation: (value: string) => `Inflation ${value}%`, contributionGrowth: (value: string) => `Beitrag ${value}% / Jahr`, terFee: (value: string) => `TER ${value}%/Jahr`, advanced: (parts: string) => `Erweiterte Optionen · ${parts}`,
   } : {
-    cautious: "Thận trọng", base: "Cơ sở", bull: "Thuận lợi", setYearOne: (value: string) => `Đã đặt Góp năm 1 = ${value}`, setFromYearTwo: (value: string) => `Đã đặt Góp từ năm 2 = ${value}`, setReturn: (value: string) => `Đã đặt Lợi nhuận VWCE = ${value}`, yearOne: (value: string) => `Góp năm 1 = ${value}`, fromYearTwo: (value: string) => `Góp từ năm 2 = ${value}`, return: (value: string) => `Lợi nhuận VWCE = ${value}`, savedChanges: (count: number) => `Đã lưu ${count} thay đổi`, noSelection: "Chưa chọn gì", saveOne: "Lưu 1 thay đổi", saveMany: (count: number) => `Lưu ${count} thay đổi`, presentValue: "giá hôm nay", nominal: "danh nghĩa", range: "biên độ", inflation: (value: string) => `lạm phát ${value}%`, contributionGrowth: (value: string) => `góp ${value}%/năm`, terFee: (value: string) => `phí ${value}%/năm`, advanced: (parts: string) => `Tùy chọn nâng cao · ${parts}`,
+    cautious: "Thận trọng", base: "Cơ sở", bull: "Thuận lợi",
+    missingPrices: (funds: string) => `Giá trị đầu kỳ chưa đầy đủ: ${funds} chưa có giá dùng được; phần chưa định giá không được tính vào số dư ban đầu.`,
+    stalePrices: (funds: string) => `Giá của ${funds} đã cũ; mô phỏng dùng mức giá gần nhất còn khả dụng.`, setYearOne: (value: string) => `Đã đặt Góp năm 1 = ${value}`, setFromYearTwo: (value: string) => `Đã đặt Góp từ năm 2 = ${value}`, setReturn: (value: string) => `Đã đặt Lợi nhuận VWCE = ${value}`, yearOne: (value: string) => `Góp năm 1 = ${value}`, fromYearTwo: (value: string) => `Góp từ năm 2 = ${value}`, return: (value: string) => `Lợi nhuận VWCE = ${value}`, savedChanges: (count: number) => `Đã lưu ${count} thay đổi`, noSelection: "Chưa chọn gì", saveOne: "Lưu 1 thay đổi", saveMany: (count: number) => `Lưu ${count} thay đổi`, presentValue: "giá hôm nay", nominal: "danh nghĩa", range: "biên độ", inflation: (value: string) => `lạm phát ${value}%`, contributionGrowth: (value: string) => `góp ${value}%/năm`, terFee: (value: string) => `phí ${value}%/năm`, advanced: (parts: string) => `Tùy chọn nâng cao · ${parts}`,
   };
 }
 
@@ -45,6 +50,7 @@ export default function Simulation() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [txs, setTxs] = useState<Transaction[]>([]);
+  const [quotes, setQuotes] = useState<Awaited<ReturnType<typeof listQuotes>>>([]);
   const [loading, setLoading] = useState(true);
   const { readOnly, showBlocked } = useRecoveryReadOnly();
 
@@ -87,6 +93,7 @@ export default function Simulation() {
       setSettings(s);
       setGoals(await listGoals());
       setTxs(await listTransactions());
+      setQuotes(await listQuotes());
       if (s.contributionY1 > 0) setMonthly(String(s.contributionY1));
       if (s.inflationRate > 0) setInflationPct(String(round2(s.inflationRate * 100)));
       if (s.endDate) {
@@ -100,18 +107,20 @@ export default function Simulation() {
     })();
   }, []);
 
-  const portfolio = useMemo(() => replayTransactions(txs), [txs]);
+  const startValue = useMemo(() => buildSimulationStartValue({
+    transactions: txs,
+    quotes,
+    legacyVwcePrice: settings?.latestVwcePrice ?? 0,
+    legacyVwcePriceAsOf: settings?.latestPriceDate ?? "",
+  }), [txs, quotes, settings]);
 
-  const realBalance = useMemo(() => {
-    const price = settings?.latestVwcePrice ?? 0;
-    const cash = settings?.trackInAppCash ? portfolio.cashBalance : Math.max(0, portfolio.cashBalance);
-    return round2(portfolio.vwceQty * price + cash);
-  }, [portfolio, settings]);
-
-  const realCostBasis = useMemo(
-    () => round2(Math.max(0, portfolio.vwceCostBasis) + Math.max(0, portfolio.cashBalance)),
-    [portfolio],
-  );
+  // Match Overview's asset semantics: all priced security positions plus positive cash.
+  const realBalance = startValue.balance;
+  const displayIsin = (isin: string) => isin === VWCE_ISIN ? "VWCE" : isin === VALL_ISIN ? "VALL" : isin;
+  const startingBalanceWarning = [
+    startValue.missingIsins.length > 0 ? text.missingPrices(startValue.missingIsins.map(displayIsin).join(", ")) : "",
+    startValue.staleIsins.length > 0 ? text.stalePrices(startValue.staleIsins.map(displayIsin).join(", ")) : "",
+  ].filter(Boolean).join(" ");
 
   const initialBalance = useMemo(() => {
     if (balanceOverride.trim() !== "") return Math.max(0, parseDecimal(balanceOverride));
@@ -126,11 +135,12 @@ export default function Simulation() {
   // TER remains a disclosed simulation assumption. Tax calculation is not part of the production path.
   const ter = DEFAULT_TER;
 
-  const baseRate = clamp(parseDecimal(rateInput) / 100, 0, 0.5);
+  // Permit negative nominal returns so the cautious scenario can model drawdowns.
+  const baseRate = clamp(parseDecimal(rateInput) / 100, -0.5, 0.5);
   const band = clamp(parseDecimal(bandInput) / 100, 0, 0.1);
   const scenarios = useMemo(
     () => [
-      { id: "cautious", label: text.cautious, rate: Math.max(0, baseRate - band) },
+      { id: "cautious", label: text.cautious, rate: baseRate - band },
       { id: "base", label: text.base, rate: baseRate },
       { id: "bull", label: text.bull, rate: baseRate + band },
     ],
@@ -156,7 +166,6 @@ export default function Simulation() {
   }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN]);
 
   const monthlyForProject = mode === "B" ? Math.max(0, requiredMonthlyBase) : monthlyN;
-  const planUnreachable = mode === "B" && requiredMonthlyBase < 0;
 
   const yearsC = useMemo(() => {
     if (mode !== "C") return { years: effectiveYears, reached: true };
@@ -169,6 +178,8 @@ export default function Simulation() {
   }, [mode, targetN, baseCommon, monthlyN, scenarios, effectiveYears]);
 
   const yearsForProject = mode === "C" ? yearsC.years : effectiveYears;
+  const planUnreachable = mode === "B" && requiredMonthlyBase < 0;
+  const targetUnreachable = mode === "C" && !yearsC.reached;
 
   const results = useMemo(() => {
     return scenarios.map((sc) => {
@@ -421,8 +432,9 @@ export default function Simulation() {
     : 0;
   const headlineNote = usePP ? text.presentValue : text.nominal;
 
+  // Profit/loss stays nominal even when the headline is switched to today's purchasing power.
   const shownInterest = primary
-    ? Math.max(0, headlineValue - primary.out.contributed - initialBalance)
+    ? round2(primary.out.terminal - primary.out.contributed - initialBalance)
     : 0;
 
   const cautiousRate = scenarios.find((s) => s.id === "cautious")?.rate ?? baseRate;
@@ -442,10 +454,12 @@ export default function Simulation() {
       mode={mode}
       setMode={setMode}
       planUnreachable={planUnreachable}
+      targetUnreachable={targetUnreachable}
       headlineValue={headlineValue}
       yearsForProject={yearsForProject}
       monthlyForProject={monthlyForProject}
       headlineNote={headlineNote}
+      startingBalanceWarning={startingBalanceWarning}
       primary={primary}
       initialBalance={initialBalance}
       shownInterest={shownInterest}

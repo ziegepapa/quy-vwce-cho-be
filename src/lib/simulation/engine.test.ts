@@ -56,6 +56,12 @@ describe("projectEnd", () => {
     expect(r.contributed).toBe(50 * 12 * 3);
   });
 
+  it("negative annual returns are modeled as losses instead of being neutralized", () => {
+    const r = projectEnd({ ...baseInput, years: 1, monthlyContribution: 0, initialBalance: 10_000, annualReturn: -0.2, ter: 0 });
+    expect(r.terminal).toBeLessThan(10_000);
+    expect(r.interest).toBeLessThan(0);
+  });
+
   it("higher rate → higher terminal", () => {
     const low = projectEnd({ ...baseInput, annualReturn: 0.03 });
     const high = projectEnd({ ...baseInput, annualReturn: 0.08 });
@@ -91,6 +97,18 @@ describe("round-trip", () => {
     expect(monthly).toBeGreaterThan(0);
     const r = projectEnd({ ...base, monthlyContribution: monthly });
     expect(Math.abs(r.terminal - target)).toBeLessThan(2);
+  });
+
+  it("reports an unreachable target after the maximum horizon", () => {
+    const result = findYearsForTarget(1_000_000_000, {
+      monthlyContribution: 1,
+      annualReturn: 0,
+      initialBalance: 0,
+      lumpSum: 0,
+      annualContributionGrowth: 0,
+      ter: 0,
+    });
+    expect(result).toEqual({ years: 40, reached: false });
   });
 
   it("findYearsForTarget → projectEnd terminal >= target", () => {

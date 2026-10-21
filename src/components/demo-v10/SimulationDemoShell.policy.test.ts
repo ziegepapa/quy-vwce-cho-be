@@ -7,19 +7,21 @@ import SimulationDemoShell, { type SimulationDemoShellProps } from "./Simulation
 
 const noop = vi.fn();
 
-function renderShell(locale: "vi" | "de") {
+function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false) {
   const props: SimulationDemoShellProps = {
     locale,
     mode: "A",
     setMode: noop,
     planUnreachable: false,
+    targetUnreachable,
     headlineValue: 1000,
     yearsForProject: 15,
     monthlyForProject: 200,
     headlineNote: "nominal",
+    startingBalanceWarning,
     primary: undefined,
     initialBalance: 0,
-    shownInterest: 0,
+    shownInterest,
     results: [],
     goalMarkers: [],
     band: 0,
@@ -107,6 +109,32 @@ describe("SimulationDemoShell financial-policy containment", () => {
     renderShell("vi");
     expect(screen.queryByText(/Thuế DE|sau thuế|có thuế/i)).toBeNull();
     expect(document.body.textContent).not.toMatch(/DE-Steuern|afterTax|after-tax/i);
+  });
+
+  it("uses localized descriptive subtitles instead of English mode labels", () => {
+    renderShell("vi");
+    expect(screen.getByText("Số dư → Kết quả")).toBeTruthy();
+    expect(screen.getByText("Số tiền → Mức góp")).toBeTruthy();
+    cleanup();
+    renderShell("de");
+    expect(screen.getByText("Startwert → Ergebnis")).toBeTruthy();
+    expect(screen.getByText("Zielbetrag → Monatsrate")).toBeTruthy();
+  });
+
+  it("shows the 40-year projection while disclosing that the target is unreachable", () => {
+    renderShell("vi", "", 0, true);
+    expect(screen.getByRole("status").textContent).toContain("Chưa thể đạt mục tiêu trong 40 năm");
+    expect(document.querySelector(".sh-big")?.textContent).not.toBe("—");
+  });
+
+  it("keeps a projected loss visible as a loss", () => {
+    renderShell("vi", "", -125);
+    expect(document.querySelector(".summary-strip .loss")).not.toBeNull();
+  });
+
+  it("discloses when the starting balance excludes unpriced holdings", () => {
+    renderShell("vi", "Giá trị đầu kỳ chưa đầy đủ: VALL chưa có giá dùng được.");
+    expect(screen.getByRole("status").textContent).toContain("VALL");
   });
 
   it("does not render German tax controls or after-tax results", () => {
