@@ -10,9 +10,9 @@ export type ConfidenceTimelineEvent = {
   at: string;
   source: ConfidenceTimelineSource;
   /** Price facts are the session/value from the stored quote, not the local write timestamp. */
-  quote?: Pick<Quote, "instrumentIsin" | "currency" | "price" | "asOf" | "fetchedAt" | "source" | "venue">;
+  quote?: Pick<Quote, "instrumentIsin" | "currency" | "price" | "asOf" | "fetchedAt" | "venue"> & { source?: Quote["source"] };
   /** Sensitive notes are available to the local UI only when the owner expands the event. */
-  transaction?: Pick<Transaction, "type" | "amount" | "date" | "notes" | "instrumentIsin" | "quantity" | "unitPrice" | "fee" | "tax">;
+  transaction?: Omit<Pick<Transaction, "type" | "amount" | "date" | "instrumentIsin" | "quantity" | "unitPrice" | "fee" | "tax">, never> & { notes?: string };
   /** A depot statement is a dated snapshot; account references and contact details are deliberately excluded. */
   statement?: { date: string; broker: string; positionsCount: number };
 };
