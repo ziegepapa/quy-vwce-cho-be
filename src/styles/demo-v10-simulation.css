@@ -259,3 +259,228 @@
 @media (prefers-reduced-motion: reduce) {
   .sim-wrap .mtab { transition: none; }
 }
+
+
+/* ---------- Simulation refresh v2: presentation-only, no calculation changes ---------- */
+.sim-wrap {
+  max-width: 600px;
+  gap: 14px;
+  padding-inline: 2px;
+}
+
+.sim-wrap .mode-tabs {
+  gap: 6px;
+  padding: 5px;
+  border-radius: 18px;
+}
+
+.sim-wrap .mtab {
+  min-height: 62px;
+  padding: 10px 6px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  line-height: 1.25;
+}
+
+.sim-wrap .mtab small {
+  margin-top: 5px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.sim-wrap .mtab.on {
+  border-color: var(--border-subtle);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), var(--shadow-raised);
+}
+
+.sim-wrap .sim-headline {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 20px 18px;
+  border-radius: 22px;
+}
+
+.sim-wrap .sim-headline::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  content: "";
+  background: var(--primary-600);
+  opacity: 0.82;
+}
+
+.sim-wrap .sh-big {
+  font-size: clamp(32px, 7vw, 42px);
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.sim-wrap .sh-sub {
+  margin-top: 9px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sim-wrap .sh-note {
+  line-height: 1.45;
+}
+
+.sim-wrap .summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.sim-wrap .summary-strip > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 12px 11px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 15px;
+  overflow-wrap: anywhere;
+}
+
+.sim-wrap .summary-strip > span strong {
+  color: var(--text-primary);
+  font-size: clamp(13px, 3.4vw, 17px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-wrap .summary-strip > span strong.loss {
+  color: var(--danger-600);
+}
+
+.sim-wrap .summary-strip > span strong.gain {
+  color: var(--success-600);
+}
+
+.sim-wrap .sim-chart-card {
+  padding: 18px 16px 14px;
+  border-radius: 20px;
+}
+
+.sim-wrap .sim-chart-title {
+  margin-bottom: 14px;
+  letter-spacing: 0.055em;
+}
+
+.sim-wrap .chart-legend {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sim-wrap .sim-inputs {
+  padding: 7px 16px;
+  border-radius: 18px;
+}
+
+.sim-wrap .inp-row {
+  min-height: 62px;
+}
+
+.sim-wrap .inp {
+  max-width: 46%;
+  border-radius: 13px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.sim-wrap .inp:focus-visible {
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-600) 16%, transparent);
+}
+
+.sim-wrap .yr-slider:focus-visible,
+.sim-wrap .show-all-btn:focus-visible,
+.sim-wrap details.gl summary:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 3px;
+}
+
+.sim-wrap .yr-table {
+  border-radius: 18px;
+}
+
+.sim-wrap .yr-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.sim-wrap .yr-row-item {
+  min-height: 48px;
+}
+
+.sim-wrap .show-all-btn {
+  border-radius: 14px;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.sim-wrap details.gl {
+  border-radius: 18px;
+}
+
+.sim-wrap details.gl[open] summary {
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.sim-wrap .sim-valuation-warning {
+  border-left: 3px solid var(--primary-600);
+}
+
+.sim-wrap .modal {
+  border-radius: 24px 24px 0 0;
+}
+
+@media (max-width: 390px) {
+  .sim-wrap .summary-strip {
+    gap: 6px;
+  }
+
+  .sim-wrap .summary-strip > span {
+    padding: 10px 8px;
+    font-size: 10px;
+  }
+
+  .sim-wrap .mtab {
+    min-height: 68px;
+    padding-inline: 3px;
+    font-size: 12px;
+  }
+
+  .sim-wrap .mtab small {
+    font-size: 9px;
+  }
+}
+
+@media (hover: hover) {
+  .sim-wrap .mtab:not(.on):hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--surface-raised) 60%, transparent);
+  }
+
+  .sim-wrap .show-all-btn:hover:not(:disabled) {
+    border-color: var(--border-subtle);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sim-wrap .inp,
+  .sim-wrap .show-all-btn {
+    transition: none;
+  }
+}
