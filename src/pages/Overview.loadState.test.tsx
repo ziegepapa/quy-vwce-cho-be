@@ -79,11 +79,26 @@ beforeEach(() => {
   dbMocks.listQuotes.mockResolvedValue([]);
   dbMocks.listTransactions.mockResolvedValue([]);
   dbMocks.db.appMetadata.get.mockResolvedValue({ lastBackupAt: "" });
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    const points = url.includes("IE000VAHT5T0")
+      ? [
+          { date: "2026-10-19", price: 4.401 },
+          { date: "2026-10-20", price: 4.39 },
+        ]
+      : [
+          { date: "2026-10-19", price: 170.88 },
+          { date: "2026-10-20", price: 170.36 },
+        ];
+    return { ok: true, json: async () => ({ points }) } as Response;
+  }));
 });
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   window.localStorage.removeItem(LOCALE_KEY);
+  window.localStorage.removeItem("vwce.overview.metric.v1");
 });
 
 describe("Overview load state", () => {
@@ -120,7 +135,7 @@ describe("Overview load state", () => {
 });
 
 describe("Overview German locale", () => {
-  it("does not leak Vietnamese overview labels when Deutsch is active", async () => {
+  it("keeps the portfolio labels German and the metric selector bilingual", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-de-1", "2026-08-01")]);
 
@@ -131,6 +146,9 @@ describe("Overview German locale", () => {
     expect(screen.getByLabelText("Zu beachten")).toBeTruthy();
     expect(screen.getByLabelText("Jahresrückblick")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Bericht exportieren" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Metrik / Chỉ số" })).toBeTruthy();
+    expect(document.body.textContent).toContain("Seit Kauf relativ");
+    expect(document.body.textContent).toContain("Từ lúc mua · phần trăm");
     expect(document.body.textContent).not.toMatch(/Tổng giá trị|Cột mốc tiếp theo|Cần chú ý|Tổng kết năm|Xuất báo cáo|Đã góp|Thị trường thêm/);
   });
 });
@@ -229,9 +247,19 @@ describe("Overview bản 2", () => {
     expect(tableText).toContain("VALL");
     expect(tableText).toContain("Vanguard FTSE All-World");
     expect(tableText).toContain("Vanguard FTSE Global All-Cap");
-    // Each holding gets a clear amount and percentage, while aggregate assets stay unchanged.
-    expect(tableText).toContain("Từ lúc mua: +70,94 € (+70,9%)");
-    expect(tableText).toContain("Từ lúc mua: +5,25 € (+4,4%)");
+    // The default metric is relative since purchase; the aggregate assets stay unchanged.
+    expect(tableText).toContain("+70,9%");
+    expect(tableText).toContain("+4,4%");
+    expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,19");
+
+    fireEvent.click(screen.getByRole("button", { name: "Metrik / Chỉ số" }));
+    expect(screen.getByRole("option", { name: /Seit Kauf absolut/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /Tagestrend relativ/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /Tagestrend absolut/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("option", { name: /Seit Kauf absolut/ }));
+    const absoluteText = container.querySelector(".ovb2-table-card")?.textContent ?? "";
+    expect(absoluteText).toContain("+70,94 €");
+    expect(absoluteText).toContain("+5,25 €");
     expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,19");
     expect(tableText).not.toContain("VanEck");
   });
@@ -245,9 +273,26 @@ describe("Overview bản 2", () => {
 
     await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
     const lossLabel = container.querySelector(".ovb2-pnl.down")?.textContent?.replace(/\u00a0/g, " ") ?? "";
-    expect(lossLabel).toContain("Từ lúc mua: −10,00 € (−10,0%)");
+    expect(lossLabel).toContain("−10,0%");
     expect(container.querySelector(".ovb2-pnl.down")).toBeTruthy();
     expect(container.querySelector(".ovb2-big")?.textContent).toContain("90,00");
+  });
+
+  it("switches between daily trend percentage and absolute value using price history", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-day-metric", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(170.36, "2026-10-20")]);
+
+    const { container } = renderOverview();
+    await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "Metrik / Chỉ số" }));
+    fireEvent.click(screen.getByRole("option", { name: /Tagestrend relativ/ }));
+    expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("−0,30%");
+
+    fireEvent.click(screen.getByRole("button", { name: "Metrik / Chỉ số" }));
+    fireEvent.click(screen.getByRole("option", { name: /Tagestrend absolut/ }));
+    expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("−0,52 €");
   });
 
   it("renders one merged attention list that links to the existing review surfaces", async () => {
