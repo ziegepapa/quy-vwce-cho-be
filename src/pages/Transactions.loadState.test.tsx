@@ -83,6 +83,28 @@ describe("Transactions load and empty states", () => {
     expect(await screen.findByText("pdf-import-loaded")).toBeTruthy();
   });
 
+  it("offers a one-tap VALL purchase and preselects its verified ISIN", async () => {
+    dbMocks.listTransactions.mockResolvedValue([]);
+    render(createElement(MemoryRouter, null, createElement(Transactions)));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Mua VALL" }));
+    expect(screen.getByRole("heading", { name: "Mua VALL" })).toBeTruthy();
+    expect((screen.getByLabelText("Công cụ") as HTMLSelectElement).value).toBe("vall");
+    expect(screen.getByText("ISIN: IE000VAHT5T0")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Tổng tiền thanh toán"), { target: { value: "120" } });
+    fireEvent.change(screen.getByLabelText("Giá một đơn vị"), { target: { value: "4.22" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+
+    await waitFor(() => expect(dbMocks.upsertTransaction).toHaveBeenCalledTimes(1));
+    expect(dbMocks.upsertTransaction.mock.calls[0][0]).toMatchObject({
+      type: "buy_security",
+      instrumentIsin: "IE000VAHT5T0",
+      amount: 120,
+      unitPrice: 4.22,
+    });
+  });
+
   it("uses German validation, date and number presentation for a critical ledger action", async () => {
     window.localStorage.setItem(LOCALE_KEY, "de");
     const alertMock = vi.spyOn(window, "alert").mockImplementation(() => undefined);
