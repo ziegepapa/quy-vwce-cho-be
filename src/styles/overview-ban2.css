@@ -213,7 +213,7 @@
 }
 
 
-/* Compact bilingual metric selector inspired by modern broker menus. */
+/* Compact, single-language metric selector. */
 .ovb2-metric-toolbar {
   display:flex;
   align-items:center;
@@ -222,127 +222,125 @@
   margin:2px 0 12px;
 }
 .ovb2-metric-caption {
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
+  flex:0 0 auto;
   color:var(--text-secondary);
-  font-size:10px;
-  font-weight:800;
-  line-height:1.3;
-  letter-spacing:.08em;
-  text-transform:uppercase;
+  font-size:12px;
+  font-weight:750;
+  line-height:1.35;
   white-space:nowrap;
 }
-.ovb2-metric-caption i {
-  display:block;
-  width:3px;
-  height:3px;
-  border-radius:50%;
-  background:var(--text-tertiary);
+.ovb2-metric-control {
+  position:relative;
+  z-index:8;
+  flex:0 1 258px;
+  min-width:0;
 }
-.ovb2-metric-control {position:relative;z-index:8;flex:0 1 270px;min-width:0}
 .ovb2-metric-trigger {
   display:flex;
   align-items:center;
-  gap:10px;
+  justify-content:space-between;
+  gap:12px;
   width:100%;
-  min-height:54px;
-  padding:8px 11px;
+  min-height:44px;
+  padding:10px 12px;
   color:var(--text-primary);
   text-align:left;
-  background:color-mix(in srgb,var(--surface-raised) 94%,var(--primary-050));
-  border:1px solid color-mix(in srgb,var(--primary-600) 24%,var(--border-subtle));
-  border-radius:14px;
-  box-shadow:0 2px 6px rgba(15,23,42,.035);
+  background:var(--surface-raised);
+  border:1px solid var(--border-subtle);
+  border-radius:12px;
+  box-shadow:0 1px 2px rgba(15,23,42,.035);
   cursor:pointer;
-  transition:border-color 140ms ease,box-shadow 140ms ease,background 140ms ease;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  transition:background-color 160ms ease,border-color 160ms ease,box-shadow 160ms ease,transform 160ms cubic-bezier(.2,.8,.2,1);
 }
-.ovb2-metric-trigger:hover,
+.ovb2-metric-trigger:hover {
+  background:var(--surface-sunken);
+  border-color:color-mix(in srgb,var(--primary-600) 30%,var(--border-subtle));
+}
 .ovb2-metric-trigger[aria-expanded="true"] {
-  border-color:color-mix(in srgb,var(--primary-600) 50%,var(--border-subtle));
-  box-shadow:0 4px 14px rgba(15,23,42,.08);
+  border-color:color-mix(in srgb,var(--primary-600) 48%,var(--border-subtle));
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--primary-600) 10%,transparent);
 }
+.ovb2-metric-trigger:active {transform:scale(.985)}
 .ovb2-metric-trigger:focus-visible,
 .ovb2-metric-option:focus-visible {
   outline:2px solid var(--focus-ring);
   outline-offset:2px;
 }
-.ovb2-metric-trigger-icon {
-  display:flex;
-  flex:0 0 34px;
-  align-items:center;
-  justify-content:center;
-  width:34px;
-  height:34px;
-  color:var(--primary-700);
-  background:color-mix(in srgb,var(--primary-050) 76%,var(--surface-raised));
-  border:1px solid color-mix(in srgb,var(--primary-600) 13%,var(--border-subtle));
-  border-radius:10px;
+.ovb2-metric-trigger-copy {display:flex;flex:1;min-width:0;align-items:center}
+.ovb2-metric-trigger-copy strong {
+  overflow:hidden;
+  font-size:12px;
+  font-weight:750;
+  line-height:1.3;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
-.ovb2-metric-trigger-copy,
-.ovb2-metric-option-copy {display:flex;flex:1;flex-direction:column;min-width:0;gap:3px}
-.ovb2-metric-trigger-copy strong {overflow:hidden;font-size:12px;font-weight:800;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
-.ovb2-metric-trigger-copy small {overflow:hidden;color:var(--text-secondary);font-size:10px;font-weight:500;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}
-.ovb2-metric-chevron {flex:0 0 auto;color:var(--text-secondary);transition:transform 140ms ease}
-.ovb2-metric-chevron.open {transform:rotate(180deg)}
+.ovb2-metric-chevron {
+  flex:0 0 auto;
+  color:var(--text-secondary);
+  transition:transform 180ms cubic-bezier(.2,.8,.2,1),color 160ms ease;
+}
+.ovb2-metric-chevron.open {color:var(--primary-600);transform:rotate(180deg)}
 .ovb2-metric-menu {
   position:absolute;
-  top:calc(100% + 8px);
+  top:calc(100% + 6px);
   right:0;
   z-index:20;
-  width:min(310px,calc(100vw - 40px));
-  padding:6px;
-  overflow:hidden;
+  width:100%;
+  min-width:min(230px,calc(100vw - 32px));
+  max-height:min(280px,calc(100dvh - 100px));
+  padding:5px;
+  overflow:auto;
+  overscroll-behavior:contain;
   background:var(--surface-raised);
   border:1px solid var(--border-subtle);
-  border-radius:16px;
-  box-shadow:0 18px 48px rgba(15,23,42,.17),0 2px 8px rgba(15,23,42,.06);
-  animation:ovb2-metric-enter 140ms ease-out;
+  border-radius:13px;
+  box-shadow:0 12px 32px rgba(15,23,42,.14),0 2px 6px rgba(15,23,42,.045);
+  transform-origin:top right;
+  animation:ovb2-metric-enter 180ms cubic-bezier(.2,.8,.2,1) both;
 }
 .ovb2-metric-option {
   display:flex;
   align-items:center;
-  gap:10px;
+  justify-content:space-between;
+  gap:12px;
   width:100%;
-  min-height:58px;
+  min-height:42px;
   padding:9px 10px;
   color:var(--text-primary);
   text-align:left;
   background:transparent;
   border:1px solid transparent;
-  border-radius:11px;
+  border-radius:9px;
   cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  transition:background-color 130ms ease,border-color 130ms ease,transform 130ms ease;
 }
-.ovb2-metric-option + .ovb2-metric-option {margin-top:2px}
 .ovb2-metric-option:hover {background:var(--surface-sunken)}
+.ovb2-metric-option:active {transform:scale(.99)}
 .ovb2-metric-option.selected {
-  background:color-mix(in srgb,var(--primary-050) 74%,var(--surface-raised));
-  border-color:color-mix(in srgb,var(--primary-600) 18%,var(--border-subtle));
+  background:color-mix(in srgb,var(--primary-050) 72%,var(--surface-raised));
+  border-color:color-mix(in srgb,var(--primary-600) 20%,var(--border-subtle));
 }
-.ovb2-metric-unit {
-  display:flex;
-  flex:0 0 34px;
-  align-items:center;
-  justify-content:center;
-  width:34px;
-  height:34px;
-  color:var(--primary-700);
-  background:var(--surface-sunken);
-  border:1px solid var(--border-subtle);
-  border-radius:10px;
+.ovb2-metric-option-label {
+  min-width:0;
   font-size:12px;
-  font-weight:850;
+  font-weight:650;
+  line-height:1.35;
 }
-.ovb2-metric-option.selected .ovb2-metric-unit {
-  color:var(--color-text-inverse);
-  background:var(--primary-600);
-  border-color:var(--primary-600);
+.ovb2-metric-check {
+  flex:0 0 16px;
+  width:16px;
+  color:var(--primary-600);
+  font-size:14px;
+  font-weight:900;
+  text-align:center;
 }
-.ovb2-metric-option-copy strong {font-size:12px;font-weight:800;line-height:1.25}
-.ovb2-metric-option-copy small {color:var(--text-secondary);font-size:10px;font-weight:500;line-height:1.35}
-.ovb2-metric-check {width:16px;color:var(--primary-600);font-size:15px;font-weight:900;text-align:center}
 @keyframes ovb2-metric-enter {
-  from {opacity:0;transform:translateY(-4px) scale(.99)}
+  from {opacity:0;transform:translateY(-5px) scale(.985)}
   to {opacity:1;transform:translateY(0) scale(1)}
 }
 .ovb2-tbl td.num small.ovb2-pnl {
@@ -359,16 +357,15 @@
 .ovb2-tbl td.num small.ovb2-pnl.down {color:var(--danger-600)}
 .ovb2-tbl td.num small.ovb2-pnl.muted {color:var(--text-tertiary)}
 @media (max-width:520px) {
-  .ovb2-metric-toolbar {align-items:flex-start;gap:8px}
-  .ovb2-metric-caption {gap:4px;padding-top:18px;font-size:9px;letter-spacing:.04em}
+  .ovb2-metric-toolbar {gap:10px}
+  .ovb2-metric-caption {font-size:11px}
   .ovb2-metric-control {flex:1 1 auto;max-width:270px}
-  .ovb2-metric-trigger {gap:7px;min-height:50px;padding:7px 8px;border-radius:12px}
-  .ovb2-metric-trigger-icon {flex-basis:30px;width:30px;height:30px}
+  .ovb2-metric-trigger {min-height:43px;padding:9px 10px}
   .ovb2-metric-trigger-copy strong {font-size:11px}
-  .ovb2-metric-trigger-copy small {font-size:9px}
-  .ovb2-metric-menu {width:min(300px,calc(100vw - 32px))}
+  .ovb2-metric-menu {min-width:0;width:max(100%,min(230px,calc(100vw - 32px)))}
 }
 @media (prefers-reduced-motion:reduce) {
-  .ovb2-metric-trigger,.ovb2-metric-chevron {transition:none}
+  .ovb2-metric-trigger,.ovb2-metric-chevron,.ovb2-metric-option {transition:none}
+  .ovb2-metric-trigger:active,.ovb2-metric-option:active {transform:none}
   .ovb2-metric-menu {animation:none}
 }
