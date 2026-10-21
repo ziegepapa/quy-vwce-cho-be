@@ -18,10 +18,10 @@ const OVERVIEW_METRICS: ReadonlyArray<{
   vi: string;
   unit: "%" | "€";
 }> = [
-  { id: "since-purchase-relative", de: "Seit Kauf relativ", vi: "Từ lúc mua · %", unit: "%" },
-  { id: "since-purchase-absolute", de: "Seit Kauf absolut", vi: "Từ lúc mua · €", unit: "€" },
-  { id: "daily-relative", de: "Tagestrend relativ", vi: "So với phiên trước · %", unit: "%" },
-  { id: "daily-absolute", de: "Tagestrend absolut", vi: "So với phiên trước · €", unit: "€" },
+  { id: "since-purchase-relative", de: "Seit Kauf (%)", vi: "Từ lúc mua (%)", unit: "%" },
+  { id: "since-purchase-absolute", de: "Seit Kauf (€)", vi: "Từ lúc mua (€)", unit: "€" },
+  { id: "daily-relative", de: "Tagesänderung (%)", vi: "So với phiên trước (%)", unit: "%" },
+  { id: "daily-absolute", de: "Tagesänderung (€)", vi: "So với phiên trước (€)", unit: "€" },
 ];
 
 function isOverviewMetric(value: string | null): value is OverviewMetric {
@@ -151,6 +151,8 @@ function overviewCopy(locale: "vi" | "de") {
     fund: "Fonds",
     currentValue: "Aktueller Wert",
     sincePurchase: "Seit Kauf",
+    metricLabel: "Kennzahl",
+    metricOptionsLabel: "Kennzahl auswählen",
     weight: "Gewichtung",
     shares: "Anteile",
     recentUpdates: "Neueste Updates",
@@ -206,6 +208,8 @@ function overviewCopy(locale: "vi" | "de") {
     fund: "Quỹ",
     currentValue: "Giá trị hiện tại",
     sincePurchase: "Từ lúc mua",
+    metricLabel: "Chỉ số",
+    metricOptionsLabel: "Chọn chỉ số",
     weight: "Tỷ trọng",
     shares: "Số cổ phần",
     recentUpdates: "Cập nhật gần nhất",
@@ -467,17 +471,15 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                 <Link to="/transactions" className="ovb2-link">{text.viewDetails}</Link>
               </div>
               <div className="ovb2-metric-toolbar">
-                <span className="ovb2-metric-caption">
-                  <span>Metrik</span>
-                  <i aria-hidden="true" />
-                  <span>Chỉ số</span>
+                <span className="ovb2-metric-caption" id="ovb2-metric-label">
+                  {text.metricLabel}
                 </span>
                 <div className="ovb2-metric-control" ref={metricControlRef}>
                   <button
                     ref={metricTriggerRef}
                     type="button"
                     className="ovb2-metric-trigger"
-                    aria-label="Metrik / Chỉ số"
+                    aria-label={`${text.metricLabel}: ${selectedMetricOption[locale]}`}
                     aria-haspopup="listbox"
                     aria-expanded={metricMenuOpen}
                     aria-controls="ovb2-metric-options"
@@ -489,17 +491,8 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                       requestAnimationFrame(() => focusMetricOption(OVERVIEW_METRICS.findIndex((metric) => metric.id === selectedMetric)));
                     }}
                   >
-                    <span className="ovb2-metric-trigger-icon" aria-hidden="true">
-                      <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
-                        <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                        <circle cx="7" cy="5" r="2" fill="var(--surface-raised)" stroke="currentColor" strokeWidth="1.6" />
-                        <circle cx="13" cy="10" r="2" fill="var(--surface-raised)" stroke="currentColor" strokeWidth="1.6" />
-                        <circle cx="8" cy="15" r="2" fill="var(--surface-raised)" stroke="currentColor" strokeWidth="1.6" />
-                      </svg>
-                    </span>
                     <span className="ovb2-metric-trigger-copy">
-                      <strong>{selectedMetricOption.de}</strong>
-                      <small>{selectedMetricOption.vi}</small>
+                      <strong>{selectedMetricOption[locale]}</strong>
                     </span>
                     <svg className={"ovb2-metric-chevron" + (metricMenuOpen ? " open" : "")} viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
                       <path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -510,7 +503,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                       className="ovb2-metric-menu"
                       id="ovb2-metric-options"
                       role="listbox"
-                      aria-label="Metrik / Chỉ số auswählen"
+                      aria-label={text.metricOptionsLabel}
                     >
                       {OVERVIEW_METRICS.map((metric, index) => (
                         <button
@@ -542,11 +535,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                             }
                           }}
                         >
-                          <span className="ovb2-metric-unit" aria-hidden="true">{metric.unit}</span>
-                          <span className="ovb2-metric-option-copy">
-                            <strong>{metric.de}</strong>
-                            <small>{metric.vi}</small>
-                          </span>
+                          <span className="ovb2-metric-option-label">{metric[locale]}</span>
                           <span className="ovb2-metric-check" aria-hidden="true">{selectedMetric === metric.id ? "✓" : ""}</span>
                         </button>
                       ))}
@@ -585,8 +574,8 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                           return (
                             <small
                               className={currentMetric.positive == null ? "ovb2-pnl muted" : currentMetric.positive ? "ovb2-pnl up" : "ovb2-pnl down"}
-                              aria-label={selectedMetricOption.de + " / " + selectedMetricOption.vi + ": " + (currentMetric.label ?? text.gainUnavailable)}
-                              title={selectedMetricOption.de + " / " + selectedMetricOption.vi}
+                              aria-label={selectedMetricOption[locale] + ": " + (currentMetric.label ?? text.gainUnavailable)}
+                              title={selectedMetricOption[locale]}
                             >
                               {currentMetric.label ?? "—"}
                             </small>
