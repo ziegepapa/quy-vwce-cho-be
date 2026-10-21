@@ -135,7 +135,7 @@ describe("Overview load state", () => {
 });
 
 describe("Overview German locale", () => {
-  it("keeps the portfolio labels German and the metric selector bilingual", async () => {
+  it("keeps the portfolio and metric selector fully German", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-de-1", "2026-08-01")]);
     dbMocks.listQuotes.mockResolvedValue([quoteVwce(110, "2026-08-19")]);
@@ -147,9 +147,9 @@ describe("Overview German locale", () => {
     expect(screen.getByLabelText("Zu beachten")).toBeTruthy();
     expect(screen.getByLabelText("Jahresrückblick")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Bericht exportieren" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Metrik / Chỉ số" })).toBeTruthy();
-    expect(document.body.textContent).toContain("Seit Kauf relativ");
-    expect(document.body.textContent).toContain("Từ lúc mua · %");
+    expect(screen.getByRole("button", { name: "Kennzahl: Seit Kauf (%)" })).toBeTruthy();
+    expect(document.body.textContent).toContain("Seit Kauf (%)");
+    expect(document.querySelector(".ovb2-metric-toolbar")?.textContent).not.toMatch(/Từ lúc mua|So với phiên trước|Chỉ số/);
     expect(document.body.textContent).not.toMatch(/Tổng giá trị|Cột mốc tiếp theo|Cần chú ý|Tổng kết năm|Xuất báo cáo|Đã góp|Thị trường thêm/);
   });
 });
@@ -253,11 +253,15 @@ describe("Overview bản 2", () => {
     expect(tableText).toContain("+4,4%");
     expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,19");
 
-    fireEvent.click(screen.getByRole("button", { name: "Metrik / Chỉ số" }));
-    expect(screen.getByRole("option", { name: /Seit Kauf absolut/ })).toBeTruthy();
-    expect(screen.getByRole("option", { name: /Tagestrend relativ/ })).toBeTruthy();
-    expect(screen.getByRole("option", { name: /Tagestrend absolut/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole("option", { name: /Seit Kauf absolut/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Chỉ số: Từ lúc mua (%)" }));
+    expect(screen.getByRole("option", { name: /Từ lúc mua \(€\)/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /So với phiên trước \(%\)/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /So với phiên trước \(€\)/ })).toBeTruthy();
+    expect(document.querySelector(".ovb2-metric-toolbar")?.textContent).not.toMatch(/Seit Kauf|Tagesänderung|Kennzahl/);
+    expect(screen.getByRole("option", { name: /Seit Kauf \(€\)/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /Tagesänderung \(%\)/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /Tagesänderung \(€\)/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("option", { name: /Seit Kauf \(€\)/ }));
     const absoluteText = container.querySelector(".ovb2-table-card")?.textContent?.replace(/\u00a0/g, " ") ?? "";
     expect(absoluteText).toContain("+70,94 €");
     expect(absoluteText).toContain("+5,25 €");
@@ -287,12 +291,12 @@ describe("Overview bản 2", () => {
     const { container } = renderOverview();
     await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
 
-    fireEvent.click(screen.getByRole("button", { name: "Metrik / Chỉ số" }));
-    fireEvent.click(screen.getByRole("option", { name: /Tagestrend relativ/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Chỉ số: Từ lúc mua (%)" }));
+    fireEvent.click(screen.getByRole("option", { name: /Tagesänderung \(%\)/ }));
     await waitFor(() => expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("−0,30%"));
 
-    fireEvent.click(screen.getByRole("button", { name: "Metrik / Chỉ số" }));
-    fireEvent.click(screen.getByRole("option", { name: /Tagestrend absolut/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Chỉ số: Từ lúc mua (%)" }));
+    fireEvent.click(screen.getByRole("option", { name: /Tagesänderung \(€\)/ }));
     await waitFor(() => expect(container.querySelector(".ovb2-pnl.down")?.textContent?.replace(/\u00a0/g, " ")).toContain("−0,52 €"));
   });
 
