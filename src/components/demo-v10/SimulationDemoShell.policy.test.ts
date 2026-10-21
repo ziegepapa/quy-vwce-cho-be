@@ -22,7 +22,11 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     primary: undefined,
     initialBalance: 0,
     shownInterest,
-    results: [],
+    results: [
+      { sc: { id: "cautious", label: locale === "de" ? "Vorsichtig" : "Thận trọng", rate: -0.01 }, out: { yearEnds: [{ yearIndex: 0, total: 0, contributed: 0 }, { yearIndex: 15, total: 800, contributed: 36000 }], terminal: 800, contributed: 36000, interest: -35200 } },
+      { sc: { id: "base", label: locale === "de" ? "Basis" : "Cơ sở", rate: 0.06 }, out: { yearEnds: [{ yearIndex: 0, total: 0, contributed: 0 }, { yearIndex: 15, total: 1000, contributed: 36000 }], terminal: 1000, contributed: 36000, interest: -35000 } },
+      { sc: { id: "bull", label: locale === "de" ? "Günstig" : "Thuận lợi", rate: 0.08 }, out: { yearEnds: [{ yearIndex: 0, total: 0, contributed: 0 }, { yearIndex: 15, total: 1200, contributed: 36000 }], terminal: 1200, contributed: 36000, interest: -34800 } },
+    ],
     goalMarkers: [],
     band: 0,
     baseRate: 0.06,
@@ -119,6 +123,19 @@ describe("SimulationDemoShell financial-policy containment", () => {
     renderShell("de");
     expect(screen.getByText("Startwert → Ergebnis")).toBeTruthy();
     expect(screen.getByText("Zielbetrag → Monatsrate")).toBeTruthy();
+  });
+
+  it("shows a localized scenario comparison with each scenario's own terminal value", () => {
+    renderShell("vi");
+    expect(screen.getByRole("heading", { name: "Giá trị cuối kỳ theo kịch bản" })).toBeTruthy();
+    expect(screen.getByText("Thận trọng")).toBeTruthy();
+    expect(screen.getByText("Cơ sở")).toBeTruthy();
+    expect(screen.getByText("Thuận lợi")).toBeTruthy();
+    expect(screen.getByText("1.000 €")).toBeTruthy();
+    cleanup();
+    renderShell("de");
+    expect(screen.getByRole("heading", { name: "Endwert nach Szenario" })).toBeTruthy();
+    expect(screen.getByText("Vorsichtig")).toBeTruthy();
   });
 
   it("shows the 40-year projection while disclosing that the target is unreachable", () => {
