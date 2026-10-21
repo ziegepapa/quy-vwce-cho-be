@@ -30,7 +30,7 @@ This refresh reconciles repository and release evidence after the August baselin
 - **H4 remains open:** source/schema inspection is static evidence only. No disposable Supabase Auth + PostgREST + PostgreSQL two-user behavioral matrix has been executed for this refresh.
 - **H5 remains blocked:** `supabase/migrations/` still contains only `002_soft_delete_and_triggers.sql`; a complete ordered baseline and upgrade/rollback drill do not exist. Do not create a purported production baseline by copying SQL without reconciling it against an authorized read-only schema inventory.
 - **Decision:** readiness remains `CONDITIONAL — NOT READY` for a sole authoritative financial record. Keep broker statements and owner-controlled off-device backups; do not infer tax readiness from CI.
-- **Closure workplan:** see [H4/H5 Closure Plan](./H4_H5_CLOSURE_PLAN.md). It defines isolated-only steps, evidence artifacts, release gates and stop conditions. No production database was accessed or changed for this refresh.
+- **Closure workplan:** see [H4/H5 Closeout Plan](./H4-H5-CLOSEOUT-PLAN-2026-10-21.md). It defines isolated-only steps, evidence artifacts, release gates and stop conditions. No production database was accessed or changed for this refresh.
 
 > Historical sections below contain observations dated August 2026. Their dated results remain historical evidence; they must not be described as newly rerun unless a corresponding artifact and run ID are recorded in the closure plan.
 
