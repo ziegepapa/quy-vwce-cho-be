@@ -54,7 +54,7 @@ describe("QuoteFeedRefresh", () => {
     ]);
 
     render(createElement(QuoteFeedRefresh, { onUpdated }));
-    fireEvent.click(screen.getByRole("button", { name: "Cập nhật giá bây giờ" }));
+    fireEvent.click(screen.getByRole("button", { name: "Đồng bộ feed giá" }));
 
     const status = await screen.findByRole("status");
     expect(status.textContent).toContain("Đang offline");
@@ -70,7 +70,7 @@ describe("QuoteFeedRefresh", () => {
     ]);
 
     render(createElement(QuoteFeedRefresh));
-    fireEvent.click(screen.getByRole("button", { name: "Cập nhật giá bây giờ" }));
+    fireEvent.click(screen.getByRole("button", { name: "Đồng bộ feed giá" }));
 
     const status = await screen.findByRole("status");
     expect(status.textContent).toBe("Đang offline — giá đã lưu trên máy vẫn được giữ nguyên.");
@@ -81,7 +81,7 @@ describe("QuoteFeedRefresh", () => {
     dbMocks.listQuoteSelectionStates.mockRejectedValue(new Error("IndexedDB unavailable"));
 
     render(createElement(QuoteFeedRefresh));
-    fireEvent.click(screen.getByRole("button", { name: "Cập nhật giá bây giờ" }));
+    fireEvent.click(screen.getByRole("button", { name: "Đồng bộ feed giá" }));
 
     await screen.findByText("Đang offline — giá đã lưu trên máy vẫn được giữ nguyên.");
     expect(dbMocks.ingestQuotesFeed).toHaveBeenCalledTimes(1);
@@ -94,7 +94,7 @@ describe("QuoteFeedRefresh", () => {
     dbMocks.ingestQuotesFeed.mockRejectedValue(new Error("network down"));
 
     render(createElement(QuoteFeedRefresh));
-    fireEvent.click(screen.getByRole("button", { name: "Cập nhật giá bây giờ" }));
+    fireEvent.click(screen.getByRole("button", { name: "Đồng bộ feed giá" }));
 
     const status = await screen.findByRole("status");
     await waitFor(() => expect(status.textContent).toContain("network down"));
