@@ -205,7 +205,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
               <article key={sc.id} className={`sim-scenario sim-scenario-${sc.id}`}>
                 <span className="sim-scenario-label">{sc.label}</span>
                 <strong>{formatMoneyRounded(out.terminal, locale)}</strong>
-                <small>{(sc.rate * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 2 })}% / {text.perYear}</small>
+                <small>{(sc.rate * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 2 })}{text.perYear}</small>
               </article>
             ))}
           </div>
