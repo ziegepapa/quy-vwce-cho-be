@@ -1,7 +1,8 @@
 # H4 — RLS, Auth Boundary and Sync Security Evidence
 
 **Trạng thái:** **Partial evidence; behavioral proof blocked by no-cost constraint.**  
-**Ngày kiểm tra:** 21-08-2026  
+**Ngày kiểm tra evidence gốc:** 21-08-2026  
+**Evidence refresh:** 21-10-2026 — không có behavioral run mới; trạng thái không thay đổi  
 **Phạm vi:** Project Supabase VWCE Vault đang active; chỉ kiểm tra read-only schema/policy metadata. Không truy vấn nội dung giao dịch, settings, goals hay dữ liệu gia đình.
 
 > **Decision boundary:** H4 không được đóng và app không được tuyên bố production RLS đã được behavioral-verified cho đến khi có môi trường controlled riêng và User-A/User-B/anonymous tests thực tế. Không tạo Supabase project/branch, không phát sinh chi phí và không dùng production owner data làm test fixture theo quyết định owner ngày 21-08-2026.
@@ -39,3 +40,10 @@ Khi owner cho phép controlled environment không chứa dữ liệu gia đình 
 ## 5. Non-goals
 
 Tài liệu này không thay đổi RLS policy, Supabase migration, database schema, sync protocol, data, token, credential, financial semantics hoặc P11.2. Nó cũng không khẳng định app an toàn tuyệt đối hay đủ điều kiện làm hệ thống hồ sơ tài chính authoritative.
+
+
+## 6. Evidence refresh — 21-10-2026
+
+Đợt rà soát mã nguồn đến mốc `7268aaa2d16e8a35bfed56540b9ee95af14b84a7` không tạo Supabase branch/project, không thực hiện write/delete vào remote, và không truy cập row data của gia đình. Repository vẫn thiếu môi trường test được xác nhận là isolated và disposable; vì vậy không có test result behavioral mới để báo cáo. Trạng thái H4 vẫn **`PARTIAL — STATIC POLICY EVIDENCE ONLY`**.
+
+Bước đóng H4 tiếp theo được định nghĩa trong [kế hoạch đóng H4/H5](./H4-H5-CLOSEOUT-PLAN-2026-10-21.md). Không đổi trạng thái trước khi artifact CI lưu được test matrix request-level cho User A, User B và anonymous trên toàn bộ bảng sync.
