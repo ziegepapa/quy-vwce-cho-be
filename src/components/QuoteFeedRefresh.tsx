@@ -48,8 +48,8 @@ export default function QuoteFeedRefresh({
 }) {
   const { locale } = useLocale();
   const text = locale === "de"
-    ? { eyebrow: "Automatisch", title: "Marktpreise", summary: "VWCE wird aus dem hinterlegten Kurs-Feed aktualisiert.", info: "Informationen zur Kursquelle", description: "Es werden nur Kennungen aus dem Kurs-Feed aktualisiert, derzeit VWCE. Andere Werte benötigen einen unten erfassten manuellen Kurs. Bei Netzwerkfehlern verwendet die App weiterhin lokale Daten.", refreshing: "Wird aktualisiert…", refresh: "Kurse jetzt aktualisieren" }
-    : { eyebrow: "Tự động", title: "Giá thị trường", summary: "VWCE được cập nhật từ feed giá đã cấu hình.", info: "Thông tin nguồn giá", description: "Chỉ những mã có trong feed giá mới được cập nhật, hiện tại là VWCE. Mã khác cần có giá thủ công trong danh sách bên dưới. Khi mạng lỗi, ứng dụng tiếp tục dùng dữ liệu local.", refreshing: "Đang cập nhật…", refresh: "Cập nhật giá bây giờ" };
+    ? { eyebrow: "Veröffentlichter Feed", title: "Marktpreise", summary: "Synchronisiert den zuletzt veröffentlichten Kurs-Feed; keine Live-Abfrage beim Anbieter.", info: "Informationen zur Kursquelle", description: "Diese Aktion lädt nur den veröffentlichten Feed in die lokale App. Sie fragt Yahoo/Onvista nicht direkt ab und liefert keinen Intraday-Kurs. Angezeigt werden der letzte abgeschlossene Kurs-Tag und der Zeitstempel des Preis-Bots. Bei Netzwerkfehlern bleiben lokale Daten erhalten.", refreshing: "Wird synchronisiert…", refresh: "Kurs-Feed synchronisieren" }
+    : { eyebrow: "Feed đã công bố", title: "Giá thị trường", summary: "Đồng bộ feed giá đã xuất bản; không truy vấn trực tiếp nguồn giá trong phiên.", info: "Thông tin nguồn giá", description: "Nút này chỉ tải feed đã công bố vào ứng dụng local. Nó không gọi trực tiếp Yahoo/Onvista và không cung cấp giá intraday. Kết quả cho biết ngày phiên đóng cửa gần nhất và thời điểm bot lấy dữ liệu. Khi mạng lỗi, giá local vẫn được giữ nguyên.", refreshing: "Đang đồng bộ…", refresh: "Đồng bộ feed giá" };
   const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState<RefreshStatus | null>(null);
 
