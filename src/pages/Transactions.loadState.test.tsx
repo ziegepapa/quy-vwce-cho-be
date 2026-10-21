@@ -401,7 +401,7 @@ describe("Transactions load and empty states", () => {
     render(createElement(Transactions));
 
     // Open the detail sheet from the row.
-    fireEvent.click(await screen.findByRole("button", { name: /Mua chứng khoán khác/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Mua VALL/ }));
     expect(document.querySelector(".txv2-detail")).toBeTruthy();
     // Pinned actions are rendered in the sheet.
     expect(document.querySelector(".txv2-detail-actions")).toBeTruthy();
