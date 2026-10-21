@@ -241,7 +241,6 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
         const value = row.value ?? 0;
         const costBasis = portfolio.positions[isin]?.costBasis ?? 0;
         const pnl = Number.isFinite(costBasis) && costBasis > 0 ? value - costBasis : null;
-        const pnlPct = pnl != null && costBasis > 0 ? (pnl / costBasis) * 100 : null;
         return {
           isin,
           ticker: instrumentTicker(isin),
