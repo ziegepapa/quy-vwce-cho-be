@@ -80,7 +80,7 @@ export function SimulationDemoChart({
   const bull = results.find((r) => r.sc.id === "bull");
   const showBand = band > 0 && !!cautious && !!bull;
   const baseEnd = base?.out.yearEnds[base.out.yearEnds.length - 1];
-  const loPct = round2(Math.max(0, baseRate - band) * 100);
+  const loPct = round2((baseRate - band) * 100);
   const hiPct = round2((baseRate + band) * 100);
   const bandPctText = `${loPct.toLocaleString(locale === "de" ? "de-DE" : "vi-VN")}% – ${hiPct.toLocaleString(locale === "de" ? "de-DE" : "vi-VN")}%`;
 
