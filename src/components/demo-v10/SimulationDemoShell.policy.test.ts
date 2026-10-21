@@ -7,7 +7,7 @@ import SimulationDemoShell, { type SimulationDemoShellProps } from "./Simulation
 
 const noop = vi.fn();
 
-function renderShell(locale: "vi" | "de") {
+function renderShell(locale: "vi" | "de", startingBalanceWarning = "") {
   const props: SimulationDemoShellProps = {
     locale,
     mode: "A",
@@ -17,6 +17,7 @@ function renderShell(locale: "vi" | "de") {
     yearsForProject: 15,
     monthlyForProject: 200,
     headlineNote: "nominal",
+    startingBalanceWarning,
     primary: undefined,
     initialBalance: 0,
     shownInterest: 0,
@@ -107,6 +108,11 @@ describe("SimulationDemoShell financial-policy containment", () => {
     renderShell("vi");
     expect(screen.queryByText(/Thuế DE|sau thuế|có thuế/i)).toBeNull();
     expect(document.body.textContent).not.toMatch(/DE-Steuern|afterTax|after-tax/i);
+  });
+
+  it("discloses when the starting balance excludes unpriced holdings", () => {
+    renderShell("vi", "Giá trị đầu kỳ chưa đầy đủ: VALL chưa có giá dùng được.");
+    expect(screen.getByRole("status").textContent).toContain("VALL");
   });
 
   it("does not render German tax controls or after-tax results", () => {
