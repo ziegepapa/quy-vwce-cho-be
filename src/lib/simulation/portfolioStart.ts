@@ -15,6 +15,7 @@ export type SimulationStartValue = {
   balance: number;
   /** Holdings whose current value is unknown because no usable quote exists. */
   missingIsins: string[];
+  staleIsins: string[];
   valuationStatus: "fresh" | "stale" | "missing";
 };
 
@@ -28,6 +29,7 @@ export function buildSimulationStartValue(input: SimulationStartValueInput): Sim
   return {
     balance: round2(snapshot.market.securities + Math.max(0, snapshot.portfolio.cashBalance)),
     missingIsins: [...snapshot.market.missingIsins],
+    staleIsins: [...snapshot.stalePriceIsins],
     valuationStatus: snapshot.valuationStatus,
   };
 }
