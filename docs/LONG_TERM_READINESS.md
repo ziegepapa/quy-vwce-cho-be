@@ -178,6 +178,26 @@ Không có thay đổi nào thuộc diện financial semantics, schema/Dexie, ba
 
 **Kết luận readiness không đổi:** H4 vẫn `PARTIAL — STATIC POLICY EVIDENCE ONLY`, H5 vẫn `BLOCKED — NO ORDERED BASELINE`, P11.2 vẫn khóa tuyệt đối chờ independent German tax expert review. Hệ thống vẫn ở mức **local-first tracker** như mục 18, chưa phải sole authoritative financial record.
 
+
+## 20. Addendum 21/10/2026 — readiness refresh and next closure gates
+
+**Current application source reviewed:** `main` at `7268aaa2d16e8a35bfed56540b9ee95af14b84a7` (PR #357).
+**Current main release workflow:** [run 39639941852](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39639941852), completed successfully on 21-10-2026. Its `test-build`, `preview-smoke`, `edge-smoke`, and `deploy` jobs passed. This proves the tested source built, passed the repository gates and was published; it does **not** prove production Supabase RLS behavior or database migration/rollback safety.
+
+### Current verified product changes since the August baseline
+
+- Simulation starting valuation now shares the canonical multi-ISIN valuation path with Overview, and reports missing/stale price evidence rather than implying a complete balance.
+- Simulation supports negative annual-return assumptions, displays signed nominal gain/loss, discloses unreachable goals at the 40-year cap, and uses localized descriptive A/B/C mode labels.
+- Regression tests cover multi-asset valuation, missing/stale prices, negative returns, visible losses and unreachable goals.
+- No ledger records, financial assumptions, Dexie schema, backup schema, sync protocol or Supabase production data were changed by this pass.
+
+### Current decision
+
+The readiness conclusion remains **`CONDITIONAL — NOT READY` as the sole authoritative financial ledger**. H4 remains `PARTIAL — STATIC POLICY EVIDENCE ONLY`; H5 remains `BLOCKED — NO ORDERED BASELINE / CONTROLLED MIGRATION PROOF`. The successful release workflow is not evidence that either blocker is closed. P11.2 remains a separate expert-review gate before tax-calculation functionality.
+
+The actionable acceptance plan, test matrix, isolation boundary and owner decisions are maintained in [H4/H5 closure plan](./H4-H5-CLOSURE-PLAN.md). No production project, family data, production token or service-role credential was used to create this addendum.
+
+
 ## References
 
 [1]: https://github.com/ziegepapa/quy-vwce-cho-be/pull/248 "PR #248 — post-baseline documentation consistency"
