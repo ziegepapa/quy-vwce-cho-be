@@ -178,7 +178,8 @@ export default function Simulation() {
   }, [mode, targetN, baseCommon, monthlyN, scenarios, effectiveYears]);
 
   const yearsForProject = mode === "C" ? yearsC.years : effectiveYears;
-  const planUnreachable = (mode === "B" && requiredMonthlyBase < 0) || (mode === "C" && !yearsC.reached);
+  const planUnreachable = mode === "B" && requiredMonthlyBase < 0;
+  const targetUnreachable = mode === "C" && !yearsC.reached;
 
   const results = useMemo(() => {
     return scenarios.map((sc) => {
@@ -453,6 +454,7 @@ export default function Simulation() {
       mode={mode}
       setMode={setMode}
       planUnreachable={planUnreachable}
+      targetUnreachable={targetUnreachable}
       headlineValue={headlineValue}
       yearsForProject={yearsForProject}
       monthlyForProject={monthlyForProject}
