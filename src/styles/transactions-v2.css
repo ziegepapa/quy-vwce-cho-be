@@ -1342,3 +1342,38 @@ html.tx-filter-open .app-shell::after {
   .tx-ledger-result-meta { align-items: flex-start; flex-direction: column; gap: 3px; }
   .tx-ledger-visible-count { text-align: left; }
 }
+
+
+/* One-tap VALL buy is a secondary action; preserve the prominent generic add action. */
+.tx-ledger-redesign .tx-ledger-vall-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 13px;
+  color: var(--primary-700);
+  background: var(--primary-050);
+  border: 1px solid color-mix(in srgb, var(--primary-600) 24%, var(--border-subtle));
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 750;
+}
+.tx-ledger-redesign .tx-ledger-vall-add > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: var(--color-text-inverse);
+  background: var(--primary-600);
+  font-size: 11px;
+  font-weight: 850;
+}
+.tx-ledger-redesign .tx-ledger-vall-add:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.tx-wrap .txv2-instrument-hint { display:block; margin-top:5px; color:var(--text-secondary); font-size:11px; font-variant-numeric:tabular-nums; }
+@media (max-width:520px) {
+  .tx-ledger-redesign .tx-ledger-vall-add { min-width:0; padding-inline:9px; gap:5px; font-size:11px; }
+  .tx-ledger-redesign .tx-ledger-vall-add > span:first-child { width:19px; height:19px; }
+}
