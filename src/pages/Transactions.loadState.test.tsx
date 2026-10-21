@@ -111,6 +111,27 @@ describe("Transactions load and empty states", () => {
     });
   });
 
+  it("labels existing VALL buys explicitly in the transaction ledger", async () => {
+    dbMocks.listTransactions.mockResolvedValue([{
+      id: "tx-vall-label",
+      date: "2026-10-15",
+      type: "buy_security",
+      instrumentIsin: "IE000VAHT5T0",
+      amount: 120,
+      quantity: 28.436,
+      unitPrice: 4.22,
+      fee: 0,
+      tax: 0,
+      notes: "",
+      createdAt: "2026-10-15T00:00:00.000Z",
+      updatedAt: "2026-10-15T00:00:00.000Z",
+    }]);
+    render(createElement(MemoryRouter, null, createElement(Transactions)));
+
+    expect(await screen.findByRole("button", { name: /Mua VALL,/ })).toBeTruthy();
+    expect(screen.getByText("Mua VALL")).toBeTruthy();
+  });
+
   it("uses German validation, date and number presentation for a critical ledger action", async () => {
     window.localStorage.setItem(LOCALE_KEY, "de");
     const alertMock = vi.spyOn(window, "alert").mockImplementation(() => undefined);
