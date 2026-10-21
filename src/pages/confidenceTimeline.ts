@@ -1,9 +1,21 @@
 import type { SyncStatus } from "../lib/sync/types";
+import type { Quote, Transaction, DepotStatement } from "../lib/types";
 
 export type ConfidenceEventKind = "quote" | "transaction_created" | "transaction_updated" | "import";
 export type ConfidenceTimelineSource = "quote" | "ledger" | "import";
 export type ConfidenceTimelineLens = "all" | "30d" | "90d" | "thisYear";
-export type ConfidenceTimelineEvent = { id: string; kind: ConfidenceEventKind; at: string; source: ConfidenceTimelineSource };
+export type ConfidenceTimelineEvent = {
+  id: string;
+  kind: ConfidenceEventKind;
+  at: string;
+  source: ConfidenceTimelineSource;
+  /** Price facts are the session/value from the stored quote, not the local write timestamp. */
+  quote?: Pick<Quote, "instrumentIsin" | "currency" | "price" | "asOf" | "fetchedAt" | "source" | "venue">;
+  /** Sensitive notes are available to the local UI only when the owner expands the event. */
+  transaction?: Pick<Transaction, "type" | "amount" | "date" | "notes" | "instrumentIsin" | "quantity" | "unitPrice" | "fee" | "tax">;
+  /** A depot statement is a dated snapshot; account references and contact details are deliberately excluded. */
+  statement?: { date: string; broker: string; positionsCount: number };
+};
 
 function timestamp(value: string | undefined): number | null {
   if (!value) return null;
@@ -26,9 +38,9 @@ function startForLens(lens: ConfidenceTimelineLens, now: Date): number | null {
  * Filters are applied before sorting/windowing and never mutate source records.
  */
 export function buildConfidenceTimeline(input: {
-  quotes: readonly { id: string; updatedAt: string }[];
-  transactions: readonly { id: string; createdAt: string; updatedAt: string; source?: "manual" | "trade_republic_pdf"; deletedAt?: string }[];
-  depotStatements: readonly { id: string; createdAt: string; deletedAt?: string }[];
+  quotes: readonly (Pick<Quote, "id" | "updatedAt"> & Partial<Omit<Quote, "id" | "updatedAt">>)[];
+  transactions: readonly (Pick<Transaction, "id" | "createdAt" | "updatedAt"> & Partial<Omit<Transaction, "id" | "createdAt" | "updatedAt">>)[];
+  depotStatements: readonly (Pick<DepotStatement, "id" | "createdAt"> & Partial<Omit<DepotStatement, "id" | "createdAt">>)[];
   syncStatus: SyncStatus;
   pending: number;
   limit?: number;
@@ -38,7 +50,25 @@ export function buildConfidenceTimeline(input: {
 }): { events: ConfidenceTimelineEvent[]; totalEvents: number; sync: { status: SyncStatus; pending: number } } {
   const events: ConfidenceTimelineEvent[] = [];
   for (const quote of input.quotes ?? []) {
-    if (timestamp(quote.updatedAt) != null) events.push({ id: `quote:${quote.id}`, kind: "quote", at: quote.updatedAt, source: "quote" });
+    if (timestamp(quote.updatedAt) == null) continue;
+    const quoteDetail = quote.instrumentIsin && quote.currency && typeof quote.price === "number" && quote.asOf
+      ? {
+          instrumentIsin: quote.instrumentIsin,
+          currency: quote.currency,
+          price: quote.price,
+          asOf: quote.asOf,
+          fetchedAt: quote.fetchedAt,
+          source: quote.source,
+          venue: quote.venue,
+        }
+      : undefined;
+    events.push({
+      id: `quote:${quote.id}`,
+      kind: "quote",
+      at: quote.updatedAt,
+      source: "quote",
+      ...(quoteDetail ? { quote: quoteDetail } : {}),
+    });
   }
   for (const tx of input.transactions ?? []) {
     if (tx.deletedAt || timestamp(tx.updatedAt) == null) continue;
@@ -48,10 +78,43 @@ export function buildConfidenceTimeline(input: {
       : createdAt != null && createdAt === timestamp(tx.updatedAt)
         ? "transaction_created"
         : "transaction_updated";
-    events.push({ id: `transaction:${tx.id}`, kind, at: tx.updatedAt, source: kind === "import" ? "import" : "ledger" });
+    const transactionDetail = typeof tx.type === "string" && typeof tx.amount === "number" && typeof tx.date === "string"
+      ? {
+          type: tx.type,
+          amount: tx.amount,
+          date: tx.date,
+          notes: typeof tx.notes === "string" && tx.notes.trim() ? tx.notes : undefined,
+          instrumentIsin: tx.instrumentIsin,
+          quantity: tx.quantity,
+          unitPrice: tx.unitPrice,
+          fee: tx.fee,
+          tax: tx.tax,
+        }
+      : undefined;
+    events.push({
+      id: `transaction:${tx.id}`,
+      kind,
+      at: tx.updatedAt,
+      source: kind === "import" ? "import" : "ledger",
+      ...(transactionDetail ? { transaction: transactionDetail } : {}),
+    });
   }
   for (const statement of input.depotStatements ?? []) {
-    if (!statement.deletedAt && timestamp(statement.createdAt) != null) events.push({ id: `statement:${statement.id}`, kind: "import", at: statement.createdAt, source: "import" });
+    if (statement.deletedAt || timestamp(statement.createdAt) == null) continue;
+    const statementDetail = typeof statement.date === "string" && typeof statement.broker === "string"
+      ? {
+          date: statement.date,
+          broker: statement.broker,
+          positionsCount: Array.isArray(statement.positions) ? statement.positions.length : 0,
+        }
+      : undefined;
+    events.push({
+      id: `statement:${statement.id}`,
+      kind: "import",
+      at: statement.createdAt,
+      source: "import",
+      ...(statementDetail ? { statement: statementDetail } : {}),
+    });
   }
 
   const lens = input.lens ?? "all";
