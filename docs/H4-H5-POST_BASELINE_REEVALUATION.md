@@ -30,3 +30,8 @@ Chỉ mở lại H4/H5 khi owner cung cấp hoặc chấp thuận một environm
 [1]: https://supabase.com/docs/guides/local-development "Supabase local development requirements"
 [2]: ./H4-RLS-EVIDENCE.md "Static H4 policy evidence"
 [3]: ../supabase/migrations/002_soft_delete_and_triggers.sql "Only ordered migration file currently present"
+
+
+## Evidence refresh — 21-10-2026
+
+The current production release was verified at commit `4fbca10b8e8ad04cb41fc7d965f5fda960035625` by [Actions run 39646030050](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39646030050). This confirms the frontend test/build, browser preview, Edge smoke and deployment gates only. No local Supabase CLI/Docker stack was available in the work environment and no owner-approved disposable remote target was used. No new behavioral RLS or ordered migration replay evidence exists; H4 remains `PARTIAL — STATIC POLICY EVIDENCE ONLY`, H5 remains blocked. No production database writes, production family-row access, paid project or branch creation was performed. The readiness decision remains `CONDITIONAL — NOT READY`.
