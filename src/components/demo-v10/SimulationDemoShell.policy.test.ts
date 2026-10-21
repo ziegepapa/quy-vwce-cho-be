@@ -22,7 +22,11 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     primary: undefined,
     initialBalance: 0,
     shownInterest,
-    results: [],
+    results: [
+      { sc: { id: "cautious", label: locale === "de" ? "Vorsichtig" : "Thận trọng", rate: -0.02 }, out: { yearEnds: [], terminal: 800, contributed: 900, interest: -100 } },
+      { sc: { id: "base", label: locale === "de" ? "Basis" : "Cơ sở", rate: 0.06 }, out: { yearEnds: [], terminal: 1200, contributed: 900, interest: 300 } },
+      { sc: { id: "bull", label: locale === "de" ? "Günstig" : "Thuận lợi", rate: 0.1 }, out: { yearEnds: [], terminal: 1600, contributed: 900, interest: 700 } },
+    ],
     goalMarkers: [],
     band: 0,
     baseRate: 0.06,
@@ -125,6 +129,20 @@ describe("SimulationDemoShell financial-policy containment", () => {
     renderShell("vi", "", 0, true);
     expect(screen.getByRole("status").textContent).toContain("Chưa thể đạt mục tiêu trong 40 năm");
     expect(document.querySelector(".sh-big")?.textContent).not.toBe("—");
+  });
+
+  it("compares three nominal scenarios and labels them as assumptions, not forecasts", () => {
+    renderShell("vi");
+    expect(screen.getByRole("heading", { name: "So sánh kịch bản" })).toBeTruthy();
+    expect(screen.getByText("Thận trọng")).toBeTruthy();
+    expect(screen.getByText("Cơ sở")).toBeTruthy();
+    expect(screen.getByText("Thuận lợi")).toBeTruthy();
+    expect(screen.getAllByText("Giá trị cuối kỳ danh nghĩa")).toHaveLength(3);
+    expect(screen.getByText(/không phải xác suất hay dự báo/i)).toBeTruthy();
+    cleanup();
+    renderShell("de");
+    expect(screen.getByRole("heading", { name: "Szenariovergleich" })).toBeTruthy();
+    expect(screen.getByText("Endwert nominal")).toBeTruthy();
   });
 
   it("keeps a projected loss visible as a loss", () => {
