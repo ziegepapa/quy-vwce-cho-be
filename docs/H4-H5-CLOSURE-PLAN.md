@@ -1,7 +1,7 @@
 # H4/H5 closure plan — controlled evidence only
 
 **Updated:** 2026-10-21  
-**Repository baseline reviewed:** `7268aaa2d16e8a35bfed56540b9ee95af14b84a7` (PR #357)  
+**Production baseline reviewed:** `4fbca10b8e8ad04cb41fc7d965f5fda960035625`; [Actions run 39646030050](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39646030050) passed the release gates. This verifies the frontend release only, not H4/H5.  
 **Decision:** H4 and H5 remain open. This document is a gated implementation plan, not proof that either control has passed.
 
 ## Guardrails
