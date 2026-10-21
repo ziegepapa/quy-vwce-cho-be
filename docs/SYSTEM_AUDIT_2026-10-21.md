@@ -30,6 +30,10 @@ This is a focused implementation audit of the active production paths, not a cla
 - Negative returns are assumptions for illustration, not market predictions.
 - No tax estimate, tax advice, trade execution, or automatic portfolio action was added.
 
+## Documentation drift found during the audit
+
+The older `docs/LONG_TERM_AUDIT.md` and `docs/adr/ADR-financial-policy-boundary.md` describe the German-tax UI caller and prescriptive glide-path UI as active behavior. That accurately records the historical baseline, but should not be read as a statement about the current UI: the active Simulation source is guarded against tax-result/toggle code, and the current `PlanRoadmapSection` is informational-only. The legacy tax helper remains intentionally frozen per ADR A.3 and is not to be reactivated without a separate policy decision. The historical audit should be treated as a dated snapshot, not a live source-code inventory.
+
 ## Existing system-level risks not closed by this UI/Simulation pass
 
 The current readiness report remains the source of truth for these separate blockers:
