@@ -242,16 +242,6 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
         const costBasis = portfolio.positions[isin]?.costBasis ?? 0;
         const pnl = Number.isFinite(costBasis) && costBasis > 0 ? value - costBasis : null;
         const pnlPct = pnl != null && costBasis > 0 ? (pnl / costBasis) * 100 : null;
-        const pnlPctFormat = new Intl.NumberFormat(locale === "de" ? "de-DE" : "vi-VN", {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1,
-        });
-        const pnlLabel = pnl == null
-          ? null
-          : `${pnl > 0 ? "+" : pnl < 0 ? "−" : ""}${formatMoney(Math.abs(pnl))}`;
-        const pnlPctLabel = pnlPct == null
-          ? null
-          : `${pnlPct > 0 ? "+" : pnlPct < 0 ? "−" : ""}${pnlPctFormat.format(Math.abs(pnlPct))}%`;
         return {
           isin,
           ticker: instrumentTicker(isin),
@@ -263,8 +253,6 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
             ? `${numberFormat.format(row.price)} €/${locale === "de" ? "Ant." : "cp"}`
             : null,
           valueLabel: formatMoney(value),
-          pnlLabel,
-          pnlPctLabel,
           pnlPositive: pnl == null ? null : pnl >= 0,
         };
       });
