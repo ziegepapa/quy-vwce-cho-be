@@ -40,7 +40,7 @@ The follow-up UI pass adds a compact, localized three-scenario comparison showin
 
 ## Readiness evidence refresh and H4/H5 plan
 
-The long-term readiness report now separates the August historical observations from the October repository/release evidence and records the verified main SHA and successful Actions run #39639941852. The readiness decision is unchanged: H4 remains open until an isolated Auth + PostgREST two-user RLS matrix passes; H5 remains blocked until a reviewed ordered migration baseline, schema equivalence, upgrade compatibility, and recovery rehearsal are evidenced. The step-by-step plan is in [H4_H5_CLOSURE_PLAN.md](./H4_H5_CLOSURE_PLAN.md). No production Supabase project was accessed or changed.
+The long-term readiness report now separates the August historical observations from the October repository/release evidence and records the verified main SHA and successful Actions run #39639941852. The readiness decision is unchanged: H4 remains open until an isolated Auth + PostgREST two-user RLS matrix passes; H5 remains blocked until a reviewed ordered migration baseline, schema equivalence, upgrade compatibility, and recovery rehearsal are evidenced. The step-by-step plan is in [H4-H5-CLOSEOUT-PLAN-2026-10-21.md](./H4-H5-CLOSEOUT-PLAN-2026-10-21.md). No production Supabase project was accessed or changed.
 
 ## Existing system-level risks not closed by this UI/Simulation pass
 
