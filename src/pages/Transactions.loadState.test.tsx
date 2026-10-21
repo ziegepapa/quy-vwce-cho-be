@@ -83,11 +83,17 @@ describe("Transactions load and empty states", () => {
     expect(await screen.findByText("pdf-import-loaded")).toBeTruthy();
   });
 
-  it("offers a one-tap VALL purchase and preselects its verified ISIN", async () => {
+  it("offers buy/sell VALL inside Add transaction and saves the verified ISIN", async () => {
     dbMocks.listTransactions.mockResolvedValue([]);
     render(createElement(MemoryRouter, null, createElement(Transactions)));
 
-    fireEvent.click(await screen.findByRole("button", { name: "Mua VALL" }));
+    expect(screen.queryByRole("button", { name: "Mua VALL" })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Thêm giao dịch" }));
+    const typeSelect = screen.getByLabelText("Loại") as HTMLSelectElement;
+    expect([...typeSelect.options].map((option) => option.textContent)).toContain("Mua VALL");
+    expect([...typeSelect.options].map((option) => option.textContent)).toContain("Bán VALL");
+
+    fireEvent.change(typeSelect, { target: { value: "buy_vall" } });
     expect(screen.getByRole("heading", { name: "Mua VALL" })).toBeTruthy();
     expect((screen.getByLabelText("Công cụ") as HTMLSelectElement).value).toBe("vall");
     expect(screen.getByText("ISIN: IE000VAHT5T0")).toBeTruthy();
