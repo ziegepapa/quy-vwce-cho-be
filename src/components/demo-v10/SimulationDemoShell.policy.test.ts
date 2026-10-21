@@ -142,7 +142,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     cleanup();
     renderShell("de");
     expect(screen.getByRole("heading", { name: "Szenariovergleich" })).toBeTruthy();
-    expect(screen.getByText("Endwert nominal")).toBeTruthy();
+    expect(screen.getAllByText("Endwert nominal")).toHaveLength(3);
   });
 
   it("keeps a projected loss visible as a loss", () => {
