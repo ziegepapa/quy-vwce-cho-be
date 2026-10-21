@@ -117,8 +117,8 @@ export function SimulationDemoChart({
       ) : null}
       {markers.map((m) => (
         <g key={m.name + m.yearIndex}>
-          <line x1={x(m.yearIndex)} x2={x(m.yearIndex)} y1={padT} y2={padT + innerH} stroke="rgba(240,238,255,.25)" strokeDasharray="4 3" />
-          <circle cx={x(m.yearIndex)} cy={y(m.amount)} r={3} fill="rgba(240,238,255,.45)" />
+          <line x1={x(m.yearIndex)} x2={x(m.yearIndex)} y1={padT} y2={padT + innerH} stroke="var(--border-subtle)" strokeDasharray="4 3" />
+          <circle cx={x(m.yearIndex)} cy={y(m.amount)} r={3} fill="var(--text-tertiary)" />
         </g>
       ))}
       {baseEnd ? (
@@ -126,9 +126,9 @@ export function SimulationDemoChart({
           {formatDisplayMoney(Math.round(baseEnd.total), locale)}
         </text>
       ) : null}
-      {showBand ? <text x={W - 4} y={padT + 10} fontSize={9} fill="rgba(240,238,255,.4)" textAnchor="end">{bandPctText}</text> : null}
-      <text x={padL} y={H - 6} fontSize={10} fill="rgba(240,238,255,.4)">0</text>
-      <text x={W - padR} y={H - 6} fontSize={10} fill="rgba(240,238,255,.4)" textAnchor="end">{years}{locale === "de" ? " J" : "n"}</text>
+      {showBand ? <text x={W - 4} y={padT + 10} fontSize={9} fill="var(--text-tertiary)" textAnchor="end">{bandPctText}</text> : null}
+      <text x={padL} y={H - 6} fontSize={10} fill="var(--text-tertiary)">0</text>
+      <text x={W - padR} y={H - 6} fontSize={10} fill="var(--text-tertiary)" textAnchor="end">{years}{locale === "de" ? " J" : "n"}</text>
     </svg>
   );
 }
