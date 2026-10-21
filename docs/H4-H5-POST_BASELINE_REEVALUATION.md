@@ -1,6 +1,7 @@
 # H4/H5 Post-Baseline Re-evaluation
 
-**Ngày:** 21-08-2026 (GMT+2)  
+**Ngày đánh giá gốc:** 21-08-2026 (GMT+2)  
+**Evidence refresh:** 21-10-2026 — capability blocker vẫn còn; chưa chạy environment mới  
 **Phạm vi:** Chỉ kiểm tra khả năng **free, local, isolated, controlled và synthetic-data-only** trong sandbox hiện hành. Không tạo Supabase project/branch, không kết nối remote database, không đọc production/family data và không dùng hạ tầng trả phí.
 
 ## Kết quả capability check
@@ -30,3 +31,10 @@ Chỉ mở lại H4/H5 khi owner cung cấp hoặc chấp thuận một environm
 [1]: https://supabase.com/docs/guides/local-development "Supabase local development requirements"
 [2]: ./H4-RLS-EVIDENCE.md "Static H4 policy evidence"
 [3]: ../supabase/migrations/002_soft_delete_and_triggers.sql "Only ordered migration file currently present"
+
+
+## Evidence refresh — 21-10-2026
+
+Repository và giới hạn an toàn đã được đối chiếu lại trong đợt audit. Không có bằng chứng mới về Supabase CLI/Docker/local stack được dựng và chạy thành công trong môi trường disposable; không có ordered baseline mới; không tạo project/branch trả phí và không dùng production. Do đó các kết luận H4/H5 ở trên **vẫn còn hiệu lực**. Đây là xác nhận rằng blocker chưa được đóng, không phải bằng chứng test mới.
+
+Kế hoạch có thể thực thi khi điều kiện môi trường được owner chấp thuận nằm tại [H4/H5 Closeout Plan](./H4-H5-CLOSEOUT-PLAN-2026-10-21.md).
