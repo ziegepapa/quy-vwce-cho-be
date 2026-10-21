@@ -21,6 +21,7 @@ export type SimulationDemoShellProps = {
   mode: Mode;
   setMode: (m: Mode) => void;
   planUnreachable: boolean;
+  targetUnreachable: boolean;
   headlineValue: number;
   yearsForProject: number;
   monthlyForProject: number;
@@ -106,7 +107,7 @@ export type SimulationDemoShellProps = {
 
 export default function SimulationDemoShell(p: SimulationDemoShellProps) {
   const {
-    locale, mode, setMode, planUnreachable, headlineValue, yearsForProject, monthlyForProject,
+    locale, mode, setMode, planUnreachable, targetUnreachable, headlineValue, yearsForProject, monthlyForProject,
     headlineNote, startingBalanceWarning, primary, initialBalance, shownInterest, results, goalMarkers, band, baseRate,
     monthly, setMonthly, years, setYears, targetAmount, setTargetAmount, targetYear, setTargetYear,
     yearsB, requiredMonthlyBase, yearsC, rateInput, setRateInput, bandPctLabel, readOnly, goals,
@@ -149,7 +150,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         {planUnreachable ? (
           <>
             <div className="sh-big">—</div>
-            <div className="sh-sub">{mode === "C" ? text.targetUnreachable : text.unavailable}</div>
+            <div className="sh-sub">{text.unavailable}</div>
             <div className="sh-note">{text.unavailableNote}</div>
           </>
         ) : (
@@ -163,6 +164,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         )}
       </section>
 
+      {targetUnreachable ? <p className="sh-note sim-valuation-warning" role="status">{text.targetUnreachable}</p> : null}
       {startingBalanceWarning ? <p className="sh-note sim-valuation-warning" role="status">{startingBalanceWarning}</p> : null}
 
       <div className="summary-strip" aria-label={text.contributed}>
