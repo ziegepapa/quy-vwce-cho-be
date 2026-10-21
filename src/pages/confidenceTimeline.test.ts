@@ -21,6 +21,68 @@ describe("buildConfidenceTimeline", () => {
     expect(result.sync).toEqual({ status: "syncing", pending: 2 });
   });
 
+  it("preserves quote session/value and transaction amount/note for the local timeline", () => {
+    const result = buildConfidenceTimeline({
+      ...base,
+      quotes: [{
+        id: "vwce-eur",
+        updatedAt: "2026-10-21T06:57:00.000Z",
+        instrumentIsin: "IE00BK5BQT80",
+        currency: "EUR",
+        price: 170.36,
+        asOf: "2026-10-20",
+        fetchedAt: "2026-10-20T20:39:54.703Z",
+        source: "auto",
+        venue: "XETRA",
+      }],
+      transactions: [{
+        id: "buy-1",
+        type: "buy_vwce",
+        amount: 120,
+        date: "2026-10-16",
+        notes: "Monthly contribution",
+        createdAt: "2026-10-16T11:36:00.000Z",
+        updatedAt: "2026-10-16T11:36:00.000Z",
+        instrumentIsin: "IE00BK5BQT80",
+      }],
+    });
+
+    const quoteEvent = result.events.find((event) => event.kind === "quote");
+    const transactionEvent = result.events.find((event) => event.kind === "transaction_created");
+    expect(quoteEvent?.quote).toMatchObject({
+      instrumentIsin: "IE00BK5BQT80",
+      price: 170.36,
+      currency: "EUR",
+      asOf: "2026-10-20",
+      fetchedAt: "2026-10-20T20:39:54.703Z",
+    });
+    expect(transactionEvent?.transaction).toMatchObject({
+      type: "buy_vwce",
+      amount: 120,
+      notes: "Monthly contribution",
+      instrumentIsin: "IE00BK5BQT80",
+    });
+  });
+
+  it("includes current emergency contacts as a snapshot, not as fabricated individual history", () => {
+    const result = buildConfidenceTimeline({
+      ...base,
+      now: new Date("2026-10-21T12:00:00.000Z"),
+      notfallmappe: {
+        updatedAt: "2026-10-20T10:00:00.000Z",
+        contacts: [{ id: "contact-1", name: "Mẹ", relation: "Mẹ", phone: "+49 111", email: "mom@example.test" }],
+      },
+    });
+
+    expect(result.events).toContainEqual({
+      id: "contacts:notfallmappe",
+      kind: "contact_snapshot",
+      at: "2026-10-20T10:00:00.000Z",
+      source: "contacts",
+      contacts: [{ id: "contact-1", name: "Mẹ", relation: "Mẹ", phone: "+49 111", email: "mom@example.test" }],
+    });
+  });
+
   it("labels broker sourced transactions as import and excludes deleted or invalid-dated rows", () => {
     const result = buildConfidenceTimeline({
       ...base,

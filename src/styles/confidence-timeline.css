@@ -32,3 +32,100 @@
 .ct-lens-group button:focus-visible, .ct-more:focus-visible, .ct-back:focus-visible { outline: 2px solid var(--demo-vi, #8b5cf6); outline-offset: 2px; }
 .ct-more { width: 100%; margin-top: 10px; color: var(--demo-vi, #8b5cf6); }
 @media (max-width: 360px) { .ct-shell { padding-inline: 10px; } .ct-sync, .ct-card { padding: 12px; } .ct-events li { grid-template-columns: 16px minmax(0, 1fr); gap: 7px; } .ct-lens-group > div { gap: 6px; } .ct-lens-group button { flex: 1 1 auto; } }
+
+
+/* Event values and optional notes clarify the underlying record without exposing contact data. */
+.ct-event-content { gap: 4px; }
+.ct-event-meta { line-height: 1.35; }
+.ct-event-details {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding-top: 2px;
+}
+.ct-event-value {
+  margin: 0;
+  color: var(--demo-sub, #d4d4d8);
+  font-size: 13px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.ct-event-details > small,
+.ct-event-detail-line {
+  color: var(--demo-dim, #71717a);
+  font-size: 10px;
+  font-weight: 620;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.ct-event-note {
+  margin-top: 2px;
+  min-width: 0;
+}
+.ct-event-note summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  color: var(--demo-vi, #8b5cf6);
+  font-size: 11px;
+  font-weight: 780;
+  cursor: pointer;
+}
+.ct-event-note p {
+  margin: 2px 0 4px;
+  color: var(--demo-sub, #d4d4d8);
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ct-event-detail-line { display: block; margin-top: 2px; }
+
+
+/* Emergency contacts are private, current-state details revealed by explicit disclosure. */
+.ct-event-contact { min-width: 0; margin-top: 3px; }
+.ct-event-contact summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  color: var(--demo-vi, #8b5cf6);
+  font-size: 11px;
+  font-weight: 780;
+  cursor: pointer;
+}
+.ct-event-contact-note {
+  margin: 0 0 5px;
+  color: var(--demo-dim, #71717a);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.ct-event-contact ul {
+  display: grid;
+  gap: 9px;
+  margin: 5px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ct-event-contact li {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 9px 10px;
+  background: color-mix(in srgb, var(--demo-g, #18181b) 54%, transparent);
+  border: 1px solid color-mix(in srgb, var(--demo-gb, #3f3f46) 72%, transparent);
+  border-radius: 9px;
+}
+.ct-event-contact li strong {
+  color: var(--demo-sub, #d4d4d8);
+  font-size: 12px;
+  font-weight: 800;
+}
+.ct-event-contact li small {
+  color: var(--demo-dim, #71717a);
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.ct-event-contact a { color: var(--demo-vi, #8b5cf6); text-decoration: underline; text-underline-offset: 2px; }
