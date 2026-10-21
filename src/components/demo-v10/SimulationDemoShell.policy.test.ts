@@ -7,7 +7,7 @@ import SimulationDemoShell, { type SimulationDemoShellProps } from "./Simulation
 
 const noop = vi.fn();
 
-function renderShell(locale: "vi" | "de", startingBalanceWarning = "") {
+function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0) {
   const props: SimulationDemoShellProps = {
     locale,
     mode: "A",
@@ -20,7 +20,7 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "") {
     startingBalanceWarning,
     primary: undefined,
     initialBalance: 0,
-    shownInterest: 0,
+    shownInterest,
     results: [],
     goalMarkers: [],
     band: 0,
@@ -108,6 +108,11 @@ describe("SimulationDemoShell financial-policy containment", () => {
     renderShell("vi");
     expect(screen.queryByText(/Thuế DE|sau thuế|có thuế/i)).toBeNull();
     expect(document.body.textContent).not.toMatch(/DE-Steuern|afterTax|after-tax/i);
+  });
+
+  it("keeps a projected loss visible as a loss", () => {
+    renderShell("vi", "", -125);
+    expect(document.querySelector(".summary-strip .loss")).not.toBeNull();
   });
 
   it("discloses when the starting balance excludes unpriced holdings", () => {
