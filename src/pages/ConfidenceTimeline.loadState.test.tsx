@@ -55,6 +55,32 @@ describe("ConfidenceTimeline", () => {
     expect(screen.getByText(/Giá · 21\/10\/2026/)).toBeTruthy();
   });
 
+  it("shows the current emergency contact snapshot only after expanding it", async () => {
+    dbMocks.getSettings.mockResolvedValueOnce({
+      depotStatements: [],
+      notfallmappe: {
+        updatedAt: "2026-10-20T10:00:00.000Z",
+        contacts: [{ id: "contact-1", name: "Mẹ", relation: "Mẹ", phone: "+49 111", email: "mom@example.test" }],
+      },
+    });
+    dbMocks.listQuotes.mockResolvedValue([]);
+    dbMocks.listTransactions.mockResolvedValue([]);
+
+    render(createElement(ConfidenceTimeline, { syncStatus: "synced", pending: 0 }));
+
+    expect(await screen.findByText("Snapshot liên hệ hiện tại · 1 người")).toBeTruthy();
+    const contactDetails = document.querySelector("details.ct-event-contact") as HTMLDetailsElement | null;
+    expect(contactDetails).toBeTruthy();
+    expect(contactDetails?.open).toBe(false);
+
+    fireEvent.click(screen.getByText("Xem thông tin liên hệ (1)"));
+    expect(contactDetails?.open).toBe(true);
+    expect(screen.getByText("Mẹ")).toBeTruthy();
+    expect(screen.getByText(/\+49 111/)).toBeTruthy();
+    expect(screen.getByText("mom@example.test")).toBeTruthy();
+    expect(screen.getByText(/không phải lịch sử từng liên hệ/)).toBeTruthy();
+  });
+
   it("shows transaction amount and reveals its note only when the owner opens it", async () => {
     render(createElement(ConfidenceTimeline, { syncStatus: "synced", pending: 0 }));
 
