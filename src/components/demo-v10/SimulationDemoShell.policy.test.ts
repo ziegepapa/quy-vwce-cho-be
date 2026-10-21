@@ -7,12 +7,13 @@ import SimulationDemoShell, { type SimulationDemoShellProps } from "./Simulation
 
 const noop = vi.fn();
 
-function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0) {
+function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false) {
   const props: SimulationDemoShellProps = {
     locale,
     mode: "A",
     setMode: noop,
     planUnreachable: false,
+    targetUnreachable,
     headlineValue: 1000,
     yearsForProject: 15,
     monthlyForProject: 200,
@@ -118,6 +119,12 @@ describe("SimulationDemoShell financial-policy containment", () => {
     renderShell("de");
     expect(screen.getByText("Startwert → Ergebnis")).toBeTruthy();
     expect(screen.getByText("Zielbetrag → Monatsrate")).toBeTruthy();
+  });
+
+  it("shows the 40-year projection while disclosing that the target is unreachable", () => {
+    renderShell("vi", "", 0, true);
+    expect(screen.getByRole("status").textContent).toContain("Chưa thể đạt mục tiêu trong 40 năm");
+    expect(document.querySelector(".sh-big")?.textContent).not.toBe("—");
   });
 
   it("keeps a projected loss visible as a loss", () => {
