@@ -10,9 +10,9 @@ function formatMoneyRounded(n: number, locale: DisplayLocale): string {
 
 function simulationCopy(locale: DisplayLocale) {
   return locale === "de" ? {
-    aria: "Simulation", modeA: "Einzahlen → Ergebnis", modeB: "Ziel → Sparrate", modeC: "Sparrate → Zeitraum", modeASub: "Startwert → Ergebnis", modeBSub: "Zielbetrag → Monatsrate", modeCSub: "Monatsrate → Zeitbedarf", unavailable: "Keine umsetzbare Rate", unavailableNote: "Ziel / Rendite prüfen", targetUnreachable: "Ziel innerhalb von 40 Jahren nicht erreichbar", afterYears: (years: number, monthly: string) => `nach ${years} Jahren · ${monthly}/Monat`, end: "Endwert", contributed: "Eingezahlt", gain: "Gewinn / Verlust (nominal)", chart: "Portfolioentwicklung", forecast: "Portfolio (Projektion)", monthly: "Monatlicher Beitrag (EUR)", target: "Zielbetrag (EUR)", duration: "Laufzeit", years: "Jahre", want: "Gewünschter Betrag (EUR)", inYear: "Im Jahr", aboutYears: (years: number, monthly: string) => `noch etwa ${years} Jahre · benötigt ca. ${monthly}/Monat`, annualReturn: "Rendite / Jahr (%)", around: "Spanne", year: "Jahr", forecastNav: "Prognostizierter NAV", current: "Heute", collapse: "Weniger anzeigen", showAll: "Alle Jahre anzeigen", disclaimer: "Schätzung — keine Anlageberatung", range: "Bandbreite ± (%)", contributionGrowth: "Beitrag ändert sich jährlich", perYear: "% / Jahr", initialLump: "Einmalbetrag zu Beginn", startingBalance: "Startguthaben", purchasingPower: "Kaufkraft von heute", inflation: "Inflation % / Jahr", presentValue: "Aktuell: heutige Kaufkraft", nominal: "Aktuell: nominal", goal: "Ziel", savePlan: "Beitrag und Basisrendite in den Plan übernehmen", noPlanChanges: "Der Plan stimmt bereits überein — nichts zu speichern.", undo: "Rückgängig", saveDialog: "Im Plan speichern", yearOne: "Jahr 1", fromYearTwo: "Ab Jahr 2", return: "Rendite", cancel: "Abbrechen",
+    aria: "Simulation", eyebrow: "LANGFRISTIGE PLANUNG", title: "Vermögen in Szenarien planen", description: "Beitrag, Laufzeit und Renditeannahmen anpassen und mögliche Verläufe vergleichen.", scenarioTitle: "Endwert nach Szenario", scenarioSubtitle: "Gleiche Eingaben, unterschiedliche Renditeannahmen", modeA: "Einzahlen → Ergebnis", modeB: "Ziel → Sparrate", modeC: "Sparrate → Zeitraum", modeASub: "Startwert → Ergebnis", modeBSub: "Zielbetrag → Monatsrate", modeCSub: "Monatsrate → Zeitbedarf", unavailable: "Keine umsetzbare Rate", unavailableNote: "Ziel / Rendite prüfen", targetUnreachable: "Ziel innerhalb von 40 Jahren nicht erreichbar", afterYears: (years: number, monthly: string) => `nach ${years} Jahren · ${monthly}/Monat`, end: "Endwert", contributed: "Eingezahlt", gain: "Gewinn / Verlust (nominal)", chart: "Portfolioentwicklung", forecast: "Portfolio (Projektion)", monthly: "Monatlicher Beitrag (EUR)", target: "Zielbetrag (EUR)", duration: "Laufzeit", years: "Jahre", want: "Gewünschter Betrag (EUR)", inYear: "Im Jahr", aboutYears: (years: number, monthly: string) => `noch etwa ${years} Jahre · benötigt ca. ${monthly}/Monat`, annualReturn: "Rendite / Jahr (%)", around: "Spanne", year: "Jahr", forecastNav: "Prognostizierter NAV", current: "Heute", collapse: "Weniger anzeigen", showAll: "Alle Jahre anzeigen", disclaimer: "Schätzung — keine Anlageberatung", range: "Bandbreite ± (%)", contributionGrowth: "Beitrag ändert sich jährlich", perYear: "% / Jahr", initialLump: "Einmalbetrag zu Beginn", startingBalance: "Startguthaben", purchasingPower: "Kaufkraft von heute", inflation: "Inflation % / Jahr", presentValue: "Aktuell: heutige Kaufkraft", nominal: "Aktuell: nominal", goal: "Ziel", savePlan: "Beitrag und Basisrendite in den Plan übernehmen", noPlanChanges: "Der Plan stimmt bereits überein — nichts zu speichern.", undo: "Rückgängig", saveDialog: "Im Plan speichern", yearOne: "Jahr 1", fromYearTwo: "Ab Jahr 2", return: "Rendite", cancel: "Abbrechen",
   } : {
-    aria: "Mô phỏng", modeA: "Góp → Nhận", modeB: "Mục tiêu → Góp", modeC: "Góp → Khi nào", modeASub: "Số dư → Kết quả", modeBSub: "Số tiền → Mức góp", modeCSub: "Mức góp → Thời gian", unavailable: "Chưa có mức góp khả thi", unavailableNote: "kiểm tra mục tiêu / lợi nhuận", targetUnreachable: "Chưa thể đạt mục tiêu trong 40 năm", afterYears: (years: number, monthly: string) => `sau ${years} năm · ${monthly}/tháng`, end: "Cuối kỳ", contributed: "Đã góp", gain: "Lãi / lỗ (danh nghĩa)", chart: "Tăng trưởng danh mục", forecast: "Danh mục (dự báo)", monthly: "Góp mỗi tháng (EUR)", target: "Mục tiêu (EUR)", duration: "Thời hạn", years: "năm", want: "Muốn có (EUR)", inYear: "Vào năm", aboutYears: (years: number, monthly: string) => `Còn khoảng ${years} năm · cần ~${monthly}/tháng`, annualReturn: "Lợi nhuận / năm (%)", around: "khoảng", year: "Năm", forecastNav: "NAV dự báo", current: "Hiện tại", collapse: "Thu gọn", showAll: "Hiện tất cả các năm", disclaimer: "Ước tính — không phải tư vấn đầu tư", range: "Biên độ ± (%)", contributionGrowth: "Góp thay đổi theo năm", perYear: "% / năm", initialLump: "Khoản lớn ban đầu", startingBalance: "Số dư xuất phát", purchasingPower: "Sức mua hôm nay", inflation: "Lạm phát %/năm", presentValue: "Đang: giá hôm nay", nominal: "Đang: danh nghĩa", goal: "Mục tiêu", savePlan: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch", noPlanChanges: "Kế hoạch đã khớp — không có gì để lưu.", undo: "Hoàn tác", saveDialog: "Lưu vào kế hoạch", yearOne: "Năm 1", fromYearTwo: "Từ năm 2", return: "Lợi nhuận", cancel: "Hủy",
+    aria: "Mô phỏng", eyebrow: "KẾ HOẠCH DÀI HẠN", title: "Lập kế hoạch qua các kịch bản", description: "Điều chỉnh mức góp, thời hạn và giả định lợi suất để so sánh các diễn biến có thể xảy ra.", scenarioTitle: "Giá trị cuối kỳ theo kịch bản", scenarioSubtitle: "Cùng đầu vào, khác giả định lợi suất", modeA: "Góp → Nhận", modeB: "Mục tiêu → Góp", modeC: "Góp → Khi nào", modeASub: "Số dư → Kết quả", modeBSub: "Số tiền → Mức góp", modeCSub: "Mức góp → Thời gian", unavailable: "Chưa có mức góp khả thi", unavailableNote: "kiểm tra mục tiêu / lợi nhuận", targetUnreachable: "Chưa thể đạt mục tiêu trong 40 năm", afterYears: (years: number, monthly: string) => `sau ${years} năm · ${monthly}/tháng`, end: "Cuối kỳ", contributed: "Đã góp", gain: "Lãi / lỗ (danh nghĩa)", chart: "Tăng trưởng danh mục", forecast: "Danh mục (dự báo)", monthly: "Góp mỗi tháng (EUR)", target: "Mục tiêu (EUR)", duration: "Thời hạn", years: "năm", want: "Muốn có (EUR)", inYear: "Vào năm", aboutYears: (years: number, monthly: string) => `Còn khoảng ${years} năm · cần ~${monthly}/tháng`, annualReturn: "Lợi nhuận / năm (%)", around: "khoảng", year: "Năm", forecastNav: "NAV dự báo", current: "Hiện tại", collapse: "Thu gọn", showAll: "Hiện tất cả các năm", disclaimer: "Ước tính — không phải tư vấn đầu tư", range: "Biên độ ± (%)", contributionGrowth: "Góp thay đổi theo năm", perYear: "% / năm", initialLump: "Khoản lớn ban đầu", startingBalance: "Số dư xuất phát", purchasingPower: "Sức mua hôm nay", inflation: "Lạm phát %/năm", presentValue: "Đang: giá hôm nay", nominal: "Đang: danh nghĩa", goal: "Mục tiêu", savePlan: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch", noPlanChanges: "Kế hoạch đã khớp — không có gì để lưu.", undo: "Hoàn tác", saveDialog: "Lưu vào kế hoạch", yearOne: "Năm 1", fromYearTwo: "Từ năm 2", return: "Lợi nhuận", cancel: "Hủy",
   };
 }
 
@@ -124,6 +124,11 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
   return (
     <main className="demo-v10-screen" aria-label={text.aria}>
       <div className="sim-wrap">
+      <header className="sim-intro">
+        <span className="sim-eyebrow">{text.eyebrow}</span>
+        <h1>{text.title}</h1>
+        <p>{text.description}</p>
+      </header>
       <div className="mode-tabs" role="tablist" aria-label={text.aria}>
         {(
           [
@@ -188,6 +193,24 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <span><i style={{ background: "var(--success-600)" }} /> {text.forecast}</span>
         </div>
       </section>
+
+      {results.length > 0 ? (
+        <section className="sim-scenarios" aria-label={text.scenarioTitle}>
+          <div className="sim-scenario-heading">
+            <h2>{text.scenarioTitle}</h2>
+            <p>{text.scenarioSubtitle}</p>
+          </div>
+          <div className="sim-scenario-grid">
+            {results.map(({ sc, out }) => (
+              <article key={sc.id} className={`sim-scenario sim-scenario-${sc.id}`}>
+                <span className="sim-scenario-label">{sc.label}</span>
+                <strong>{formatMoneyRounded(out.terminal, locale)}</strong>
+                <small>{(sc.rate * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 2 })}% / {text.perYear}</small>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {(mode === "A" || mode === "C") && (
         <section className="gl sim-inputs">
