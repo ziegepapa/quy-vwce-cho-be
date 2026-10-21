@@ -18,7 +18,8 @@ test("installer accepts a hidden repo-scoped token, protects it, and does not ec
   assert.match(installer, /chmod 600/);
   assert.match(installer, /chown root:root/);
   assert.match(installer, /Actions: Read and write/);
-  assert.doesNotMatch(installer, /printf[^\n]*TOKEN[^\n]*\$\{?TOKEN/);
+  assert.match(installer, /printf 'PRICE_WORKFLOW_DISPATCH_TOKEN=%s\\nPRICE_WORKFLOW_REF=main\\n' "\\$\\{TOKEN\\}" > "\\$\\{ENV_FILE\\}"/);
+  assert.match(installer, /unset TOKEN/);
   assert.match(installer, /No immediate workflow was launched/);
 });
 
