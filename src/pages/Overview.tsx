@@ -27,15 +27,40 @@ function readPriceHistory(payload: unknown): BriefingPricePoint[] {
   if (!payload || typeof payload !== "object") return [];
   const raw = (payload as { points?: unknown }).points;
   if (!Array.isArray(raw)) return [];
-  return raw
+  const valid = raw
     .filter(
       (row): row is { date: string; price: number } =>
         !!row &&
         typeof row === "object" &&
         typeof (row as { date?: unknown }).date === "string" &&
-        Number.isFinite((row as { price?: unknown }).price),
+        /^\d{4}-\d{2}-\d{2}$/.test((row as { date: string }).date) &&
+        Number.isFinite((row as { price?: unknown }).price) &&
+        (row as { price: number }).price > 0,
     )
-    .map((row) => ({ date: row.date, price: row.price as number }));
+    .map((row) => ({ date: row.date, price: row.price as number }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const byDate = new Map<string, BriefingPricePoint>();
+  for (const point of valid) byDate.set(point.date, point);
+  return [...byDate.values()];
+}
+
+/** Latest known close versus the previous close; display-only, never affects assets. */
+function dailyMoveFromHistory(
+  history: ReadonlyArray<BriefingPricePoint>,
+  quantity: number,
+): { absolute: number; relative: number } | null {
+  const points = [...history]
+    .filter((point) => /^\d{4}-\d{2}-\d{2}$/.test(point.date) && Number.isFinite(point.price) && point.price > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const unique = points.filter((point, index) => index === points.length - 1 || points[index + 1].date !== point.date);
+  if (unique.length < 2 || !Number.isFinite(quantity) || quantity <= 0) return null;
+  const previous = unique[unique.length - 2];
+  const latest = unique[unique.length - 1];
+  const priceDelta = latest.price - previous.price;
+  return {
+    absolute: priceDelta * quantity,
+    relative: (priceDelta / previous.price) * 100,
+  };
 }
 
 function overviewPageCopy(locale: "vi" | "de") {
@@ -136,17 +161,22 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     };
   }, [refreshKey, loadAttempt]);
 
-  // VWCE price history for the daily briefing: best effort, never blocks.
+  // Historical closes for supported funds power the per-fund day-trend metric.
+  // This stays best-effort and never blocks the overview or changes the total.
   useEffect(() => {
     let alive = true;
-    void fetch(priceHistoryUrl(VWCE_ISIN))
-      .then(async (response) => (response.ok ? readPriceHistory(await response.json()) : []))
-      .then((history) => {
-        if (alive) setPriceHistories(new Map([[VWCE_ISIN, history]]));
-      })
-      .catch(() => {
-        if (alive) setPriceHistories(new Map());
-      });
+    const historyIsins = [VWCE_ISIN, VALL_ISIN] as const;
+    void Promise.all(historyIsins.map(async (isin) => {
+      try {
+        const response = await fetch(priceHistoryUrl(isin), { cache: "no-store" });
+        const history = response.ok ? readPriceHistory(await response.json()) : [];
+        return [isin, history] as const;
+      } catch {
+        return [isin, []] as const;
+      }
+    })).then((entries) => {
+      if (alive) setPriceHistories(new Map(entries));
+    });
     return () => {
       alive = false;
     };
@@ -238,6 +268,10 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     });
+    const dailyPercentageFormat = new Intl.NumberFormat(locale === "de" ? "de-DE" : "vi-VN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
     const allocation: AllocationSlice[] = Object.entries(market.byIsin)
       .filter(([, row]) => row.qty > 0 && (row.value ?? 0) > 0)
       .sort(([, a], [, b]) => (b.value ?? 0) - (a.value ?? 0))
@@ -246,6 +280,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
         const costBasis = portfolio.positions[isin]?.costBasis ?? 0;
         const pnl = Number.isFinite(costBasis) && costBasis > 0 ? value - costBasis : null;
         const pnlPct = pnl == null ? null : (pnl / costBasis) * 100;
+        const dailyMove = dailyMoveFromHistory(priceHistories.get(isin) ?? [], row.qty);
         return {
           isin,
           ticker: instrumentTicker(isin),
@@ -259,7 +294,10 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
           valueLabel: formatMoney(value),
           pnlLabel: pnl == null ? null : (pnl > 0 ? "+" : pnl < 0 ? "−" : "") + formatMoney(Math.abs(pnl)),
           pnlPctLabel: pnlPct == null ? null : (pnlPct > 0 ? "+" : pnlPct < 0 ? "−" : "") + percentageFormat.format(Math.abs(pnlPct)) + "%",
+          dayChangeLabel: dailyMove == null ? null : (dailyMove.absolute > 0 ? "+" : dailyMove.absolute < 0 ? "−" : "") + formatMoney(Math.abs(dailyMove.absolute)),
+          dayChangePctLabel: dailyMove == null ? null : (dailyMove.relative > 0 ? "+" : dailyMove.relative < 0 ? "−" : "") + dailyPercentageFormat.format(Math.abs(dailyMove.relative)) + "%",
           pnlPositive: pnl == null ? null : pnl >= 0,
+          dayChangePositive: dailyMove == null ? null : dailyMove.absolute >= 0,
         };
       });
 
