@@ -52,9 +52,9 @@ describe("buildSimulationStartValue", () => {
     expect(result.valuationStatus).toBe("stale");
   });
 
-  it("counts positive cash but never subtracts a negative bookkeeping balance from assets", () => {
+  it("counts positive cash and never subtracts a negative bookkeeping balance from assets", () => {
     const cashIn: Transaction = {
-      id: "cash", date: DATE, type: "cash_in", amount: 50, notes: "",
+      id: "cash-in", date: DATE, type: "cash_in", amount: 150, notes: "",
       createdAt: NOW, updatedAt: NOW,
     };
     const positive = buildSimulationStartValue({
@@ -63,5 +63,12 @@ describe("buildSimulationStartValue", () => {
       nowDate: DATE,
     });
     expect(positive.balance).toBe(150);
+
+    const negative = buildSimulationStartValue({
+      transactions: [tx("vwce-no-cash", VWCE_ISIN, 1)],
+      quotes: [quote("q-vwce-no-cash", VWCE_ISIN, 100)],
+      nowDate: DATE,
+    });
+    expect(negative.balance).toBe(100);
   });
 });
