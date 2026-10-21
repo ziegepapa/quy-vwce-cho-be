@@ -138,6 +138,7 @@ describe("Overview German locale", () => {
   it("keeps the portfolio labels German and the metric selector bilingual", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-de-1", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(110, "2026-08-19")]);
 
     renderGermanOverview();
 
@@ -257,7 +258,7 @@ describe("Overview bản 2", () => {
     expect(screen.getByRole("option", { name: /Tagestrend relativ/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /Tagestrend absolut/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("option", { name: /Seit Kauf absolut/ }));
-    const absoluteText = container.querySelector(".ovb2-table-card")?.textContent ?? "";
+    const absoluteText = container.querySelector(".ovb2-table-card")?.textContent?.replace(/\u00a0/g, " ") ?? "";
     expect(absoluteText).toContain("+70,94 €");
     expect(absoluteText).toContain("+5,25 €");
     expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,19");
@@ -292,7 +293,7 @@ describe("Overview bản 2", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Metrik / Chỉ số" }));
     fireEvent.click(screen.getByRole("option", { name: /Tagestrend absolut/ }));
-    await waitFor(() => expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("−0,52 €"));
+    await waitFor(() => expect(container.querySelector(".ovb2-pnl.down")?.textContent?.replace(/\u00a0/g, " ")).toContain("−0,52 €"));
   });
 
   it("renders one merged attention list that links to the existing review surfaces", async () => {
