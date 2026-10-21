@@ -22,6 +22,14 @@ test("dispatches the existing price workflow with a repo-scoped request", async 
   assert.deepEqual(result, { status: 204, workflow: "update-vwce-price.yml", ref: "main" });
 });
 
+test("accepts the current REST API 200 response as well as the legacy 204 response", async () => {
+  const result = await dispatchPriceWorkflow({
+    token: "test-token",
+    fetchImpl: async () => new Response(JSON.stringify({ workflow_run_id: 123 }), { status: 200 }),
+  });
+  assert.equal(result.status, 200);
+});
+
 test("requires a token without logging or embedding a token value in the error", async () => {
   await assert.rejects(
     () => dispatchPriceWorkflow({ token: "" }),
