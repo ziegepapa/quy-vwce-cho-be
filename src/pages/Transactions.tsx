@@ -897,6 +897,12 @@ export default function Transactions() {
                       <ul className="txv2-list tx-ledger-list">
                         {group.transactions.map((tx) => {
                           const meta = types.find((t) => t.value === tx.type);
+                          const transactionIsin = resolveInstrumentIsin(tx);
+                          const label = transactionIsin === VALL_ISIN && tx.type === "buy_security"
+                            ? text.quickBuyVall
+                            : transactionIsin === VALL_ISIN && tx.type === "sell_security"
+                              ? text.quickSellVall
+                              : meta?.label ?? tx.type;
                           const sign = meta?.sign ?? "~";
                           return (
                             <li key={tx.id}>
@@ -904,11 +910,11 @@ export default function Transactions() {
                                 type="button"
                                 className="txv2-row tx-ledger-row"
                                 onClick={() => setDetailId(tx.id)}
-                                aria-label={`${meta?.label ?? tx.type}, ${formatDisplayDate(tx.date, locale)}, ${formatDisplayMoney(tx.amount, locale)}`}
+                                aria-label={`${label}, ${formatDisplayDate(tx.date, locale)}, ${formatDisplayMoney(tx.amount, locale)}`}
                               >
                                 <span className={`txv2-ico tx-ledger-kind ${iconClass(tx.type)}`} aria-hidden="true">{iconGlyph(tx.type)}</span>
                                 <span className="txv2-main">
-                                  <span className="txv2-name">{meta?.label ?? tx.type}</span>
+                                  <span className="txv2-name">{label}</span>
                                   <span className="txv2-date">{formatDisplayDate(tx.date, locale)}</span>
                                 </span>
                                 <span className="tx-ledger-amount-cell">
@@ -1049,6 +1055,11 @@ export default function Transactions() {
       {(() => {
         if (!detailTx) return null;
         const meta = types.find((t) => t.value === detailTx.type);
+        const detailLabel = detailIsin === VALL_ISIN && detailTx.type === "buy_security"
+          ? text.quickBuyVall
+          : detailIsin === VALL_ISIN && detailTx.type === "sell_security"
+            ? text.quickSellVall
+            : meta?.label ?? detailTx.type;
         const sign = meta?.sign ?? "~";
         return (
           <div className="txv2-detail-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailId(null); }}>
@@ -1056,7 +1067,7 @@ export default function Transactions() {
               className="txv2-detail"
               role="dialog"
               aria-modal="true"
-              aria-label={`${meta?.label ?? detailTx.type}, ${formatDisplayDate(detailTx.date, locale)}`}
+              aria-label={`${detailLabel}, ${formatDisplayDate(detailTx.date, locale)}`}
               onKeyDown={(event) => { if (event.key === "Escape") setDetailId(null); }}
             >
               <div className="sheet-handle" aria-hidden="true" />
@@ -1065,7 +1076,7 @@ export default function Transactions() {
                   {iconGlyph(detailTx.type)}
                 </span>
                 <div className="txv2-detail-titles">
-                  <strong>{meta?.label ?? detailTx.type}</strong>
+                  <strong>{detailLabel}</strong>
                   <span>{formatDisplayDate(detailTx.date, locale)}</span>
                 </div>
                 <div className="txv2-detail-nav">
@@ -1100,7 +1111,7 @@ export default function Transactions() {
                 </svg>
               ) : null}
               <dl className="txv2-detail-card">
-                <div><dt>{text.type}</dt><dd>{meta?.label ?? detailTx.type}</dd></div>
+                <div><dt>{text.type}</dt><dd>{detailLabel}</dd></div>
                 <div><dt>{text.date}</dt><dd>{formatDisplayDate(detailTx.date, locale)}</dd></div>
                 {detailIsin ? <div><dt>ISIN</dt><dd className="mono">{detailIsin}</dd></div> : null}
                 {detailTx.quantity != null ? <div><dt>{text.quantity}</dt><dd>{formatDisplayQuantity(detailTx.quantity, locale)}</dd></div> : null}
