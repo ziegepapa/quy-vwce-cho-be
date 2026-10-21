@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLocale } from "../../lib/locale";
 import { formatMoney } from "../../lib/calc";
@@ -8,6 +8,53 @@ import type { YearInReview } from "../../pages/yearInReview";
 import type { ValueHistoryPoint } from "../../lib/valueHistory";
 import ValueHistoryChart from "../ValueHistoryChart";
 import "../../styles/overview-ban2.css";
+
+type OverviewMetric = "since-purchase-relative" | "since-purchase-absolute" | "daily-relative" | "daily-absolute";
+
+const OVERVIEW_METRIC_STORAGE_KEY = "vwce.overview.metric.v1";
+const OVERVIEW_METRICS: ReadonlyArray<{
+  id: OverviewMetric;
+  de: string;
+  vi: string;
+  unit: "%" | "€";
+}> = [
+  { id: "since-purchase-relative", de: "Seit Kauf relativ", vi: "Từ lúc mua · %", unit: "%" },
+  { id: "since-purchase-absolute", de: "Seit Kauf absolut", vi: "Từ lúc mua · €", unit: "€" },
+  { id: "daily-relative", de: "Tagestrend relativ", vi: "So với phiên trước · %", unit: "%" },
+  { id: "daily-absolute", de: "Tagestrend absolut", vi: "So với phiên trước · €", unit: "€" },
+];
+
+function isOverviewMetric(value: string | null): value is OverviewMetric {
+  return OVERVIEW_METRICS.some((metric) => metric.id === value);
+}
+
+function readOverviewMetric(): OverviewMetric {
+  if (typeof window === "undefined") return "since-purchase-relative";
+  try {
+    const stored = window.localStorage.getItem(OVERVIEW_METRIC_STORAGE_KEY);
+    if (isOverviewMetric(stored)) return stored;
+  } catch {
+    // The selector still works when local storage is unavailable.
+  }
+  return "since-purchase-relative";
+}
+
+function metricForHolding(
+  holding: AllocationSlice,
+  metric: OverviewMetric,
+): { label: string | null; positive: boolean | null } {
+  switch (metric) {
+    case "since-purchase-relative":
+      return { label: holding.pnlPctLabel, positive: holding.pnlPositive };
+    case "since-purchase-absolute":
+      return { label: holding.pnlLabel, positive: holding.pnlPositive };
+    case "daily-relative":
+      return { label: holding.dayChangePctLabel, positive: holding.dayChangePositive };
+    case "daily-absolute":
+      return { label: holding.dayChangeLabel, positive: holding.dayChangePositive };
+  }
+}
+
 
 /** One allocation slice: numeric value + weight for the donut and the table. */
 export type AllocationSlice = {
@@ -27,7 +74,10 @@ export type AllocationSlice = {
   valueLabel: string;
   pnlLabel: string | null;
   pnlPctLabel: string | null;
+  dayChangeLabel: string | null;
+  dayChangePctLabel: string | null;
   pnlPositive: boolean | null;
+  dayChangePositive: boolean | null;
 };
 
 export type UpdateItem = {
@@ -302,6 +352,45 @@ export default function OverviewFrame(props: OverviewFrameProps) {
   } = props;
   const { locale } = useLocale();
   const text = overviewCopy(locale);
+  const [selectedMetric, setSelectedMetric] = useState<OverviewMetric>(readOverviewMetric);
+  const [metricMenuOpen, setMetricMenuOpen] = useState(false);
+  const metricControlRef = useRef<HTMLDivElement>(null);
+  const metricTriggerRef = useRef<HTMLButtonElement>(null);
+  const metricOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const selectedMetricOption = OVERVIEW_METRICS.find((metric) => metric.id === selectedMetric) ?? OVERVIEW_METRICS[0];
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(OVERVIEW_METRIC_STORAGE_KEY, selectedMetric);
+    } catch {
+      // The selection remains active for this screen even if storage is unavailable.
+    }
+  }, [selectedMetric]);
+
+  useEffect(() => {
+    if (!metricMenuOpen) return;
+    const dismissOutside = (event: PointerEvent) => {
+      if (!metricControlRef.current?.contains(event.target as Node)) setMetricMenuOpen(false);
+    };
+    const dismissOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMetricMenuOpen(false);
+      metricTriggerRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("keydown", dismissOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      document.removeEventListener("keydown", dismissOnEscape);
+    };
+  }, [metricMenuOpen]);
+
+  const focusMetricOption = (index: number) => {
+    const count = OVERVIEW_METRICS.length;
+    const normalized = (index + count) % count;
+    metricOptionRefs.current[normalized]?.focus();
+  };
+
   const attentionItems = useMemo(
     () => buildAttentionItems(heartbeat, dataHealth, text),
     [heartbeat, dataHealth, text],
@@ -377,6 +466,94 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                 <h3>📄 {text.portfolio}</h3>
                 <Link to="/transactions" className="ovb2-link">{text.viewDetails}</Link>
               </div>
+              <div className="ovb2-metric-toolbar">
+                <span className="ovb2-metric-caption">
+                  <span>Metrik</span>
+                  <i aria-hidden="true" />
+                  <span>Chỉ số</span>
+                </span>
+                <div className="ovb2-metric-control" ref={metricControlRef}>
+                  <button
+                    ref={metricTriggerRef}
+                    type="button"
+                    className="ovb2-metric-trigger"
+                    aria-label="Metrik / Chỉ số"
+                    aria-haspopup="listbox"
+                    aria-expanded={metricMenuOpen}
+                    aria-controls="ovb2-metric-options"
+                    onClick={() => setMetricMenuOpen((open) => !open)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+                      event.preventDefault();
+                      setMetricMenuOpen(true);
+                      requestAnimationFrame(() => focusMetricOption(OVERVIEW_METRICS.findIndex((metric) => metric.id === selectedMetric)));
+                    }}
+                  >
+                    <span className="ovb2-metric-trigger-icon" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
+                        <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                        <circle cx="7" cy="5" r="2" fill="var(--surface-raised)" stroke="currentColor" strokeWidth="1.6" />
+                        <circle cx="13" cy="10" r="2" fill="var(--surface-raised)" stroke="currentColor" strokeWidth="1.6" />
+                        <circle cx="8" cy="15" r="2" fill="var(--surface-raised)" stroke="currentColor" strokeWidth="1.6" />
+                      </svg>
+                    </span>
+                    <span className="ovb2-metric-trigger-copy">
+                      <strong>{selectedMetricOption.de}</strong>
+                      <small>{selectedMetricOption.vi}</small>
+                    </span>
+                    <svg className={"ovb2-metric-chevron" + (metricMenuOpen ? " open" : "")} viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                      <path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  {metricMenuOpen ? (
+                    <div
+                      className="ovb2-metric-menu"
+                      id="ovb2-metric-options"
+                      role="listbox"
+                      aria-label="Metrik / Chỉ số auswählen"
+                    >
+                      {OVERVIEW_METRICS.map((metric, index) => (
+                        <button
+                          key={metric.id}
+                          ref={(node) => { metricOptionRefs.current[index] = node; }}
+                          type="button"
+                          role="option"
+                          aria-selected={selectedMetric === metric.id}
+                          tabIndex={selectedMetric === metric.id ? 0 : -1}
+                          className={"ovb2-metric-option" + (selectedMetric === metric.id ? " selected" : "")}
+                          onClick={() => {
+                            setSelectedMetric(metric.id);
+                            setMetricMenuOpen(false);
+                            metricTriggerRef.current?.focus();
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "ArrowDown") {
+                              event.preventDefault();
+                              focusMetricOption(index + 1);
+                            } else if (event.key === "ArrowUp") {
+                              event.preventDefault();
+                              focusMetricOption(index - 1);
+                            } else if (event.key === "Home") {
+                              event.preventDefault();
+                              focusMetricOption(0);
+                            } else if (event.key === "End") {
+                              event.preventDefault();
+                              focusMetricOption(OVERVIEW_METRICS.length - 1);
+                            }
+                          }}
+                        >
+                          <span className="ovb2-metric-unit" aria-hidden="true">{metric.unit}</span>
+                          <span className="ovb2-metric-option-copy">
+                            <strong>{metric.de}</strong>
+                            <small>{metric.vi}</small>
+                          </span>
+                          <span className="ovb2-metric-check" aria-hidden="true">{selectedMetric === metric.id ? "✓" : ""}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
               <table className="ovb2-tbl">
                 <thead>
                   <tr>
@@ -403,14 +580,18 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                       <td className="num">
                         <b>{a.valueLabel}</b>
                         <small>{a.pricePerShare ?? "—"}</small>
-                        <small
-                          className={a.pnlPositive == null ? "ovb2-pnl muted" : a.pnlPositive ? "ovb2-pnl up" : "ovb2-pnl down"}
-                          aria-label={text.sincePurchase + ": " + (a.pnlLabel == null ? text.gainUnavailable : a.pnlLabel + (a.pnlPctLabel ? " (" + a.pnlPctLabel + ")" : ""))}
-                        >
-                          {a.pnlLabel == null
-                            ? text.gainUnavailable
-                            : text.sincePurchase + ": " + a.pnlLabel + (a.pnlPctLabel ? " (" + a.pnlPctLabel + ")" : "")}
-                        </small>
+                        {(() => {
+                          const currentMetric = metricForHolding(a, selectedMetric);
+                          return (
+                            <small
+                              className={currentMetric.positive == null ? "ovb2-pnl muted" : currentMetric.positive ? "ovb2-pnl up" : "ovb2-pnl down"}
+                              aria-label={selectedMetricOption.de + " / " + selectedMetricOption.vi + ": " + (currentMetric.label ?? text.gainUnavailable)}
+                              title={selectedMetricOption.de + " / " + selectedMetricOption.vi}
+                            >
+                              {currentMetric.label ?? "—"}
+                            </small>
+                          );
+                        })()}
                       </td>
                       <td className="num"><b>{a.weightPct.toFixed(1).replace(".", ",")}%</b></td>
                       <td className="num"><b>{a.shares}</b></td>
