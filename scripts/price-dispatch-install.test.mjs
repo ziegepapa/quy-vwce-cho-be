@@ -18,9 +18,9 @@ test("installer accepts a hidden repo-scoped token, protects it, and does not ec
   assert.match(installer, /chmod 600/);
   assert.match(installer, /chown root:root/);
   assert.match(installer, /Actions: Read and write/);
-  const tokenWriteLine = installer.split("\\n").find((line) => line.includes("PRICE_WORKFLOW_DISPATCH_TOKEN=%s"));
+  const tokenWriteLine = installer.split(/\r?\n/).find((line) => line.includes("PRICE_WORKFLOW_DISPATCH_TOKEN=%s"));
   assert.ok(tokenWriteLine, "token must only be written through the protected environment file");
-  assert.match(tokenWriteLine, /> "\\$\\{ENV_FILE\\}"/);
+  assert.ok(tokenWriteLine.endsWith(' > "${ENV_FILE}"'));
   assert.match(installer, /unset TOKEN/);
   assert.match(installer, /No immediate workflow was launched/);
 });
