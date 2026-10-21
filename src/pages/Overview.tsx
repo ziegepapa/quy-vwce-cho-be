@@ -172,7 +172,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
         const history = response.ok ? readPriceHistory(await response.json()) : [];
         return [isin, history] as const;
       } catch {
-        return [isin, []] as const;
+        return [isin, [] as BriefingPricePoint[]] as const;
       }
     })).then((entries) => {
       if (alive) setPriceHistories(new Map(entries));
