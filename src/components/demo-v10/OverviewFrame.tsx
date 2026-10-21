@@ -25,9 +25,6 @@ export type AllocationSlice = {
   pricePerShare: string | null;
   /** Formatted "327,11 €". */
   valueLabel: string;
-  /** Gain/loss since purchase; null when cost basis is unavailable. */
-  pnlLabel: string | null;
-  pnlPctLabel: string | null;
   pnlPositive: boolean | null;
 };
 
@@ -404,8 +401,11 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                       <td className="num">
                         <b>{a.valueLabel}</b>
                         <small>{a.pricePerShare ?? "—"}</small>
-                        <small className={a.pnlPositive == null ? "ovb2-pnl muted" : a.pnlPositive ? "ovb2-pnl up" : "ovb2-pnl down"}>
-                          {text.sincePurchase}: {a.pnlLabel ?? "—"}{a.pnlPctLabel ? ` (${a.pnlPctLabel})` : ""}
+                        <small
+                          className={a.pnlPositive == null ? "ovb2-pnl muted" : a.pnlPositive ? "ovb2-pnl up" : "ovb2-pnl down"}
+                          aria-label={`${text.sincePurchase}: ${a.pnlPositive == null ? text.gainUnavailable : a.pnlPositive ? "+" : "−"}`}
+                        >
+                          {a.pnlPositive == null ? "—" : a.pnlPositive ? "+" : "−"}
                         </small>
                       </td>
                       <td className="num"><b>{a.weightPct.toFixed(1).replace(".", ",")}%</b></td>
