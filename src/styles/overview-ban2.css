@@ -213,18 +213,16 @@
 }
 
 
-/* Per-investment performance is subordinate to current value and never changes the portfolio total. */
+/* A minimal +/− indicator for each holding; this never changes the portfolio total. */
 .ovb2-tbl td.num small.ovb2-pnl {
-  margin-top: 4px;
-  font-size: 10.5px;
-  font-weight: 650;
-  line-height: 1.35;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  display: inline-block;
+  margin-top: 3px;
+  min-width: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: right;
 }
 .ovb2-tbl td.num small.ovb2-pnl.up { color: var(--success-600); }
 .ovb2-tbl td.num small.ovb2-pnl.down { color: var(--danger-600); }
 .ovb2-tbl td.num small.ovb2-pnl.muted { color: var(--text-tertiary); }
-@media (max-width:640px) {
-  .ovb2-tbl td.num small.ovb2-pnl { max-width: 124px; margin-left: auto; font-size: 10px; }
-}
