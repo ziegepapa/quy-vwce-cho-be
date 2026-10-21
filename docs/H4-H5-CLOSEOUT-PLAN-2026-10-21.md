@@ -35,8 +35,9 @@ Test every current sync collection:
 - `monthly_snapshots`
 
 For each applicable collection, retain pass/fail for:
-- A can read/create/update/delete A-owned fixtures.
-- B can read A's rows only if the policy explicitly allows it (expected: no); B cannot update/delete A's rows or insert a row claiming A as owner.
+- User A can read and create/update their own fixtures through the documented client path.
+- User A can delete their own row only where the current policy permits direct deletion. In particular, `profiles` has no direct DELETE policy in the current bootstrap SQL; test that as an intentional contract, and separately test Auth-user cascade deletion on a disposable principal.
+- User B cannot read or update User A's rows, delete User A's rows where direct deletion is allowed, or insert a row claiming User A as owner.
 - Anonymous cannot read or mutate private rows.
 - Owner key is enforced on both existing-row predicates and new-row checks.
 - Auth-user deletion/cascade behavior matches the documented contract, using disposable principals only.
