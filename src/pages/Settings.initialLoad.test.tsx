@@ -140,16 +140,16 @@ describe("Settings initial load state", () => {
     expect(screen.getAllByText("%/năm")).toHaveLength(3);
   });
 
-  it("keeps the main settings screen unified, localized, and free of experiment links", async () => {
+  it("keeps the compact Settings categories localized and free of experiment links", async () => {
     dbMocks.getSettings.mockResolvedValue(loadedSettings());
     renderSettings();
 
     await screen.findByRole("heading", { name: "Cài đặt" });
-    expect(screen.getByRole("region", { name: "Bảo mật" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Đồng bộ" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Dữ liệu" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Ứng dụng" })).toBeTruthy();
-    expect(screen.getByText("Danh mục lưu trên thiết bị · quản lý an toàn")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "KẾ HOẠCH" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "HIỂN THỊ" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "DỮ LIỆU" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "BẢO MẬT" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Ngôn ngữ Tiếng Việt/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Horizon ansehen|Xem HORIZON|P29 öffnen|P29 vergleichen/ })).toBeNull();
   });
 
