@@ -71,6 +71,8 @@
 }
 .sim-wrap .sh-sub { margin-top: 8px; color: var(--text-secondary); font-size: 13px; }
 .sim-wrap .sh-note { margin-top: 4px; color: var(--text-tertiary); font-size: 12px; }
+.sim-wrap .sim-valuation-warning { margin: 0; padding: 10px 12px; color: var(--text-secondary); background: var(--surface-sunken); border: 1px solid var(--border-subtle); border-radius: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.sim-wrap .summary-strip .loss { color: var(--danger-600); }
 
 
 /* ---------- Chart ---------- */
