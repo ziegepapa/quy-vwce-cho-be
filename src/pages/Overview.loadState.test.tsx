@@ -148,7 +148,7 @@ describe("Overview German locale", () => {
     expect(screen.getByRole("button", { name: "Bericht exportieren" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Metrik / Chỉ số" })).toBeTruthy();
     expect(document.body.textContent).toContain("Seit Kauf relativ");
-    expect(document.body.textContent).toContain("Từ lúc mua · phần trăm");
+    expect(document.body.textContent).toContain("Từ lúc mua · %");
     expect(document.body.textContent).not.toMatch(/Tổng giá trị|Cột mốc tiếp theo|Cần chú ý|Tổng kết năm|Xuất báo cáo|Đã góp|Thị trường thêm/);
   });
 });
@@ -288,11 +288,11 @@ describe("Overview bản 2", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Metrik / Chỉ số" }));
     fireEvent.click(screen.getByRole("option", { name: /Tagestrend relativ/ }));
-    expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("−0,30%");
+    await waitFor(() => expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("−0,30%"));
 
     fireEvent.click(screen.getByRole("button", { name: "Metrik / Chỉ số" }));
     fireEvent.click(screen.getByRole("option", { name: /Tagestrend absolut/ }));
-    expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("−0,52 €");
+    await waitFor(() => expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("−0,52 €"));
   });
 
   it("renders one merged attention list that links to the existing review surfaces", async () => {
