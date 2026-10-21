@@ -239,6 +239,20 @@ describe("Overview bản 2", () => {
     expect(tableText).not.toContain("VanEck");
   });
 
+  it("shows a minus sign when a holding is below its cost basis", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-loss-sign", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(90, "2026-10-15")]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
+    const signs = [...container.querySelectorAll(".ovb2-pnl")].map((node) => node.textContent?.trim());
+    expect(signs).toEqual(["−"]);
+    expect(container.querySelector(".ovb2-pnl.down")).toBeTruthy();
+    expect(container.querySelector(".ovb2-big")?.textContent).toContain("90,00");
+  });
+
   it("renders one merged attention list that links to the existing review surfaces", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-health", "2026-08-01")]);
