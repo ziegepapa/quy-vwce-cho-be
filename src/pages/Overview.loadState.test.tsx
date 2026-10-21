@@ -229,10 +229,12 @@ describe("Overview bản 2", () => {
     expect(tableText).toContain("VALL");
     expect(tableText).toContain("Vanguard FTSE All-World");
     expect(tableText).toContain("Vanguard FTSE Global All-Cap");
-    // Per-fund performance is shown separately; the aggregate asset calculation stays unchanged.
-    expect(tableText).toContain("Từ lúc mua");
-    expect(tableText).toContain("+70,94");
-    expect(tableText).toContain("+5,25");
+    // Each holding shows only a positive/negative sign; aggregate assets stay unchanged.
+    const signs = [...container.querySelectorAll(".ovb2-pnl")].map((node) => node.textContent?.trim());
+    expect(signs).toEqual(["+", "+"]);
+    expect(tableText).not.toContain("Từ lúc mua");
+    expect(tableText).not.toContain("+70,94");
+    expect(tableText).not.toContain("+5,25");
     expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,19");
     expect(tableText).not.toContain("VanEck");
   });
