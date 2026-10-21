@@ -18,10 +18,10 @@ const OVERVIEW_METRICS: ReadonlyArray<{
   vi: string;
   unit: "%" | "€";
 }> = [
-  { id: "since-purchase-relative", de: "Seit Kauf relativ", vi: "Từ lúc mua · phần trăm", unit: "%" },
-  { id: "since-purchase-absolute", de: "Seit Kauf absolut", vi: "Từ lúc mua · số tiền", unit: "€" },
-  { id: "daily-relative", de: "Tagestrend relativ", vi: "Biến động trong ngày · phần trăm", unit: "%" },
-  { id: "daily-absolute", de: "Tagestrend absolut", vi: "Biến động trong ngày · số tiền", unit: "€" },
+  { id: "since-purchase-relative", de: "Seit Kauf relativ", vi: "Từ lúc mua · %", unit: "%" },
+  { id: "since-purchase-absolute", de: "Seit Kauf absolut", vi: "Từ lúc mua · €", unit: "€" },
+  { id: "daily-relative", de: "Tagestrend relativ", vi: "So với phiên trước · %", unit: "%" },
+  { id: "daily-absolute", de: "Tagestrend absolut", vi: "So với phiên trước · €", unit: "€" },
 ];
 
 function isOverviewMetric(value: string | null): value is OverviewMetric {
