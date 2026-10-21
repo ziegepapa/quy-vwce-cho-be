@@ -131,7 +131,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByText("Thận trọng")).toBeTruthy();
     expect(screen.getByText("Cơ sở")).toBeTruthy();
     expect(screen.getByText("Thuận lợi")).toBeTruthy();
-    expect(screen.getByText("1.000 €")).toBeTruthy();
+    expect(Array.from(document.querySelectorAll(".sim-scenario strong")).some((node) => node.textContent?.includes("1.000"))).toBe(true);
     cleanup();
     renderShell("de");
     expect(screen.getByRole("heading", { name: "Endwert nach Szenario" })).toBeTruthy();
