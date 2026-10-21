@@ -211,3 +211,18 @@
   .ovb2-mile {transition:none}
   .ovb2-mile:active {transform:none}
 }
+
+
+/* A minimal +/− indicator for each holding; this never changes the portfolio total. */
+.ovb2-tbl td.num small.ovb2-pnl {
+  display: inline-block;
+  margin-top: 3px;
+  min-width: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: right;
+}
+.ovb2-tbl td.num small.ovb2-pnl.up { color: var(--success-600); }
+.ovb2-tbl td.num small.ovb2-pnl.down { color: var(--danger-600); }
+.ovb2-tbl td.num small.ovb2-pnl.muted { color: var(--text-tertiary); }

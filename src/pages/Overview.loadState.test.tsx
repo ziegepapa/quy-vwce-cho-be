@@ -205,7 +205,7 @@ describe("Overview bản 2", () => {
     expect(milestoneLink?.getAttribute("href")).toBe("/goals");
   });
 
-  it("lists holdings without comparing the two funds' returns", async () => {
+  it("lists current holding value and gain/loss since purchase without changing the total", async () => {
     dbMocks.getSettings.mockResolvedValue(defaultSettings());
     dbMocks.listTransactions.mockResolvedValue([
       buyVwce("tx-tbl-1", "2026-08-01"),
@@ -229,9 +229,28 @@ describe("Overview bản 2", () => {
     expect(tableText).toContain("VALL");
     expect(tableText).toContain("Vanguard FTSE All-World");
     expect(tableText).toContain("Vanguard FTSE Global All-Cap");
-    // No per-fund profit % — never compare the two funds' returns.
-    expect(tableText).not.toMatch(/\+\d+,\d+%/);
+    // Each holding shows only a positive/negative sign; aggregate assets stay unchanged.
+    const signs = [...container.querySelectorAll(".ovb2-pnl")].map((node) => node.textContent?.trim());
+    expect(signs).toEqual(["+", "+"]);
+    expect(tableText).not.toContain("Từ lúc mua");
+    expect(tableText).not.toContain("+70,94");
+    expect(tableText).not.toContain("+5,25");
+    expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,19");
     expect(tableText).not.toContain("VanEck");
+  });
+
+  it("shows a minus sign when a holding is below its cost basis", async () => {
+    dbMocks.getSettings.mockResolvedValue(defaultSettings());
+    dbMocks.listTransactions.mockResolvedValue([buyVwce("tx-loss-sign", "2026-08-01")]);
+    dbMocks.listQuotes.mockResolvedValue([quoteVwce(90, "2026-10-15")]);
+
+    const { container } = renderOverview();
+
+    await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
+    const signs = [...container.querySelectorAll(".ovb2-pnl")].map((node) => node.textContent?.trim());
+    expect(signs).toEqual(["−"]);
+    expect(container.querySelector(".ovb2-pnl.down")).toBeTruthy();
+    expect(container.querySelector(".ovb2-big")?.textContent).toContain("90,00");
   });
 
   it("renders one merged attention list that links to the existing review surfaces", async () => {

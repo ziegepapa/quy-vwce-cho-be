@@ -239,6 +239,8 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       .sort(([, a], [, b]) => (b.value ?? 0) - (a.value ?? 0))
       .map(([isin, row]) => {
         const value = row.value ?? 0;
+        const costBasis = portfolio.positions[isin]?.costBasis ?? 0;
+        const pnl = Number.isFinite(costBasis) && costBasis > 0 ? value - costBasis : null;
         return {
           isin,
           ticker: instrumentTicker(isin),
@@ -250,6 +252,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
             ? `${numberFormat.format(row.price)} €/${locale === "de" ? "Ant." : "cp"}`
             : null,
           valueLabel: formatMoney(value),
+          pnlPositive: pnl == null ? null : pnl >= 0,
         };
       });
 

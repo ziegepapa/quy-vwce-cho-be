@@ -25,6 +25,7 @@ export type AllocationSlice = {
   pricePerShare: string | null;
   /** Formatted "327,11 €". */
   valueLabel: string;
+  pnlPositive: boolean | null;
 };
 
 export type UpdateItem = {
@@ -97,6 +98,7 @@ function overviewCopy(locale: "vi" | "de") {
     viewDetails: "Details ansehen →",
     fund: "Fonds",
     currentValue: "Aktueller Wert",
+    sincePurchase: "Seit Kauf",
     weight: "Gewichtung",
     shares: "Anteile",
     recentUpdates: "Neueste Updates",
@@ -151,6 +153,7 @@ function overviewCopy(locale: "vi" | "de") {
     viewDetails: "Xem chi tiết →",
     fund: "Quỹ",
     currentValue: "Giá trị hiện tại",
+    sincePurchase: "Từ lúc mua",
     weight: "Tỷ trọng",
     shares: "Số cổ phần",
     recentUpdates: "Cập nhật gần nhất",
@@ -365,7 +368,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
             ) : null}
           </div>
 
-          {/* Holdings table — no per-fund profit comparison */}
+          {/* Holdings table — total asset remains above; each line adds return since purchase. */}
           {allocation.length > 0 ? (
             <section className="ovb2-card ovb2-table-card" aria-label={text.portfolio}>
               <div className="ovb2-cardhead">
@@ -395,7 +398,16 @@ export default function OverviewFrame(props: OverviewFrameProps) {
                           </span>
                         </div>
                       </td>
-                      <td className="num"><b>{a.valueLabel}</b><small>{a.pricePerShare ?? "—"}</small></td>
+                      <td className="num">
+                        <b>{a.valueLabel}</b>
+                        <small>{a.pricePerShare ?? "—"}</small>
+                        <small
+                          className={a.pnlPositive == null ? "ovb2-pnl muted" : a.pnlPositive ? "ovb2-pnl up" : "ovb2-pnl down"}
+                          aria-label={`${text.sincePurchase}: ${a.pnlPositive == null ? text.gainUnavailable : a.pnlPositive ? "+" : "−"}`}
+                        >
+                          {a.pnlPositive == null ? "—" : a.pnlPositive ? "+" : "−"}
+                        </small>
+                      </td>
                       <td className="num"><b>{a.weightPct.toFixed(1).replace(".", ",")}%</b></td>
                       <td className="num"><b>{a.shares}</b></td>
                     </tr>
