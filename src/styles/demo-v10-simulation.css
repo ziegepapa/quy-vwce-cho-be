@@ -484,3 +484,121 @@
     transition: none;
   }
 }
+
+
+/* Scenario comparison: disclose assumptions while keeping the legacy projection engine intact. */
+.sim-wrap .sim-chart-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sim-wrap .sim-chart-heading .sim-chart-title { margin-bottom: 0; }
+.sim-wrap .sim-live-tag {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+}
+.sim-wrap .scenario-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sim-wrap .scenario-heading h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+.sim-wrap .scenario-heading p {
+  margin: 4px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.sim-wrap .scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.sim-wrap .scenario-card {
+  min-width: 0;
+  padding: 12px 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+}
+.sim-wrap .scenario-card-base {
+  border-color: var(--primary-600);
+  box-shadow: inset 0 0 0 1px var(--primary-600);
+}
+.sim-wrap .scenario-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+}
+.sim-wrap .scenario-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+.sim-wrap .scenario-dot-cautious { background: var(--text-secondary); }
+.sim-wrap .scenario-dot-base { background: var(--primary-600); }
+.sim-wrap .scenario-dot-bull { background: var(--success-600); }
+.sim-wrap .scenario-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+.sim-wrap .scenario-rate {
+  margin-top: 10px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.sim-wrap .scenario-rate-value {
+  margin-top: 2px;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.sim-wrap .scenario-end-label {
+  margin-top: 10px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.sim-wrap .scenario-end-value {
+  margin-top: 3px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.sim-wrap .inp:focus-visible,
+.sim-wrap .yr-slider:focus-visible,
+.sim-wrap .show-all-btn:focus-visible,
+.sim-wrap details.gl summary:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 3px;
+}
+@media (max-width: 390px) {
+  .sim-wrap .scenario-grid { gap: 6px; }
+  .sim-wrap .scenario-card { padding: 10px 7px; border-radius: 13px; }
+  .sim-wrap .scenario-name { font-size: 11px; }
+  .sim-wrap .scenario-rate-value { font-size: 14px; }
+  .sim-wrap .scenario-end-value { font-size: 12px; }
+}
