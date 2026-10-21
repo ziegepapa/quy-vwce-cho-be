@@ -41,7 +41,8 @@ export async function dispatchPriceWorkflow({
     body: JSON.stringify({ ref: ref.trim() }),
   });
 
-  if (response.status !== 204) {
+  // GitHub has documented 204 for older REST API versions and 200 with newer versions.
+  if (response.status !== 204 && response.status !== 200) {
     let detail = "";
     try {
       detail = (await response.text()).trim().slice(0, 300);
@@ -51,7 +52,7 @@ export async function dispatchPriceWorkflow({
     throw new Error(`GitHub workflow dispatch failed with HTTP ${response.status}${detail ? `: ${detail}` : ""}.`);
   }
 
-  return { status: 204, workflow, ref: ref.trim() };
+  return { status: response.status, workflow, ref: ref.trim() };
 }
 
 async function main() {
