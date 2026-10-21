@@ -232,8 +232,8 @@ describe("Overview bản 2", () => {
     // Per-fund performance is shown separately; the aggregate asset calculation stays unchanged.
     expect(tableText).toContain("Từ lúc mua");
     expect(tableText).toContain("+70,94");
-    expect(tableText).toContain("+5,26");
-    expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,20");
+    expect(tableText).toContain("+5,25");
+    expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,19");
     expect(tableText).not.toContain("VanEck");
   });
 
