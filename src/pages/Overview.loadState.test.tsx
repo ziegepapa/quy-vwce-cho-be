@@ -224,7 +224,7 @@ describe("Overview bản 2", () => {
     const { container } = renderOverview();
 
     await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
-    const tableText = container.querySelector(".ovb2-table-card")?.textContent ?? "";
+    const tableText = container.querySelector(".ovb2-table-card")?.textContent?.replace(/\u00a0/g, " ") ?? "";
     expect(tableText).toContain("VWCE");
     expect(tableText).toContain("VALL");
     expect(tableText).toContain("Vanguard FTSE All-World");
@@ -244,7 +244,8 @@ describe("Overview bản 2", () => {
     const { container } = renderOverview();
 
     await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
-    expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("Từ lúc mua: −10,00 € (−10,0%)");
+    const lossLabel = container.querySelector(".ovb2-pnl.down")?.textContent?.replace(/\u00a0/g, " ") ?? "";
+    expect(lossLabel).toContain("Từ lúc mua: −10,00 € (−10,0%)");
     expect(container.querySelector(".ovb2-pnl.down")).toBeTruthy();
     expect(container.querySelector(".ovb2-big")?.textContent).toContain("90,00");
   });
