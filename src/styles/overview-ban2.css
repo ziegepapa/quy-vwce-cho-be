@@ -213,16 +213,162 @@
 }
 
 
-/* Per-holding returns are explicit and separate from the portfolio total. */
-.ovb2-tbl td.num small.ovb2-pnl {
-  display: block;
-  margin-top: 5px;
-  font-size: 11px;
-  font-weight: 750;
-  line-height: 1.35;
-  text-align: right;
-  white-space: nowrap;
+/* Compact bilingual metric selector inspired by modern broker menus. */
+.ovb2-metric-toolbar {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:2px 0 12px;
 }
-.ovb2-tbl td.num small.ovb2-pnl.up { color: var(--success-600); }
-.ovb2-tbl td.num small.ovb2-pnl.down { color: var(--danger-600); }
-.ovb2-tbl td.num small.ovb2-pnl.muted { color: var(--text-tertiary); }
+.ovb2-metric-caption {
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  color:var(--text-secondary);
+  font-size:10px;
+  font-weight:800;
+  line-height:1.3;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.ovb2-metric-caption i {
+  display:block;
+  width:3px;
+  height:3px;
+  border-radius:50%;
+  background:var(--text-tertiary);
+}
+.ovb2-metric-control {position:relative;z-index:8;flex:0 1 270px;min-width:0}
+.ovb2-metric-trigger {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  min-height:54px;
+  padding:8px 11px;
+  color:var(--text-primary);
+  text-align:left;
+  background:color-mix(in srgb,var(--surface-raised) 94%,var(--primary-050));
+  border:1px solid color-mix(in srgb,var(--primary-600) 24%,var(--border-subtle));
+  border-radius:14px;
+  box-shadow:0 2px 6px rgba(15,23,42,.035);
+  cursor:pointer;
+  transition:border-color 140ms ease,box-shadow 140ms ease,background 140ms ease;
+}
+.ovb2-metric-trigger:hover,
+.ovb2-metric-trigger[aria-expanded="true"] {
+  border-color:color-mix(in srgb,var(--primary-600) 50%,var(--border-subtle));
+  box-shadow:0 4px 14px rgba(15,23,42,.08);
+}
+.ovb2-metric-trigger:focus-visible,
+.ovb2-metric-option:focus-visible {
+  outline:2px solid var(--focus-ring);
+  outline-offset:2px;
+}
+.ovb2-metric-trigger-icon {
+  display:flex;
+  flex:0 0 34px;
+  align-items:center;
+  justify-content:center;
+  width:34px;
+  height:34px;
+  color:var(--primary-700);
+  background:color-mix(in srgb,var(--primary-050) 76%,var(--surface-raised));
+  border:1px solid color-mix(in srgb,var(--primary-600) 13%,var(--border-subtle));
+  border-radius:10px;
+}
+.ovb2-metric-trigger-copy,
+.ovb2-metric-option-copy {display:flex;flex:1;flex-direction:column;min-width:0;gap:3px}
+.ovb2-metric-trigger-copy strong {overflow:hidden;font-size:12px;font-weight:800;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+.ovb2-metric-trigger-copy small {overflow:hidden;color:var(--text-secondary);font-size:10px;font-weight:500;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}
+.ovb2-metric-chevron {flex:0 0 auto;color:var(--text-secondary);transition:transform 140ms ease}
+.ovb2-metric-chevron.open {transform:rotate(180deg)}
+.ovb2-metric-menu {
+  position:absolute;
+  top:calc(100% + 8px);
+  right:0;
+  z-index:20;
+  width:min(310px,calc(100vw - 40px));
+  padding:6px;
+  overflow:hidden;
+  background:var(--surface-raised);
+  border:1px solid var(--border-subtle);
+  border-radius:16px;
+  box-shadow:0 18px 48px rgba(15,23,42,.17),0 2px 8px rgba(15,23,42,.06);
+  animation:ovb2-metric-enter 140ms ease-out;
+}
+.ovb2-metric-option {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  min-height:58px;
+  padding:9px 10px;
+  color:var(--text-primary);
+  text-align:left;
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:11px;
+  cursor:pointer;
+}
+.ovb2-metric-option + .ovb2-metric-option {margin-top:2px}
+.ovb2-metric-option:hover {background:var(--surface-sunken)}
+.ovb2-metric-option.selected {
+  background:color-mix(in srgb,var(--primary-050) 74%,var(--surface-raised));
+  border-color:color-mix(in srgb,var(--primary-600) 18%,var(--border-subtle));
+}
+.ovb2-metric-unit {
+  display:flex;
+  flex:0 0 34px;
+  align-items:center;
+  justify-content:center;
+  width:34px;
+  height:34px;
+  color:var(--primary-700);
+  background:var(--surface-sunken);
+  border:1px solid var(--border-subtle);
+  border-radius:10px;
+  font-size:12px;
+  font-weight:850;
+}
+.ovb2-metric-option.selected .ovb2-metric-unit {
+  color:var(--color-text-inverse);
+  background:var(--primary-600);
+  border-color:var(--primary-600);
+}
+.ovb2-metric-option-copy strong {font-size:12px;font-weight:800;line-height:1.25}
+.ovb2-metric-option-copy small {color:var(--text-secondary);font-size:10px;font-weight:500;line-height:1.35}
+.ovb2-metric-check {width:16px;color:var(--primary-600);font-size:15px;font-weight:900;text-align:center}
+@keyframes ovb2-metric-enter {
+  from {opacity:0;transform:translateY(-4px) scale(.99)}
+  to {opacity:1;transform:translateY(0) scale(1)}
+}
+.ovb2-tbl td.num small.ovb2-pnl {
+  display:block;
+  margin-top:5px;
+  font-size:12px;
+  font-weight:800;
+  line-height:1.3;
+  text-align:right;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.ovb2-tbl td.num small.ovb2-pnl.up {color:var(--success-600)}
+.ovb2-tbl td.num small.ovb2-pnl.down {color:var(--danger-600)}
+.ovb2-tbl td.num small.ovb2-pnl.muted {color:var(--text-tertiary)}
+@media (max-width:520px) {
+  .ovb2-metric-toolbar {align-items:flex-start;gap:8px}
+  .ovb2-metric-caption {gap:4px;padding-top:18px;font-size:9px;letter-spacing:.04em}
+  .ovb2-metric-control {flex:1 1 auto;max-width:270px}
+  .ovb2-metric-trigger {gap:7px;min-height:50px;padding:7px 8px;border-radius:12px}
+  .ovb2-metric-trigger-icon {flex-basis:30px;width:30px;height:30px}
+  .ovb2-metric-trigger-copy strong {font-size:11px}
+  .ovb2-metric-trigger-copy small {font-size:9px}
+  .ovb2-metric-menu {width:min(300px,calc(100vw - 32px))}
+}
+@media (prefers-reduced-motion:reduce) {
+  .ovb2-metric-trigger,.ovb2-metric-chevron {transition:none}
+  .ovb2-metric-menu {animation:none}
+}
