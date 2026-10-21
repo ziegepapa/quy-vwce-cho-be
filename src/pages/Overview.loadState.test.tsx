@@ -253,7 +253,7 @@ describe("Overview bản 2", () => {
     expect(tableText).toContain("+4,4%");
     expect(container.querySelector(".ovb2-big")?.textContent).toContain("296,19");
 
-    fireEvent.click(screen.getByRole("button", { name: "Chỉ số: Từ lúc mua (%)" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Chỉ số:/ }));
     expect(screen.getByRole("option", { name: /Từ lúc mua \(€\)/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /So với phiên trước \(%\)/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /So với phiên trước \(€\)/ })).toBeTruthy();
@@ -291,11 +291,11 @@ describe("Overview bản 2", () => {
     const { container } = renderOverview();
     await waitFor(() => expect(container.querySelector(".ovb2-table-card")).toBeTruthy());
 
-    fireEvent.click(screen.getByRole("button", { name: "Chỉ số: Từ lúc mua (%)" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Chỉ số:/ }));
     fireEvent.click(screen.getByRole("option", { name: /Tagesänderung \(%\)/ }));
     await waitFor(() => expect(container.querySelector(".ovb2-pnl.down")?.textContent).toContain("−0,30%"));
 
-    fireEvent.click(screen.getByRole("button", { name: "Chỉ số: Từ lúc mua (%)" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Chỉ số:/ }));
     fireEvent.click(screen.getByRole("option", { name: /Tagesänderung \(€\)/ }));
     await waitFor(() => expect(container.querySelector(".ovb2-pnl.down")?.textContent?.replace(/\u00a0/g, " ")).toContain("−0,52 €"));
   });
