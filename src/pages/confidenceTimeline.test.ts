@@ -64,6 +64,25 @@ describe("buildConfidenceTimeline", () => {
     });
   });
 
+  it("includes current emergency contacts as a snapshot, not as fabricated individual history", () => {
+    const result = buildConfidenceTimeline({
+      ...base,
+      now: new Date("2026-10-21T12:00:00.000Z"),
+      notfallmappe: {
+        updatedAt: "2026-10-20T10:00:00.000Z",
+        contacts: [{ id: "contact-1", name: "Mẹ", relation: "Mẹ", phone: "+49 111", email: "mom@example.test" }],
+      },
+    });
+
+    expect(result.events).toContainEqual({
+      id: "contacts:notfallmappe",
+      kind: "contact_snapshot",
+      at: "2026-10-20T10:00:00.000Z",
+      source: "contacts",
+      contacts: [{ id: "contact-1", name: "Mẹ", relation: "Mẹ", phone: "+49 111", email: "mom@example.test" }],
+    });
+  });
+
   it("labels broker sourced transactions as import and excludes deleted or invalid-dated rows", () => {
     const result = buildConfidenceTimeline({
       ...base,
