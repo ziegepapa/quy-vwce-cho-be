@@ -57,9 +57,9 @@ export function buildConfidenceTimeline(input: {
           currency: quote.currency,
           price: quote.price,
           asOf: quote.asOf,
-          fetchedAt: quote.fetchedAt,
-          source: quote.source,
-          venue: quote.venue,
+          ...(quote.fetchedAt ? { fetchedAt: quote.fetchedAt } : {}),
+          ...(quote.source ? { source: quote.source } : {}),
+          ...(quote.venue ? { venue: quote.venue } : {}),
         }
       : undefined;
     events.push({
@@ -83,12 +83,12 @@ export function buildConfidenceTimeline(input: {
           type: tx.type,
           amount: tx.amount,
           date: tx.date,
-          notes: typeof tx.notes === "string" && tx.notes.trim() ? tx.notes : undefined,
-          instrumentIsin: tx.instrumentIsin,
-          quantity: tx.quantity,
-          unitPrice: tx.unitPrice,
-          fee: tx.fee,
-          tax: tx.tax,
+          ...(typeof tx.notes === "string" && tx.notes.trim() ? { notes: tx.notes } : {}),
+          ...(tx.instrumentIsin ? { instrumentIsin: tx.instrumentIsin } : {}),
+          ...(typeof tx.quantity === "number" ? { quantity: tx.quantity } : {}),
+          ...(typeof tx.unitPrice === "number" ? { unitPrice: tx.unitPrice } : {}),
+          ...(typeof tx.fee === "number" ? { fee: tx.fee } : {}),
+          ...(typeof tx.tax === "number" ? { tax: tx.tax } : {}),
         }
       : undefined;
     events.push({
