@@ -36,7 +36,7 @@ The older `docs/LONG_TERM_AUDIT.md` and `docs/adr/ADR-financial-policy-boundary.
 
 ## Existing system-level risks not closed by this UI/Simulation pass
 
-The current readiness report remains the source of truth for these separate blockers:
+The refreshed readiness report and [H4/H5 closeout plan](./H4-H5-CLOSEOUT-PLAN-2026-10-21.md) remain the source of truth for these separate blockers:
 
 1. H4: behavioral Supabase RLS proof using isolated, disposable, synthetic-data-only infrastructure is still missing.
 2. H5: a complete ordered migration baseline and controlled upgrade/rollback proof are still missing.
