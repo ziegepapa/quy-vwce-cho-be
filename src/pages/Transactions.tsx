@@ -10,7 +10,7 @@ import {
   upsertTransaction,
 } from "../lib/db";
 import type { Quote, Transaction, TxType } from "../lib/types";
-import { VWCE_ISIN } from "../lib/types";
+import { VALL_ISIN, VWCE_ISIN } from "../lib/types";
 import { calcQuantity, parseDecimal, replayTransactions } from "../lib/calc";
 import {
   classifyTransactionAgainstHoldings,
@@ -188,9 +188,9 @@ export default function Transactions() {
   const { locale } = useLocale();
   const types = useMemo(() => transactionTypes(locale), [locale]);
   const text = locale === "de" ? {
-    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", transactionCount: "Buchungen", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Filter schließen", tools: "Filter", filterSheet: "Filter", applyFilters: "Anwenden", search: "Suchen", searchLedger: "Transaktionen durchsuchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", instrument: "Wertpapier", instrumentVwce: "VWCE", instrumentOther: "Andere Wertpapiere", status: "Status", statusNormal: "Unauffällig", statusReview: "Prüfen", activeFilterChips: "Aktive Filter", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", journal: "Transaktionsjournal", quickFilter: "Schnellfilter", buysQuick: "VWCE-Käufe", contributionsQuick: "Einzahlungen", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", editTransaction: "Transaktion bearbeiten", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen", deleteConfirm: "Diese Transaktion löschen?", activity: "Aktivität", tradeActivity: "Wertpapiere", fundingActivity: "Einzahlungen", outflowActivity: "Ausgaben", newest: "Neueste zuerst", oldest: "Älteste zuerst", amountDesc: "Höchster Betrag", sort: "Sortierung", activeFilters: "{count} aktiv", clearFilters: "Zurücksetzen", quickBuy: "VWCE kaufen", quickFunding: "Geld einzahlen", rowMenu: "Aktionen für Transaktion", timeLens: "Zeitraum", timeAll: "Gesamt", thisMonth: "Dieser Monat", last90Days: "90 Tage", thisYear: "Dieses Jahr", lastYear: "Letztes Jahr", qualityInbox: "Datenqualität", qualityCount: "{count} prüfen", qualityMore: "{count} weitere zeigen", qualityOpen: "Öffnen und prüfen", qualityAction: "Aktion erforderlich", qualityReview: "Prüfen", qualityTip: "Hinweis", qualityMissingIsin: "ISIN fehlt", qualityInvalidIsin: "ISIN ist ungültig", qualityInvalidAmount: "Betrag fehlt oder ist ungültig", qualityMissingQuantity: "Menge oder Stückpreis fehlt", qualityMissingUnitPrice: "Stückpreis fehlt", qualityMissingNote: "Notiz fehlt", qualitySourceReplay: "Finanzielle Prüfung", qualitySourceCompleteness: "Vollständigkeitsprüfung", qualityRecordManual: "Manuell", qualityRecordTradeRepublic: "Trade Republic PDF", qualityRecordLegacy: "Legacy / unbekannt", savedViews: "Gespeicherte Ansichten", saveView: "Ansicht speichern", savedViewName: "Name der Ansicht", savedViewNamePlaceholder: "z. B. Käufe dieses Jahr", saveCurrentView: "Aktuelle Ansicht speichern", savedViewEmpty: "Noch keine gespeicherte Ansicht.", savedViewLimit: "Maximal {count} Ansichten. Löschen Sie eine Ansicht, um fortzufahren.", savedViewNameRequired: "Geben Sie einen Namen für die Ansicht ein.", savedViewStorageError: "Diese Ansicht konnte auf diesem Gerät nicht gespeichert werden.", savedViewNoFilters: "Wählen Sie mindestens einen Filter oder eine Sortierung aus.", removeSavedView: "Ansicht {name} löschen", dateAmountRequired: "Datum und Betrag sind erforderlich.", adjustmentNoteRequired: "Für eine Anpassung ist eine Notiz erforderlich.", invalidIsinChecksum: "ISIN ist ungültig oder die Prüfsumme stimmt nicht.", sellQuantityRequired: "Für einen Verkauf ist eine Wertpapiermenge erforderlich.", priceOrQuantityRequired: "Preis oder Menge ist erforderlich.", invalidQuantity: "Die Menge ist ungültig.", heroContributed: "eingezahlt", heroTxCount: "{count} Buchungen", yearPills: "Jahr wählen", yearSummary: "{count} Buchungen im Jahr {year}", allYearsSummary: "{count} Buchungen · alle Jahre", detailPrev: "Vorherige Buchung", detailNext: "Nächste Buchung", detailClose: "Details schließen", lotWorth: "Tranche jetzt wert", boughtMarker: "Kauf", sourceLabel: "Quelle",
+    loading: "Transaktionen werden geladen", loadError: "Transaktionen konnten nicht geladen werden", safeData: "Die Daten auf diesem Gerät bleiben unverändert.", retry: "Erneut versuchen", title: "Transaktionen", add: "Hinzufügen", contributed: "Eingezahlt", pnl: "Gewinn / Verlust", transactionCount: "Buchungen", buys: "Käufe", analysis: "Analyse aus dem Transaktionsbuch", positions: "offene Positionen", noPositions: "Keine Position", missingPrices: "Kursdaten fehlen", valued: "Bewertet", holdings: "Wert der Wertpapiere", realized: "Realisierter Gewinn / Verlust", unrealized: "Nicht realisierter Gewinn / Verlust", feesTax: "Gebühren & Steuern", analysisNote: "Der Gesamtgewinn wird nicht berechnet, wenn {reason}. Ergänzen Sie Kurse oder Transaktionsdaten für eine genaue Bewertung.", missingQuote: "Kurse fehlen für {isins}", missingLots: "Kauf- oder Verkaufsmenge fehlt", hideTools: "Filter schließen", tools: "Filter", filterSheet: "Filter", applyFilters: "Anwenden", search: "Suchen", searchLedger: "Transaktionen durchsuchen", searchPlaceholder: "Notiz, Typ, ISIN…", year: "Jahr", all: "Alle", type: "Typ", instrument: "Wertpapier", instrumentVwce: "VWCE", instrumentOther: "Andere Wertpapiere", status: "Status", statusNormal: "Unauffällig", statusReview: "Prüfen", activeFilterChips: "Aktive Filter", noTransactions: "Noch keine Transaktionen.", noMatches: "Keine Transaktionen entsprechen dem Filter.", visibleCount: "{visible} von {total} Transaktionen", loadMore: "{count} weitere laden", allVisible: "Alle {total} Transaktionen werden angezeigt", journal: "Transaktionsjournal", quickFilter: "Schnellfilter", buysQuick: "VWCE-Käufe", contributionsQuick: "Einzahlungen", addFirst: "Erste Transaktion hinzufügen", quantity: "Menge", edit: "Bearbeiten", addTransaction: "Transaktion hinzufügen", editTransaction: "Transaktion bearbeiten", date: "Datum", amount: "Betrag", totalPayment: "Gesamtzahlung", unitPrice: "Preis je Einheit", sellQuantity: "Menge (beim Verkauf erforderlich)", autoQuantity: "Menge (leer = automatisch berechnet)", fee: "Gebühr", tax: "Steuer", notes: "Notiz", notesRequired: " (erforderlich)", save: "Speichern", cancel: "Abbrechen", delete: "Löschen", deleteConfirm: "Diese Transaktion löschen?", activity: "Aktivität", tradeActivity: "Wertpapiere", fundingActivity: "Einzahlungen", outflowActivity: "Ausgaben", newest: "Neueste zuerst", oldest: "Älteste zuerst", amountDesc: "Höchster Betrag", sort: "Sortierung", activeFilters: "{count} aktiv", clearFilters: "Zurücksetzen", quickBuy: "VWCE kaufen", quickBuyVall: "VALL kaufen", instrumentVall: "VALL — FTSE Global All-Cap", otherIsin: "Andere ISIN eingeben", manualIsin: "ISIN manuell eingeben", quickFunding: "Geld einzahlen", rowMenu: "Aktionen für Transaktion", timeLens: "Zeitraum", timeAll: "Gesamt", thisMonth: "Dieser Monat", last90Days: "90 Tage", thisYear: "Dieses Jahr", lastYear: "Letztes Jahr", qualityInbox: "Datenqualität", qualityCount: "{count} prüfen", qualityMore: "{count} weitere zeigen", qualityOpen: "Öffnen und prüfen", qualityAction: "Aktion erforderlich", qualityReview: "Prüfen", qualityTip: "Hinweis", qualityMissingIsin: "ISIN fehlt", qualityInvalidIsin: "ISIN ist ungültig", qualityInvalidAmount: "Betrag fehlt oder ist ungültig", qualityMissingQuantity: "Menge oder Stückpreis fehlt", qualityMissingUnitPrice: "Stückpreis fehlt", qualityMissingNote: "Notiz fehlt", qualitySourceReplay: "Finanzielle Prüfung", qualitySourceCompleteness: "Vollständigkeitsprüfung", qualityRecordManual: "Manuell", qualityRecordTradeRepublic: "Trade Republic PDF", qualityRecordLegacy: "Legacy / unbekannt", savedViews: "Gespeicherte Ansichten", saveView: "Ansicht speichern", savedViewName: "Name der Ansicht", savedViewNamePlaceholder: "z. B. Käufe dieses Jahr", saveCurrentView: "Aktuelle Ansicht speichern", savedViewEmpty: "Noch keine gespeicherte Ansicht.", savedViewLimit: "Maximal {count} Ansichten. Löschen Sie eine Ansicht, um fortzufahren.", savedViewNameRequired: "Geben Sie einen Namen für die Ansicht ein.", savedViewStorageError: "Diese Ansicht konnte auf diesem Gerät nicht gespeichert werden.", savedViewNoFilters: "Wählen Sie mindestens einen Filter oder eine Sortierung aus.", removeSavedView: "Ansicht {name} löschen", dateAmountRequired: "Datum und Betrag sind erforderlich.", adjustmentNoteRequired: "Für eine Anpassung ist eine Notiz erforderlich.", invalidIsinChecksum: "ISIN ist ungültig oder die Prüfsumme stimmt nicht.", sellQuantityRequired: "Für einen Verkauf ist eine Wertpapiermenge erforderlich.", priceOrQuantityRequired: "Preis oder Menge ist erforderlich.", invalidQuantity: "Die Menge ist ungültig.", heroContributed: "eingezahlt", heroTxCount: "{count} Buchungen", yearPills: "Jahr wählen", yearSummary: "{count} Buchungen im Jahr {year}", allYearsSummary: "{count} Buchungen · alle Jahre", detailPrev: "Vorherige Buchung", detailNext: "Nächste Buchung", detailClose: "Details schließen", lotWorth: "Tranche jetzt wert", boughtMarker: "Kauf", sourceLabel: "Quelle",
   } : {
-    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", transactionCount: "Giao dịch", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Đóng bộ lọc", tools: "Lọc", filterSheet: "Bộ lọc", applyFilters: "Áp dụng", search: "Tìm", searchLedger: "Tìm kiếm giao dịch", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", instrument: "Công cụ", instrumentVwce: "VWCE", instrumentOther: "Chứng khoán khác", status: "Trạng thái", statusNormal: "Bình thường", statusReview: "Cần rà soát", activeFilterChips: "Bộ lọc đang dùng", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", editTransaction: "Sửa giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước", qualityInbox: "Dữ liệu cần rà soát", qualityCount: "{count} cần rà soát", qualityMore: "Xem thêm {count}", qualityOpen: "Mở để rà soát", qualityAction: "Cần xử lý", qualityReview: "Cần kiểm tra", qualityTip: "Gợi ý", qualityMissingIsin: "Thiếu ISIN", qualityInvalidIsin: "ISIN không hợp lệ", qualityInvalidAmount: "Số tiền thiếu hoặc không hợp lệ", qualityMissingQuantity: "Thiếu số lượng hoặc giá đơn vị", qualityMissingUnitPrice: "Thiếu giá đơn vị", qualityMissingNote: "Thiếu ghi chú", qualitySourceReplay: "Kiểm tra tài chính", qualitySourceCompleteness: "Kiểm tra độ đầy đủ", qualityRecordManual: "Nhập thủ công", qualityRecordTradeRepublic: "PDF Trade Republic", qualityRecordLegacy: "Legacy / không rõ nguồn", savedViews: "Góc xem đã lưu", saveView: "Lưu view", savedViewName: "Tên góc xem", savedViewNamePlaceholder: "Ví dụ: Mua trong năm nay", saveCurrentView: "Lưu góc xem hiện tại", savedViewEmpty: "Chưa có góc xem nào được lưu.", savedViewLimit: "Tối đa {count} góc xem. Hãy xóa một góc xem để tiếp tục.", savedViewNameRequired: "Hãy nhập tên cho góc xem.", savedViewStorageError: "Không thể lưu góc xem trên thiết bị này.", savedViewNoFilters: "Hãy chọn ít nhất một bộ lọc hoặc sắp xếp trước.", removeSavedView: "Xóa góc xem {name}", dateAmountRequired: "Ngày và số tiền bắt buộc", adjustmentNoteRequired: "Điều chỉnh bắt buộc có ghi chú", invalidIsinChecksum: "ISIN không hợp lệ hoặc sai checksum.", sellQuantityRequired: "Giao dịch bán cần số lượng chứng khoán.", priceOrQuantityRequired: "Cần giá hoặc số lượng", invalidQuantity: "Số lượng không hợp lệ", heroContributed: "đã góp", heroTxCount: "{count} giao dịch", yearPills: "Chọn năm xem", yearSummary: "{count} giao dịch trong năm {year}", allYearsSummary: "{count} giao dịch · tất cả các năm", detailPrev: "Giao dịch trước", detailNext: "Giao dịch sau", detailClose: "Đóng chi tiết", lotWorth: "lô này hiện trị giá", boughtMarker: "mua", sourceLabel: "Nguồn",
+    loading: "Đang tải Giao dịch", loadError: "Không tải được Giao dịch", safeData: "Dữ liệu trên thiết bị vẫn được giữ nguyên.", retry: "Thử lại", title: "Giao dịch", add: "Thêm", contributed: "Tổng góp", pnl: "Lãi / lỗ", transactionCount: "Giao dịch", buys: "Số lần mua", analysis: "Phân tích từ sổ giao dịch", positions: "vị thế đang mở", noPositions: "Chưa có vị thế", missingPrices: "Chưa đủ dữ liệu giá", valued: "Đã định giá", holdings: "Giá trị chứng khoán", realized: "Lãi / lỗ đã chốt", unrealized: "Lãi / lỗ tạm tính", feesTax: "Phí & thuế", analysisNote: "Không suy ra lợi nhuận tổng khi {reason}. Thêm giá hoặc hoàn thiện giao dịch để định giá chính xác.", missingQuote: "thiếu giá cho {isins}", missingLots: "thiếu dữ liệu số lượng mua/bán", hideTools: "Đóng bộ lọc", tools: "Lọc", filterSheet: "Bộ lọc", applyFilters: "Áp dụng", search: "Tìm", searchLedger: "Tìm kiếm giao dịch", searchPlaceholder: "Ghi chú, loại, ISIN…", year: "Năm", all: "Tất cả", type: "Loại", instrument: "Công cụ", instrumentVwce: "VWCE", instrumentOther: "Chứng khoán khác", status: "Trạng thái", statusNormal: "Bình thường", statusReview: "Cần rà soát", activeFilterChips: "Bộ lọc đang dùng", noTransactions: "Chưa có giao dịch.", noMatches: "Không có giao dịch khớp bộ lọc.", visibleCount: "Đang hiển thị {visible}/{total} giao dịch", loadMore: "Tải thêm {count} giao dịch", allVisible: "Đã hiển thị toàn bộ {total} giao dịch", journal: "Nhật ký giao dịch", quickFilter: "Lọc nhanh", buysQuick: "Mua VWCE", contributionsQuick: "Góp tiền", addFirst: "Thêm giao dịch đầu tiên", quantity: "SL", edit: "Sửa", addTransaction: "Thêm giao dịch", editTransaction: "Sửa giao dịch", date: "Ngày", amount: "Số tiền", totalPayment: "Tổng tiền thanh toán", unitPrice: "Giá một đơn vị", sellQuantity: "Số lượng (bắt buộc khi bán)", autoQuantity: "Số lượng (để trống = tự tính)", fee: "Phí", tax: "Thuế", notes: "Ghi chú", notesRequired: " (bắt buộc)", save: "Lưu", cancel: "Hủy", delete: "Xóa", deleteConfirm: "Xóa giao dịch này?", activity: "Dòng tiền", tradeActivity: "Đầu tư", fundingActivity: "Tiền vào", outflowActivity: "Chi ra", newest: "Mới nhất", oldest: "Cũ nhất", amountDesc: "Số tiền cao nhất", sort: "Sắp xếp", activeFilters: "{count} bộ lọc", clearFilters: "Xóa lọc", quickBuy: "Mua VWCE", quickBuyVall: "Mua VALL", instrumentVall: "VALL — FTSE Global All-Cap", otherIsin: "Nhập ISIN khác", manualIsin: "ISIN thủ công", quickFunding: "Góp tiền", rowMenu: "Tùy chọn giao dịch", timeLens: "Thời gian", timeAll: "Toàn bộ", thisMonth: "Tháng này", last90Days: "90 ngày", thisYear: "Năm nay", lastYear: "Năm trước", qualityInbox: "Dữ liệu cần rà soát", qualityCount: "{count} cần rà soát", qualityMore: "Xem thêm {count}", qualityOpen: "Mở để rà soát", qualityAction: "Cần xử lý", qualityReview: "Cần kiểm tra", qualityTip: "Gợi ý", qualityMissingIsin: "Thiếu ISIN", qualityInvalidIsin: "ISIN không hợp lệ", qualityInvalidAmount: "Số tiền thiếu hoặc không hợp lệ", qualityMissingQuantity: "Thiếu số lượng hoặc giá đơn vị", qualityMissingUnitPrice: "Thiếu giá đơn vị", qualityMissingNote: "Thiếu ghi chú", qualitySourceReplay: "Kiểm tra tài chính", qualitySourceCompleteness: "Kiểm tra độ đầy đủ", qualityRecordManual: "Nhập thủ công", qualityRecordTradeRepublic: "PDF Trade Republic", qualityRecordLegacy: "Legacy / không rõ nguồn", savedViews: "Góc xem đã lưu", saveView: "Lưu view", savedViewName: "Tên góc xem", savedViewNamePlaceholder: "Ví dụ: Mua trong năm nay", saveCurrentView: "Lưu góc xem hiện tại", savedViewEmpty: "Chưa có góc xem nào được lưu.", savedViewLimit: "Tối đa {count} góc xem. Hãy xóa một góc xem để tiếp tục.", savedViewNameRequired: "Hãy nhập tên cho góc xem.", savedViewStorageError: "Không thể lưu góc xem trên thiết bị này.", savedViewNoFilters: "Hãy chọn ít nhất một bộ lọc hoặc sắp xếp trước.", removeSavedView: "Xóa góc xem {name}", dateAmountRequired: "Ngày và số tiền bắt buộc", adjustmentNoteRequired: "Điều chỉnh bắt buộc có ghi chú", invalidIsinChecksum: "ISIN không hợp lệ hoặc sai checksum.", sellQuantityRequired: "Giao dịch bán cần số lượng chứng khoán.", priceOrQuantityRequired: "Cần giá hoặc số lượng", invalidQuantity: "Số lượng không hợp lệ", heroContributed: "đã góp", heroTxCount: "{count} giao dịch", yearPills: "Chọn năm xem", yearSummary: "{count} giao dịch trong năm {year}", allYearsSummary: "{count} giao dịch · tất cả các năm", detailPrev: "Giao dịch trước", detailNext: "Giao dịch sau", detailClose: "Đóng chi tiết", lotWorth: "lô này hiện trị giá", boughtMarker: "mua", sourceLabel: "Nguồn",
   };
   const pdfImportLabel = locale === "de" ? "PDF importieren" : "Nhập PDF";
 
@@ -571,7 +571,7 @@ export default function Transactions() {
     setShow(true);
   }
 
-  function openCreate(type: TxType = "buy_vwce") {
+  function openCreate(type: TxType = "buy_vwce", preferredIsin?: string) {
     if (readOnly) {
       showBlocked();
       return;
@@ -580,7 +580,9 @@ export default function Transactions() {
     setForm({
       ...emptyForm(),
       type,
-      instrumentIsin: type === "buy_vwce" || type === "sell_vwce" ? VWCE_ISIN : emptyForm().instrumentIsin,
+      instrumentIsin: type === "buy_vwce" || type === "sell_vwce"
+        ? VWCE_ISIN
+        : preferredIsin ?? (type === "buy_security" || type === "sell_security" ? VALL_ISIN : emptyForm().instrumentIsin),
     });
     setShow(true);
   }
@@ -756,6 +758,11 @@ export default function Transactions() {
                 <summary>{pdfImportLabel}</summary>
                 {pdfToolsOpen ? <Suspense fallback={<p className="tx-tool-loading" role="status">{text.loading}</p>}><TradeRepublicPdfImport transactions={txs} onTransactionImported={reload} /></Suspense> : null}
               </details>
+            ) : null}
+            {!readOnly ? (
+              <button type="button" className="txv2-add tx-ledger-vall-add" onClick={() => openCreate("buy_security", VALL_ISIN)} aria-label={text.quickBuyVall}>
+                <span aria-hidden="true">V</span><span>{text.quickBuyVall}</span>
+              </button>
             ) : null}
             <button type="button" className="txv2-add tx-ledger-add" onClick={() => openCreate()} aria-label={text.addTransaction}>
               <span aria-hidden="true">＋</span><span>{text.add}</span>
@@ -1126,7 +1133,7 @@ export default function Transactions() {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className="sheet-handle" aria-hidden />
-            <h2>{editId ? text.editTransaction : text.addTransaction}</h2>
+            <h2>{editId ? text.editTransaction : form.type === "buy_security" && form.instrumentIsin === VALL_ISIN ? text.quickBuyVall : text.addTransaction}</h2>
             <div className="field">
               <label htmlFor="f-date">{text.date}</label>
               <input id="f-date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
@@ -1141,7 +1148,11 @@ export default function Transactions() {
                   setForm({
                     ...form,
                     type,
-                    instrumentIsin: type === "buy_vwce" || type === "sell_vwce" ? VWCE_ISIN : form.instrumentIsin,
+                    instrumentIsin: type === "buy_vwce" || type === "sell_vwce"
+                      ? VWCE_ISIN
+                      : type === "buy_security" || type === "sell_security"
+                        ? (form.instrumentIsin && form.instrumentIsin !== VWCE_ISIN ? form.instrumentIsin : VALL_ISIN)
+                        : form.instrumentIsin,
                   });
                 }}
               >
@@ -1151,19 +1162,45 @@ export default function Transactions() {
               </select>
             </div>
             {security ? (
-              <div className="field">
-                <label htmlFor="f-isin">ISIN</label>
-                <input
-                  id="f-isin"
-                  value={form.type === "buy_vwce" || form.type === "sell_vwce" ? VWCE_ISIN : form.instrumentIsin}
-                  readOnly={form.type === "buy_vwce" || form.type === "sell_vwce"}
-                  onChange={(e) => {
-                    setIsinError("");
-                    setForm({ ...form, instrumentIsin: e.target.value.toUpperCase() });
-                  }}
-                />
-                {isinError ? <p style={{ color: "var(--color-danger)", fontSize: 13 }}>{isinError}</p> : null}
-              </div>
+              form.type === "buy_vwce" || form.type === "sell_vwce" ? (
+                <div className="field">
+                  <label htmlFor="f-isin">ISIN</label>
+                  <input id="f-isin" value={VWCE_ISIN} readOnly />
+                </div>
+              ) : (
+                <div className="field">
+                  <label htmlFor="f-instrument">{text.instrument}</label>
+                  <select
+                    id="f-instrument"
+                    value={form.instrumentIsin === VALL_ISIN ? "vall" : "custom"}
+                    onChange={(e) => {
+                      setIsinError("");
+                      setForm({ ...form, instrumentIsin: e.target.value === "vall" ? VALL_ISIN : "" });
+                    }}
+                  >
+                    <option value="vall">{text.instrumentVall}</option>
+                    <option value="custom">{text.otherIsin}</option>
+                  </select>
+                  {form.instrumentIsin !== VALL_ISIN ? (
+                    <>
+                      <label htmlFor="f-isin">{text.manualIsin}</label>
+                      <input
+                        id="f-isin"
+                        value={form.instrumentIsin}
+                        autoComplete="off"
+                        spellCheck={false}
+                        onChange={(e) => {
+                          setIsinError("");
+                          setForm({ ...form, instrumentIsin: e.target.value.toUpperCase() });
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <small className="txv2-instrument-hint">ISIN: {VALL_ISIN}</small>
+                  )}
+                  {isinError ? <p style={{ color: "var(--color-danger)", fontSize: 13 }}>{isinError}</p> : null}
+                </div>
+              )
             ) : null}
             <div className="field">
               <label htmlFor="f-amt">{security ? text.totalPayment : text.amount}</label>
