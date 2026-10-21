@@ -211,3 +211,20 @@
   .ovb2-mile {transition:none}
   .ovb2-mile:active {transform:none}
 }
+
+
+/* Per-investment performance is subordinate to current value and never changes the portfolio total. */
+.ovb2-tbl td.num small.ovb2-pnl {
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.ovb2-tbl td.num small.ovb2-pnl.up { color: var(--success-600); }
+.ovb2-tbl td.num small.ovb2-pnl.down { color: var(--danger-600); }
+.ovb2-tbl td.num small.ovb2-pnl.muted { color: var(--text-tertiary); }
+@media (max-width:640px) {
+  .ovb2-tbl td.num small.ovb2-pnl { max-width: 124px; margin-left: auto; font-size: 10px; }
+}
