@@ -36,7 +36,7 @@ function timelineCopy(locale: "vi" | "de") {
     offline: "Auf diesem Gerät gespeichert",
     conflict: "Datenkonflikt prüfen",
     pending: (count: number) => `${count} Änderung${count === 1 ? "" : "en"} ausstehend`,
-    privacy: "Beträge und Kursdaten werden angezeigt, wenn sie vorhanden sind. Notizen öffnen Sie bei Bedarf. Notfallkontakte sind kein Bestandteil der Zeitleiste.",
+    privacy: "Beträge und Kursdaten werden angezeigt, wenn sie vorhanden sind. Notizen öffnen Sie bei Bedarf. Notfallkontakte öffnen Sie bei Bedarf; angezeigt wird der aktuelle Stand, keine Historie pro Kontakt.",
     timeLens: "Zeitraum",
     sources: "Quellen",
     all: "Alles",
@@ -82,7 +82,7 @@ function timelineCopy(locale: "vi" | "de") {
     offline: "Được giữ trên thiết bị này",
     conflict: "Cần xử lý xung đột dữ liệu",
     pending: (count: number) => `Còn ${count} thay đổi chờ`,
-    privacy: "Số tiền và giá hiển thị khi có dữ liệu. Ghi chú mở riêng khi bạn chọn xem; thông tin liên hệ khẩn cấp không đưa vào dòng thời gian.",
+    privacy: "Số tiền và giá hiển thị khi có dữ liệu. Ghi chú mở riêng khi bạn chọn xem; liên hệ khẩn cấp chỉ hiển thị khi bạn mở chi tiết; đây là danh sách hiện tại, không phải lịch sử từng liên hệ.",
     timeLens: "Khoảng thời gian",
     sources: "Nguồn",
     all: "Tất cả",
@@ -200,7 +200,7 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [lens, setLens] = useState<ConfidenceTimelineLens>("all");
-  const [sources, setSources] = useState<ConfidenceTimelineSource[]>(["quote", "ledger", "import"]);
+  const [sources, setSources] = useState<ConfidenceTimelineSource[]>(["quote", "ledger", "import", "contacts"]);
   const [limit, setLimit] = useState(30);
 
   useEffect(() => {
