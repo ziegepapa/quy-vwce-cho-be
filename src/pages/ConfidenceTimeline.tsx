@@ -51,6 +51,13 @@ function timelineCopy(locale: "vi" | "de") {
     reportDate: "Berichtsdatum",
     positions: "Positionen",
     manualPrice: "Manueller Kurs",
+    contactSource: "Notfallkontakte",
+    contactSnapshot: (count: number) => `Aktueller Notfallkontakt-Snapshot · ${count}`,
+    showContacts: (count: number) => `Kontaktdaten anzeigen (${count})`,
+    relation: "Beziehung",
+    phone: "Telefon",
+    email: "E-Mail",
+    contactSnapshotNote: "Aktueller gespeicherter Stand; keine Historie pro Kontakt.",
     back: "Zur Übersicht",
   } : {
     eyebrow: "Độ tin cậy dữ liệu",
@@ -90,6 +97,13 @@ function timelineCopy(locale: "vi" | "de") {
     reportDate: "Ngày báo cáo",
     positions: "vị thế",
     manualPrice: "Giá thủ công",
+    contactSource: "Liên hệ khẩn cấp",
+    contactSnapshot: (count: number) => `Snapshot liên hệ hiện tại · ${count} người`,
+    showContacts: (count: number) => `Xem thông tin liên hệ (${count})`,
+    relation: "Quan hệ",
+    phone: "Điện thoại",
+    email: "Email",
+    contactSnapshotNote: "Đây là danh sách hiện đang lưu, không phải lịch sử thay đổi riêng từng liên hệ.",
     back: "Về Tổng quan",
   };
 }
@@ -156,6 +170,7 @@ function transactionAmount(amount: number, type: string, locale: "vi" | "de") {
 }
 
 function eventHeading(event: ConfidenceTimelineEvent, locale: "vi" | "de", text: ReturnType<typeof timelineCopy>) {
+  if (event.contacts) return text.contactSnapshot(event.contacts.length);
   if (event.quote) {
     const instrument = instrumentLabel(event.quote.instrumentIsin, locale);
     return locale === "de" ? `Kurs-Snapshot · ${instrument}` : `Snapshot giá · ${instrument}`;
@@ -201,6 +216,7 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
     quotes: data.quotes,
     transactions: data.transactions,
     depotStatements: data.settings.depotStatements ?? [],
+    notfallmappe: data.settings.notfallmappe ?? null,
     syncStatus,
     pending,
     lens,
@@ -218,10 +234,10 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
   if (!timeline || failed) return <section className="ct-shell" role="alert"><h1>{text.title}</h1><p>{text.error}</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>{text.retry}</button></section>;
 
   const syncLabel = timeline.sync.status === "synced" ? text.synced : timeline.sync.status === "syncing" ? text.syncing : timeline.sync.status === "conflict" ? text.conflict : text.offline;
-  const sourceLabel = (source: ConfidenceTimelineSource) => source === "quote" ? text.quoteSource : source === "ledger" ? text.ledgerSource : text.importSource;
+  const sourceLabel = (source: ConfidenceTimelineSource) => source === "quote" ? text.quoteSource : source === "ledger" ? text.ledgerSource : source === "contacts" ? text.contactSource : text.importSource;
   const lenses: Array<{ key: ConfidenceTimelineLens; label: string }> = [{ key: "all", label: text.all }, { key: "30d", label: text.last30 }, { key: "90d", label: text.last90 }, { key: "thisYear", label: text.thisYear }];
-  const sourceOptions: Array<{ key: ConfidenceTimelineSource; label: string }> = [{ key: "quote", label: text.quoteSource }, { key: "ledger", label: text.ledgerSource }, { key: "import", label: text.importSource }];
-  const emptyMessage = timeline.totalEvents === 0 && data && (data.quotes.length + data.transactions.length + (data.settings.depotStatements?.length ?? 0) > 0) ? text.noVisibleEvents : text.noEvents;
+  const sourceOptions: Array<{ key: ConfidenceTimelineSource; label: string }> = [{ key: "quote", label: text.quoteSource }, { key: "ledger", label: text.ledgerSource }, { key: "import", label: text.importSource }, { key: "contacts", label: text.contactSource }];
+  const emptyMessage = timeline.totalEvents === 0 && data && (data.quotes.length + data.transactions.length + (data.settings.depotStatements?.length ?? 0) + (data.settings.notfallmappe?.contacts.length ?? 0) > 0) ? text.noVisibleEvents : text.noEvents;
 
   return (
     <main className="ct-shell" aria-label={text.title}>
@@ -281,6 +297,23 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
                         </details>
                       ) : null}
                     </div>
+                  ) : null}
+
+                  {event.contacts ? (
+                    <details className="ct-event-contact">
+                      <summary>{text.showContacts(event.contacts.length)}</summary>
+                      <p className="ct-event-contact-note">{text.contactSnapshotNote}</p>
+                      <ul>
+                        {event.contacts.map((contact) => (
+                          <li key={contact.id}>
+                            <strong>{contact.name}</strong>
+                            {contact.relation ? <small>{text.relation}: {contact.relation}</small> : null}
+                            {contact.phone ? <small>{text.phone}: <a href={`tel:${contact.phone}`}>{contact.phone}</a></small> : null}
+                            {contact.email ? <small>{text.email}: <a href={`mailto:${contact.email}`}>{contact.email}</a></small> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
                   ) : null}
 
                   {event.statement ? (
