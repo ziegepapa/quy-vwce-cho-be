@@ -1,16 +1,16 @@
-# Long-Term Stable Baseline v1 — Báo cáo Readiness
+# Long-Term Stable Baseline v1 — Báo cáo Readiness (cập nhật evidence 21-10-2026)
 
 **Tác giả:** Manus AI
 
 **Phiên bản ứng dụng:** `1.6.0`
 
-**Commit phát hành mới nhất đã kiểm chứng:** `ff3f1b6458cbddc940b470db8fbc6ceb1de5d2e5` (merge PR #251) [22]
+**Commit production đã kiểm chứng gần nhất:** `7268aaa2d16e8a35bfed56540b9ee95af14b84a7` (PR #357; workflow `39639941852` hoàn tất `success`, gồm test-build, preview-smoke, edge-smoke và deploy).
 
-**Ngày đánh giá evidence:** 21-08-2026 (GMT+2)
+**Ngày cập nhật evidence repository/CI:** 21-10-2026 (GMT+2). Các quan sát database/auth ghi rõ bên dưới vẫn chưa được chạy lại trong môi trường Supabase cô lập.
 
 **Đối tượng sử dụng:** Gia đình sở hữu vault và người bảo trì kế tiếp.
 
-> **Trạng thái baseline 23/08/2026: `CONDITIONAL — NOT READY` cho vai trò sổ cái tài chính duy nhất, có thẩm quyền tuyệt đối.**
+> **Trạng thái hiện tại 21/10/2026: `CONDITIONAL — NOT READY` cho vai trò sổ cái tài chính duy nhất, có thẩm quyền tuyệt đối.**
 >
 > VWCE Vault có đủ evidence để tiếp tục vận hành như một **tracker local-first** có kiểm soát, khi owner lưu sao kê/chứng từ broker độc lập và diễn tập backup. Security dependency audit nay sạch; client release, UX mobile-first, recovery runbook/drill, password-reset callback và release gates đã được harden. Tuy nhiên H4 chưa có request-level behavioral RLS proof và H5 chưa có ordered migration baseline cùng controlled upgrade/rollback proof. P11.2 vẫn tuyệt đối bị khóa chờ independent German tax expert review. Các điểm này không được che khuất bởi CI xanh.
 
@@ -19,6 +19,20 @@
 | Theo dõi danh mục local-first hằng ngày | **Có thể sử dụng** | Owner chủ động export backup, xem Sync Health/Data Health và giữ sao kê broker độc lập. |
 | Bản ghi duy nhất để quyết định hoặc tái tạo toàn bộ lịch sử tài chính | **Không sẵn sàng** | H4 và H5 còn blocker độc lập; không bỏ qua chúng vì dependency audit đã sạch. |
 | Tính thuế, FIFO hoặc Vorabpauschale | **Không được hỗ trợ** | P11.2 bị khóa; không dùng output để khai thuế. |
+
+
+## Evidence refresh — 21-10-2026
+
+This refresh reconciles repository and release evidence after the August baseline; it does **not** claim a new behavioral database/security certification.
+
+- **Production code:** main commit `7268aaa2d16e8a35bfed56540b9ee95af14b84a7`, PR #357; [GitHub Actions run](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39639941852) completed successfully, including `test-build`, `preview-smoke`, `edge-smoke` and `deploy`. The published `gh-pages` branch was updated by that run.
+- **Current scope:** Simulation now uses the shared multi-ISIN portfolio starting-value path, discloses missing/stale quotes, supports negative return assumptions, keeps nominal gain/loss signed, and states when a target cannot be reached within 40 years. The next UI-only refresh adds localized nominal scenario comparison; it does not alter the projection engine or persisted assumptions.
+- **H4 remains open:** source/schema inspection is static evidence only. No disposable Supabase Auth + PostgREST + PostgreSQL two-user behavioral matrix has been executed for this refresh.
+- **H5 remains blocked:** `supabase/migrations/` still contains only `002_soft_delete_and_triggers.sql`; a complete ordered baseline and upgrade/rollback drill do not exist. Do not create a purported production baseline by copying SQL without reconciling it against an authorized read-only schema inventory.
+- **Decision:** readiness remains `CONDITIONAL — NOT READY` for a sole authoritative financial record. Keep broker statements and owner-controlled off-device backups; do not infer tax readiness from CI.
+- **Closure workplan:** see [H4/H5 Closure Plan](./H4_H5_CLOSURE_PLAN.md). It defines isolated-only steps, evidence artifacts, release gates and stop conditions. No production database was accessed or changed for this refresh.
+
+> Historical sections below contain observations dated August 2026. Their dated results remain historical evidence; they must not be described as newly rerun unless a corresponding artifact and run ID are recorded in the closure plan.
 
 ## 1. Mục đích sản phẩm
 
