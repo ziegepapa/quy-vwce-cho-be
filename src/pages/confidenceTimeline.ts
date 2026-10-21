@@ -139,7 +139,7 @@ export function buildConfidenceTimeline(input: {
   }
 
   const lens = input.lens ?? "all";
-  const sourceSet = new Set(input.sources ?? ["quote", "ledger", "import"]);
+  const sourceSet = new Set(input.sources ?? ["quote", "ledger", "import", "contacts"]);
   const start = startForLens(lens, input.now ?? new Date());
   const filtered = events.filter((event) => sourceSet.has(event.source) && (start == null || timestamp(event.at)! >= start));
   filtered.sort((a, b) => timestamp(b.at)! - timestamp(a.at)! || a.id.localeCompare(b.id));
