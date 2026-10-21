@@ -135,7 +135,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     renderShell("vi");
     expect(screen.getByRole("heading", { name: "So sánh kịch bản" })).toBeTruthy();
     expect(screen.getByText("Thận trọng")).toBeTruthy();
-    expect(screen.getByText("Cơ sở")).toBeTruthy();
+    expect(screen.getAllByText("Cơ sở")).toHaveLength(2);
     expect(screen.getByText("Thuận lợi")).toBeTruthy();
     expect(screen.getAllByText("Giá trị cuối kỳ danh nghĩa")).toHaveLength(3);
     expect(screen.getByText(/không phải xác suất hay dự báo/i)).toBeTruthy();
