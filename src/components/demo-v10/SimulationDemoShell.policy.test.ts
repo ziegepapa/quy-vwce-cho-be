@@ -110,6 +110,16 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(document.body.textContent).not.toMatch(/DE-Steuern|afterTax|after-tax/i);
   });
 
+  it("uses localized descriptive subtitles instead of English mode labels", () => {
+    renderShell("vi");
+    expect(screen.getByText("Số dư → Kết quả")).toBeTruthy();
+    expect(screen.getByText("Số tiền → Mức góp")).toBeTruthy();
+    cleanup();
+    renderShell("de");
+    expect(screen.getByText("Startwert → Ergebnis")).toBeTruthy();
+    expect(screen.getByText("Zielbetrag → Monatsrate")).toBeTruthy();
+  });
+
   it("keeps a projected loss visible as a loss", () => {
     renderShell("vi", "", -125);
     expect(document.querySelector(".summary-strip .loss")).not.toBeNull();
