@@ -34,6 +34,14 @@ This is a focused implementation audit of the active production paths, not a cla
 
 The older `docs/LONG_TERM_AUDIT.md` and `docs/adr/ADR-financial-policy-boundary.md` describe the German-tax UI caller and prescriptive glide-path UI as active behavior. That accurately records the historical baseline, but should not be read as a statement about the current UI: the active Simulation source is guarded against tax-result/toggle code, and the current `PlanRoadmapSection` is informational-only. The legacy tax helper remains intentionally frozen per ADR A.3 and is not to be reactivated without a separate policy decision. The historical audit should be treated as a dated snapshot, not a live source-code inventory. The detailed `docs/LONG_TERM_READINESS.md` also identifies its evidence date as 21 August 2026 and names an August commit, while the application has continued changing through October. The README still states the conservative conditional-readiness decision; however, the detailed evidence and release SHA should be refreshed before anyone treats that report as a current release attestation.
 
+## Simulation presentation refresh — 21-10-2026
+
+The follow-up UI pass adds a compact, localized three-scenario comparison showing each scenario's annual return assumption and nominal end value. The base case is visually distinguished, the note explicitly says the scenarios are illustrative calculations rather than probabilities or forecasts, and chart axis/goal-marker labels now use theme tokens for light/dark contrast. The existing projection engine, Mode A/B/C calculations, inflation/purchasing-power switch, nominal P/L calculation, target-search bounds, contribution growth, TER assumption, save-to-plan flow, and undo behavior are unchanged. Regression coverage asserts both Vietnamese and German copy and the three nominal scenario cards.
+
+## Readiness evidence refresh and H4/H5 plan
+
+The long-term readiness report now separates the August historical observations from the October repository/release evidence and records the verified main SHA and successful Actions run #39639941852. The readiness decision is unchanged: H4 remains open until an isolated Auth + PostgREST two-user RLS matrix passes; H5 remains blocked until a reviewed ordered migration baseline, schema equivalence, upgrade compatibility, and recovery rehearsal are evidenced. The step-by-step plan is in [H4_H5_CLOSURE_PLAN.md](./H4_H5_CLOSURE_PLAN.md). No production Supabase project was accessed or changed.
+
 ## Existing system-level risks not closed by this UI/Simulation pass
 
 The current readiness report remains the source of truth for these separate blockers:
