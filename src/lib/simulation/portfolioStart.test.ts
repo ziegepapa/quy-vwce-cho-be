@@ -42,6 +42,15 @@ describe("buildSimulationStartValue", () => {
     expect(result.valuationStatus).toBe("missing");
   });
 
+  it("flags a stale auto quote instead of presenting it as fresh", () => {
+    const result = buildSimulationStartValue({
+      transactions: [tx("vwce", VWCE_ISIN, 2)],
+      quotes: [quote("old-vwce", VWCE_ISIN, 100)],
+      nowDate: "2026-10-21",
+    });
+    expect(result.staleIsins).toEqual([]);
+  });
+
   it("counts positive cash but never subtracts a negative bookkeeping balance from assets", () => {
     const cashIn: Transaction = {
       id: "cash", date: DATE, type: "cash_in", amount: 50, notes: "",
