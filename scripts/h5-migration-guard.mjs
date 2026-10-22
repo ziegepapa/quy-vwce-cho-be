@@ -35,11 +35,11 @@ function finish(result, message, checkedFiles = files) {
 
 function normalizeReviewedBaseline(sql) {
   return sql
-    .split(/\\r?\\n/)
-    .filter((line) => !/^\\s*--/.test(line))
-    .filter((line) => !/^\\s*drop policy if exists\\b/i.test(line))
-    .join("\\n")
-    .replace(/\\s+/g, " ")
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*--/.test(line))
+    .filter((line) => !/^\s*drop policy if exists\b/i.test(line))
+    .join("\n")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
