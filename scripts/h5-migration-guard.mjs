@@ -3,6 +3,7 @@
  * H5 — migration order guard with redacted machine-readable evidence.
  * Ensures SQL migration filenames form a contiguous sequence starting at 001.
  */
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,10 +15,15 @@ function finish(result, message, checkedFiles = files) {
   const evidence = {
     schemaVersion: 1,
     kind: "H5_MIGRATION_ORDER",
+    sourceCommit: process.env.SOURCE_COMMIT ?? process.env.GITHUB_SHA ?? null,
+    workflowRunId: process.env.GITHUB_RUN_ID ?? null,
     generatedAt: new Date().toISOString(),
     result,
     message,
-    migrations: checkedFiles,
+    migrations: checkedFiles.map((file) => ({
+      file,
+      sha256: createHash("sha256").update(fs.readFileSync(path.join(root, file))).digest("hex"),
+    })),
   };
   fs.writeFileSync("h5-migration-evidence.json", JSON.stringify(evidence, null, 2) + "\n", { mode: 0o600 });
   if (result !== "PASS") {
