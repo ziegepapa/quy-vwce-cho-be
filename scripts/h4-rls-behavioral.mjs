@@ -16,7 +16,9 @@
  * Exit 0 only when every applicable matrix cell passes.
  */
 
-import { writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { readFile, writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 
 const outcomes = [];
@@ -63,10 +65,24 @@ function pass(msg) {
 async function writeEvidence() {
   const passed = outcomes.filter((item) => item.status === "PASS").length;
   const failed = outcomes.filter((item) => item.status === "FAIL").length;
+  const migrationPaths = [
+    "supabase/schema.sql",
+    "supabase/migrations/001_baseline_schema.sql",
+    "supabase/migrations/002_soft_delete_and_triggers.sql",
+  ];
+  const schemaManifest = await Promise.all(migrationPaths.map(async (file) => ({
+    file,
+    sha256: createHash("sha256").update(await readFile(file)).digest("hex"),
+  })));
+  const supabaseCliVersion = execFileSync("supabase", ["--version"], { encoding: "utf8" }).trim();
   const evidence = {
     schemaVersion: 1,
     kind: "H4_BEHAVIORAL_RLS",
     target: "disposable-supabase-local",
+    sourceCommit: process.env.SOURCE_COMMIT ?? process.env.GITHUB_SHA ?? null,
+    workflowRunId: process.env.GITHUB_RUN_ID ?? null,
+    supabaseCliVersion,
+    schemaManifest,
     generatedAt: new Date().toISOString(),
     result: failed === 0 ? "PASS" : "FAIL",
     summary: { passed, failed, total: outcomes.length },
