@@ -87,7 +87,7 @@ BEGIN
       RAISE EXCEPTION 'H4 catalog: owner-scoped ALL policy/WITH CHECK missing on public.%', t;
     END IF;
   END LOOP;
-END
+END;
 $h4$;
 
 SELECT 'PASS: H4 RLS enabled and required owner-scoped policies are present' AS evidence;
