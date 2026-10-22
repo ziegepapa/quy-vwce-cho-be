@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { createElement } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SimulationDemoShell, { type SimulationDemoShellProps } from "./SimulationDemoShell";
 
@@ -47,7 +47,7 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     readOnly: false,
     goals: [],
     applyYearsFromGoal: noop,
-    advSummary: "Erweiterte Optionen",
+    advSummary: locale === "de" ? "Erweiterte Optionen" : "Tùy chọn nâng cao",
     bandInput: "0",
     setBandInput: noop,
     growthOn: false,
@@ -153,6 +153,41 @@ describe("SimulationDemoShell financial-policy containment", () => {
   it("discloses when the starting balance excludes unpriced holdings", () => {
     renderShell("vi", "Giá trị đầu kỳ chưa đầy đủ: VALL chưa có giá dùng được.");
     expect(screen.getByRole("status").textContent).toContain("VALL");
+  });
+
+  it("associates Vietnamese controls with labels and exposes accurate control semantics", () => {
+    renderShell("vi");
+    expect(screen.getByLabelText("Góp mỗi tháng (EUR)")).toBeTruthy();
+    expect(screen.getByLabelText("Lợi nhuận / năm (%)")).toBeTruthy();
+    expect(screen.getByLabelText("Thời hạn")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Mô phỏng" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Tóm tắt kết quả mô phỏng" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Góp → Nhận/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("table", { name: "Bảng mô phỏng theo năm" })).toBeTruthy();
+    expect(document.querySelector(".sim-chart-svg")?.textContent).toContain("15 năm");
+  });
+
+  it("associates German controls with labels and localizes chart duration", () => {
+    renderShell("de");
+    expect(screen.getByLabelText("Monatlicher Beitrag (EUR)")).toBeTruthy();
+    expect(screen.getByLabelText("Rendite / Jahr (%)")).toBeTruthy();
+    expect(screen.getByLabelText("Laufzeit")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Simulation" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Simulationsergebnis" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Einzahlen → Ergebnis/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("table", { name: "Jährliche Projektion" })).toBeTruthy();
+    expect(document.querySelector(".sim-chart-svg")?.textContent).toContain("15 Jahre");
+  });
+
+  it("keeps the save-to-plan action in the closed advanced disclosure and invokes confirmation when opened", () => {
+    renderShell("vi");
+    const details = document.querySelector("details.gl") as HTMLDetailsElement | null;
+    expect(details?.open).toBe(false);
+    fireEvent.click(screen.getByText("Tùy chọn nâng cao"));
+    expect(details?.open).toBe(true);
+    const save = screen.getByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" });
+    fireEvent.click(save);
+    expect(noop).toHaveBeenCalled();
   });
 
   it("does not render German tax controls or after-tax results", () => {
