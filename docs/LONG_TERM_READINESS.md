@@ -25,8 +25,8 @@
 This entry supersedes the 21-10 release metadata above. The August baseline and earlier dated audits remain historical and are not represented as rerun.
 
 - **Verified main:** `bd163ad296b2b4df944688f86974da8724113d52`, merge of PR #362 (quote-data refresh).
-- **Application release gates:** [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971), completed with success on 21-10-2026T20:43Z.
-- **Production health:** [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168), completed with success on 22-10-2026T10:16Z.
+- **Application release gates:** [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971), completed with success at 2026-10-21T20:45:34Z.
+- **Production health:** [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168), completed with success at 2026-10-22T10:17:53Z.
 - **Quote artifact in main:** `public/data/quotes.json`, schema version 2; VWCE `171.32 EUR` and VALL `4.416 EUR`, both `asOf: 2026-10-21`. This is the latest quote snapshot in the verified main tree, not a claim about a live intraday market price.
 - **Candidate implementation branch:** `readiness/h4-h5-evidence-ci-2026-10-22`, based on the verified main SHA above. It is not yet merged. Its H4/H5 workflow has not produced an evidenced result in this audit; do not describe the branch scaffolding as PASS.
 - **H4 on production main:** `PARTIAL — STATIC POLICY EVIDENCE ONLY`. The candidate branch adds an Auth + PostgREST behavioral matrix with synthetic users A/B and anonymous requests. It becomes behavioral evidence only after the isolated CI stack actually runs, all assertions pass, and the run is reviewed.
