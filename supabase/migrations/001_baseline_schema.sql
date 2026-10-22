@@ -1,4 +1,5 @@
 -- 001_baseline_schema.sql
+-- Depends-On: none
 -- H5 ordered baseline: blank-database install of the owner-approved schema
 -- reflected by repository supabase/schema.sql as of main@bd163ad296b2b4df944688f86974da8724113d52.
 -- Apply with Supabase migration tooling in ascending numeric order before 002_*.
