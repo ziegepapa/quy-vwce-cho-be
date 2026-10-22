@@ -11,6 +11,8 @@ on:
       - "scripts/h4-rls-behavioral.mjs"
       - "scripts/h4-rls-catalog-check.sql"
       - "scripts/h5-migration-guard.mjs"
+      - "scripts/h5-migration-guard-lib.mjs"
+      - "scripts/h5-migration-guard-contract.mjs"
       - ".github/workflows/h4-h5-evidence.yml"
 
 concurrency:
@@ -28,6 +30,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Test migration numbering and dependency guard
+        run: node --test scripts/h5-migration-guard-contract.mjs
+
       - name: Run migration numbering guard
         run: node scripts/h5-migration-guard.mjs
 
