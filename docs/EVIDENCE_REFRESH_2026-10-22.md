@@ -17,8 +17,8 @@ Verified against GitHub commit metadata, Actions run metadata and the quote arti
 
 | Control | Result | Latest evidence | Remaining work |
 |---|---|---|---|
-| **H4** behavioral RLS | **PASS on candidate branch / isolated local Supabase** | [Run 39842267812](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39842267812): RLS catalog precheck and Auth + PostgREST matrix succeeded at head `73c66b15acabb1bee5b75df3e3544faab64bce8a`; the non-local URL guard and JSON artifact validation also passed, and redacted artifact `h4-h5-evidence-39842267812` (ID `12453601365`) was uploaded | Merge/re-run or verify the identical tree on main; separately reconcile hosted database state (not accessed) |
-| **H5** migration baseline | **PARTIAL** — clean install and order guard passed | [Run 39842267812](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39842267812): migration order guard and `supabase db reset --yes` succeeded | Controlled pre-002 upgrade, hosted schema drift, backup/restore and rollback/recovery rehearsal |
+| **H4** behavioral RLS | **PASS — candidate branch / isolated local Supabase** | [Run 39844731945](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39844731945) on head `e04a93cbfc5c2c527f3e87c6e8624a97c0ea19e2`: 119/119 behavioral assertions passed through Auth + PostgREST for profiles and five sync tables; non-local URL rejection and JSON evidence validation passed. Artifact `h4-h5-evidence-39844731945` (ID `12455335988`). | Candidate evidence only; hosted production policy/schema parity has not been checked. Re-run on merged main before treating as released baseline. |
+| **H5** migration baseline / upgrade / fixture recovery | **PARTIAL** | [Run 39844731945](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39844731945): normalized 001-vs-schema guard, ordered migration chain, blank install, synthetic pre-002 upgrade through 002, trigger/version/timestamp checks and a selected synthetic Auth+goals backup/restore rehearsal passed. Artifact `h4-h5-evidence-39844731945` (ID `12455335988`). | Hosted schema drift and actual production migration history remain unverified; fixture restore is not a full-project backup/restore or a general rollback proof. |
 | Frontend / Simulation | **PASS** for release gates | No formula change in this branch; Mode A/B/C already on main (#357/#361) | Visual polish only if owner requests; not a ledger blocker |
 | P11.2 tax | **BLOCKED** | — | Independent German tax expert review |
 
@@ -26,11 +26,11 @@ Verified against GitHub commit metadata, Actions run metadata and the quote arti
 
 - A green frontend Test and Deploy run alone **does not** close H4 or H5; the isolated H4/H5 evidence run above proves only the matrix and clean-install cases that actually executed.
 - Static RLS policy SQL **does not** equal behavioral proof.
-- H5 remains partial until upgrade, hosted schema-drift reconciliation, backup/restore and rollback/recovery are rehearsed.
+- H5 remains partial: a selected synthetic pre-002 upgrade and a narrow Auth+goals restore-to-baseline drill passed in run 39844731945; hosted schema-drift reconciliation, production migration-history review and broader owner-approved recovery proof remain open.
 - Stale branch `readiness/h4-h5-and-simulation-refresh` is superseded; do not merge it.
 
 ## Decision
 
-**CONDITIONAL — NOT READY** as the sole authoritative financial ledger. H4's behavioral matrix and fail-closed URL check, plus H5's migration-order and blank-install checks, passed on this candidate branch; H5 remains **PARTIAL** pending a controlled upgrade, hosted-schema drift reconciliation, backup/restore, and rollback/recovery rehearsal. The hosted production schema was not accessed, and P11.2 tax remains blocked pending independent German tax-expert review.
+**CONDITIONAL — NOT READY** as the sole authoritative financial ledger. H4's 119-case behavioral matrix and fail-closed URL check passed on this candidate branch. H5 migration-order, blank-install, selected pre-002 upgrade and synthetic restore-to-baseline checks passed in run 39844731945, but H5 remains **PARTIAL**: no hosted production schema or migration history was accessed; the restore test covers only a selected synthetic fixture and does not prove full project recovery or production rollback. P11.2 tax remains blocked pending independent German tax-expert review.
 
 Local-first daily tracking remains appropriate with independent broker statements and owner-controlled backups.
