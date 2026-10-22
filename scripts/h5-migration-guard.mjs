@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
- * H5 — migration numbering guard.
- * Fails if supabase/migrations lacks a contiguous ordered prefix starting at 001,
- * or if numbers duplicate / are unparseable.
+ * H5 — migration order guard with redacted machine-readable evidence.
+ * Ensures SQL migration filenames form a contiguous sequence starting at 001.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -11,37 +10,46 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "supabase", "migrations");
 const files = fs.readdirSync(root).filter((f) => f.endsWith(".sql")).sort();
 
+function finish(result, message, checkedFiles = files) {
+  const evidence = {
+    schemaVersion: 1,
+    kind: "H5_MIGRATION_ORDER",
+    generatedAt: new Date().toISOString(),
+    result,
+    message,
+    migrations: checkedFiles,
+  };
+  fs.writeFileSync("h5-migration-evidence.json", JSON.stringify(evidence, null, 2) + "\n", { mode: 0o600 });
+  if (result !== "PASS") {
+    console.error("FAIL: " + message);
+    process.exit(1);
+  }
+  console.log("PASS: " + message + ": " + checkedFiles.join(", "));
+}
+
 if (!files.length) {
-  console.error("FAIL: no migration files");
-  process.exit(1);
+  finish("FAIL", "no migration files", files);
 }
 
 const nums = [];
-for (const f of files) {
-  const m = /^(\d{3})_/.exec(f);
-  if (!m) {
-    console.error(`FAIL: unnumbered migration file: ${f}`);
-    process.exit(1);
-  }
-  nums.push(Number(m[1]));
+for (const file of files) {
+  const match = /^(\\d{3})_/.exec(file);
+  if (!match) finish("FAIL", "unnumbered migration file: " + file, files);
+  nums.push(Number(match[1]));
 }
 
-const unique = new Set(nums);
-if (unique.size !== nums.length) {
-  console.error("FAIL: duplicate migration numbers", nums);
-  process.exit(1);
+if (new Set(nums).size !== nums.length) {
+  finish("FAIL", "duplicate migration numbers", files);
 }
 
 if (nums[0] !== 1) {
-  console.error(`FAIL: baseline must start at 001, got ${String(nums[0]).padStart(3, "0")}`);
-  process.exit(1);
+  finish("FAIL", "baseline must start at 001; got " + String(nums[0]).padStart(3, "0"), files);
 }
 
 for (let i = 0; i < nums.length; i++) {
   if (nums[i] !== i + 1) {
-    console.error(`FAIL: gap or disorder at index ${i}: expected ${i + 1}, got ${nums[i]}`);
-    process.exit(1);
+    finish("FAIL", "gap or disorder at index " + i + ": expected " + (i + 1) + ", got " + nums[i], files);
   }
 }
 
-console.log("PASS: ordered migrations", files.join(", "));
+finish("PASS", "ordered migrations verified", files);
