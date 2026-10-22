@@ -2,14 +2,18 @@
 
 **Updated:** 2026-10-22  
 **Production baseline reviewed:** `bd163ad296b2b4df944688f86974da8724113d52`; [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971) and [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168) succeeded. These are release/health evidence only, not H4/H5 proof.  
-**Decision:** H4 and H5 remain open. This document is a gated implementation plan, not proof that either control has passed.
+**Decision:** PR #363 has a successful isolated H4 behavioral matrix and H5 blank-install run at candidate head `330ba04eaca0d1f147e7d6695392c73879e99cb1`. H4 is evidenced for the repository schema/policies on that disposable stack; H5 is **PARTIAL**, because upgrade/schema-drift and recovery/rollback gates have not run. The branch is not yet merged, and no hosted production database was changed or verified.
 
 ## Evidence scaffolding status — 2026-10-22
 
-Candidate branch: `readiness/h4-h5-evidence-ci-2026-10-22`, based on the verified main commit above. No PR workflow result is claimed yet.
+Candidate branch: `readiness/h4-h5-evidence-ci-2026-10-22`, based on the verified main commit above; PR [#363](https://github.com/ziegepapa/quy-vwce-cho-be/pull/363) remains open.
 
-- **H4:** the branch includes a local-only Auth + PostgREST script using synthetic users A/B and anonymous requests. The request matrix and outcome assertions must pass on the disposable CI stack before any PASS label is allowed. A test script existing in Git is not behavioral evidence.
-- **H5:** the branch adds `supabase/migrations/001_baseline_schema.sql` plus a contiguous-number guard. A clean `supabase db reset` run is pending. Upgrade compatibility, comparison against the approved schema manifest, backup and recovery/rollback rehearsal remain separate acceptance items.
+### Latest executed evidence
+
+- **Workflow:** [H4 H5 Evidence run 39830035462](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39830035462) completed successfully at head `330ba04eaca0d1f147e7d6695392c73879e99cb1` on 2026-10-22. Both `H5 migration order guard` and `H4 behavioral RLS + H5 blank install` succeeded; the second job started/checked/stopped disposable local Supabase, ran `supabase db reset --yes`, checked the RLS catalog, executed the Auth/PostgREST matrix, and uploaded redacted evidence artifact `h4-h5-evidence-39830035462` (artifact ID `12448302319`).
+- **H4:** `PASS — candidate branch, isolated local behavioral matrix`. This covers the six repository tables plus `profiles`, using synthetic users A/B, anonymous requests, forged owner IDs, denied cross-user mutations, invalid JWT, and user-deletion cascade checks. This does not establish parity with the hosted production database, which was not accessed.
+- **H5:** `PARTIAL — blank install and migration order guard passed`. Baseline comparison and clean replay passed; controlled upgrade, hosted schema drift, backup/restore and rollback/recovery tests are still open.
+- **Readiness:** do not mark the whole project READY or sole-authoritative. The PR is not merged and P11.2 still needs independent German tax-expert review.
 - **No production writes:** the workflow must only use the Supabase stack started in the GitHub runner. Do not add production project references, credentials or family data.
 - **Readiness:** remains `CONDITIONAL — NOT READY` as the sole authoritative financial record until all independent gates, including the tax expert-review boundary, are satisfied.
 
