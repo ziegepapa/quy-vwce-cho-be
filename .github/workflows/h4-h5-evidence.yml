@@ -5,6 +5,9 @@ on:
   pull_request:
     paths:
       - "supabase/**"
+      - "docs/LONG_TERM_READINESS.md"
+      - "docs/H4-H5-CLOSURE-PLAN.md"
+      - "docs/EVIDENCE_REFRESH_2026-10-22.md"
       - "scripts/h4-rls-behavioral.mjs"
       - "scripts/h4-rls-catalog-check.sql"
       - "scripts/h5-migration-guard.mjs"
@@ -18,6 +21,8 @@ jobs:
   h5-guard:
     name: H5 migration order guard
     runs-on: ubuntu-latest
+    env:
+      SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,6 +35,8 @@ jobs:
     name: H4 behavioral RLS + H5 blank install
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
 
@@ -64,12 +71,20 @@ jobs:
           supabase db reset --yes
           node --input-type=module -e '
             import fs from "node:fs";
+            import { createHash } from "node:crypto";
+            import { execFileSync } from "node:child_process";
             const path = "h5-migration-evidence.json";
             const evidence = JSON.parse(fs.readFileSync(path, "utf8"));
+            const schemaSha256 = createHash("sha256")
+              .update(fs.readFileSync("supabase/schema.sql")).digest("hex");
             evidence.blankInstall = {
               result: "PASS",
               command: "supabase db reset --yes",
               target: "disposable-supabase-local",
+              sourceCommit: process.env.SOURCE_COMMIT ?? process.env.GITHUB_SHA ?? null,
+              workflowRunId: process.env.GITHUB_RUN_ID ?? null,
+              supabaseCliVersion: execFileSync("supabase", ["--version"], { encoding: "utf8" }).trim(),
+              schemaSqlSha256: schemaSha256,
               checkedAt: new Date().toISOString()
             };
             fs.writeFileSync(path, JSON.stringify(evidence, null, 2) + "\n", { mode: 0o600 });
@@ -96,6 +111,8 @@ jobs:
               schemaVersion: 1,
               kind: "H4_RLS_CATALOG",
               target: "disposable-supabase-local",
+              sourceCommit: process.env.SOURCE_COMMIT ?? process.env.GITHUB_SHA ?? null,
+              workflowRunId: process.env.GITHUB_RUN_ID ?? null,
               generatedAt: new Date().toISOString(),
               result: "PASS",
               assertions: ["all six protected tables have RLS enabled", "required owner-scoped policies are present"]
