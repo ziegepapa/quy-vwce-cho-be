@@ -1,6 +1,6 @@
 # Evidence refresh — 2026-10-22
 
-Independent audit (Grok). Complements [LONG_TERM_READINESS.md](./LONG_TERM_READINESS.md); does **not** replace the August baseline narrative.
+Verified against GitHub commit metadata, Actions run metadata and the quote artifact. Complements [LONG_TERM_READINESS.md](./LONG_TERM_READINESS.md); does **not** replace the August baseline narrative.
 
 ## Verified release surface
 
@@ -8,7 +8,7 @@ Independent audit (Grok). Complements [LONG_TERM_READINESS.md](./LONG_TERM_READI
 |---|---|
 | Main SHA | `bd163ad296b2b4df944688f86974da8724113d52` |
 | Message | `chore(data): update quotes.json, VWCE mirror, and price history (#362)` |
-| Test and Deploy | [39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971) — **success** (2026-10-21T20:43Z) |
+| Test and Deploy | [39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971) — **success** (completed 2026-10-21T20:45:34Z) |
 | Production Health | [39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168) — **success** |
 | Production site | https://ziegepapa.github.io/quy-vwce-cho-be/ — HTTP 200 |
 | Quotes (schema 2) | VWCE `IE00BK5BQT80` **171.32 EUR** asOf **2026-10-21**; VALL `IE000VAHT5T0` **4.416 EUR** asOf **2026-10-21** |
