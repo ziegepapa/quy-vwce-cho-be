@@ -2,6 +2,20 @@ name: H4 H5 Evidence
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/**"
+      - "docs/LONG_TERM_READINESS.md"
+      - "docs/H4-H5-CLOSURE-PLAN.md"
+      - "docs/EVIDENCE_REFRESH_2026-10-22.md"
+      - "scripts/h4-rls-behavioral.mjs"
+      - "scripts/h4-rls-catalog-check.sql"
+      - "scripts/h5-migration-guard.mjs"
+      - "scripts/h5-migration-guard-lib.mjs"
+      - "scripts/h5-migration-guard-contract.mjs"
+      - "scripts/h5-upgrade-recovery.mjs"
+      - ".github/workflows/h4-h5-evidence.yml"
   pull_request:
     paths:
       - "supabase/**"
@@ -13,6 +27,7 @@ on:
       - "scripts/h5-migration-guard.mjs"
       - "scripts/h5-migration-guard-lib.mjs"
       - "scripts/h5-migration-guard-contract.mjs"
+      - "scripts/h5-upgrade-recovery.mjs"
       - ".github/workflows/h4-h5-evidence.yml"
 
 concurrency:
@@ -199,7 +214,20 @@ jobs:
               echo "Missing evidence file: $file"
               exit 1
             fi
-            node -e 'const fs = require("node:fs"); const file = process.argv[1]; const evidence = JSON.parse(fs.readFileSync(file, "utf8")); if (evidence.result !== "PASS") { throw new Error("Evidence result is not PASS: " + file); } console.log("Valid PASS evidence JSON: " + file);' "$file"
+            node -e '
+              const fs = require("node:fs");
+              const file = process.argv[1];
+              const evidence = JSON.parse(fs.readFileSync(file, "utf8"));
+              if (evidence.result !== "PASS") throw new Error("Evidence result is not PASS: " + file);
+              if (file === "h5-migration-evidence.json") {
+                for (const key of ["blankInstall", "pre002Upgrade", "backupRestoreRecovery"]) {
+                  if (evidence[key]?.result !== "PASS") {
+                    throw new Error("H5 stage is not PASS: " + key + " (" + String(evidence[key]?.result ?? "MISSING") + ")");
+                  }
+                }
+              }
+              console.log("Valid PASS evidence JSON: " + file);
+            ' "$file"
           done
 
       - name: Stop local stack
