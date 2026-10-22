@@ -56,3 +56,15 @@ These cannot responsibly be marked resolved by frontend tests. No production Sup
 2. Keep all asset valuation routed through one shared deterministic adapter; do not create screen-specific price fallbacks.
 3. Maintain a single clear simulation vocabulary: nominal projection, purchasing-power projection, signed gain/loss, and explicit missing-price/unreachable-target states.
 4. Treat stale/unknown quotes as evidence states, never as a zero price or a reason to alter the ledger.
+
+
+## Addendum — 22-10-2026: H4/H5 candidate CI evidence
+
+The base audit above remains a dated, source-reviewed snapshot; the latest source and run evidence is maintained in [`docs/LONG_TERM_READINESS.md`](./LONG_TERM_READINESS.md).
+
+- PR [#363](https://github.com/ziegepapa/quy-vwce-cho-be/pull/363), candidate head `e04a93cbfc5c2c527f3e87c6e8624a97c0ea19e2`, passed [H4 H5 Evidence run 39844731945](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39844731945) on an ephemeral local Supabase stack. H4's machine-readable evidence records **119 passed, 0 failed** behavioral assertions. The run includes synthetic A/B/anonymous Auth + PostgREST checks, non-local URL fail-closed test, catalog precheck and JSON artifact validation.
+- H5 passed migration ordering and baseline comparison, blank install, a selected synthetic pre-002 upgrade through `002_soft_delete_and_triggers.sql`, and a selected Auth+goals fixture restore into a fresh baseline. Evidence artifact: `h4-h5-evidence-39844731945` (ID `12455335988`).
+- H4/H5 code remains on an open candidate PR and is not yet part of the production `main` tree. The hosted Supabase schema and actual production migration history were not accessed. The selected restore fixture is not a complete project recovery/rollback certification; H5 remains **PARTIAL**.
+- The production release and quote data are unchanged by this candidate work. Simulation calculation and persistence code are not changed by PR #363. Readiness remains **`CONDITIONAL — NOT READY`** as the sole authoritative financial ledger; P11.2 remains blocked pending independent German tax-expert review.
+
+No production Supabase writes, family data, production credentials or paid Supabase project were used for this evidence run.
