@@ -1,8 +1,17 @@
 # H4/H5 closure plan — controlled evidence only
 
-**Updated:** 2026-10-21  
-**Production baseline reviewed:** `4fbca10b8e8ad04cb41fc7d965f5fda960035625`; [Actions run 39646030050](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39646030050) passed the release gates. This verifies the frontend release only, not H4/H5.  
+**Updated:** 2026-10-22  
+**Production baseline reviewed:** `bd163ad296b2b4df944688f86974da8724113d52`; [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971) and [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168) succeeded. These are release/health evidence only, not H4/H5 proof.  
 **Decision:** H4 and H5 remain open. This document is a gated implementation plan, not proof that either control has passed.
+
+## Evidence scaffolding status — 2026-10-22
+
+Candidate branch: `readiness/h4-h5-evidence-ci-2026-10-22`, based on the verified main commit above. No PR workflow result is claimed yet.
+
+- **H4:** the branch includes a local-only Auth + PostgREST script using synthetic users A/B and anonymous requests. The request matrix and outcome assertions must pass on the disposable CI stack before any PASS label is allowed. A test script existing in Git is not behavioral evidence.
+- **H5:** the branch adds `supabase/migrations/001_baseline_schema.sql` plus a contiguous-number guard. A clean `supabase db reset` run is pending. Upgrade compatibility, comparison against the approved schema manifest, backup and recovery/rollback rehearsal remain separate acceptance items.
+- **No production writes:** the workflow must only use the Supabase stack started in the GitHub runner. Do not add production project references, credentials or family data.
+- **Readiness:** remains `CONDITIONAL — NOT READY` as the sole authoritative financial record until all independent gates, including the tax expert-review boundary, are satisfied.
 
 ## Guardrails
 
