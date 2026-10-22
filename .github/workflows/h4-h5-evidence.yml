@@ -37,7 +37,7 @@ jobs:
           node-version: "22"
 
       - name: Install dependencies (supabase-js for H4 client)
-        run: npm install @supabase/supabase-js@2.49.1 --no-save
+        run: npm ci
 
       - name: Setup Supabase CLI (pinned)
         uses: supabase/setup-cli@v1
