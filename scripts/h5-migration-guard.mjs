@@ -33,7 +33,7 @@ if (!files.length) {
 
 const nums = [];
 for (const file of files) {
-  const match = /^(\\d{3})_/.exec(file);
+  const match = /^(\d{3})_/.exec(file);
   if (!match) finish("FAIL", "unnumbered migration file: " + file, files);
   nums.push(Number(match[1]));
 }
