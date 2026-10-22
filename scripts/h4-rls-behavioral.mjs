@@ -5,7 +5,7 @@
  * Guardrails:
  * - Target must be localhost (or explicit allow-list) — fail closed otherwise.
  * - Synthetic users only; never production family data.
- * - Service-role only for fixture bootstrap; assertions use user JWTs / anon key.
+ * - Service-role only for synthetic fixture bootstrap, cleanup and cascade verification; access-control assertions use user JWTs / anon key.
  * - Never print passwords, tokens, or raw auth payloads.
  *
  * Env:
@@ -158,6 +158,7 @@ async function main() {
 
   const userA = await signUp(admin, emailA, password);
   const userB = await signUp(admin, emailB, password);
+  const cascadeRows = [];
   const clientA = await signIn(url, anonKey, emailA, password);
   const clientB = await signIn(url, anonKey, emailB, password);
 
@@ -267,16 +268,16 @@ async function main() {
   await readProfile(clientB, userB.id, "profiles B after anonymous delete");
 
   expectDeniedInsert(
-    await clientB.from("profiles").insert({ id: randomUUID(), display_name: "forged-by-b" }),
-    "profiles B forged identity insert"
+    await clientB.from("profiles").insert({ id: userA.id, display_name: "forged-by-b" }),
+    "profiles B cannot claim A's identity"
   );
   expectDeniedInsert(
-    await clientA.from("profiles").insert({ id: randomUUID(), display_name: "forged-by-a" }),
-    "profiles A forged identity insert"
+    await clientA.from("profiles").insert({ id: userB.id, display_name: "forged-by-a" }),
+    "profiles A cannot claim B's identity"
   );
   expectDeniedInsert(
-    await anon.from("profiles").insert({ id: randomUUID(), display_name: "forged-anonymous" }),
-    "profiles anonymous insert"
+    await anon.from("profiles").insert({ id: userA.id, display_name: "forged-anonymous" }),
+    "profiles anonymous cannot claim A's identity"
   );
 
   // For each sync table, create a row for A and B. Each owner's successful
@@ -382,6 +383,21 @@ async function main() {
       await clientB.from(table.name).select("id").eq("id", rowB.id).eq("user_id", userB.id),
       table.name + " B row removed after own delete"
     );
+
+    // Leave one synthetic A-owned row to test auth.users ON DELETE CASCADE below.
+    const cascadeId = "cascade-" + table.name + "-" + stamp;
+    const cascadeInsert = await clientA.from(table.name).insert({
+      ...table.sample,
+      id: cascadeId,
+      user_id: userA.id,
+      data: { ...table.sample.data, h4CascadeSentinel: true },
+    });
+    if (cascadeInsert.error) {
+      fail(table.name + " cascade sentinel insert — " + cascadeInsert.error.message);
+    } else {
+      cascadeRows.push({ table: table.name, id: cascadeId, userId: userA.id });
+      pass(table.name + " cascade sentinel staged");
+    }
   }
 
   // A malformed bearer token must be rejected, not accidentally treated as an authenticated user.
@@ -395,13 +411,30 @@ async function main() {
   } else {
     fail("invalid bearer token was not clearly rejected by Auth/PostgREST");
   }
-  // cleanup synthetic users (best-effort)
-  try {
-    await admin.auth.admin.deleteUser(userA.id);
-    await admin.auth.admin.deleteUser(userB.id);
-  } catch {
-    /* ignore */
+  // Delete synthetic User A and verify ON DELETE CASCADE for profiles + each sync table.
+  const deleteA = await admin.auth.admin.deleteUser(userA.id);
+  if (deleteA.error) fail("delete synthetic User A — " + deleteA.error.message);
+  else pass("delete synthetic User A");
+
+  const profileCascadeA = await admin.from("profiles").select("id").eq("id", userA.id);
+  if (profileCascadeA.error) fail("verify profile cascade A — " + profileCascadeA.error.message);
+  else if (profileCascadeA.data?.length) fail("profile row survived deletion of User A");
+  else pass("profile row cascaded after deleting User A");
+
+  for (const row of cascadeRows) {
+    const { data, error } = await admin.from(row.table).select("id").eq("user_id", row.userId).eq("id", row.id);
+    if (error) fail(row.table + " cascade verification — " + error.message);
+    else if (data?.length) fail(row.table + " row survived deletion of User A");
+    else pass(row.table + " row cascaded after deleting User A");
   }
+
+  const deleteB = await admin.auth.admin.deleteUser(userB.id);
+  if (deleteB.error) fail("delete synthetic User B — " + deleteB.error.message);
+  else pass("delete synthetic User B");
+  const profileCascadeB = await admin.from("profiles").select("id").eq("id", userB.id);
+  if (profileCascadeB.error) fail("verify profile cascade B — " + profileCascadeB.error.message);
+  else if (profileCascadeB.data?.length) fail("profile row survived deletion of User B");
+  else pass("profile row cascaded after deleting User B");
 
   await writeEvidence();
   if (process.exitCode) {
