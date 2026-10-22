@@ -1,0 +1,247 @@
+name: H4 H5 Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/**"
+      - "docs/LONG_TERM_READINESS.md"
+      - "docs/H4-H5-CLOSURE-PLAN.md"
+      - "docs/EVIDENCE_REFRESH_2026-10-22.md"
+      - "scripts/h4-rls-behavioral.mjs"
+      - "scripts/h4-rls-catalog-check.sql"
+      - "scripts/h5-migration-guard.mjs"
+      - "scripts/h5-migration-guard-lib.mjs"
+      - "scripts/h5-migration-guard-contract.mjs"
+      - "scripts/h5-upgrade-recovery.mjs"
+      - ".github/workflows/h4-h5-evidence.yml"
+  pull_request:
+    paths:
+      - "supabase/**"
+      - "docs/LONG_TERM_READINESS.md"
+      - "docs/H4-H5-CLOSURE-PLAN.md"
+      - "docs/EVIDENCE_REFRESH_2026-10-22.md"
+      - "scripts/h4-rls-behavioral.mjs"
+      - "scripts/h4-rls-catalog-check.sql"
+      - "scripts/h5-migration-guard.mjs"
+      - "scripts/h5-migration-guard-lib.mjs"
+      - "scripts/h5-migration-guard-contract.mjs"
+      - "scripts/h5-upgrade-recovery.mjs"
+      - ".github/workflows/h4-h5-evidence.yml"
+
+concurrency:
+  group: h4-h5-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  h5-guard:
+    name: H5 migration order guard
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test migration numbering and dependency guard
+        run: node --test scripts/h5-migration-guard-contract.mjs
+
+      - name: Run migration numbering guard
+        run: node scripts/h5-migration-guard.mjs
+
+  h4-h5-local:
+    name: H4 behavioral RLS + H5 blank install
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (supabase-js for H4 client)
+        run: npm ci
+
+      - name: Setup Supabase CLI (pinned)
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.119.0
+
+      - name: Run H5 migration numbering guard
+        run: node scripts/h5-migration-guard.mjs
+
+      - name: Verify H4 rejects non-local targets before creating clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/h4-nonlocal-target.log"
+          if SUPABASE_URL="https://example.com" node scripts/h4-rls-behavioral.mjs >"$log" 2>&1; then
+            echo "ERROR: H4 unexpectedly accepted a non-local Supabase URL."
+            exit 1
+          fi
+          if ! grep -Fq "H4 fail-closed: refusing non-local Supabase target" "$log"; then
+            echo "ERROR: H4 failed for a reason other than the URL safety guard."
+            tail -n 40 "$log"
+            exit 1
+          fi
+          echo "PASS: non-local URL refused before client creation or network requests."
+
+      - name: Start local Supabase (disposable)
+        run: |
+          set -euo pipefail
+          if [ ! -f supabase/config.toml ]; then
+            supabase init
+          fi
+          supabase start -x studio,imgproxy,logflare,vector,supavisor
+          supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          echo "Supabase status environment captured in runner temp storage; credential contents withheld."
+
+      - name: Apply ordered migrations from a clean local database
+        run: |
+          set -euo pipefail
+          supabase db reset --yes
+          node --input-type=module -e '
+            import fs from "node:fs";
+            import { createHash } from "node:crypto";
+            import { execFileSync } from "node:child_process";
+            const path = "h5-migration-evidence.json";
+            const evidence = JSON.parse(fs.readFileSync(path, "utf8"));
+            const schemaSha256 = createHash("sha256")
+              .update(fs.readFileSync("supabase/schema.sql")).digest("hex");
+            evidence.blankInstall = {
+              result: "PASS",
+              command: "supabase db reset --yes",
+              target: "disposable-supabase-local",
+              sourceCommit: process.env.SOURCE_COMMIT ?? process.env.GITHUB_SHA ?? null,
+              workflowRunId: process.env.GITHUB_RUN_ID ?? null,
+              supabaseCliVersion: execFileSync("supabase", ["--version"], { encoding: "utf8" }).trim(),
+              schemaSqlSha256: schemaSha256,
+              checkedAt: new Date().toISOString()
+            };
+            fs.writeFileSync(path, JSON.stringify(evidence, null, 2) + "\n", { mode: 0o600 });
+          '
+
+      - name: Verify RLS catalog and policy prerequisites
+        run: |
+          set -euo pipefail
+          # These are the documented default credentials/port for this disposable
+          # local stack only; do not replace them with a hosted Supabase URL.
+          export DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          node --input-type=module -e '
+            const u = new URL(process.env.DB_URL ?? "");
+            if (u.hostname !== "127.0.0.1" ||
+                u.protocol !== "postgresql:" || u.port !== "54322" ||
+                u.username !== "postgres" || u.password !== "postgres") {
+              throw new Error("H4 catalog check refuses a non-local database target");
+            }
+          '
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const evidence = {
+              schemaVersion: 1,
+              kind: "H4_RLS_CATALOG",
+              target: "disposable-supabase-local",
+              sourceCommit: process.env.SOURCE_COMMIT ?? process.env.GITHUB_SHA ?? null,
+              workflowRunId: process.env.GITHUB_RUN_ID ?? null,
+              generatedAt: new Date().toISOString(),
+              result: "PASS",
+              assertions: ["all six protected tables have RLS enabled", "required owner-scoped policies are present"]
+            };
+            fs.writeFileSync("h4-catalog-evidence.json", JSON.stringify(evidence, null, 2) + "\n", { mode: 0o600 });
+          '
+
+      - name: Export local keys for H4 (job-local only)
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          } >> "$GITHUB_ENV"
+
+      - name: H4 behavioral matrix
+        run: node scripts/h4-rls-behavioral.mjs
+
+      - name: H5 pre-002 upgrade and synthetic backup/restore rehearsal
+        shell: bash
+        run: |
+          set -euo pipefail
+          export H5_FIXTURE_PATH="$RUNNER_TEMP/h5-upgrade-fixture.json"
+          export H5_EVIDENCE_PATH="h5-migration-evidence.json"
+
+          # Rebuild only the disposable local database through baseline 001.
+          # This does not link to, reset, or modify any hosted Supabase project.
+          supabase db reset --local --yes --version 001
+
+          # Seed one synthetic Auth user and one pre-002 goals row.
+          node scripts/h5-upgrade-recovery.mjs seed
+
+          # Snapshot only synthetic Auth identity + fixture table rows before 002.
+          pg_dump "$DB_URL" --data-only --no-owner --no-privileges \
+            --table=auth.users --table=public.goals \
+            > "$RUNNER_TEMP/h5-pre002-backup.sql"
+          test -s "$RUNNER_TEMP/h5-pre002-backup.sql"
+          grep -q "COPY auth.users" "$RUNNER_TEMP/h5-pre002-backup.sql"
+          grep -q "COPY public.goals" "$RUNNER_TEMP/h5-pre002-backup.sql"
+
+          # Apply the pending migration exactly as a normal local upgrade would.
+          supabase migration up --local
+          node scripts/h5-upgrade-recovery.mjs verify-upgrade
+
+          # Recovery rehearsal: restore that synthetic pre-002 snapshot into a
+          # fresh baseline-only local database, then check exact row values.
+          supabase db reset --local --yes --version 001
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/h5-pre002-backup.sql"
+          node scripts/h5-upgrade-recovery.mjs verify-restore
+
+      - name: Validate machine-readable evidence JSON
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in h4-evidence.json h4-catalog-evidence.json h5-migration-evidence.json; do
+            if [ ! -s "$file" ]; then
+              echo "Missing evidence file: $file"
+              exit 1
+            fi
+            node -e '
+              const fs = require("node:fs");
+              const file = process.argv[1];
+              const evidence = JSON.parse(fs.readFileSync(file, "utf8"));
+              if (evidence.result !== "PASS") throw new Error("Evidence result is not PASS: " + file);
+              if (file === "h5-migration-evidence.json") {
+                for (const key of ["blankInstall", "pre002Upgrade", "backupRestoreRecovery"]) {
+                  if (evidence[key]?.result !== "PASS") {
+                    throw new Error("H5 stage is not PASS: " + key + " (" + String(evidence[key]?.result ?? "MISSING") + ")");
+                  }
+                }
+              }
+              console.log("Valid PASS evidence JSON: " + file);
+            ' "$file"
+          done
+
+      - name: Stop local stack
+        if: always()
+        run: supabase stop --no-backup || true
+
+      - name: Upload redacted H4/H5 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: h4-h5-evidence-${{ github.run_id }}
+          path: |
+            h4-evidence.json
+            h4-catalog-evidence.json
+            h5-migration-evidence.json
+          if-no-files-found: ignore
+          retention-days: 14

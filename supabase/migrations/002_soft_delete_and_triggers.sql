@@ -1,5 +1,6 @@
--- Chạy sau schema.sql trong Supabase SQL Editor
--- Bổ sung deleted_at + trigger version/updated_at
+-- 002_soft_delete_and_triggers.sql
+-- Depends-On: 001_baseline_schema.sql
+-- Migration nâng cấp sau baseline 001; bổ sung deleted_at + trigger version/updated_at.
 
 alter table public.app_settings add column if not exists deleted_at timestamptz;
 alter table public.app_settings add column if not exists created_at timestamptz not null default now();

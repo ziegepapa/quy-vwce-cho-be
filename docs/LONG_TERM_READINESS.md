@@ -4,21 +4,37 @@
 
 **Phiên bản ứng dụng:** `1.6.0`
 
-**Commit production đã kiểm chứng gần nhất (21-10-2026):** `4fbca10b8e8ad04cb41fc7d965f5fda960035625`; [Actions run 39646030050](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39646030050) completed successfully, including test-build, browser preview, Edge smoke and deploy.
+**Commit production đã kiểm chứng gần nhất (22-10-2026):** `bd163ad296b2b4df944688f86974da8724113d52`; [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971) completed successfully. [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168) also completed successfully.
 
-**Ngày baseline evidence gốc:** 21-08-2026 (GMT+2). **Evidence repository/release được cập nhật:** 21-10-2026 (GMT+2); các kiểm tra Supabase behavioral vẫn chưa được chạy lại.
+**Ngày baseline evidence gốc:** 21-08-2026 (GMT+2). **Evidence repository/release được cập nhật:** 22-10-2026 (GMT+2). Bằng chứng tháng 8 vẫn là lịch sử. PR #363 có bằng chứng CI mới trên nhánh ứng viên; các thay đổi chưa được merge vào `main`.
 
 **Đối tượng sử dụng:** Gia đình sở hữu vault và người bảo trì kế tiếp.
 
-> **Trạng thái hiện tại 21/10/2026: `CONDITIONAL — NOT READY` cho vai trò sổ cái tài chính duy nhất, có thẩm quyền tuyệt đối.**
+> **Trạng thái hiện tại 22/10/2026: `CONDITIONAL — NOT READY` cho vai trò sổ cái tài chính duy nhất, có thẩm quyền tuyệt đối.**
 >
-> VWCE Vault có đủ evidence để tiếp tục vận hành như một **tracker local-first** có kiểm soát, khi owner lưu sao kê/chứng từ broker độc lập và diễn tập backup. Security dependency audit nay sạch; client release, UX mobile-first, recovery runbook/drill, password-reset callback và release gates đã được harden. Tuy nhiên H4 chưa có request-level behavioral RLS proof và H5 chưa có ordered migration baseline cùng controlled upgrade/rollback proof. P11.2 vẫn tuyệt đối bị khóa chờ independent German tax expert review. Các điểm này không được che khuất bởi CI xanh.
+> VWCE Vault có đủ evidence để tiếp tục vận hành như một **tracker local-first** có kiểm soát, khi owner lưu sao kê/chứng từ broker độc lập và diễn tập backup. Security dependency audit nay sạch; client release, UX mobile-first, recovery runbook/drill, password-reset callback và release gates đã được harden. PR #363 đã chạy thành công ma trận H4 gồm 119/119 assertion và các bước H5 chọn lọc trên Supabase cục bộ dùng dữ liệu tổng hợp ở run [39846912976](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39846912976), trên code head `57d52814200bdcb73975117f781cd7b53d8c6c95`. H5 đã kiểm tra baseline/order, cài mới, upgrade fixture pre-002 qua migration 002, soft-delete/tombstone, version/timestamp và restore một snapshot Auth+goals tổng hợp về baseline. Đây là bằng chứng nhánh ứng viên, chưa nằm trong `main`; không xác minh schema hoặc migration history của hosted production. H5 vẫn **PARTIAL**. P11.2 vẫn bị khóa chờ independent German tax expert review. Không suy diễn rằng CI xanh đồng nghĩa hệ thống đã sẵn sàng làm sổ cái duy nhất.
 
 | Phạm vi sử dụng | Kết luận | Điều kiện vận hành |
 |---|---|---|
 | Theo dõi danh mục local-first hằng ngày | **Có thể sử dụng** | Owner chủ động export backup, xem Sync Health/Data Health và giữ sao kê broker độc lập. |
-| Bản ghi duy nhất để quyết định hoặc tái tạo toàn bộ lịch sử tài chính | **Không sẵn sàng** | H4 và H5 còn blocker độc lập; không bỏ qua chúng vì dependency audit đã sạch. |
+| Bản ghi duy nhất để quyết định hoặc tái tạo toàn bộ lịch sử tài chính | **Không sẵn sàng** | H4 behavioral proof đã PASS trên Supabase local ở nhánh ứng viên nhưng chưa là bằng chứng `main`/hosted; H5 vẫn PARTIAL và P11.2 tax bị chặn. Không bỏ qua các ranh giới này vì CI xanh. |
 | Tính thuế, FIFO hoặc Vorabpauschale | **Không được hỗ trợ** | P11.2 bị khóa; không dùng output để khai thuế. |
+
+## Evidence refresh — 22-10-2026 (current repository status)
+
+This entry supersedes the 21-10 release metadata above. The August baseline and earlier dated audits remain historical and are not represented as rerun. Later date-stamped October 21 addenda are preserved as history; where their H4/H5 state differs, this October 22 evidence section is the current repository-level report.
+
+- **Verified main:** `bd163ad296b2b4df944688f86974da8724113d52`, merge of PR #362 (quote-data refresh).
+- **Application release gates:** [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971), completed with success at 2026-10-21T20:45:34Z.
+- **Production health:** [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168), completed with success at 2026-10-22T10:17:53Z.
+- **Quote artifact in main:** `public/data/quotes.json`, schema version 2; VWCE `171.32 EUR` and VALL `4.416 EUR`, both `asOf: 2026-10-21`. This is the latest quote snapshot in the verified main tree, not a claim about a live intraday market price.
+- **Candidate implementation branch:** `readiness/h4-h5-evidence-ci-2026-10-22`, based on the verified main SHA above; PR [#363](https://github.com/ziegepapa/quy-vwce-cho-be/pull/363) is still open and not yet merged.
+- **H4 behavioral evidence (candidate branch):** `PASS — isolated CI matrix, 119/119 assertions` at head `57d52814200bdcb73975117f781cd7b53d8c6c95`; [H4 H5 Evidence run 39846912976](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39846912976) passed the Auth + PostgREST matrix for synthetic A/B and anonymous principals across `profiles` plus five sync tables. Cross-user disclosure/mutation, forged owner insert, invalid JWT, user-delete cascade, fail-closed non-local URL test and JSON artifact validation passed. Redacted artifact `h4-h5-evidence-39846912976` (ID `12455258593`). This proves the checked-in schema/policies on a disposable local stack, not hosted production parity. Re-run after merge before treating as released baseline.
+- **H5 migration evidence (candidate branch):** `PARTIAL` at head `57d52814200bdcb73975117f781cd7b53d8c6c95`; run 39846912976 passed baseline equivalence/order guard, blank install, a selected synthetic pre-002 `goals` row upgrade through `002_soft_delete_and_triggers.sql`, index/trigger/version/timestamp and soft-delete/tombstone assertions, and restore of the selected synthetic Auth+goals snapshot into a fresh baseline. Hosted schema drift, actual production migration history, full-project restore and general rollback/recovery remain unverified. Contract tests also passed for migration dependency failure modes at this evidence head; the current workflow adds required PASS checks for all three nested H5 stages and a push-to-main trigger, whose current-head run is tracked separately. Do not describe H5 as fully closed.
+- **Simulation:** Mode A/B/C and the illustrative scenario-card UI are already represented on main by the previously merged simulation work. This H4/H5 branch does not change simulation formulas or persistence.
+- **Readiness decision:** unchanged — `CONDITIONAL — NOT READY` as the sole authoritative financial ledger. Maintain independent broker statements and owner-controlled backups. P11.2/tax calculations remain blocked pending independent German tax-expert review.
+
+The candidate branch is intended to establish repeatable evidence, not to convert H4/H5 status merely because test code or a migration file now exists.
 
 ## Evidence refresh — 21-10-2026
 

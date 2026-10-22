@@ -1,8 +1,21 @@
 # H4/H5 closure plan — controlled evidence only
 
-**Updated:** 2026-10-21  
-**Production baseline reviewed:** `4fbca10b8e8ad04cb41fc7d965f5fda960035625`; [Actions run 39646030050](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39646030050) passed the release gates. This verifies the frontend release only, not H4/H5.  
-**Decision:** H4 and H5 remain open. This document is a gated implementation plan, not proof that either control has passed.
+**Updated:** 2026-10-22  
+**Production baseline reviewed:** `bd163ad296b2b4df944688f86974da8724113d52`; [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971) and [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168) succeeded. These are release/health evidence only, not H4/H5 proof.  
+**Decision:** PR #363 has current passing isolated H4 and selected H5 upgrade/recovery evidence at candidate head `57d52814200bdcb73975117f781cd7b53d8c6c95`. Run 39846912976 reports H4 119/119 PASS, ordered migration and blank install PASS, synthetic pre-002 upgrade PASS, and selected Auth+goals restore-to-baseline PASS. H4 is evidenced for checked-in policies on local Supabase; H5 remains **PARTIAL** because hosted schema drift, actual production migration history, full-project restore and general rollback/recovery remain unverified. PR #363 is not merged; no hosted production database was changed or verified.
+
+## Evidence scaffolding status — 2026-10-22
+
+Candidate branch: `readiness/h4-h5-evidence-ci-2026-10-22`, based on the verified main commit above; PR [#363](https://github.com/ziegepapa/quy-vwce-cho-be/pull/363) remains open.
+
+### Latest executed evidence
+
+- **Workflow:** [H4 H5 Evidence run 39846912976](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39846912976) completed successfully at head `57d52814200bdcb73975117f781cd7b53d8c6c95` on 2026-10-22. Both jobs passed. The run started disposable local Supabase; proved non-local URL rejection; checked baseline equivalence and migration numbering; installed from blank; passed the catalog check and 119 behavioral H4 assertions; seeded a synthetic pre-002 Auth user and `goals` row; applied `002_soft_delete_and_triggers.sql`; checked row preservation, five indexes, five update triggers, version/timestamp behavior and soft-delete tombstone semantics; restored the selected synthetic Auth+goals snapshot into a fresh baseline and checked profile trigger plus cascade cleanup. JSON evidence validation passed and artifact `h4-h5-evidence-39846912976` (ID `12455258593`) was uploaded.
+- **H4:** `PASS — candidate branch, isolated local behavioral matrix` (119/119 assertions in run 39846912976). This covers the six repository tables plus `profiles`, using synthetic users A/B, anonymous requests, forged owner IDs, denied cross-user mutations, invalid JWT, and user-deletion cascade checks. This does not establish parity with the hosted production database, which was not accessed.
+- **H5:** `PARTIAL`. Migration numbering and baseline equivalence, blank install, synthetic pre-002 upgrade through 002, expected trigger/index behavior, and a selected synthetic Auth+goals restore-to-baseline drill passed in run 39846912976. Hosted schema drift and production migration history were not examined; this selected fixture drill is not whole-project backup validation or general rollback proof. Contract tests now exercise gap/duplicate/missing/unknown/forward dependencies and baseline mismatch; the current workflow also rejects H5 artifacts unless blank-install, upgrade and restore/recovery stage results are all PASS.
+- **Readiness:** do not mark the whole project READY or sole-authoritative. The PR is not merged and P11.2 still needs independent German tax-expert review.
+- **No production writes:** the workflow must only use the Supabase stack started in the GitHub runner. Do not add production project references, credentials or family data.
+- **Readiness:** remains `CONDITIONAL — NOT READY` as the sole authoritative financial record until all independent gates, including the tax expert-review boundary, are satisfied.
 
 ## Guardrails
 
@@ -57,7 +70,7 @@ If the environment cannot start, mark **BLOCKED — ENVIRONMENT**, attach only s
 ### Phase H5.1 — Establish the migration contract
 
 1. Reconcile `supabase/schema.sql` (historical manually applied baseline) with the current database objects and current `002_soft_delete_and_triggers.sql`. Produce an object-level diff for tables, columns, constraints, indexes, RLS, policies, functions and triggers.
-2. Author `001_initial_schema.sql` from the reviewed baseline, preserving Supabase-managed `auth.users` / `auth.uid()` dependencies; do not create fake Auth functions or a plain-Postgres surrogate.
+2. Author `001_baseline_schema.sql` from the reviewed baseline, preserving Supabase-managed `auth.users` / `auth.uid()` dependencies; do not create fake Auth functions or a plain-Postgres surrogate.
 3. Apply `001` then `002` to a blank local Supabase database. Assert exact expected schema objects and rerun checks for policy/trigger presence.
 4. Define how an existing manually provisioned project would be reconciled with migration history. Do not run `migration repair`, reset, push or destructive DDL against production as part of this work.
 
