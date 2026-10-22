@@ -16,6 +16,7 @@
  * Exit 0 only when every applicable matrix cell passes.
  */
 
+import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 const TABLES = [
@@ -57,6 +58,46 @@ function fail(msg) {
 
 function pass(msg) {
   console.log(`PASS: ${msg}`);
+}
+
+function isExpectedDenied(error) {
+  const code = String(error?.code ?? error?.status ?? "");
+  const message = String(error?.message ?? "");
+  return ["42501", "PGRST301", "PGRST302", "401", "403"].includes(code) ||
+    /row-level security|permission denied|not authorized|invalid jwt|jwt expired/i.test(message);
+}
+
+function expectNoPrivateRows(result, label) {
+  if (result.error) {
+    if (isExpectedDenied(result.error)) pass(label + " — access denied");
+    else fail(label + " — unexpected error: " + result.error.message);
+    return;
+  }
+  if (Array.isArray(result.data) && result.data.length === 0) {
+    pass(label + " — no rows");
+    return;
+  }
+  if (result.data == null) {
+    pass(label + " — no row");
+    return;
+  }
+  fail(label + " — protected row was exposed");
+}
+
+function expectDeniedInsert(result, label) {
+  if (!result.error) {
+    fail(label + " — unexpectedly succeeded");
+  } else if (isExpectedDenied(result.error)) {
+    pass(label + " — rejected by Auth/RLS");
+  } else {
+    fail(label + " — unexpected error: " + result.error.message);
+  }
+}
+
+function inspectMutationError(error, label) {
+  if (error && !isExpectedDenied(error)) {
+    fail(label + " — unexpected error: " + error.message);
+  }
 }
 
 async function signUp(admin, email, password) {
@@ -106,88 +147,238 @@ async function main() {
 
   console.log("H4 matrix start (synthetic users; tokens not logged)");
 
-  // profiles: A can read own; B cannot read A
-  {
-    const { data: own, error } = await clientA.from("profiles").select("id").eq("id", userA.id);
-    if (error) fail(`profiles A select own: ${error.message}`);
-    else if (!own?.length) fail("profiles A select own returned 0 rows");
-    else pass("profiles A select own");
-
-    const { data: cross } = await clientB.from("profiles").select("id").eq("id", userA.id);
-    if (cross?.length) fail("profiles B must not see A");
-    else pass("profiles B cannot select A");
-
-    const { data: anonRows } = await anon.from("profiles").select("id").eq("id", userA.id);
-    if (anonRows?.length) fail("anon must not see profiles");
-    else pass("anon cannot select profiles");
+  // Helper functions intentionally assert through authenticated REST clients.
+  async function readDataRow(client, tableName, ownerId, id, label) {
+    const { data, error } = await client.from(tableName)
+      .select("id,user_id,data")
+      .eq("id", id)
+      .eq("user_id", ownerId)
+      .maybeSingle();
+    if (error) {
+      fail(label + " — owner re-read failed: " + error.message);
+      return null;
+    }
+    if (!data) {
+      fail(label + " — expected row is missing");
+      return null;
+    }
+    return data;
   }
 
+  async function readProfile(client, profileId, label) {
+    const { data, error } = await client.from("profiles")
+      .select("id,display_name")
+      .eq("id", profileId)
+      .maybeSingle();
+    if (error) {
+      fail(label + " — profile re-read failed: " + error.message);
+      return null;
+    }
+    if (!data) {
+      fail(label + " — expected profile is missing");
+      return null;
+    }
+    return data;
+  }
+
+  // profiles: own access, cross-user isolation in both directions, and anonymous denial.
+  const profileAResult = await clientA.from("profiles").select("id").eq("id", userA.id);
+  if (profileAResult.error || !profileAResult.data?.some((r) => r.id === userA.id)) {
+    fail("profiles A select own — " + (profileAResult.error?.message ?? "expected own profile not returned"));
+  } else pass("profiles A select own");
+
+  const profileBResult = await clientB.from("profiles").select("id").eq("id", userB.id);
+  if (profileBResult.error || !profileBResult.data?.some((r) => r.id === userB.id)) {
+    fail("profiles B select own — " + (profileBResult.error?.message ?? "expected own profile not returned"));
+  } else pass("profiles B select own");
+
+  expectNoPrivateRows(
+    await clientB.from("profiles").select("id").eq("id", userA.id),
+    "profiles B cannot select A"
+  );
+  expectNoPrivateRows(
+    await clientA.from("profiles").select("id").eq("id", userB.id),
+    "profiles A cannot select B"
+  );
+  expectNoPrivateRows(
+    await anon.from("profiles").select("id").in("id", [userA.id, userB.id]),
+    "profiles anonymous select"
+  );
+
+  const profileMarkerA = "owner-a-" + stamp;
+  const profileMarkerB = "owner-b-" + stamp;
+  const updateProfileA = await clientA.from("profiles").update({ display_name: profileMarkerA }).eq("id", userA.id);
+  if (updateProfileA.error) fail("profiles A update own — " + updateProfileA.error.message);
+  const updateProfileB = await clientB.from("profiles").update({ display_name: profileMarkerB }).eq("id", userB.id);
+  if (updateProfileB.error) fail("profiles B update own — " + updateProfileB.error.message);
+  const profileAAfterOwn = await readProfile(clientA, userA.id, "profiles A own update");
+  const profileBAfterOwn = await readProfile(clientB, userB.id, "profiles B own update");
+  if (profileAAfterOwn?.display_name !== profileMarkerA) fail("profiles A own update did not persist");
+  else pass("profiles A update own persists");
+  if (profileBAfterOwn?.display_name !== profileMarkerB) fail("profiles B own update did not persist");
+  else pass("profiles B update own persists");
+
+  const crossProfileUpdateBA = await clientB.from("profiles").update({ display_name: "attack-b-to-a" }).eq("id", userA.id);
+  inspectMutationError(crossProfileUpdateBA.error, "profiles B update A");
+  const crossProfileUpdateAB = await clientA.from("profiles").update({ display_name: "attack-a-to-b" }).eq("id", userB.id);
+  inspectMutationError(crossProfileUpdateAB.error, "profiles A update B");
+  const profileAAfterCrossUpdate = await readProfile(clientA, userA.id, "profiles A after cross update");
+  const profileBAfterCrossUpdate = await readProfile(clientB, userB.id, "profiles B after cross update");
+  if (profileAAfterCrossUpdate?.display_name !== profileMarkerA) fail("profiles B changed A's profile");
+  else pass("profiles B cannot update A");
+  if (profileBAfterCrossUpdate?.display_name !== profileMarkerB) fail("profiles A changed B's profile");
+  else pass("profiles A cannot update B");
+
+  const crossProfileDeleteBA = await clientB.from("profiles").delete().eq("id", userA.id);
+  inspectMutationError(crossProfileDeleteBA.error, "profiles B delete A");
+  const crossProfileDeleteAB = await clientA.from("profiles").delete().eq("id", userB.id);
+  inspectMutationError(crossProfileDeleteAB.error, "profiles A delete B");
+  await readProfile(clientA, userA.id, "profiles A after cross delete");
+  await readProfile(clientB, userB.id, "profiles B after cross delete");
+
+  const anonProfileUpdate = await anon.from("profiles").update({ display_name: "attack-anon" }).in("id", [userA.id, userB.id]);
+  inspectMutationError(anonProfileUpdate.error, "profiles anonymous update");
+  const profileAAfterAnonUpdate = await readProfile(clientA, userA.id, "profiles A after anonymous update");
+  const profileBAfterAnonUpdate = await readProfile(clientB, userB.id, "profiles B after anonymous update");
+  if (profileAAfterAnonUpdate?.display_name !== profileMarkerA) fail("anonymous changed A's profile");
+  else pass("anonymous cannot update A profile");
+  if (profileBAfterAnonUpdate?.display_name !== profileMarkerB) fail("anonymous changed B's profile");
+  else pass("anonymous cannot update B profile");
+
+  const anonProfileDelete = await anon.from("profiles").delete().in("id", [userA.id, userB.id]);
+  inspectMutationError(anonProfileDelete.error, "profiles anonymous delete");
+  await readProfile(clientA, userA.id, "profiles A after anonymous delete");
+  await readProfile(clientB, userB.id, "profiles B after anonymous delete");
+
+  expectDeniedInsert(
+    await clientB.from("profiles").insert({ id: randomUUID(), display_name: "forged-by-b" }),
+    "profiles B forged identity insert"
+  );
+  expectDeniedInsert(
+    await clientA.from("profiles").insert({ id: randomUUID(), display_name: "forged-by-a" }),
+    "profiles A forged identity insert"
+  );
+  expectDeniedInsert(
+    await anon.from("profiles").insert({ id: randomUUID(), display_name: "forged-anonymous" }),
+    "profiles anonymous insert"
+  );
+
+  // For each sync table, create a row for A and B. Each owner's successful
+  // read-back is the control that prevents generic HTTP/network errors from
+  // being mistaken for a successful denial.
   for (const table of TABLES) {
-    const row = { ...table.sample, user_id: userA.id };
+    const rowA = { ...table.sample, id: table.sample.id + "-a-" + stamp, user_id: userA.id };
+    const rowB = { ...table.sample, id: table.sample.id + "-b-" + stamp, user_id: userB.id };
+    const markerA = "owner-a-" + stamp;
+    const markerB = "owner-b-" + stamp;
 
-    // A insert own
-    {
-      const { error } = await clientA.from(table.name).insert(row);
-      if (error) fail(`${table.name} A insert own: ${error.message}`);
-      else pass(`${table.name} A insert own`);
-    }
+    const insertA = await clientA.from(table.name).insert({ ...rowA, data: { ...table.sample.data, h4OwnerMarker: markerA } });
+    if (insertA.error) fail(table.name + " A insert own — " + insertA.error.message);
+    else pass(table.name + " A insert own");
+    const insertB = await clientB.from(table.name).insert({ ...rowB, data: { ...table.sample.data, h4OwnerMarker: markerB } });
+    if (insertB.error) fail(table.name + " B insert own — " + insertB.error.message);
+    else pass(table.name + " B insert own");
 
-    // A select own
-    {
-      const { data, error } = await clientA.from(table.name).select("id").eq("id", table.sample.id);
-      if (error) fail(`${table.name} A select own: ${error.message}`);
-      else if (!data?.length) fail(`${table.name} A select own empty (HTTP may be 200 under RLS)`);
-      else pass(`${table.name} A select own`);
-    }
+    const ownA = await readDataRow(clientA, table.name, userA.id, rowA.id, table.name + " A select own");
+    const ownB = await readDataRow(clientB, table.name, userB.id, rowB.id, table.name + " B select own");
+    if (ownA?.data?.h4OwnerMarker !== markerA) fail(table.name + " A owner control marker mismatch");
+    if (ownB?.data?.h4OwnerMarker !== markerB) fail(table.name + " B owner control marker mismatch");
 
-    // B select A → empty
-    {
-      const { data } = await clientB.from(table.name).select("id").eq("id", table.sample.id);
-      if (data?.length) fail(`${table.name} B saw A's row`);
-      else pass(`${table.name} B cannot select A`);
-    }
+    expectNoPrivateRows(
+      await clientB.from(table.name).select("id").eq("id", rowA.id).eq("user_id", userA.id),
+      table.name + " B cannot select A"
+    );
+    expectNoPrivateRows(
+      await clientA.from(table.name).select("id").eq("id", rowB.id).eq("user_id", userB.id),
+      table.name + " A cannot select B"
+    );
+    expectNoPrivateRows(
+      await anon.from(table.name).select("id").in("id", [rowA.id, rowB.id]),
+      table.name + " anonymous select"
+    );
 
-    // B update A → no change
-    {
-      await clientB
-        .from(table.name)
-        .update({ data: { hijack: true } })
-        .eq("id", table.sample.id)
-        .eq("user_id", userA.id);
-      const { data: recheck } = await clientA.from(table.name).select("data").eq("id", table.sample.id).maybeSingle();
-      if (recheck?.data && recheck.data.hijack === true) fail(`${table.name} B updated A's row`);
-      else pass(`${table.name} B cannot update A`);
-    }
+    const updateBA = await clientB.from(table.name).update({ data: { h4Attack: "from-b" } }).eq("id", rowA.id).eq("user_id", userA.id);
+    inspectMutationError(updateBA.error, table.name + " B update A");
+    const afterUpdateBA = await readDataRow(clientA, table.name, userA.id, rowA.id, table.name + " A after B update");
+    if (afterUpdateBA?.data?.h4OwnerMarker !== markerA) fail(table.name + " B changed A's row");
+    else pass(table.name + " B cannot update A");
 
-    // B insert claiming A's user_id
-    {
-      const forged = { ...table.sample, id: `${table.sample.id}-forged`, user_id: userA.id };
-      const { error } = await clientB.from(table.name).insert(forged);
-      if (!error) {
-        // Prefer WITH CHECK reject; if insert "succeeded", verify A cannot be polluted
-        const { data } = await clientA.from(table.name).select("id").eq("id", forged.id);
-        if (data?.length) fail(`${table.name} B forged insert landed as A`);
-        else pass(`${table.name} B forged insert not visible to A`);
-      } else {
-        pass(`${table.name} B forged insert rejected`);
-      }
-    }
+    const updateAB = await clientA.from(table.name).update({ data: { h4Attack: "from-a" } }).eq("id", rowB.id).eq("user_id", userB.id);
+    inspectMutationError(updateAB.error, table.name + " A update B");
+    const afterUpdateAB = await readDataRow(clientB, table.name, userB.id, rowB.id, table.name + " B after A update");
+    if (afterUpdateAB?.data?.h4OwnerMarker !== markerB) fail(table.name + " A changed B's row");
+    else pass(table.name + " A cannot update B");
 
-    // anon insert
-    {
-      const { error } = await anon.from(table.name).insert({ ...table.sample, id: `${table.sample.id}-anon`, user_id: userA.id });
-      if (!error) fail(`${table.name} anon insert must fail`);
-      else pass(`${table.name} anon cannot insert`);
-    }
+    const deleteBA = await clientB.from(table.name).delete().eq("id", rowA.id).eq("user_id", userA.id);
+    inspectMutationError(deleteBA.error, table.name + " B delete A");
+    await readDataRow(clientA, table.name, userA.id, rowA.id, table.name + " A after B delete");
+    const deleteAB = await clientA.from(table.name).delete().eq("id", rowB.id).eq("user_id", userB.id);
+    inspectMutationError(deleteAB.error, table.name + " A delete B");
+    await readDataRow(clientB, table.name, userB.id, rowB.id, table.name + " B after A delete");
 
-    // A delete own
-    {
-      const { error } = await clientA.from(table.name).delete().eq("id", table.sample.id);
-      if (error) fail(`${table.name} A delete own: ${error.message}`);
-      else pass(`${table.name} A delete own`);
-    }
+    expectDeniedInsert(
+      await clientB.from(table.name).insert({ ...table.sample, id: "forged-b-" + stamp + "-" + table.name, user_id: userA.id }),
+      table.name + " B forged user_id insert"
+    );
+    expectDeniedInsert(
+      await clientA.from(table.name).insert({ ...table.sample, id: "forged-a-" + stamp + "-" + table.name, user_id: userB.id }),
+      table.name + " A forged user_id insert"
+    );
+    expectDeniedInsert(
+      await anon.from(table.name).insert({ ...table.sample, id: "forged-anon-a-" + stamp + "-" + table.name, user_id: userA.id }),
+      table.name + " anonymous forged insert"
+    );
+
+    const anonUpdateA = await anon.from(table.name).update({ data: { h4Attack: "from-anon" } }).eq("id", rowA.id).eq("user_id", userA.id);
+    inspectMutationError(anonUpdateA.error, table.name + " anonymous update A");
+    const afterAnonUpdateA = await readDataRow(clientA, table.name, userA.id, rowA.id, table.name + " A after anonymous update");
+    if (afterAnonUpdateA?.data?.h4OwnerMarker !== markerA) fail(table.name + " anonymous changed A's row");
+    else pass(table.name + " anonymous cannot update A");
+
+    const anonUpdateB = await anon.from(table.name).update({ data: { h4Attack: "from-anon" } }).eq("id", rowB.id).eq("user_id", userB.id);
+    inspectMutationError(anonUpdateB.error, table.name + " anonymous update B");
+    const afterAnonUpdateB = await readDataRow(clientB, table.name, userB.id, rowB.id, table.name + " B after anonymous update");
+    if (afterAnonUpdateB?.data?.h4OwnerMarker !== markerB) fail(table.name + " anonymous changed B's row");
+    else pass(table.name + " anonymous cannot update B");
+
+    const anonDeleteA = await anon.from(table.name).delete().eq("id", rowA.id).eq("user_id", userA.id);
+    inspectMutationError(anonDeleteA.error, table.name + " anonymous delete A");
+    await readDataRow(clientA, table.name, userA.id, rowA.id, table.name + " A after anonymous delete");
+    const anonDeleteB = await anon.from(table.name).delete().eq("id", rowB.id).eq("user_id", userB.id);
+    inspectMutationError(anonDeleteB.error, table.name + " anonymous delete B");
+    await readDataRow(clientB, table.name, userB.id, rowB.id, table.name + " B after anonymous delete");
+
+    const ownDeleteA = await clientA.from(table.name).delete().eq("id", rowA.id).eq("user_id", userA.id).select("id");
+    if (ownDeleteA.error) fail(table.name + " A delete own — " + ownDeleteA.error.message);
+    else if (!ownDeleteA.data?.some((r) => r.id === rowA.id)) fail(table.name + " A delete own matched no visible row");
+    else pass(table.name + " A delete own");
+
+    const ownDeleteB = await clientB.from(table.name).delete().eq("id", rowB.id).eq("user_id", userB.id).select("id");
+    if (ownDeleteB.error) fail(table.name + " B delete own — " + ownDeleteB.error.message);
+    else if (!ownDeleteB.data?.some((r) => r.id === rowB.id)) fail(table.name + " B delete own matched no visible row");
+    else pass(table.name + " B delete own");
+
+    expectNoPrivateRows(
+      await clientA.from(table.name).select("id").eq("id", rowA.id).eq("user_id", userA.id),
+      table.name + " A row removed after own delete"
+    );
+    expectNoPrivateRows(
+      await clientB.from(table.name).select("id").eq("id", rowB.id).eq("user_id", userB.id),
+      table.name + " B row removed after own delete"
+    );
   }
 
+  // A malformed bearer token must be rejected, not accidentally treated as an authenticated user.
+  const invalidTokenClient = createClient(url, anonKey, {
+    global: { headers: { Authorization: "Bearer definitely-not-a-valid-jwt" } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const invalidTokenResult = await invalidTokenClient.from("profiles").select("id").eq("id", userA.id);
+  if (invalidTokenResult.error && isExpectedDenied(invalidTokenResult.error)) {
+    pass("invalid bearer token rejected");
+  } else {
+    fail("invalid bearer token was not clearly rejected by Auth/PostgREST");
+  }
   // cleanup synthetic users (best-effort)
   try {
     await admin.auth.admin.deleteUser(userA.id);
