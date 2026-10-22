@@ -16,7 +16,6 @@
  * Exit 0 only when every applicable matrix cell passes.
  */
 
-import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 
