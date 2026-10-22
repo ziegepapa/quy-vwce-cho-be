@@ -179,7 +179,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
 
   it("keeps the save-to-plan action in the closed advanced disclosure and invokes confirmation when opened", () => {
     renderShell("vi");
-    const details = document.querySelector("details.gl");
+    const details = document.querySelector("details.gl") as HTMLDetailsElement | null;
     expect(details?.open).toBe(false);
     fireEvent.click(screen.getByText("Tùy chọn nâng cao"));
     expect(details?.open).toBe(true);
