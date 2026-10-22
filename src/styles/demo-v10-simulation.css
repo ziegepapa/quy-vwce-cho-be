@@ -73,6 +73,35 @@
 .sim-wrap .sh-note { margin-top: 4px; color: var(--text-tertiary); font-size: 12px; }
 .sim-wrap .sim-valuation-warning { margin: 0; padding: 10px 12px; color: var(--text-secondary); background: var(--surface-sunken); border: 1px solid var(--border-subtle); border-radius: 12px; line-height: 1.45; overflow-wrap: anywhere; }
 .sim-wrap .summary-strip .loss { color: var(--danger-600); }
+.sim-wrap .summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px;
+  padding: 2px 0;
+}
+.sim-wrap .summary-strip > span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.35;
+}
+.sim-wrap .summary-strip > span:not(:last-child)::after { content: none; }
+.sim-wrap .summary-strip strong {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: clamp(12px, 3.4vw, 14px);
+  line-height: 1.25;
+}
+.sim-wrap .yr-table-head span,
+.sim-wrap .yr-row-item > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
 
 /* ---------- Chart ---------- */
