@@ -17,8 +17,8 @@ Verified against GitHub commit metadata, Actions run metadata and the quote arti
 
 | Control | Result | Latest evidence | Remaining work |
 |---|---|---|---|
-| **H4** behavioral RLS | **PASS on candidate branch / isolated local Supabase** | [Run 39830035462](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39830035462): RLS catalog precheck and Auth + PostgREST matrix succeeded at head `330ba04eaca0d1f147e7d6695392c73879e99cb1` | Merge/re-run or verify the identical tree on main; separately reconcile hosted database state (not accessed) |
-| **H5** migration baseline | **PARTIAL** — clean install and order guard passed | [Run 39830035462](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39830035462): migration order guard and `supabase db reset --yes` succeeded | Controlled pre-002 upgrade, hosted schema drift, backup/restore and rollback/recovery rehearsal |
+| **H4** behavioral RLS | **PASS on candidate branch / isolated local Supabase** | [Run 39842267812](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39842267812): RLS catalog precheck and Auth + PostgREST matrix succeeded at head `73c66b15acabb1bee5b75df3e3544faab64bce8a`; the non-local URL guard and JSON artifact validation also passed, and redacted artifact `h4-h5-evidence-39842267812` (ID `12453601365`) was uploaded | Merge/re-run or verify the identical tree on main; separately reconcile hosted database state (not accessed) |
+| **H5** migration baseline | **PARTIAL** — clean install and order guard passed | [Run 39842267812](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39842267812): migration order guard and `supabase db reset --yes` succeeded | Controlled pre-002 upgrade, hosted schema drift, backup/restore and rollback/recovery rehearsal |
 | Frontend / Simulation | **PASS** for release gates | No formula change in this branch; Mode A/B/C already on main (#357/#361) | Visual polish only if owner requests; not a ledger blocker |
 | P11.2 tax | **BLOCKED** | — | Independent German tax expert review |
 
@@ -31,6 +31,6 @@ Verified against GitHub commit metadata, Actions run metadata and the quote arti
 
 ## Decision
 
-**CONDITIONAL — NOT READY** as sole authoritative financial ledger until H4 matrix and H5 blank-install CI both pass.
+**CONDITIONAL — NOT READY** as the sole authoritative financial ledger. H4's behavioral matrix and fail-closed URL check, plus H5's migration-order and blank-install checks, passed on this candidate branch; H5 remains **PARTIAL** pending a controlled upgrade, hosted-schema drift reconciliation, backup/restore, and rollback/recovery rehearsal. The hosted production schema was not accessed, and P11.2 tax remains blocked pending independent German tax-expert review.
 
 Local-first daily tracking remains appropriate with independent broker statements and owner-controlled backups.
