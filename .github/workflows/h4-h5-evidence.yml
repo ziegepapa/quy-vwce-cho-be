@@ -1,0 +1,82 @@
+name: H4 H5 Evidence
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "supabase/**"
+      - "scripts/h4-rls-behavioral.mjs"
+      - "scripts/h5-migration-guard.mjs"
+      - ".github/workflows/h4-h5-evidence.yml"
+
+concurrency:
+  group: h4-h5-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  h5-guard:
+    name: H5 migration order guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run migration numbering guard
+        run: node scripts/h5-migration-guard.mjs
+
+  h4-h5-local:
+    name: H4 behavioral RLS + H5 blank install
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (supabase-js for H4 client)
+        run: npm install @supabase/supabase-js@2.49.1 --no-save
+
+      - name: Setup Supabase CLI (pinned)
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.20.5
+
+      - name: Start local Supabase (disposable)
+        run: |
+          set -euo pipefail
+          if [ ! -f supabase/config.toml ]; then
+            supabase init
+          fi
+          supabase start -x studio,imgproxy,logflare,vector,supavisor
+          supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          cat "$RUNNER_TEMP/supabase.env" | sed 's/KEY=.*/KEY=***redacted***/'
+
+      - name: Apply ordered migrations (H5 blank-ish path)
+        run: |
+          set -euo pipefail
+          # Local start applies migrations from supabase/migrations when linked;
+          # force db reset ensures ordered 001 then 002 from empty public schema state.
+          supabase db reset --yes
+
+      - name: Export local keys for H4 (never upload secrets)
+        id: keys
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          echo "url=$API_URL" >> "$GITHUB_OUTPUT"
+          echo "anon=$ANON_KEY" >> "$GITHUB_OUTPUT"
+          echo "service=$SERVICE_ROLE_KEY" >> "$GITHUB_OUTPUT"
+
+      - name: H4 behavioral matrix
+        env:
+          SUPABASE_URL: ${{ steps.keys.outputs.url }}
+          SUPABASE_ANON_KEY: ${{ steps.keys.outputs.anon }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.keys.outputs.service }}
+        run: node scripts/h4-rls-behavioral.mjs
+
+      - name: Stop local stack
+        if: always()
+        run: supabase stop --no-backup || true
