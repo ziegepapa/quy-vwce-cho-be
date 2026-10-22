@@ -6,13 +6,13 @@
 
 **Commit production đã kiểm chứng gần nhất (22-10-2026):** `bd163ad296b2b4df944688f86974da8724113d52`; [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971) completed successfully. [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168) also completed successfully.
 
-**Ngày baseline evidence gốc:** 21-08-2026 (GMT+2). **Evidence repository/release được cập nhật:** 22-10-2026 (GMT+2). Các bằng chứng tháng 8 vẫn là lịch sử; H4/H5 behavioral chưa được xác nhận PASS.
+**Ngày baseline evidence gốc:** 21-08-2026 (GMT+2). **Evidence repository/release được cập nhật:** 22-10-2026 (GMT+2). Bằng chứng tháng 8 vẫn là lịch sử. PR #363 có bằng chứng CI mới trên nhánh ứng viên; các thay đổi chưa được merge vào `main`.
 
 **Đối tượng sử dụng:** Gia đình sở hữu vault và người bảo trì kế tiếp.
 
 > **Trạng thái hiện tại 22/10/2026: `CONDITIONAL — NOT READY` cho vai trò sổ cái tài chính duy nhất, có thẩm quyền tuyệt đối.**
 >
-> VWCE Vault có đủ evidence để tiếp tục vận hành như một **tracker local-first** có kiểm soát, khi owner lưu sao kê/chứng từ broker độc lập và diễn tập backup. Security dependency audit nay sạch; client release, UX mobile-first, recovery runbook/drill, password-reset callback và release gates đã được harden. Tuy nhiên H4 chưa có request-level behavioral RLS proof và H5 chưa có ordered migration baseline cùng controlled upgrade/rollback proof. P11.2 vẫn tuyệt đối bị khóa chờ independent German tax expert review. Các điểm này không được che khuất bởi CI xanh.
+> VWCE Vault có đủ evidence để tiếp tục vận hành như một **tracker local-first** có kiểm soát, khi owner lưu sao kê/chứng từ broker độc lập và diễn tập backup. Security dependency audit nay sạch; client release, UX mobile-first, recovery runbook/drill, password-reset callback và release gates đã được harden. PR #363 đã chạy thành công ma trận H4 trên Supabase cục bộ dùng user tổng hợp và kiểm tra H5 từ database trống; đây là bằng chứng cho nhánh ứng viên, chưa phải trạng thái `main`. H5 vẫn thiếu kiểm tra upgrade, schema drift với môi trường hosted, restore và rollback/recovery. P11.2 vẫn bị khóa chờ independent German tax expert review. Không suy diễn rằng CI xanh đồng nghĩa hệ thống đã sẵn sàng làm sổ cái duy nhất.
 
 | Phạm vi sử dụng | Kết luận | Điều kiện vận hành |
 |---|---|---|
@@ -28,9 +28,9 @@ This entry supersedes the 21-10 release metadata above. The August baseline and 
 - **Application release gates:** [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971), completed with success at 2026-10-21T20:45:34Z.
 - **Production health:** [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168), completed with success at 2026-10-22T10:17:53Z.
 - **Quote artifact in main:** `public/data/quotes.json`, schema version 2; VWCE `171.32 EUR` and VALL `4.416 EUR`, both `asOf: 2026-10-21`. This is the latest quote snapshot in the verified main tree, not a claim about a live intraday market price.
-- **Candidate implementation branch:** `readiness/h4-h5-evidence-ci-2026-10-22`, based on the verified main SHA above. It is not yet merged. Its H4/H5 workflow has not produced an evidenced result in this audit; do not describe the branch scaffolding as PASS.
-- **H4 on production main:** `PARTIAL — STATIC POLICY EVIDENCE ONLY`. The candidate branch adds an Auth + PostgREST behavioral matrix with synthetic users A/B and anonymous requests. It becomes behavioral evidence only after the isolated CI stack actually runs, all assertions pass, and the run is reviewed.
-- **H5 on production main:** `BLOCKED — NO ORDERED BASELINE`. The candidate branch adds `001_baseline_schema.sql` and an ordered-migration guard, but blank install is still unverified until `supabase db reset` succeeds in CI. Upgrade, schema-drift comparison and recovery/rollback rehearsal are separate outstanding gates.
+- **Candidate implementation branch:** `readiness/h4-h5-evidence-ci-2026-10-22`, based on the verified main SHA above; PR [#363](https://github.com/ziegepapa/quy-vwce-cho-be/pull/363) is still open and not yet merged.
+- **H4 behavioral evidence (candidate branch):** `PASS — isolated CI matrix` at head `330ba04eaca0d1f147e7d6695392c73879e99cb1`; [H4 H5 Evidence run 39830035462](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39830035462) completed successfully. The job started disposable local Supabase, passed the RLS catalog precheck and completed the Auth + PostgREST matrix for synthetic users A/B and anonymous requests. This proves the checked-in schema/policies on that isolated stack; it does not prove hosted production schema has no drift. Re-run/verify on the merged main tree before calling it part of the released baseline.
+- **H5 migration evidence (candidate branch):** `PARTIAL`. The ordered migration guard and `supabase db reset --yes` from a blank local stack both passed in run 39830035462; `001_baseline_schema.sql` is equivalent to repository `supabase/schema.sql` apart from comments and idempotent policy drops. Controlled upgrade from pre-002 state, hosted schema-drift reconciliation, backup/restore and rollback/recovery rehearsal remain open.
 - **Simulation:** Mode A/B/C and the illustrative scenario-card UI are already represented on main by the previously merged simulation work. This H4/H5 branch does not change simulation formulas or persistence.
 - **Readiness decision:** unchanged — `CONDITIONAL — NOT READY` as the sole authoritative financial ledger. Maintain independent broker statements and owner-controlled backups. P11.2/tax calculations remain blocked pending independent German tax-expert review.
 
