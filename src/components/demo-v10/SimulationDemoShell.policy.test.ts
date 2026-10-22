@@ -177,10 +177,12 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(document.querySelector(".sim-chart-svg")?.textContent).toContain("15 Jahre");
   });
 
-  it("keeps the save-to-plan action behind the advanced disclosure and invokes confirmation", () => {
+  it("keeps the save-to-plan action in the closed advanced disclosure and invokes confirmation when opened", () => {
     renderShell("vi");
-    expect(screen.queryByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" })).toBeNull();
+    const details = document.querySelector("details.gl");
+    expect(details?.open).toBe(false);
     fireEvent.click(screen.getByText("Tùy chọn nâng cao"));
+    expect(details?.open).toBe(true);
     const save = screen.getByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" });
     fireEvent.click(save);
     expect(noop).toHaveBeenCalled();
