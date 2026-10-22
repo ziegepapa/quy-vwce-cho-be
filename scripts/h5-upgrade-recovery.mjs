@@ -200,6 +200,40 @@ async function verifyUpgrade({ apiUrl, dbUrl, fixturePath }) {
     throw new Error("H5 update trigger did not advance updated_at");
   }
 
+  const softDeletedAt = new Date(Date.now() - 60_000).toISOString();
+  const softDelete = await admin.from("goals")
+    .update({ deleted_at: softDeletedAt })
+    .eq("id", fixture.goalId)
+    .eq("user_id", fixture.userId);
+  if (softDelete.error) throw new Error("H5 soft-delete marker update failed");
+
+  const softDeleted = await admin.from("goals")
+    .select("id,user_id,data,version,updated_at,deleted_at")
+    .eq("id", fixture.goalId)
+    .eq("user_id", fixture.userId)
+    .maybeSingle();
+  if (softDeleted.error || !softDeleted.data) {
+    throw new Error("H5 soft delete hard-deleted the row instead of retaining its tombstone");
+  }
+  passIfEqual(
+    new Date(softDeleted.data.deleted_at).toISOString(),
+    softDeletedAt,
+    "H5 soft-delete marker timestamp was not preserved"
+  );
+  passIfEqual(
+    softDeleted.data.version,
+    fixture.version + 2,
+    "H5 soft-delete marker did not increment the version exactly once"
+  );
+  passIfEqual(
+    softDeleted.data.data?.postUpgradeTriggerProbe,
+    true,
+    "H5 soft delete changed the upgraded row payload"
+  );
+  if (new Date(softDeleted.data.updated_at).getTime() < new Date(after.data.updated_at).getTime()) {
+    throw new Error("H5 soft-delete update moved updated_at backwards");
+  }
+
   await updateEvidence("pre002Upgrade", {
     result: "PASS",
     target: "disposable-supabase-local",
@@ -207,6 +241,8 @@ async function verifyUpgrade({ apiUrl, dbUrl, fixturePath }) {
     workflowRunId: process.env.GITHUB_RUN_ID || null,
     assertions: [
       "pre-002 synthetic row and JSON payload survived migration 002",
+      "soft-delete marker persists without hard-deleting the row",
+      "soft-delete increments version and retains the row payload",
       "created_at and deleted_at columns are present with expected values",
       "all five expected update indexes and version triggers are installed",
       "update trigger increments version and advances updated_at",
