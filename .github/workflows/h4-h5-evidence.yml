@@ -55,6 +55,22 @@ jobs:
       - name: Run H5 migration numbering guard
         run: node scripts/h5-migration-guard.mjs
 
+      - name: Verify H4 rejects non-local targets before creating clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/h4-nonlocal-target.log"
+          if SUPABASE_URL="https://example.com" node scripts/h4-rls-behavioral.mjs >"$log" 2>&1; then
+            echo "ERROR: H4 unexpectedly accepted a non-local Supabase URL."
+            exit 1
+          fi
+          if ! grep -Fq "H4 fail-closed: refusing non-local Supabase target" "$log"; then
+            echo "ERROR: H4 failed for a reason other than the URL safety guard."
+            tail -n 40 "$log"
+            exit 1
+          fi
+          echo "PASS: non-local URL refused before client creation or network requests."
+
       - name: Start local Supabase (disposable)
         run: |
           set -euo pipefail
