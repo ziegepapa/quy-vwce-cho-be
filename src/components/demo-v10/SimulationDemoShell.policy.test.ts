@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { createElement } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SimulationDemoShell, { type SimulationDemoShellProps } from "./SimulationDemoShell";
 
@@ -175,6 +175,15 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByRole("button", { name: /Einzahlen → Ergebnis/ }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("table", { name: "Jährliche Projektion" })).toBeTruthy();
     expect(document.querySelector(".sim-chart-svg")?.textContent).toContain("15 Jahre");
+  });
+
+  it("keeps the save-to-plan action behind the advanced disclosure and invokes confirmation", () => {
+    renderShell("vi");
+    expect(screen.queryByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" })).toBeNull();
+    fireEvent.click(screen.getByText("Tùy chọn nâng cao"));
+    const save = screen.getByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" });
+    fireEvent.click(save);
+    expect(noop).toHaveBeenCalled();
   });
 
   it("does not render German tax controls or after-tax results", () => {
