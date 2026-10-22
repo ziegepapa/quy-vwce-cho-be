@@ -33,8 +33,30 @@ function finish(result, message, checkedFiles = files) {
   console.log("PASS: " + message + ": " + checkedFiles.join(", "));
 }
 
+function normalizeReviewedBaseline(sql) {
+  return sql
+    .split(/\\r?\\n/)
+    .filter((line) => !/^\\s*--/.test(line))
+    .filter((line) => !/^\\s*drop policy if exists\\b/i.test(line))
+    .join("\\n")
+    .replace(/\\s+/g, " ")
+    .trim();
+}
+
 if (!files.length) {
   finish("FAIL", "no migration files", files);
+}
+
+const repoRoot = path.join(root, "..");
+const reviewedSchemaPath = path.join(repoRoot, "schema.sql");
+const baselinePath = path.join(root, "001_baseline_schema.sql");
+if (!fs.existsSync(reviewedSchemaPath) || !fs.existsSync(baselinePath)) {
+  finish("FAIL", "reviewed schema.sql or 001 baseline is missing", files);
+}
+const reviewedSchema = fs.readFileSync(reviewedSchemaPath, "utf8");
+const baselineSchema = fs.readFileSync(baselinePath, "utf8");
+if (normalizeReviewedBaseline(reviewedSchema) !== normalizeReviewedBaseline(baselineSchema)) {
+  finish("FAIL", "001 baseline differs from supabase/schema.sql beyond comments/idempotent policy drops", files);
 }
 
 const nums = [];
