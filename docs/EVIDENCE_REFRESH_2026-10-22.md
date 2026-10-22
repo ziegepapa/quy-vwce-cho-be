@@ -13,20 +13,20 @@ Verified against GitHub commit metadata, Actions run metadata and the quote arti
 | Production site | https://ziegepapa.github.io/quy-vwce-cho-be/ — HTTP 200 |
 | Quotes (schema 2) | VWCE `IE00BK5BQT80` **171.32 EUR** asOf **2026-10-21**; VALL `IE000VAHT5T0` **4.416 EUR** asOf **2026-10-21** |
 
-## H4 / H5 status after this branch’s scaffolding
+## H4 / H5 status after PR #363 CI run
 
-| Control | Result | What changed on branch | What still blocks PASS |
+| Control | Result | Latest evidence | Remaining work |
 |---|---|---|---|
-| **H4** behavioral RLS | **NOT RUN** (scaffolding ready) | `scripts/h4-rls-behavioral.mjs` + `.github/workflows/h4-h5-evidence.yml` | Workflow must complete green on disposable local Supabase with User A/B/anon JWT matrix |
-| **H5** migration baseline | **PARTIAL** (ordered files in repo) | `supabase/migrations/001_baseline_schema.sql` + `scripts/h5-migration-guard.mjs` | `supabase db reset` / blank install + upgrade/rollback rehearsal must be evidenced in CI logs |
+| **H4** behavioral RLS | **PASS on candidate branch / isolated local Supabase** | [Run 39830035462](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39830035462): RLS catalog precheck and Auth + PostgREST matrix succeeded at head `330ba04eaca0d1f147e7d6695392c73879e99cb1` | Merge/re-run or verify the identical tree on main; separately reconcile hosted database state (not accessed) |
+| **H5** migration baseline | **PARTIAL** — clean install and order guard passed | [Run 39830035462](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39830035462): migration order guard and `supabase db reset --yes` succeeded | Controlled pre-002 upgrade, hosted schema drift, backup/restore and rollback/recovery rehearsal |
 | Frontend / Simulation | **PASS** for release gates | No formula change in this branch; Mode A/B/C already on main (#357/#361) | Visual polish only if owner requests; not a ledger blocker |
 | P11.2 tax | **BLOCKED** | — | Independent German tax expert review |
 
 ## Explicit non-claims
 
-- CI green on Test and Deploy **does not** close H4 or H5.
+- A green frontend Test and Deploy run alone **does not** close H4 or H5; the isolated H4/H5 evidence run above proves only the matrix and clean-install cases that actually executed.
 - Static RLS policy SQL **does not** equal behavioral proof.
-- Copying `schema.sql` into `001_*.sql` **without** CI blank-install evidence **does not** close H5.
+- H5 remains partial until upgrade, hosted schema-drift reconciliation, backup/restore and rollback/recovery are rehearsed.
 - Stale branch `readiness/h4-h5-and-simulation-refresh` is superseded; do not merge it.
 
 ## Decision
