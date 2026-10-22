@@ -17,7 +17,7 @@
 | Phạm vi sử dụng | Kết luận | Điều kiện vận hành |
 |---|---|---|
 | Theo dõi danh mục local-first hằng ngày | **Có thể sử dụng** | Owner chủ động export backup, xem Sync Health/Data Health và giữ sao kê broker độc lập. |
-| Bản ghi duy nhất để quyết định hoặc tái tạo toàn bộ lịch sử tài chính | **Không sẵn sàng** | H4 và H5 còn blocker độc lập; không bỏ qua chúng vì dependency audit đã sạch. |
+| Bản ghi duy nhất để quyết định hoặc tái tạo toàn bộ lịch sử tài chính | **Không sẵn sàng** | H4 behavioral proof đã PASS trên Supabase local ở nhánh ứng viên nhưng chưa là bằng chứng `main`/hosted; H5 vẫn PARTIAL và P11.2 tax bị chặn. Không bỏ qua các ranh giới này vì CI xanh. |
 | Tính thuế, FIFO hoặc Vorabpauschale | **Không được hỗ trợ** | P11.2 bị khóa; không dùng output để khai thuế. |
 
 ## Evidence refresh — 22-10-2026 (current repository status)
