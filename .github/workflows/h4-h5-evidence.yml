@@ -44,6 +44,9 @@ jobs:
         with:
           version: 2.20.5
 
+      - name: Run H5 migration numbering guard
+        run: node scripts/h5-migration-guard.mjs
+
       - name: Start local Supabase (disposable)
         run: |
           set -euo pipefail
@@ -53,16 +56,6 @@ jobs:
           supabase start -x studio,imgproxy,logflare,vector,supavisor
           supabase status -o env > "$RUNNER_TEMP/supabase.env"
           echo "Supabase status environment captured in runner temp storage; credential contents withheld."
-
-      - name: Apply ordered migrations (H5 blank-ish path)
-        run: |
-          set -euo pipefail
-          # Local start applies migrations from supabase/migrations when linked;
-          # force db reset ensures ordered 001 then 002 from empty public schema state.
-          supabase db reset --yes
-
-      - name: Run H5 migration numbering guard
-        run: node scripts/h5-migration-guard.mjs
 
       - name: Apply ordered migrations from a clean local database
         run: |
