@@ -52,7 +52,7 @@ jobs:
           fi
           supabase start -x studio,imgproxy,logflare,vector,supavisor
           supabase status -o env > "$RUNNER_TEMP/supabase.env"
-          cat "$RUNNER_TEMP/supabase.env" | sed 's/KEY=.*/KEY=***redacted***/'
+          echo "Supabase status environment captured in runner temp storage; credential contents withheld."
 
       - name: Apply ordered migrations (H5 blank-ish path)
         run: |
@@ -78,7 +78,7 @@ jobs:
               target: "disposable-supabase-local",
               checkedAt: new Date().toISOString()
             };
-            fs.writeFileSync(path, JSON.stringify(evidence, null, 2) + "\\n", { mode: 0o600 });
+            fs.writeFileSync(path, JSON.stringify(evidence, null, 2) + "\n", { mode: 0o600 });
           '
 
       - name: Export local keys for H4 (job-local only)
