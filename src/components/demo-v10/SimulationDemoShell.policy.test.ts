@@ -155,6 +155,28 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByRole("status").textContent).toContain("VALL");
   });
 
+  it("associates Vietnamese controls with labels and exposes accurate control semantics", () => {
+    renderShell("vi");
+    expect(screen.getByLabelText("Góp mỗi tháng (EUR)")).toBeTruthy();
+    expect(screen.getByLabelText("Lợi nhuận / năm (%)")).toBeTruthy();
+    expect(screen.getByLabelText("Thời hạn")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Mô phỏng" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Góp → Nhận/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("table", { name: "Bảng mô phỏng theo năm" })).toBeTruthy();
+    expect(document.querySelector(".sim-chart-svg")?.textContent).toContain("15 năm");
+  });
+
+  it("associates German controls with labels and localizes chart duration", () => {
+    renderShell("de");
+    expect(screen.getByLabelText("Monatlicher Beitrag (EUR)")).toBeTruthy();
+    expect(screen.getByLabelText("Rendite / Jahr (%)")).toBeTruthy();
+    expect(screen.getByLabelText("Laufzeit")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Simulation" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Einzahlen → Ergebnis/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("table", { name: "Jährliche Projektion" })).toBeTruthy();
+    expect(document.querySelector(".sim-chart-svg")?.textContent).toContain("15 Jahre");
+  });
+
   it("does not render German tax controls or after-tax results", () => {
     renderShell("de");
     expect(screen.queryByText(/DE-Steuern|nach Steuern|mit Steuern/i)).toBeNull();
