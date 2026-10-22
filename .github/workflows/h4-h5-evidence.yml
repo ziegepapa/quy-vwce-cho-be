@@ -146,10 +146,43 @@ jobs:
             echo "SUPABASE_URL=$API_URL"
             echo "SUPABASE_ANON_KEY=$ANON_KEY"
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres"
           } >> "$GITHUB_ENV"
 
       - name: H4 behavioral matrix
         run: node scripts/h4-rls-behavioral.mjs
+
+      - name: H5 pre-002 upgrade and synthetic backup/restore rehearsal
+        shell: bash
+        run: |
+          set -euo pipefail
+          export H5_FIXTURE_PATH="$RUNNER_TEMP/h5-upgrade-fixture.json"
+          export H5_EVIDENCE_PATH="h5-migration-evidence.json"
+
+          # Rebuild only the disposable local database through baseline 001.
+          # This does not link to, reset, or modify any hosted Supabase project.
+          supabase db reset --local --yes --version 001
+
+          # Seed one synthetic Auth user and one pre-002 goals row.
+          node scripts/h5-upgrade-recovery.mjs seed
+
+          # Snapshot only synthetic Auth identity + fixture table rows before 002.
+          pg_dump "$DB_URL" --data-only --no-owner --no-privileges \
+            --table=auth.users --table=public.goals \
+            > "$RUNNER_TEMP/h5-pre002-backup.sql"
+          test -s "$RUNNER_TEMP/h5-pre002-backup.sql"
+          grep -q "COPY auth.users" "$RUNNER_TEMP/h5-pre002-backup.sql"
+          grep -q "COPY public.goals" "$RUNNER_TEMP/h5-pre002-backup.sql"
+
+          # Apply the pending migration exactly as a normal local upgrade would.
+          supabase migration up --local
+          node scripts/h5-upgrade-recovery.mjs verify-upgrade
+
+          # Recovery rehearsal: restore that synthetic pre-002 snapshot into a
+          # fresh baseline-only local database, then check exact row values.
+          supabase db reset --local --yes --version 001
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/h5-pre002-backup.sql"
+          node scripts/h5-upgrade-recovery.mjs verify-restore
 
       - name: Validate machine-readable evidence JSON
         if: always()
