@@ -237,7 +237,7 @@ Dependency update là maintenance có kiểm soát, không phải auto-fix. Tạ
 
 ### 13.4 Handover status
 
-Release baseline hiện hành là `1.6.0`; lifecycle sản phẩm là **vô thời hạn** và không có application end date. `CONDITIONAL — NOT READY` vẫn là readiness chính thức cho sole authoritative financial-record role, do H4 chỉ có static policy evidence, H5 không có ordered migration/reproducibility proof, và P11.2 chờ independent German tax expert review. Người bảo trì phải đọc detailed status trong [`LONG_TERM_READINESS.md`](./LONG_TERM_READINESS.md) trước khi đổi bất kỳ ranh giới nào.
+Release baseline hiện hành là `1.6.0`; lifecycle sản phẩm là **vô thời hạn** và không có application end date. `CONDITIONAL — NOT READY` vẫn là readiness chính thức cho sole authoritative financial-record role. PR [#363](https://github.com/ziegepapa/quy-vwce-cho-be/pull/363) có bằng chứng H4 119/119 trên Supabase local cô lập và H5 cho migration baseline/order, blank install, upgrade fixture pre-002 và restore fixture chọn lọc trong [run 39844731945](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39844731945); các thay đổi đó **chưa được merge vào main**. H5 vẫn `PARTIAL`: schema/migration history hosted production chưa được đọc kiểm tra; restore fixture không chứng minh toàn bộ project backup/rollback. P11.2 chờ independent German tax expert review. Người bảo trì phải đọc detailed status trong [`LONG_TERM_READINESS.md`](./LONG_TERM_READINESS.md) và [`H4-H5-CLOSURE-PLAN.md`](./H4-H5-CLOSURE-PLAN.md) trước khi đổi bất kỳ ranh giới nào.
 
 ## 14. Automation vận hành và bàn giao cho người/AI mới
 
