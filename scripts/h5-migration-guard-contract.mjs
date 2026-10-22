@@ -3,7 +3,7 @@ import test from "node:test";
 import { validateMigrationSet } from "./h5-migration-guard-lib.mjs";
 
 const schema = "-- approved repository schema\ncreate table public.sample (id integer primary key);\n";
-const baseline = "-- 001 baseline\ncreate table public.sample (id integer primary key);\n";
+const baseline = "-- 001 baseline\n-- Depends-On: none\ncreate table public.sample (id integer primary key);\n";
 const baseFile = "001_baseline_schema.sql";
 const migration2 = "002_soft_delete_and_triggers.sql";
 
