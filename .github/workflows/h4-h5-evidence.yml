@@ -6,6 +6,7 @@ on:
     paths:
       - "supabase/**"
       - "scripts/h4-rls-behavioral.mjs"
+      - "scripts/h4-rls-catalog-check.sql"
       - "scripts/h5-migration-guard.mjs"
       - ".github/workflows/h4-h5-evidence.yml"
 
@@ -74,6 +75,31 @@ jobs:
             fs.writeFileSync(path, JSON.stringify(evidence, null, 2) + "\n", { mode: 0o600 });
           '
 
+      - name: Verify RLS catalog and policy prerequisites
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          node --input-type=module -e '
+            const u = new URL(process.env.DB_URL ?? "");
+            if (!["127.0.0.1", "localhost", "::1"].includes(u.hostname) ||
+                u.protocol !== "postgresql:" || u.port !== "54322") {
+              throw new Error("H4 catalog check refuses a non-local database target");
+            }
+          '
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const evidence = {
+              schemaVersion: 1,
+              kind: "H4_RLS_CATALOG",
+              target: "disposable-supabase-local",
+              generatedAt: new Date().toISOString(),
+              result: "PASS",
+              assertions: ["all six protected tables have RLS enabled", "required owner-scoped policies are present"]
+            };
+            fs.writeFileSync("h4-catalog-evidence.json", JSON.stringify(evidence, null, 2) + "\\n", { mode: 0o600 });
+          '
+
       - name: Export local keys for H4 (job-local only)
         run: |
           set -euo pipefail
@@ -100,6 +126,7 @@ jobs:
           name: h4-h5-evidence-${{ github.run_id }}
           path: |
             h4-evidence.json
+            h4-catalog-evidence.json
             h5-migration-evidence.json
           if-no-files-found: ignore
           retention-days: 14
