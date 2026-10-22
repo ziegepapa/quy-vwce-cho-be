@@ -229,7 +229,7 @@ Khi có dấu hiệu import/restore/sync hoặc release có thể làm mất ho�
 | 6 | Nếu corruption/validation bị từ chối, giữ source file, trạng thái vault và rejection evidence. | Bỏ qua safety backup hoặc ép import qua validation. |
 | 7 | Điều tra nguyên nhân trên branch/PR riêng; chỉ cân nhắc remediation sau khi evidence và rollback đã được review. | Đụng production schema, RLS, financial semantics hoặc sync conflict logic để chữa cháy. |
 
-Recovery drill hiện được chứng minh bằng fixture tổng hợp và có ranh giới fail-closed; nó không thay thế broker evidence hoặc chứng minh migration reproducibility/H4 behavioral RLS. [2] [3]
+Recovery drill hiện có bằng chứng fixture tổng hợp riêng cho một số hành vi restore và upgrade; nó không chứng minh full-project recovery, hosted schema parity, production migration-history reconciliation hoặc rollback production. H4 behavioral RLS đã có 119 assertion PASS trên local Supabase cô lập tại [run 39846912976](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39846912976); bằng chứng này vẫn phải được xác minh lại sau merge vào main. [2] [3]
 
 ### 13.3 Dependency update
 
@@ -237,7 +237,7 @@ Dependency update là maintenance có kiểm soát, không phải auto-fix. Tạ
 
 ### 13.4 Handover status
 
-Release baseline hiện hành là `1.6.0`; lifecycle sản phẩm là **vô thời hạn** và không có application end date. `CONDITIONAL — NOT READY` vẫn là readiness chính thức cho sole authoritative financial-record role. PR [#363](https://github.com/ziegepapa/quy-vwce-cho-be/pull/363) có bằng chứng H4 119/119 trên Supabase local cô lập và H5 cho migration baseline/order, blank install, upgrade fixture pre-002 và restore fixture chọn lọc trong [run 39844731945](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39844731945); các thay đổi đó **chưa được merge vào main**. H5 vẫn `PARTIAL`: schema/migration history hosted production chưa được đọc kiểm tra; restore fixture không chứng minh toàn bộ project backup/rollback. P11.2 chờ independent German tax expert review. Người bảo trì phải đọc detailed status trong [`LONG_TERM_READINESS.md`](./LONG_TERM_READINESS.md) và [`H4-H5-CLOSURE-PLAN.md`](./H4-H5-CLOSURE-PLAN.md) trước khi đổi bất kỳ ranh giới nào.
+Release baseline hiện hành là `1.6.0`; lifecycle sản phẩm là **vô thời hạn** và không có application end date. `CONDITIONAL — NOT READY` vẫn là readiness chính thức cho sole authoritative financial-record role. PR [#363](https://github.com/ziegepapa/quy-vwce-cho-be/pull/363) có bằng chứng H4 119/119 trên Supabase local cô lập và H5 cho migration baseline/order, blank install, upgrade fixture pre-002 và restore fixture chọn lọc (bao gồm kiểm tra soft-delete/tombstone ở bài upgrade) trong [run 39846912976](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39846912976); các thay đổi đó **chưa được merge vào main**. H5 vẫn `PARTIAL`: schema/migration history hosted production chưa được đọc kiểm tra; restore fixture không chứng minh toàn bộ project backup/rollback. P11.2 chờ independent German tax expert review. Người bảo trì phải đọc detailed status trong [`LONG_TERM_READINESS.md`](./LONG_TERM_READINESS.md) và [`H4-H5-CLOSURE-PLAN.md`](./H4-H5-CLOSURE-PLAN.md) trước khi đổi bất kỳ ranh giới nào.
 
 ## 14. Automation vận hành và bàn giao cho người/AI mới
 
