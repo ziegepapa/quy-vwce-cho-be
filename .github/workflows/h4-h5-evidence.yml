@@ -117,7 +117,7 @@ jobs:
               result: "PASS",
               assertions: ["all six protected tables have RLS enabled", "required owner-scoped policies are present"]
             };
-            fs.writeFileSync("h4-catalog-evidence.json", JSON.stringify(evidence, null, 2) + "\\n", { mode: 0o600 });
+            fs.writeFileSync("h4-catalog-evidence.json", JSON.stringify(evidence, null, 2) + "\n", { mode: 0o600 });
           '
 
       - name: Export local keys for H4 (job-local only)
@@ -134,6 +134,19 @@ jobs:
 
       - name: H4 behavioral matrix
         run: node scripts/h4-rls-behavioral.mjs
+
+      - name: Validate machine-readable evidence JSON
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in h4-evidence.json h4-catalog-evidence.json h5-migration-evidence.json; do
+            if [ ! -s "$file" ]; then
+              echo "Missing evidence file: $file"
+              exit 1
+            fi
+            node -e 'const fs = require("node:fs"); const file = process.argv[1]; const evidence = JSON.parse(fs.readFileSync(file, "utf8")); if (evidence.result !== "PASS") { throw new Error("Evidence result is not PASS: " + file); } console.log("Valid PASS evidence JSON: " + file);' "$file"
+          done
 
       - name: Stop local stack
         if: always()
