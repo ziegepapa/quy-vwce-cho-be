@@ -166,7 +166,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
       {targetUnreachable ? <p className="sh-note sim-valuation-warning" role="status">{text.targetUnreachable}</p> : null}
       {startingBalanceWarning ? <p className="sh-note sim-valuation-warning" role="status">{startingBalanceWarning}</p> : null}
 
-      <div className="summary-strip" aria-label={text.summary}>
+      <div className="summary-strip" role="group" aria-label={text.summary}>
         <span><strong>{primary && !planUnreachable ? formatMoneyRounded(headlineValue, locale) : "—"}</strong> {text.end}</span>
         <span><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong> {text.contributed}</span>
         <span><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong> {text.gain}</span>
