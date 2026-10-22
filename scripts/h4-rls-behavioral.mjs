@@ -313,6 +313,24 @@ async function main() {
       table.name + " anonymous select"
     );
 
+    const ownUpdateA = await clientA.from(table.name).update({
+      data: { ...table.sample.data, h4OwnerMarker: markerA, h4OwnUpdated: true },
+    }).eq("id", rowA.id).eq("user_id", userA.id);
+    if (ownUpdateA.error) fail(table.name + " A update own — " + ownUpdateA.error.message);
+    const ownAfterUpdateA = await readDataRow(clientA, table.name, userA.id, rowA.id, table.name + " A after own update");
+    if (ownAfterUpdateA?.data?.h4OwnerMarker !== markerA || ownAfterUpdateA?.data?.h4OwnUpdated !== true) {
+      fail(table.name + " A own update did not persist");
+    } else pass(table.name + " A update own persists");
+
+    const ownUpdateB = await clientB.from(table.name).update({
+      data: { ...table.sample.data, h4OwnerMarker: markerB, h4OwnUpdated: true },
+    }).eq("id", rowB.id).eq("user_id", userB.id);
+    if (ownUpdateB.error) fail(table.name + " B update own — " + ownUpdateB.error.message);
+    const ownAfterUpdateB = await readDataRow(clientB, table.name, userB.id, rowB.id, table.name + " B after own update");
+    if (ownAfterUpdateB?.data?.h4OwnerMarker !== markerB || ownAfterUpdateB?.data?.h4OwnUpdated !== true) {
+      fail(table.name + " B own update did not persist");
+    } else pass(table.name + " B update own persists");
+
     const updateBA = await clientB.from(table.name).update({ data: { h4Attack: "from-b" } }).eq("id", rowA.id).eq("user_id", userA.id);
     inspectMutationError(updateBA.error, table.name + " B update A");
     const afterUpdateBA = await readDataRow(clientA, table.name, userA.id, rowA.id, table.name + " A after B update");
