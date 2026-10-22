@@ -47,7 +47,7 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     readOnly: false,
     goals: [],
     applyYearsFromGoal: noop,
-    advSummary: "Erweiterte Optionen",
+    advSummary: locale === "de" ? "Erweiterte Optionen" : "Tùy chọn nâng cao",
     bandInput: "0",
     setBandInput: noop,
     growthOn: false,
