@@ -47,7 +47,7 @@ export function validateMigrationSet(files, readText, reviewedSchema) {
   for (let i = 0; i < ordered.length; i++) {
     const file = ordered[i];
     const sql = readText(file);
-    const declarations = [...sql.matchAll(/^\s*--\s*Depends-On:\s*(.*?)\s*$/gim)];
+    const declarations = [...sql.matchAll(/^[ \t]*--[ \t]*Depends-On:[ \t]*(.*?)[ \t]*$/gim)];
     if (declarations.length !== 1) {
       throw new Error("dependency declaration must appear exactly once in " + file);
     }
