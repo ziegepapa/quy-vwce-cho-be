@@ -17,7 +17,10 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
+
+const outcomes = [];
 
 const TABLES = [
   { name: "app_settings", pk: ["user_id", "id"], sample: { id: "default", data: { h4: true }, version: 1 } },
@@ -35,13 +38,9 @@ function assertLocalUrl(url) {
     throw new Error(`H4 fail-closed: invalid SUPABASE_URL`);
   }
   const host = u.hostname;
-  const allowed =
-    host === "127.0.0.1" ||
-    host === "localhost" ||
-    host === "0.0.0.0" ||
-    host.endsWith(".supabase.internal");
-  if (!allowed) {
-    throw new Error(`H4 fail-closed: refusing non-local target host "${host}"`);
+  const allowed = host === "127.0.0.1" || host === "localhost" || host === "::1";
+  if (!allowed || u.protocol !== "http:" || (u.port && u.port !== "54321")) {
+    throw new Error("H4 fail-closed: refusing non-local Supabase target");
   }
 }
 
@@ -52,12 +51,29 @@ function requireEnv(name) {
 }
 
 function fail(msg) {
+  outcomes.push({ status: "FAIL", case: msg });
   console.error(`FAIL: ${msg}`);
   process.exitCode = 1;
 }
 
 function pass(msg) {
+  outcomes.push({ status: "PASS", case: msg });
   console.log(`PASS: ${msg}`);
+}
+
+async function writeEvidence() {
+  const passed = outcomes.filter((item) => item.status === "PASS").length;
+  const failed = outcomes.filter((item) => item.status === "FAIL").length;
+  const evidence = {
+    schemaVersion: 1,
+    kind: "H4_BEHAVIORAL_RLS",
+    target: "disposable-supabase-local",
+    generatedAt: new Date().toISOString(),
+    result: failed === 0 ? "PASS" : "FAIL",
+    summary: { passed, failed, total: outcomes.length },
+    cases: outcomes,
+  };
+  await writeFile("h4-evidence.json", JSON.stringify(evidence, null, 2) + "\n", { mode: 0o600 });
 }
 
 function isExpectedDenied(error) {
@@ -387,14 +403,20 @@ async function main() {
     /* ignore */
   }
 
+  await writeEvidence();
   if (process.exitCode) {
     console.error("H4 matrix FAILED");
-    process.exit(1);
+    return;
   }
   console.log("H4 matrix PASSED");
 }
 
-main().catch((e) => {
-  console.error("H4 error:", e instanceof Error ? e.message : e);
-  process.exit(1);
+main().catch(async (e) => {
+  fail("H4 runner error: " + (e instanceof Error ? e.message : String(e)));
+  try {
+    await writeEvidence();
+  } catch {
+    /* evidence upload may still show the runner failure in logs */
+  }
+  process.exitCode = 1;
 });
