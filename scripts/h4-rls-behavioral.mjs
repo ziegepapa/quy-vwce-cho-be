@@ -39,7 +39,7 @@ function assertLocalUrl(url) {
   }
   const host = u.hostname;
   const allowed = host === "127.0.0.1" || host === "localhost" || host === "::1";
-  if (!allowed || u.protocol !== "http:" || (u.port && u.port !== "54321")) {
+  if (!allowed || u.protocol !== "http:" || u.port !== "54321") {
     throw new Error("H4 fail-closed: refusing non-local Supabase target");
   }
 }
