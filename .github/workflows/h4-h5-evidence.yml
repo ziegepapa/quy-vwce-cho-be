@@ -61,22 +61,52 @@ jobs:
           # force db reset ensures ordered 001 then 002 from empty public schema state.
           supabase db reset --yes
 
-      - name: Export local keys for H4 (never upload secrets)
-        id: keys
+      - name: Run H5 migration numbering guard
+        run: node scripts/h5-migration-guard.mjs
+
+      - name: Apply ordered migrations from a clean local database
+        run: |
+          set -euo pipefail
+          supabase db reset --yes
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const path = "h5-migration-evidence.json";
+            const evidence = JSON.parse(fs.readFileSync(path, "utf8"));
+            evidence.blankInstall = {
+              result: "PASS",
+              command: "supabase db reset --yes",
+              target: "disposable-supabase-local",
+              checkedAt: new Date().toISOString()
+            };
+            fs.writeFileSync(path, JSON.stringify(evidence, null, 2) + "\\n", { mode: 0o600 });
+          '
+
+      - name: Export local keys for H4 (job-local only)
         run: |
           set -euo pipefail
           eval "$(supabase status -o env)"
-          echo "url=$API_URL" >> "$GITHUB_OUTPUT"
-          echo "anon=$ANON_KEY" >> "$GITHUB_OUTPUT"
-          echo "service=$SERVICE_ROLE_KEY" >> "$GITHUB_OUTPUT"
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
 
       - name: H4 behavioral matrix
-        env:
-          SUPABASE_URL: ${{ steps.keys.outputs.url }}
-          SUPABASE_ANON_KEY: ${{ steps.keys.outputs.anon }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.keys.outputs.service }}
         run: node scripts/h4-rls-behavioral.mjs
 
       - name: Stop local stack
         if: always()
         run: supabase stop --no-backup || true
+
+      - name: Upload redacted H4/H5 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: h4-h5-evidence-${{ github.run_id }}
+          path: |
+            h4-evidence.json
+            h5-migration-evidence.json
+          if-no-files-found: ignore
+          retention-days: 14
