@@ -78,11 +78,14 @@ jobs:
       - name: Verify RLS catalog and policy prerequisites
         run: |
           set -euo pipefail
-          eval "$(supabase status -o env)"
+          # These are the documented default credentials/port for this disposable
+          # local stack only; do not replace them with a hosted Supabase URL.
+          export DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
           node --input-type=module -e '
             const u = new URL(process.env.DB_URL ?? "");
-            if (!["127.0.0.1", "localhost", "::1"].includes(u.hostname) ||
-                u.protocol !== "postgresql:" || u.port !== "54322") {
+            if (u.hostname !== "127.0.0.1" ||
+                u.protocol !== "postgresql:" || u.port !== "54322" ||
+                u.username !== "postgres" || u.password !== "postgres") {
               throw new Error("H4 catalog check refuses a non-local database target");
             }
           '
