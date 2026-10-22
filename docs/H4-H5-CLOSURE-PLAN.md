@@ -2,7 +2,7 @@
 
 **Updated:** 2026-10-22  
 **Production baseline reviewed:** `bd163ad296b2b4df944688f86974da8724113d52`; [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971) and [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168) succeeded. These are release/health evidence only, not H4/H5 proof.  
-**Decision:** PR #363 has a successful isolated H4 behavioral matrix and H5 blank-install run at candidate head `330ba04eaca0d1f147e7d6695392c73879e99cb1`. H4 is evidenced for the repository schema/policies on that disposable stack; H5 is **PARTIAL**, because upgrade/schema-drift and recovery/rollback gates have not run. The branch is not yet merged, and no hosted production database was changed or verified.
+**Decision:** PR #363 has a successful isolated H4 behavioral matrix and H5 blank-install run at candidate head `73c66b15acabb1bee5b75df3e3544faab64bce8a`. H4 is evidenced for the repository schema/policies on that disposable stack; H5 is **PARTIAL**, because upgrade/schema-drift and recovery/rollback gates have not run. The branch is not yet merged, and no hosted production database was changed or verified.
 
 ## Evidence scaffolding status — 2026-10-22
 
@@ -10,7 +10,7 @@ Candidate branch: `readiness/h4-h5-evidence-ci-2026-10-22`, based on the verifie
 
 ### Latest executed evidence
 
-- **Workflow:** [H4 H5 Evidence run 39830035462](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39830035462) completed successfully at head `330ba04eaca0d1f147e7d6695392c73879e99cb1` on 2026-10-22. Both `H5 migration order guard` and `H4 behavioral RLS + H5 blank install` succeeded; the second job started/checked/stopped disposable local Supabase, ran `supabase db reset --yes`, checked the RLS catalog, executed the Auth/PostgREST matrix, and uploaded redacted evidence artifact `h4-h5-evidence-39830035462` (artifact ID `12448302319`).
+- **Workflow:** [H4 H5 Evidence run 39842267812](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39842267812) completed successfully at head `73c66b15acabb1bee5b75df3e3544faab64bce8a` on 2026-10-22. Both `H5 migration order guard` and `H4 behavioral RLS + H5 blank install` succeeded; the second job started/checked/stopped disposable local Supabase, ran `supabase db reset --yes`, checked the RLS catalog, executed the Auth/PostgREST matrix, and uploaded redacted evidence artifact `h4-h5-evidence-39842267812` (artifact ID `12448302319`).
 - **H4:** `PASS — candidate branch, isolated local behavioral matrix`. This covers the six repository tables plus `profiles`, using synthetic users A/B, anonymous requests, forged owner IDs, denied cross-user mutations, invalid JWT, and user-deletion cascade checks. This does not establish parity with the hosted production database, which was not accessed.
 - **H5:** `PARTIAL — blank install and migration order guard passed`. Baseline comparison and clean replay passed; controlled upgrade, hosted schema drift, backup/restore and rollback/recovery tests are still open.
 - **Readiness:** do not mark the whole project READY or sole-authoritative. The PR is not merged and P11.2 still needs independent German tax-expert review.
@@ -70,7 +70,7 @@ If the environment cannot start, mark **BLOCKED — ENVIRONMENT**, attach only s
 ### Phase H5.1 — Establish the migration contract
 
 1. Reconcile `supabase/schema.sql` (historical manually applied baseline) with the current database objects and current `002_soft_delete_and_triggers.sql`. Produce an object-level diff for tables, columns, constraints, indexes, RLS, policies, functions and triggers.
-2. Author `001_initial_schema.sql` from the reviewed baseline, preserving Supabase-managed `auth.users` / `auth.uid()` dependencies; do not create fake Auth functions or a plain-Postgres surrogate.
+2. Author `001_baseline_schema.sql` from the reviewed baseline, preserving Supabase-managed `auth.users` / `auth.uid()` dependencies; do not create fake Auth functions or a plain-Postgres surrogate.
 3. Apply `001` then `002` to a blank local Supabase database. Assert exact expected schema objects and rerun checks for policy/trigger presence.
 4. Define how an existing manually provisioned project would be reconciled with migration history. Do not run `migration repair`, reset, push or destructive DDL against production as part of this work.
 
