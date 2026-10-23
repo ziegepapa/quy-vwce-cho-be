@@ -147,12 +147,19 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             <div className="sh-note">{headlineNote}</div>
           </>
         )}
+      <div className="summary-strip" role="group" aria-label={text.summary}>
+        <span><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong> {text.contributed}</span>
+        <span><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong> {text.gain}</span>
+      </div>
         <div className="sim-hero-actions">
           <button type="button" className="sim-parameters-trigger" aria-haspopup="dialog" onClick={() => setParamsOpen(true)}>
             <span aria-hidden="true">☷</span><span>{text.adjust}</span><span className="sim-trigger-chevron" aria-hidden="true">↗</span>
           </button>
         </div>
       </section>
+
+      {targetUnreachable ? <p className="sh-note sim-valuation-warning" role="status">{text.targetUnreachable}</p> : null}
+      {startingBalanceWarning ? <p className="sh-note sim-valuation-warning" role="status">{startingBalanceWarning}</p> : null}
 
       <section className="gl sim-chart-card">
         <div className="sim-chart-heading">
@@ -192,14 +199,6 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             <small>{sub}</small>
           </button>
         ))}
-      </div>
-
-      {targetUnreachable ? <p className="sh-note sim-valuation-warning" role="status">{text.targetUnreachable}</p> : null}
-      {startingBalanceWarning ? <p className="sh-note sim-valuation-warning" role="status">{startingBalanceWarning}</p> : null}
-
-      <div className="summary-strip" role="group" aria-label={text.summary}>
-        <span><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong> {text.contributed}</span>
-        <span><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong> {text.gain}</span>
       </div>
 
       <section className="scenario-comparison" aria-labelledby="scenario-comparison-title">
