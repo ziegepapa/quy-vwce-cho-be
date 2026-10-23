@@ -147,6 +147,20 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getAllByText("Endwert nominal")).toHaveLength(3);
   });
 
+  it("applies theme-aware premium presentation classes to the live Simulation route", () => {
+    const { container } = renderShell("vi");
+    expect(container.querySelector(".sim-screen")).toBeTruthy();
+    expect(container.querySelector(".sim-headline .sim-mode-badge")).toBeTruthy();
+    expect(container.querySelectorAll(".scenario-card")).toHaveLength(3);
+    expect(container.querySelector(".scenario-card-cautious")).toBeTruthy();
+    expect(container.querySelector(".scenario-card-base.scenario-card-selected")).toBeTruthy();
+    expect(container.querySelector(".scenario-card-bull")).toBeTruthy();
+    cleanup();
+    const german = renderShell("de");
+    expect(german.container.querySelector(".sim-screen")).toBeTruthy();
+    expect(german.container.querySelectorAll(".scenario-card")).toHaveLength(3);
+  });
+
   it("shows the mode-specific hero metric without duplicating it in the secondary strip", () => {
     const { container } = renderShell("vi", "", 0, false, false, "B");
     expect(container.querySelector(".sim-mode-badge")?.textContent).toContain("Chế độ B");
