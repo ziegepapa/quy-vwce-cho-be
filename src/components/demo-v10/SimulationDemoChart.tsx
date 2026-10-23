@@ -29,7 +29,7 @@ export function SimulationDemoChart({
   locale: DisplayLocale;
 }) {
   const W = 320;
-  const H = 168;
+  const H = 224;
   const padL = 8;
   const padR = 52;
   const padT = 12;

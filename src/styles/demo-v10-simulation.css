@@ -863,3 +863,151 @@
     transition: none !important;
   }
 }
+
+
+/* SIMULATION-WOW-LAYOUT-003 — information architecture, not token-only restyling.
+   The live screen opens on a decisive metric and chart; editing lives in a focused sheet. */
+.sim-screen .sim-wrap { width: min(100%, 760px); gap: 14px; }
+.sim-wrap .sim-headline { padding: clamp(24px, 6vw, 36px) clamp(20px, 5vw, 32px) 22px; border-radius: 30px; }
+.sim-wrap .sh-big { font-size: clamp(44px, 11.5vw, 66px); line-height: 0.99; letter-spacing: -0.055em; }
+.sim-wrap .sim-hero-actions { display: flex; margin-top: 22px; }
+.sim-wrap .sim-parameters-trigger {
+  display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: flex-start; gap: 10px;
+  padding: 11px 14px; color: var(--text-primary); font: inherit; font-size: 14px; font-weight: 750; text-align: left;
+  cursor: pointer; background: color-mix(in srgb, var(--surface-raised) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-600) 28%, var(--border-subtle)); border-radius: 16px;
+  box-shadow: inset 0 1px 0 var(--hero-highlight); -webkit-tap-highlight-color: transparent;
+}
+.sim-wrap .sim-parameters-trigger > span:first-child {
+  display: grid; width: 26px; height: 26px; flex: 0 0 26px; place-items: center;
+  color: var(--primary-600); font-size: 18px; background: color-mix(in srgb, var(--primary-600) 11%, var(--surface-raised)); border-radius: 9px;
+}
+.sim-wrap .sim-trigger-chevron { margin-left: auto; color: var(--primary-600); font-size: 18px; }
+.sim-wrap .sim-chart-card { padding: 18px 16px 14px; border-radius: 24px; }
+.sim-wrap .sim-chart-svg { height: auto; min-height: 196px; overflow: visible; }
+.sim-wrap .mode-tabs { padding: 4px; border-radius: 16px; }
+.sim-wrap .mtab { min-height: 48px; padding: 8px 4px; font-size: 12px; }
+.sim-wrap .mtab small { font-size: 9px; }
+.sim-wrap .summary-strip { margin: 0; }
+.sim-wrap .scenario-comparison { min-width: 0; padding: 2px 0 0; }
+.sim-wrap .scenario-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 2px 10px; }
+.sim-wrap .scenario-heading h2 { margin: 0; color: var(--text-primary); font-size: 15px; font-weight: 800; letter-spacing: -0.015em; }
+.sim-wrap .scenario-heading p { max-width: 55%; margin: 0; color: var(--text-tertiary); font-size: 10px; line-height: 1.35; text-align: right; }
+.sim-wrap .scenario-chips {
+  display: flex; gap: 9px; width: 100%; padding: 2px 2px 8px; overflow-x: auto;
+  overscroll-behavior-x: contain; scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+}
+.sim-wrap .scenario-chip {
+  display: grid; min-width: 0; min-height: 82px; flex: 1 0 31%;
+  grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto;
+  align-content: center; align-items: center; gap: 7px 8px; padding: 11px 12px; color: var(--text-secondary);
+  background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: 17px; box-shadow: var(--shadow-raised);
+}
+.sim-wrap .scenario-chip-name {
+  display: flex; min-width: 0; grid-column: 1 / -1; align-items: center; gap: 6px;
+  color: var(--text-primary); font-size: 11px; font-weight: 800; white-space: nowrap;
+}
+.sim-wrap .scenario-chip-name .scenario-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; }
+.sim-wrap .scenario-chip-rate { min-width: 0; color: var(--text-secondary); font-size: 10px; font-weight: 650; }
+.sim-wrap .scenario-chip strong {
+  min-width: 0; color: var(--text-primary); font-size: clamp(10px, 2.6vw, 13px); font-weight: 850;
+  line-height: 1.2; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.sim-wrap .scenario-chip-cautious { background: color-mix(in srgb, var(--text-secondary) 4%, var(--surface-raised)); }
+.sim-wrap .scenario-chip-base {
+  border-color: color-mix(in srgb, var(--primary-600) 52%, var(--border-subtle));
+  background: color-mix(in srgb, var(--primary-600) 7%, var(--surface-raised));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-600) 12%, transparent), var(--shadow-raised);
+}
+.sim-wrap .scenario-chip-bull { background: color-mix(in srgb, var(--success-600) 6%, var(--surface-raised)); }
+.sim-sheet-backdrop {
+  position: fixed; z-index: 1200; inset: 0; display: flex; align-items: flex-end; justify-content: center;
+  padding-top: max(16px, env(safe-area-inset-top, 0px)); background: color-mix(in srgb, var(--bg-base) 64%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+.sim-sheet-panel {
+  width: min(100%, 720px); max-height: min(90dvh, 860px); padding: 10px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto; overscroll-behavior: contain; color: var(--text-primary); background: var(--surface-raised);
+  border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: 26px 26px 0 0;
+  box-shadow: 0 -18px 56px color-mix(in srgb, var(--text-primary) 16%, transparent);
+  animation: sim-sheet-enter 220ms var(--ease-standard, ease-out) both;
+}
+.sim-sheet-panel .sheet-handle { width: 38px; height: 5px; margin: 0 auto 15px; background: var(--border-strong, var(--border-subtle)); border-radius: 999px; }
+.sim-sheet-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+.sim-sheet-eyebrow { margin: 0 0 4px; color: var(--primary-600); font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.sim-sheet-header h2 { margin: 0; color: var(--text-primary); font-size: 22px; font-weight: 850; letter-spacing: -.03em; }
+.sim-wrap .sim-sheet-close {
+  display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; color: var(--text-primary);
+  font: inherit; font-size: 28px; line-height: 1; cursor: pointer; background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle); border-radius: 50%;
+}
+.sim-sheet-panel .sim-inputs { margin: 0 0 12px; }
+.sim-sheet-panel details.gl { padding: 14px; }
+.sim-sheet-panel details.gl > summary { display: flex; min-height: 32px; align-items: center; }
+@keyframes sim-sheet-enter { from { opacity: .7; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 390px) {
+  .sim-wrap .scenario-heading { display: block; }
+  .sim-wrap .scenario-heading p { max-width: 100%; margin-top: 4px; text-align: left; }
+  .sim-wrap .scenario-chip { flex-basis: 42%; }
+  .sim-wrap .scenario-chip strong { font-size: 12px; }
+}
+@media (min-width: 700px) {
+  .sim-wrap .sim-headline { padding: 34px 36px 30px; }
+  .sim-wrap .sh-big { font-size: clamp(56px, 7vw, 72px); }
+  .sim-wrap .sim-chart-card { padding: 22px 24px 18px; }
+  .sim-wrap .sim-chart-svg { min-height: 224px; }
+}
+@media (prefers-reduced-motion: reduce) { .sim-sheet-panel { animation: none !important; } }
+
+
+/* Final WOW IA polish: true horizontal pills rather than miniature vertical cards.
+   All three assumptions and terminal values stay visible without long stacked panels. */
+.sim-wrap .scenario-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: max-content;
+  max-width: none;
+  grid-template-columns: none;
+  grid-template-rows: none;
+  padding: 9px 12px;
+  border-radius: 999px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.sim-wrap .scenario-chip-name {
+  display: inline-flex;
+  flex: 0 0 auto;
+  grid-column: auto;
+  grid-row: auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.sim-wrap .scenario-chip-rate {
+  flex: 0 0 auto;
+  grid-column: auto;
+  grid-row: auto;
+  padding-right: 8px;
+  border-right: 1px solid var(--border-subtle);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.sim-wrap .scenario-chip strong {
+  flex: 0 0 auto;
+  grid-column: auto;
+  grid-row: auto;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.2;
+  text-align: left;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+@media (max-width: 390px) {
+  .sim-wrap .scenario-chip { min-height: 44px; flex: 0 0 auto; }
+}
