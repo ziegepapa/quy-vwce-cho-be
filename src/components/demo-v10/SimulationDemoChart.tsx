@@ -122,13 +122,13 @@ export function SimulationDemoChart({
         </g>
       ))}
       {baseEnd ? (
-        <text x={W - 4} y={y(baseEnd.total)} fontSize={10} fill="var(--success-600)" textAnchor="end" dominantBaseline="middle">
+        <text x={W - 4} y={y(baseEnd.total)} fontSize={10} fill="var(--text-primary)" textAnchor="end" dominantBaseline="middle">
           {formatDisplayMoney(Math.round(baseEnd.total), locale)}
         </text>
       ) : null}
-      {showBand ? <text x={W - 4} y={padT + 10} fontSize={9} fill="var(--text-tertiary)" textAnchor="end">{bandPctText}</text> : null}
-      <text x={padL} y={H - 6} fontSize={10} fill="var(--text-tertiary)">0</text>
-      <text x={W - padR} y={H - 6} fontSize={10} fill="var(--text-tertiary)" textAnchor="end">{years}{locale === "de" ? " Jahre" : " năm"}</text>
+      {showBand ? <text x={W - 4} y={padT + 10} fontSize={9} fill="var(--text-secondary)" textAnchor="end">{bandPctText}</text> : null}
+      <text x={padL} y={H - 6} fontSize={10} fill="var(--text-secondary)">0</text>
+      <text x={W - padR} y={H - 6} fontSize={10} fill="var(--text-secondary)" textAnchor="end">{years}{locale === "de" ? " Jahre" : " năm"}</text>
     </svg>
   );
 }
