@@ -352,7 +352,10 @@
     radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--primary-600) 12%, transparent), transparent 58%),
     linear-gradient(118deg, color-mix(in srgb, var(--primary-600) 9%, var(--surface-raised)), var(--surface-raised) 78%);
   border-color: color-mix(in srgb, var(--primary-600) 70%, var(--border-subtle));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-600) 24%, transparent), 0 8px 22px color-mix(in srgb, var(--primary-600) 13%, transparent), var(--shadow-raised);
+}
+
+.sim-wrap .scenario-card-selected {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-600) 28%, transparent), 0 8px 22px color-mix(in srgb, var(--primary-600) 16%, transparent), var(--shadow-raised);
 }
 
 .sim-wrap .scenario-card-bull {
@@ -835,8 +838,8 @@
     transform: translateY(-2px);
     box-shadow: var(--shadow-raised);
   }
-  .sim-wrap .scenario-card-base:hover {
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-600) 25%, transparent), 0 10px 24px color-mix(in srgb, var(--primary-600) 16%, transparent);
+  .sim-wrap .scenario-card-selected:hover {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-600) 30%, transparent), 0 10px 24px color-mix(in srgb, var(--primary-600) 19%, transparent), var(--shadow-raised);
   }
   .sim-wrap .show-all-btn:hover { border-color: color-mix(in srgb, var(--primary-600) 42%, var(--border-subtle)); }
   .sim-wrap .sim-save-cta:hover:not(:disabled) { box-shadow: 0 7px 22px color-mix(in srgb, var(--primary-600) 28%, transparent); }
