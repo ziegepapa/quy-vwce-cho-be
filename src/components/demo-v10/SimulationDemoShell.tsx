@@ -337,7 +337,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
 
       <details className="gl sim-year-disclosure">
         <summary>{text.yearTable}</summary>
-      <section className="gl yr-table" role="table" aria-label={text.yearTable}>
+      <section className="yr-table" role="table" aria-label={text.yearTable}>
         <div className="yr-table-head" role="row">
           <span role="columnheader">{text.year}</span>
           <span role="columnheader">{text.forecastNav}</span>
