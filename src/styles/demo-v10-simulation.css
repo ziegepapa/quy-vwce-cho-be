@@ -1,7 +1,7 @@
 /* Simulation Premium — visual system aligned with Overview and the active theme.
    Presentation only: the simulation engine, valuation inputs and plan persistence are untouched. */
 
-.sim-screen {
+.demo-v10-screen.sim-screen {
   min-height: 100dvh;
   padding: clamp(12px, 2.2vw, 24px) 12px calc(96px + env(safe-area-inset-bottom, 0px));
   color: var(--text-primary);
@@ -100,9 +100,9 @@
   background:
     radial-gradient(ellipse at 95% 8%, var(--hero-glow), transparent 43%),
     linear-gradient(120deg,
-      color-mix(in srgb, var(--primary-600) 9%, var(--surface-raised)) 0%,
-      color-mix(in srgb, var(--success-600) 6%, var(--surface-raised)) 60%,
-      var(--surface-raised) 100%);
+      color-mix(in srgb, var(--hero-from) 8%, var(--surface-raised)) 0%,
+      color-mix(in srgb, var(--hero-mid) 9%, var(--surface-raised)) 48%,
+      color-mix(in srgb, var(--hero-to) 6%, var(--surface-raised)) 100%);
   border: 1px solid color-mix(in srgb, var(--primary-600) 20%, var(--border-subtle));
   border-radius: 27px;
   box-shadow: var(--shadow-raised);
@@ -800,7 +800,7 @@
 }
 
 @media (max-width: 480px) {
-  .sim-screen { padding: 11px 10px calc(92px + env(safe-area-inset-bottom, 0px)); }
+  .demo-v10-screen.sim-screen { padding: 11px 10px calc(92px + env(safe-area-inset-bottom, 0px)); }
   .sim-screen .sim-wrap { gap: 16px; }
   .sim-wrap .mode-tabs { gap: 3px; padding: 4px; border-radius: 17px; }
   .sim-wrap .mtab { min-height: 54px; padding: 8px 3px; font-size: 12px; border-radius: 13px; }
