@@ -111,8 +111,8 @@ export function SimulationDemoChart({
         <>
           <path d={areaToBaseline(base.out.yearEnds, "contributed")} fill="url(#chart-deposit-gradient)" />
           <path d={areaToBaseline(base.out.yearEnds, "total")} fill="url(#chart-projection-gradient)" />
-          <path d={pathFor(base.out.yearEnds, "contributed")} fill="none" stroke="var(--primary-600)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-          <path d={pathFor(base.out.yearEnds, "total")} fill="none" stroke="var(--success-600)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          <path d={pathFor(base.out.yearEnds, "contributed")} fill="none" stroke="var(--primary-600)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          <path d={pathFor(base.out.yearEnds, "total")} fill="none" stroke="var(--success-600)" strokeWidth={2.7} strokeLinecap="round" strokeLinejoin="round" />
         </>
       ) : null}
       {markers.map((m) => (
@@ -122,13 +122,13 @@ export function SimulationDemoChart({
         </g>
       ))}
       {baseEnd ? (
-        <text x={W - 4} y={y(baseEnd.total)} fontSize={10} fill="var(--success-600)" textAnchor="end" dominantBaseline="middle">
+        <text x={W - 4} y={y(baseEnd.total)} fontSize={10} fill="var(--text-primary)" textAnchor="end" dominantBaseline="middle">
           {formatDisplayMoney(Math.round(baseEnd.total), locale)}
         </text>
       ) : null}
-      {showBand ? <text x={W - 4} y={padT + 10} fontSize={9} fill="var(--text-tertiary)" textAnchor="end">{bandPctText}</text> : null}
-      <text x={padL} y={H - 6} fontSize={10} fill="var(--text-tertiary)">0</text>
-      <text x={W - padR} y={H - 6} fontSize={10} fill="var(--text-tertiary)" textAnchor="end">{years}{locale === "de" ? " Jahre" : " năm"}</text>
+      {showBand ? <text x={W - 4} y={padT + 10} fontSize={9} fill="var(--text-secondary)" textAnchor="end">{bandPctText}</text> : null}
+      <text x={padL} y={H - 6} fontSize={10} fill="var(--text-secondary)">0</text>
+      <text x={W - padR} y={H - 6} fontSize={10} fill="var(--text-secondary)" textAnchor="end">{years}{locale === "de" ? " Jahre" : " năm"}</text>
     </svg>
   );
 }
