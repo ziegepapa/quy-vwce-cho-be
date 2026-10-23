@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SimulationDemoShell, { type SimulationDemoShellProps } from "./SimulationDemoShell";
 
-const simulationCss = readFileSync(new URL("../../styles/demo-v10-simulation.css", import.meta.url), "utf8");
+const simulationCss = readFileSync("src/styles/demo-v10-simulation.css", "utf8");
 
 const noop = vi.fn();
 
