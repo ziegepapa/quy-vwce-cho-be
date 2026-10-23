@@ -1165,3 +1165,52 @@
   .sim-wrap .mode-tabs .mtab { min-height: 48px; }
   .sim-wrap .sim-parameters-trigger { min-height: 48px; }
 }
+
+
+/* SIMULATION-COPY-CLARITY-006 — compact, tappable estimate explainer in the hero. */
+.sim-wrap .sim-estimate-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.sim-wrap .sim-estimate-note > span {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.sim-wrap .sim-estimate-info {
+  display: inline-grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  padding: 0;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--surface-raised) 78%, transparent);
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+}
+.sim-wrap .sim-estimate-info:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--primary-600));
+  outline-offset: 2px;
+}
+.sim-wrap .sim-estimate-details {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 11px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  background: color-mix(in srgb, var(--surface-raised) 78%, var(--surface-sunken));
+  border: 1px solid var(--border-subtle);
+  border-radius: 13px;
+}
+.sim-wrap .sim-estimate-details p { margin: 0; }
