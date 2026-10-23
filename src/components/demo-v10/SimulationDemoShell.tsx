@@ -122,7 +122,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
   const text = simulationCopy(locale);
 
   return (
-    <main className="demo-v10-screen" aria-label={text.aria}>
+    <main className="demo-v10-screen sim-screen" aria-label={text.aria}>
       <div className="sim-wrap">
       <div className="mode-tabs" role="group" aria-label={text.aria}>
         {(
@@ -145,7 +145,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         ))}
       </div>
 
-      <section className="sim-headline">
+      <section key={mode} className="sim-headline">
         <span className="sim-mode-badge">{mode === "A" ? text.badgeA : mode === "B" ? text.badgeB : text.badgeC}</span>
         {planUnreachable ? (
           <>
@@ -205,7 +205,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             <article
               key={sc.id}
               role="listitem"
-              className={"scenario-card" + (sc.id === "base" ? " scenario-card-base" : "")}
+              className={"scenario-card scenario-card-" + sc.id + (sc.id === "base" ? " scenario-card-base scenario-card-selected" : "")}
             >
               <div className="scenario-card-top">
                 <span className={"scenario-dot scenario-dot-" + sc.id} aria-hidden="true" />
