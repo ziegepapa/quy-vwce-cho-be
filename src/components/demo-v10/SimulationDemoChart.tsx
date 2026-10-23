@@ -106,7 +106,7 @@ export function SimulationDemoChart({
         </linearGradient>
       </defs>
       {showBand && cautious && bull ? (
-        <path d={bandArea(cautious.out.yearEnds, bull.out.yearEnds)} fill={scenarioColor("base")} opacity={0.13} />
+        <path data-series="cautious-to-bull-band" d={bandArea(cautious.out.yearEnds, bull.out.yearEnds)} fill={scenarioColor("base")} opacity={0.13} />
       ) : null}
       {base ? (
         <>
