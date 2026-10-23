@@ -8,12 +8,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import SimulationDemoShell, { type SimulationDemoShellProps } from "./SimulationDemoShell";
 
 const simulationCss = readFileSync("src/styles/demo-v10-simulation.css", "utf8");
+const simulationPageSource = readFileSync("src/pages/Simulation.tsx", "utf8");
 
 
 
 const noop = vi.fn();
 
-function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false, planChanged = false, mode: "A" | "B" | "C" = "A", band = 0) {
+function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false, planChanged = false, mode: "A" | "B" | "C" = "A", band = 0, showInflation = false) {
   const props: SimulationDemoShellProps = {
     locale,
     mode,
@@ -24,8 +25,8 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     yearsForProject: 15,
     monthlyForProject: 200,
     headlineNote: locale === "de"
-      ? mode === "B" ? "erforderlicher Monatsbeitrag" : mode === "C" ? "benötigte Zeit bis zum Ziel" : "nominal"
-      : mode === "B" ? "mức góp hằng tháng cần thiết" : mode === "C" ? "thời gian cần để đạt mục tiêu" : "danh nghĩa",
+      ? "Schätzung · ohne deutsche Steuern · ohne Inflationsanpassung"
+      : "Ước tính · chưa tính thuế · chưa chỉnh lạm phát",
     startingBalanceWarning,
     primary: undefined,
     initialBalance: 0,
@@ -67,7 +68,7 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     balanceOverride: "",
     setBalanceOverride: noop,
     realBalance: 0,
-    inflationOn: false,
+    inflationOn: showInflation,
     setInflationOn: noop,
     inflationPct: "0",
     setInflationPct: noop,
@@ -269,6 +270,62 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByRole("table", { name: "Jährliche Projektion" })).toBeTruthy();
     expect(document.querySelectorAll(".scenario-chip")).toHaveLength(3);
     expect(document.querySelector(".sim-chart-svg")?.textContent).toContain("15 Jahre");
+  });
+
+  it("shows localized Vietnamese estimate details without German copy and labels purchasing-power mode clearly", () => {
+    renderShell("vi", "", 0, false, false, "A", 0, true);
+    expect(screen.getByText("Ước tính · chưa tính thuế · chưa chỉnh lạm phát")).toBeTruthy();
+    expect(screen.getByText("Lãi / lỗ")).toBeTruthy();
+    const info = screen.getByRole("button", { name: "Giải thích về ước tính" });
+    expect(info.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(info);
+    expect(screen.getByText("Kết quả dựa trên giả định lợi suất bạn chọn.")).toBeTruthy();
+    expect(screen.getByText("Mô phỏng chưa trừ thuế Đức và phí broker.")).toBeTruthy();
+    expect(screen.getByText("Bật “Hiện theo sức mua hôm nay” để quy đổi giá trị tiền tệ về sức mua hiện tại.")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("Deutsche Steuern");
+    expect(document.body.textContent).not.toContain("Gewinn/Verlust");
+    expect(document.body.textContent).not.toMatch(/danh nghĩa|nominal/i);
+
+    fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
+    fireEvent.click(screen.getByText("Tùy chọn nâng cao"));
+    const powerToggle = screen.getByRole("button", { name: "Hiện theo sức mua hôm nay" });
+    expect(powerToggle.getAttribute("aria-pressed")).toBe("false");
+    noop.mockClear();
+    fireEvent.click(powerToggle);
+    expect(noop).toHaveBeenCalled();
+  });
+
+  it("shows localized German estimate details without Vietnamese copy and labels purchasing-power mode clearly", () => {
+    renderShell("de", "", 0, false, false, "A", 0, true);
+    expect(screen.getByText("Schätzung · ohne deutsche Steuern · ohne Inflationsanpassung")).toBeTruthy();
+    expect(screen.getByText("Gewinn/Verlust")).toBeTruthy();
+    const info = screen.getByRole("button", { name: "Hinweise zur Schätzung" });
+    expect(info.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(info);
+    expect(screen.getByText("Das Ergebnis basiert auf der gewählten Renditeannahme.")).toBeTruthy();
+    expect(screen.getByText("Deutsche Steuern und Brokergebühren werden nicht abgezogen.")).toBeTruthy();
+    expect(screen.getByText("Aktiviere „In heutiger Kaufkraft anzeigen“, um den Geldwert auf heutige Kaufkraft umzurechnen.")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("Ước tính");
+    expect(document.body.textContent).not.toContain("Lãi / lỗ");
+    expect(document.body.textContent).not.toMatch(/danh nghĩa|nominal/i);
+
+    fireEvent.click(screen.getByRole("button", { name: "Annahmen anpassen" }));
+    fireEvent.click(screen.getByText("Erweiterte Optionen"));
+    const powerToggle = screen.getByRole("button", { name: "In heutiger Kaufkraft anzeigen" });
+    expect(powerToggle.getAttribute("aria-pressed")).toBe("false");
+    noop.mockClear();
+    fireEvent.click(powerToggle);
+    expect(noop).toHaveBeenCalled();
+  });
+
+  it("uses the same localized estimate strings on the production Simulation page", () => {
+    expect(simulationPageSource).toContain('heroEstimateUnadjusted: "Schätzung · ohne deutsche Steuern · ohne Inflationsanpassung"');
+    expect(simulationPageSource).toContain('heroEstimateAdjusted: "Schätzung · ohne deutsche Steuern · in heutiger Kaufkraft"');
+    expect(simulationPageSource).toContain('heroEstimateUnadjusted: "Ước tính · chưa tính thuế · chưa chỉnh lạm phát"');
+    expect(simulationPageSource).toContain('heroEstimateAdjusted: "Ước tính · chưa tính thuế · theo sức mua hôm nay"');
+    expect(simulationPageSource).toContain('const headlineNote = mode === "A" && usePP');
+    expect(simulationPageSource).not.toContain('nominal: "nominal"');
+    expect(simulationPageSource).not.toContain('nominal: "danh nghĩa"');
   });
 
   it("keeps advanced options collapsed and shows the save CTA only when the plan differs", () => {
