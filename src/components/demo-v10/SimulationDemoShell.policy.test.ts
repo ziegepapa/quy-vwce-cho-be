@@ -17,7 +17,9 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     headlineValue: mode === "B" ? 200 : mode === "C" ? 15 : 1000,
     yearsForProject: 15,
     monthlyForProject: 200,
-    headlineNote: mode === "B" ? "mức góp hằng tháng cần thiết" : mode === "C" ? "thời gian cần để đạt mục tiêu" : "nominal",
+    headlineNote: locale === "de"
+      ? mode === "B" ? "erforderlicher Monatsbeitrag" : mode === "C" ? "benötigte Zeit bis zum Ziel" : "nominal"
+      : mode === "B" ? "mức góp hằng tháng cần thiết" : mode === "C" ? "thời gian cần để đạt mục tiêu" : "danh nghĩa",
     startingBalanceWarning,
     primary: undefined,
     initialBalance: 0,
