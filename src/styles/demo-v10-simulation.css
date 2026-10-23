@@ -87,7 +87,7 @@
   box-shadow: 0 2px 5px color-mix(in srgb, var(--primary-600) 24%, transparent), 0 5px 14px color-mix(in srgb, var(--primary-600) 18%, transparent);
 }
 
-.sim-wrap .mtab.on small { color: color-mix(in srgb, var(--bg-base) 82%, transparent); }
+.sim-wrap .mtab.on small { color: var(--bg-base); }
 .sim-wrap .mtab:active { transform: scale(0.985); }
 
 /* Hero: soft mesh gradient rather than a flat accounting-form panel.
@@ -166,6 +166,10 @@
   color: var(--text-tertiary);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.sim-wrap .sim-headline .sh-note {
+  color: var(--text-secondary);
 }
 
 .sim-wrap .sim-valuation-warning {
