@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
 
+// @ts-ignore -- test-only CSS source audit; Node typings are intentionally omitted from the app tsconfig.
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SimulationDemoShell, { type SimulationDemoShellProps } from "./SimulationDemoShell";
-import simulationCss from "../../styles/demo-v10-simulation.css?raw";
+
+const simulationCss = readFileSync("src/styles/demo-v10-simulation.css", "utf8");
+
 
 
 const noop = vi.fn();
