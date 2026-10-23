@@ -287,6 +287,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(document.body.textContent).not.toMatch(/danh nghĩa|nominal/i);
 
     fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
+    expect(screen.getByText("Điều chỉnh theo lạm phát")).toBeTruthy();
     fireEvent.click(screen.getByText("Tùy chọn nâng cao"));
     const powerToggle = screen.getByRole("button", { name: "Hiện theo sức mua hôm nay" });
     expect(powerToggle.getAttribute("aria-pressed")).toBe("false");
@@ -310,6 +311,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(document.body.textContent).not.toMatch(/danh nghĩa|nominal/i);
 
     fireEvent.click(screen.getByRole("button", { name: "Annahmen anpassen" }));
+    expect(screen.getByText("Inflation berücksichtigen")).toBeTruthy();
     fireEvent.click(screen.getByText("Erweiterte Optionen"));
     const powerToggle = screen.getByRole("button", { name: "In heutiger Kaufkraft anzeigen" });
     expect(powerToggle.getAttribute("aria-pressed")).toBe("false");
