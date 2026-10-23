@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-23T20:30:08.935Z",
+  "quotes": [
+    {
+      "instrumentIsin": "IE000VAHT5T0",
+      "currency": "EUR",
+      "venue": "XETRA",
+      "price": 4.3625,
+      "asOf": "2026-10-23",
+      "fetchedAt": "2026-10-23T20:30:08.722Z",
+      "source": "auto",
+      "provider": "yahoo_finance_chart",
+      "providerUrl": "https://finance.yahoo.com/quote/VGLA.DE",
+      "crossCheckedWith": "onvista",
+      "crossCheckDifferencePct": 0.0917
+    },
+    {
+      "instrumentIsin": "IE00BK5BQT80",
+      "currency": "EUR",
+      "venue": "XETRA",
+      "price": 169.3,
+      "asOf": "2026-10-23",
+      "fetchedAt": "2026-10-23T20:30:07.898Z",
+      "source": "auto",
+      "provider": "yahoo_finance_chart",
+      "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
+      "crossCheckedWith": "onvista",
+      "crossCheckDifferencePct": 0.1654
+    }
+  ]
+}
