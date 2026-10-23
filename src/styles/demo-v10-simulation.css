@@ -1112,3 +1112,56 @@
     font-size: 12px;
   }
 }
+
+
+/* SIMULATION-TYPE-SCALE-005 — align Simulation with Overview's calm mobile type scale.
+   Keep all A/B/C results on this single selector so none can become a larger billboard. */
+.sim-wrap .sim-hero-amount {
+  font-size: clamp(32px, 4.5vw, 36px);
+  font-weight: 750;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.sim-wrap .sh-sub {
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.45;
+}
+.sim-wrap .sim-headline .sh-note {
+  font-size: 13px;
+  line-height: 1.45;
+}
+/* Overview support-metric values use 15px/750; use the same visual weight here. */
+.sim-wrap .summary-strip > span {
+  font-size: 12px;
+}
+.sim-wrap .summary-strip > span strong {
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 600px) {
+  .sim-wrap .sim-hero-amount {
+    font-size: clamp(28px, 8.2vw, 32px);
+    font-weight: 750;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+  }
+  .sim-wrap .sh-sub { font-size: 14px; }
+  .sim-wrap .sim-headline .sh-note { font-size: 13px; }
+  .sim-wrap .summary-strip > span {
+    min-height: 70px;
+    gap: 5px;
+    padding: 11px 12px;
+    font-size: 12px;
+  }
+  .sim-wrap .summary-strip > span strong {
+    font-size: 15px;
+    font-weight: 750;
+  }
+  .sim-wrap .mode-tabs .mtab { min-height: 48px; }
+  .sim-wrap .sim-parameters-trigger { min-height: 48px; }
+}
