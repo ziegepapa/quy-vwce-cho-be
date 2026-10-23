@@ -1011,3 +1011,104 @@
 @media (max-width: 390px) {
   .sim-wrap .scenario-chip { min-height: 44px; flex: 0 0 auto; }
 }
+
+
+/* SIMULATION-WOW-POLISH-004 — preserve the approved hero; polish the lower half. */
+/* The page owns nav/safe-area space; avoid stacking another safe-area gap inside the content wrapper. */
+.demo-v10-screen.sim-screen {
+  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+.sim-screen .sim-wrap {
+  padding-bottom: 0;
+}
+
+/* On iPhone-width screens, every scenario gets a complete, readable row. */
+@media (max-width: 600px) {
+  .sim-wrap .scenario-heading {
+    display: block;
+    margin: 0 2px 9px;
+  }
+  .sim-wrap .scenario-heading p {
+    max-width: none;
+    margin-top: 4px;
+    text-align: left;
+    font-size: 11px;
+  }
+  .sim-wrap .scenario-chips {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    overflow: visible;
+    padding: 0;
+    scroll-snap-type: none;
+  }
+  .sim-wrap .scenario-chip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content max-content;
+    grid-template-rows: auto;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 54px;
+    flex: 0 0 auto;
+    padding: 11px 13px;
+    border-radius: 15px;
+    white-space: normal;
+    box-shadow: var(--shadow-raised);
+  }
+  .sim-wrap .scenario-chip-name {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    font-size: 12px;
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+  .sim-wrap .scenario-chip-rate {
+    grid-column: 2;
+    grid-row: 1;
+    padding-right: 0;
+    border-right: 0;
+    font-size: 11px;
+    white-space: nowrap;
+    justify-self: end;
+  }
+  .sim-wrap .scenario-chip strong {
+    grid-column: 3;
+    grid-row: 1;
+    font-size: clamp(11px, 3vw, 13px);
+    text-align: right;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+}
+
+/* Very narrow phones may wrap the amount, never clip the scenario label/value. */
+@media (max-width: 360px) {
+  .sim-wrap .scenario-chip {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-rows: auto auto;
+    row-gap: 5px;
+  }
+  .sim-wrap .scenario-chip-name {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .sim-wrap .scenario-chip-rate {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .sim-wrap .scenario-chip strong {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: start;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+  }
+}
