@@ -7,17 +7,17 @@ import SimulationDemoShell, { type SimulationDemoShellProps } from "./Simulation
 
 const noop = vi.fn();
 
-function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false, planChanged = false) {
+function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false, planChanged = false, mode: "A" | "B" | "C" = "A") {
   const props: SimulationDemoShellProps = {
     locale,
-    mode: "A",
+    mode,
     setMode: noop,
     planUnreachable: false,
     targetUnreachable,
-    headlineValue: 1000,
+    headlineValue: mode === "B" ? 200 : mode === "C" ? 15 : 1000,
     yearsForProject: 15,
     monthlyForProject: 200,
-    headlineNote: "nominal",
+    headlineNote: mode === "B" ? "mức góp hằng tháng cần thiết" : mode === "C" ? "thời gian cần để đạt mục tiêu" : "nominal",
     startingBalanceWarning,
     primary: undefined,
     initialBalance: 0,
@@ -145,6 +145,19 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getAllByText("Endwert nominal")).toHaveLength(3);
   });
 
+  it("shows the mode-specific hero metric without duplicating it in the secondary strip", () => {
+    const { container } = renderShell("vi", "", 0, false, false, "B");
+    expect(container.querySelector(".sim-mode-badge")?.textContent).toContain("Chế độ B");
+    expect(container.querySelector(".sim-headline .sh-big")?.textContent).toContain("200");
+    expect(container.querySelector(".sim-headline .sh-sub")?.textContent).toContain("2042");
+    expect(container.querySelectorAll(".summary-strip > span")).toHaveLength(2);
+    cleanup();
+    const timeResult = renderShell("de", "", 0, true, false, "C");
+    expect(timeResult.container.querySelector(".sim-mode-badge")?.textContent).toContain("Modus C");
+    expect(timeResult.container.querySelector(".sim-headline .sh-big")?.textContent).toContain("15");
+    expect(timeResult.container.querySelector(".sim-headline .sh-big")?.textContent).toContain("Jahre");
+  });
+
   it("keeps a projected loss visible as a loss", () => {
     renderShell("vi", "", -125);
     expect(document.querySelector(".summary-strip .loss")).not.toBeNull();
@@ -188,7 +201,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
 
   it("keeps advanced options collapsed and shows the save CTA only when the plan differs", () => {
     renderShell("vi");
-    const details = document.querySelector("details.gl") as HTMLDetailsElement | null;
+    const details = document.querySelector("details.gl:not(.sim-year-disclosure)") as HTMLDetailsElement | null;
     expect(details?.open).toBe(false);
     expect(screen.queryByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" })).toBeNull();
 
