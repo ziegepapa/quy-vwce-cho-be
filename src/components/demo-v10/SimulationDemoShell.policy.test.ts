@@ -7,7 +7,7 @@ import SimulationDemoShell, { type SimulationDemoShellProps } from "./Simulation
 
 const noop = vi.fn();
 
-function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false, planChanged = false, mode: "A" | "B" | "C" = "A") {
+function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false, planChanged = false, mode: "A" | "B" | "C" = "A", band = 0) {
   const props: SimulationDemoShellProps = {
     locale,
     mode,
@@ -30,7 +30,7 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
       { sc: { id: "bull", label: locale === "de" ? "Günstig" : "Thuận lợi", rate: 0.1 }, out: { yearEnds: [], terminal: 1600, contributed: 900, interest: 700 } },
     ],
     goalMarkers: [],
-    band: 0,
+    band,
     baseRate: 0.06,
     monthly: "200",
     setMonthly: noop,
@@ -151,11 +151,12 @@ describe("SimulationDemoShell financial-policy containment", () => {
   });
 
   it("applies theme-aware premium presentation classes to the live Simulation route", () => {
-    const { container } = renderShell("vi");
+    const { container } = renderShell("vi", "", 0, false, false, "A", 0.02);
     expect(container.querySelector(".sim-screen")).toBeTruthy();
     expect(container.querySelector(".sim-headline .sim-mode-badge")).toBeTruthy();
     expect(container.querySelectorAll('[data-testid="simulation-growth-chart"]')).toHaveLength(1);
     expect(container.querySelectorAll('svg[data-chart-kind="portfolio-growth"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-series="cautious-to-bull-band"]')).toHaveLength(1);
     expect(container.querySelectorAll('[data-testid="simulation-mode-switch"]')).toHaveLength(1);
     expect(container.querySelectorAll(".mode-tabs .mtab")).toHaveLength(3);
     expect(container.querySelectorAll(".scenario-chip")).toHaveLength(3);
