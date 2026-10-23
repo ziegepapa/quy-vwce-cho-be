@@ -143,3 +143,8 @@ VWCE Vault chỉ hỗ trợ **theo dõi, ghi nhận và mô phỏng**. Đây kh�
 
 [1]: ./docs/LONG_TERM_READINESS.md "Current readiness decision and dependency-audit evidence"
 [2]: https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail "Supabase JavaScript password recovery"
+
+
+## Readiness evidence (verified 23-10-2026)
+
+Current `main` is `dcbacd420d76bf4c4c0e0e7ed678679282e48b55`. [Test and Deploy run 39857582904](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39857582904) and [isolated H4/H5 run 39857582898](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39857582898) both passed on this commit. H4 is proven only for the checked-in schema/policies on disposable local Supabase; H5 remains PARTIAL pending hosted schema/history reconciliation and broader recovery/rollback proof. Overall readiness remains **CONDITIONAL — NOT READY** as the sole authoritative ledger. See [current evidence refresh](./docs/EVIDENCE_REFRESH_2026-10-23.md) and [H4/H5 closure plan](./docs/H4-H5-CLOSURE-PLAN.md).

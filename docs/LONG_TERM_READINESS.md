@@ -1,18 +1,20 @@
 # Long-Term Stable Baseline v1 — Báo cáo Readiness
 
-**Tác giả:** Manus AI
-
 **Phiên bản ứng dụng:** `1.6.0`
 
-**Commit production đã kiểm chứng gần nhất (22-10-2026):** `bd163ad296b2b4df944688f86974da8724113d52`; [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971) completed successfully. [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168) also completed successfully.
+**Cập nhật bằng chứng hiện tại:** 23-10-2026 (UTC). **Main đã kiểm tra:** `dcbacd420d76bf4c4c0e0e7ed678679282e48b55`, merge PR #363. **Test and Deploy:** [run 39857582904](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39857582904) — SUCCESS, bao gồm test, build, release artifact, preview smoke, Edge smoke và deploy job. **H4/H5 Evidence:** [run 39857582898](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39857582898) — SUCCESS trên cùng commit main. **Cập nhật giá theo lịch:** [run 39875369470](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39875369470) — SUCCESS.
 
-**Ngày baseline evidence gốc:** 21-08-2026 (GMT+2). **Evidence repository/release được cập nhật:** 22-10-2026 (GMT+2). Bằng chứng tháng 8 vẫn là lịch sử. PR #363 có bằng chứng CI mới trên nhánh ứng viên; các thay đổi chưa được merge vào `main`.
+**Ngày baseline evidence gốc:** 21-08-2026 (GMT+2). Các báo cáo và run tháng 8, 21-10 và 22-10 bên dưới được giữ lại làm lịch sử; nơi nào ghi trạng thái trước merge thì đã lỗi thời và phải đọc theo bản cập nhật 23-10 này.
 
-**Đối tượng sử dụng:** Gia đình sở hữu vault và người bảo trì kế tiếp.
-
-> **Trạng thái hiện tại 22/10/2026: `CONDITIONAL — NOT READY` cho vai trò sổ cái tài chính duy nhất, có thẩm quyền tuyệt đối.**
+> **Trạng thái hiện tại 23/10/2026: `CONDITIONAL — NOT READY` cho vai trò sổ cái tài chính duy nhất, có thẩm quyền tuyệt đối.**
 >
-> VWCE Vault có đủ evidence để tiếp tục vận hành như một **tracker local-first** có kiểm soát, khi owner lưu sao kê/chứng từ broker độc lập và diễn tập backup. Security dependency audit nay sạch; client release, UX mobile-first, recovery runbook/drill, password-reset callback và release gates đã được harden. PR #363 đã chạy thành công ma trận H4 gồm 119/119 assertion và các bước H5 chọn lọc trên Supabase cục bộ dùng dữ liệu tổng hợp ở run [39846912976](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39846912976), trên code head `57d52814200bdcb73975117f781cd7b53d8c6c95`. H5 đã kiểm tra baseline/order, cài mới, upgrade fixture pre-002 qua migration 002, soft-delete/tombstone, version/timestamp và restore một snapshot Auth+goals tổng hợp về baseline. Đây là bằng chứng nhánh ứng viên, chưa nằm trong `main`; không xác minh schema hoặc migration history của hosted production. H5 vẫn **PARTIAL**. P11.2 vẫn bị khóa chờ independent German tax expert review. Không suy diễn rằng CI xanh đồng nghĩa hệ thống đã sẵn sàng làm sổ cái duy nhất.
+> **H4:** PASS cho behavioral RLS matrix chạy trên Supabase local cô lập, bằng Auth + PostgREST và dữ liệu tổng hợp; workflow trên `main` đã chạy thành công sau merge. Bằng chứng chỉ bao phủ schema/policies được checkout trong run, không xác minh policy/grant parity hoặc migration history của Supabase hosted production.
+>
+> **H5:** PARTIAL. Trên main, CI đã chạy thành công migration order/dependency guard, clean install từ chuỗi migration, fixture upgrade trước migration 002, và diễn tập restore hẹp với Auth + goals tổng hợp. Đây không phải chứng nhận full-project backup/restore, rollback tổng quát hoặc tương thích với database production hiện hữu. Không có thao tác ghi lên production DB.
+>
+> **Simulation:** mã giao diện hiện tại đã tích hợp định giá danh mục đa ISIN theo đường dùng chung với Overview, cảnh báo giá thiếu/cũ, lợi suất âm, P/L signed, ba kịch bản, i18n vi/de, cải thiện responsive/accessibility/theme tokens và regression tests. [Test and Deploy run 39857582904](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39857582904) xanh trên main. Điều này xác nhận release gates tự động, không thay thế kiểm tra trực quan trực tiếp trên iPhone/Safari của owner.
+>
+> **P11.2 / thuế:** BLOCKED chờ independent German tax-expert review. Không dùng ứng dụng để tính thuế, FIFO hoặc Vorabpauschale. Readiness tổng thể không được nâng chỉ vì CI xanh.
 
 | Phạm vi sử dụng | Kết luận | Điều kiện vận hành |
 |---|---|---|
@@ -20,21 +22,21 @@
 | Bản ghi duy nhất để quyết định hoặc tái tạo toàn bộ lịch sử tài chính | **Không sẵn sàng** | H4 behavioral proof đã PASS trên Supabase local ở nhánh ứng viên nhưng chưa là bằng chứng `main`/hosted; H5 vẫn PARTIAL và P11.2 tax bị chặn. Không bỏ qua các ranh giới này vì CI xanh. |
 | Tính thuế, FIFO hoặc Vorabpauschale | **Không được hỗ trợ** | P11.2 bị khóa; không dùng output để khai thuế. |
 
-## Evidence refresh — 22-10-2026 (current repository status)
+## Historical evidence refresh — 22-10-2026 (superseded by current update above)
 
-This entry supersedes the 21-10 release metadata above. The August baseline and earlier dated audits remain historical and are not represented as rerun. Later date-stamped October 21 addenda are preserved as history; where their H4/H5 state differs, this October 22 evidence section is the current repository-level report.
+This section is retained as historical evidence from 22-10-2026. Its main SHA, open-PR status and candidate-branch descriptions are superseded by the authoritative 23-10-2026 update at the top. The August baseline and earlier dated audits remain historical and were not represented as rerun.
 
 - **Verified main:** `bd163ad296b2b4df944688f86974da8724113d52`, merge of PR #362 (quote-data refresh).
 - **Application release gates:** [Test and Deploy run 39672705971](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39672705971), completed with success at 2026-10-21T20:45:34Z.
 - **Production health:** [Production Health run 39761903168](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39761903168), completed with success at 2026-10-22T10:17:53Z.
 - **Quote artifact in main:** `public/data/quotes.json`, schema version 2; VWCE `171.32 EUR` and VALL `4.416 EUR`, both `asOf: 2026-10-21`. This is the latest quote snapshot in the verified main tree, not a claim about a live intraday market price.
-- **Candidate implementation branch:** `readiness/h4-h5-evidence-ci-2026-10-22`, based on the verified main SHA above; PR [#363](https://github.com/ziegepapa/quy-vwce-cho-be/pull/363) is still open and not yet merged.
-- **H4 behavioral evidence (candidate branch):** `PASS — isolated CI matrix, 119/119 assertions` at head `57d52814200bdcb73975117f781cd7b53d8c6c95`; [H4 H5 Evidence run 39846912976](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39846912976) passed the Auth + PostgREST matrix for synthetic A/B and anonymous principals across `profiles` plus five sync tables. Cross-user disclosure/mutation, forged owner insert, invalid JWT, user-delete cascade, fail-closed non-local URL test and JSON artifact validation passed. Redacted artifact `h4-h5-evidence-39846912976` (ID `12455258593`). This proves the checked-in schema/policies on a disposable local stack, not hosted production parity. Re-run after merge before treating as released baseline.
-- **H5 migration evidence (candidate branch):** `PARTIAL` at head `57d52814200bdcb73975117f781cd7b53d8c6c95`; run 39846912976 passed baseline equivalence/order guard, blank install, a selected synthetic pre-002 `goals` row upgrade through `002_soft_delete_and_triggers.sql`, index/trigger/version/timestamp and soft-delete/tombstone assertions, and restore of the selected synthetic Auth+goals snapshot into a fresh baseline. Hosted schema drift, actual production migration history, full-project restore and general rollback/recovery remain unverified. Contract tests also passed for migration dependency failure modes at this evidence head; the current workflow adds required PASS checks for all three nested H5 stages and a push-to-main trigger, whose current-head run is tracked separately. Do not describe H5 as fully closed.
+- **Historical candidate implementation (22-10):** PR [#363](https://github.com/ziegepapa/quy-vwce-cho-be/pull/363) has since merged as commit `dcbacd420d76bf4c4c0e0e7ed678679282e48b55`; this sentence is retained only as historical provenance.
+- **Historical H4 candidate evidence (22-10):** run [39846912976](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39846912976) recorded 119/119 assertions at candidate head `57d52814200bdcb73975117f781cd7b53d8c6c95`. The post-merge main evidence is run [39857582898](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39857582898); see the authoritative 23-10 update at the top and `docs/EVIDENCE_REFRESH_2026-10-23.md`.
+- **Historical H5 candidate evidence (22-10):** run 39846912976 passed the selected synthetic baseline/order, clean-install, pre-002 upgrade and Auth+goals restore checks. The post-merge main run is [39857582898](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39857582898). Hosted schema drift, actual production migration history, full-project restore and general rollback/recovery remain unverified; H5 is still PARTIAL.
 - **Simulation:** Mode A/B/C and the illustrative scenario-card UI are already represented on main by the previously merged simulation work. This H4/H5 branch does not change simulation formulas or persistence.
 - **Readiness decision:** unchanged — `CONDITIONAL — NOT READY` as the sole authoritative financial ledger. Maintain independent broker statements and owner-controlled backups. P11.2/tax calculations remain blocked pending independent German tax-expert review.
 
-The candidate branch is intended to establish repeatable evidence, not to convert H4/H5 status merely because test code or a migration file now exists.
+The isolated workflow is intended to establish repeatable evidence, not to convert H4/H5 status merely because test code or a migration file exists.
 
 ## Evidence refresh — 21-10-2026
 
@@ -221,7 +223,7 @@ Không có thay đổi nào thuộc diện financial semantics, schema/Dexie, ba
 
 ### Current decision
 
-The readiness conclusion remains **`CONDITIONAL — NOT READY` as the sole authoritative financial ledger**. H4 remains `PARTIAL — STATIC POLICY EVIDENCE ONLY`; H5 remains `BLOCKED — NO ORDERED BASELINE / CONTROLLED MIGRATION PROOF`. The successful release workflow is not evidence that either blocker is closed. P11.2 remains a separate expert-review gate before tax-calculation functionality.
+The readiness conclusion remains **`CONDITIONAL — NOT READY` as the sole authoritative financial ledger**. As of the 23-10 main run, H4 is `PASS` for isolated behavioral proof against the checked-in schema/policies only; H5 is `PARTIAL` because hosted schema/history parity, full-project recovery and broad rollback/recovery are not proven. The successful release workflow alone is not H4/H5 evidence. P11.2 remains blocked pending independent German tax-expert review.
 
 The actionable acceptance plan, test matrix, isolation boundary and owner decisions are maintained in [H4/H5 closure plan](./H4-H5-CLOSURE-PLAN.md). No production project, family data, production token or service-role credential was used to create this addendum.
 

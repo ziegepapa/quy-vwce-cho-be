@@ -68,3 +68,18 @@ The base audit above remains a dated, source-reviewed snapshot; the latest sourc
 - The production release and quote data are unchanged by this candidate work. Simulation calculation and persistence code are not changed by PR #363. Readiness remains **`CONDITIONAL — NOT READY`** as the sole authoritative financial ledger; P11.2 remains blocked pending independent German tax-expert review.
 
 No production Supabase writes, family data, production credentials or paid Supabase project were used for this evidence run.
+
+
+## Evidence refresh — 23 October 2026 (post-merge verification)
+
+This addendum supersedes the prior statement below that PR #363 remained open. It preserves the 21 October audit findings and does not rewrite their historical scope.
+
+- **Verified main:** `dcbacd420d76bf4c4c0e0e7ed678679282e48b55`, merge of PR #363.
+- **Release/deploy:** [Test and Deploy run 39857582904](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39857582904) completed SUCCESS on the main commit. Its `test-build`, `edge-smoke`, `preview-smoke` and `deploy` jobs all passed.
+- **H4/H5 isolated CI:** [run 39857582898](https://github.com/ziegepapa/quy-vwce-cho-be/actions/runs/39857582898) completed SUCCESS on the same main commit. The behavioral RLS matrix and clean install/selected upgrade/restore steps passed on disposable local Supabase; migration-order/dependency guard passed. Redacted artifact `h4-h5-evidence-39857582898` (ID `12459519740`).
+- **H4 status:** PASS for the checked-in schema/policy behavioral matrix in local Supabase. Hosted production schema, grants/policies and migration history remain unverified.
+- **H5 status:** PARTIAL. The tested upgrade and restore scope is selected synthetic fixtures, not full-project recovery, hosted migration reconciliation or generic rollback certification.
+- **Simulation:** main release gates pass with the current active route and regression suite. The accessibility/mobile polish merged in PR #364 (merge commit `fa722600950f96d670c83d311803b0e7e308cd22`, parent of the H4/H5 merge) keeps the existing A/B/C engine and save/undo behavior; it improves labels/semantics, compact metrics, wrapping, theme-aware chart colors and localized axis units. Automated smoke is not a manual iPhone/VoiceOver sign-off.
+- **Overall readiness:** remains `CONDITIONAL — NOT READY` as the sole authoritative ledger; P11.2 German tax review remains BLOCKED.
+
+No production Supabase database was queried or modified during this evidence refresh. This is repository/CI evidence only.
