@@ -111,8 +111,8 @@ export function SimulationDemoChart({
         <>
           <path d={areaToBaseline(base.out.yearEnds, "contributed")} fill="url(#chart-deposit-gradient)" />
           <path d={areaToBaseline(base.out.yearEnds, "total")} fill="url(#chart-projection-gradient)" />
-          <path d={pathFor(base.out.yearEnds, "contributed")} fill="none" stroke="var(--primary-600)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-          <path d={pathFor(base.out.yearEnds, "total")} fill="none" stroke="var(--success-600)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          <path d={pathFor(base.out.yearEnds, "contributed")} fill="none" stroke="var(--primary-600)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          <path d={pathFor(base.out.yearEnds, "total")} fill="none" stroke="var(--success-600)" strokeWidth={2.7} strokeLinecap="round" strokeLinejoin="round" />
         </>
       ) : null}
       {markers.map((m) => (
