@@ -704,13 +704,13 @@
   width: 100%;
   min-height: 50px;
   padding: 13px 16px;
-  color: var(--surface-raised);
+  color: var(--primary-600);
   font: inherit;
   font-size: 14px;
   font-weight: 800;
   line-height: 1.35;
   cursor: pointer;
-  background: var(--primary-600);
+  background: var(--primary-050);
   border: 1px solid var(--primary-600);
   border-radius: 16px;
   box-shadow: var(--shadow-raised);
