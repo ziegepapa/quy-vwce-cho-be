@@ -178,7 +178,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByRole("group", { name: "Mô phỏng" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Tóm tắt kết quả mô phỏng" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Góp → Nhận/ }).getAttribute("aria-pressed")).toBe("true");
-    expect(document.queryByRole("table", { name: "Bảng mô phỏng theo năm" })).toBeNull();
+    expect(document.querySelector(".sim-year-disclosure")?.hasAttribute("open")).toBe(false);
     fireEvent.click(screen.getByText("Bảng mô phỏng theo năm"));
     expect(screen.getByRole("table", { name: "Bảng mô phỏng theo năm" })).toBeTruthy();
     expect(document.querySelectorAll(".scenario-card")).toHaveLength(3);
@@ -194,7 +194,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByRole("group", { name: "Simulation" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Simulationsergebnis" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Einzahlen → Ergebnis/ }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.queryByRole("table", { name: "Jährliche Projektion" })).toBeNull();
+    expect(document.querySelector(".sim-year-disclosure")?.hasAttribute("open")).toBe(false);
     fireEvent.click(screen.getByText("Jährliche Projektion"));
     expect(screen.getByRole("table", { name: "Jährliche Projektion" })).toBeTruthy();
     expect(document.querySelectorAll(".scenario-card")).toHaveLength(3);
