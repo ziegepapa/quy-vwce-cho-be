@@ -958,3 +958,56 @@
   .sim-wrap .sim-chart-svg { min-height: 224px; }
 }
 @media (prefers-reduced-motion: reduce) { .sim-sheet-panel { animation: none !important; } }
+
+
+/* Final WOW IA polish: true horizontal pills rather than miniature vertical cards.
+   All three assumptions and terminal values stay visible without long stacked panels. */
+.sim-wrap .scenario-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: max-content;
+  max-width: none;
+  grid-template-columns: none;
+  grid-template-rows: none;
+  padding: 9px 12px;
+  border-radius: 999px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.sim-wrap .scenario-chip-name {
+  display: inline-flex;
+  flex: 0 0 auto;
+  grid-column: auto;
+  grid-row: auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.sim-wrap .scenario-chip-rate {
+  flex: 0 0 auto;
+  grid-column: auto;
+  grid-row: auto;
+  padding-right: 8px;
+  border-right: 1px solid var(--border-subtle);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.sim-wrap .scenario-chip strong {
+  flex: 0 0 auto;
+  grid-column: auto;
+  grid-row: auto;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.2;
+  text-align: left;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+@media (max-width: 390px) {
+  .sim-wrap .scenario-chip { min-height: 44px; flex: 0 0 auto; }
+}
