@@ -281,7 +281,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     fireEvent.click(info);
     expect(screen.getByText("Kết quả dựa trên giả định lợi suất bạn chọn.")).toBeTruthy();
     expect(screen.getByText("Mô phỏng chưa trừ thuế Đức và phí broker.")).toBeTruthy();
-    expect(screen.getByText("Bật “Hiện theo sức mua hôm nay” để quy đổi giá trị tiền tệ về sức mua hiện tại.")).toBeTruthy();
+    expect(screen.getByText("Ở chế độ A, bật “Hiện theo sức mua hôm nay” để quy đổi giá trị danh mục về sức mua hiện tại.")).toBeTruthy();
     expect(document.body.textContent).not.toContain("Deutsche Steuern");
     expect(document.body.textContent).not.toContain("Gewinn/Verlust");
     expect(document.body.textContent).not.toMatch(/danh nghĩa|nominal/i);
@@ -304,7 +304,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     fireEvent.click(info);
     expect(screen.getByText("Das Ergebnis basiert auf der gewählten Renditeannahme.")).toBeTruthy();
     expect(screen.getByText("Deutsche Steuern und Brokergebühren werden nicht abgezogen.")).toBeTruthy();
-    expect(screen.getByText("Aktiviere „In heutiger Kaufkraft anzeigen“, um den Geldwert auf heutige Kaufkraft umzurechnen.")).toBeTruthy();
+    expect(screen.getByText("Aktiviere in Modus A „In heutiger Kaufkraft anzeigen“, um den Portfoliowert auf heutige Kaufkraft umzurechnen.")).toBeTruthy();
     expect(document.body.textContent).not.toContain("Ước tính");
     expect(document.body.textContent).not.toContain("Lãi / lỗ");
     expect(document.body.textContent).not.toMatch(/danh nghĩa|nominal/i);
