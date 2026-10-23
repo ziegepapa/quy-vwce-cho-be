@@ -141,6 +141,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByText("Thuận lợi")).toBeTruthy();
     expect(document.querySelectorAll(".scenario-chip")).toHaveLength(3);
     expect(document.querySelectorAll(".scenario-card")).toHaveLength(0);
+    expect(document.querySelectorAll(".scenario-chip-value")).toHaveLength(3);
     expect(screen.getByText(/không phải xác suất hay dự báo/i)).toBeTruthy();
     cleanup();
     renderShell("de");
@@ -153,6 +154,10 @@ describe("SimulationDemoShell financial-policy containment", () => {
     const { container } = renderShell("vi");
     expect(container.querySelector(".sim-screen")).toBeTruthy();
     expect(container.querySelector(".sim-headline .sim-mode-badge")).toBeTruthy();
+    expect(container.querySelectorAll('[data-testid="simulation-growth-chart"]')).toHaveLength(1);
+    expect(container.querySelectorAll('svg[data-chart-kind="portfolio-growth"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="simulation-mode-switch"]')).toHaveLength(1);
+    expect(container.querySelectorAll(".mode-tabs .mtab")).toHaveLength(3);
     expect(container.querySelectorAll(".scenario-chip")).toHaveLength(3);
     expect(container.querySelector(".scenario-chip-cautious")).toBeTruthy();
     expect(container.querySelector(".scenario-chip-base")).toBeTruthy();
@@ -237,15 +242,15 @@ describe("SimulationDemoShell financial-policy containment", () => {
 
   it("keeps advanced options collapsed and shows the save CTA only when the plan differs", () => {
     renderShell("vi");
-    expect(screen.queryByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Lưu vào kế hoạch" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
     const details = document.querySelector("details.gl:not(.sim-year-disclosure)") as HTMLDetailsElement | null;
     expect(details?.open).toBe(false);
-    expect(screen.queryByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Lưu vào kế hoạch" })).toBeNull();
 
     cleanup();
     renderShell("vi", "", 0, false, true);
-    const save = screen.getByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" });
+    const save = screen.getByRole("button", { name: "Lưu vào kế hoạch" });
     fireEvent.click(save);
     expect(noop).toHaveBeenCalled();
   });
