@@ -11,9 +11,9 @@ function formatMoneyRounded(n: number, locale: DisplayLocale): string {
 
 function simulationCopy(locale: DisplayLocale) {
   return locale === "de" ? {
-    aria: "Simulation", adjust: "Annahmen anpassen", close: "Schließen", parameters: "Parameter", modeA: "Einzahlen → Ergebnis", modeB: "Ziel → Sparrate", modeC: "Sparrate → Zeitraum", modeASub: "Startwert → Ergebnis", modeBSub: "Zielbetrag → Monatsrate", modeCSub: "Monatsrate → Zeitbedarf", badgeA: "Modus A · Endwert", badgeB: "Modus B · Monatsrate", badgeC: "Modus C · Zeitbedarf", targetBy: (amount: string, year: string) => `Ziel ${amount} bis ${year}`, goalWithMonthly: (amount: string, monthly: string) => `Ziel ${amount} bei ${monthly}/Monat`, unavailable: "Keine umsetzbare Rate", unavailableNote: "Ziel / Rendite prüfen", targetUnreachable: "Ziel innerhalb von 40 Jahren nicht erreichbar", afterYears: (years: number, monthly: string) => `nach ${years} Jahren · ${monthly}/Monat`, end: "Endwert", contributed: "Eingezahlt", gain: "Gewinn / Verlust (nominal)", summary: "Simulationsergebnis", yearTable: "Jährliche Projektion", chart: "Portfolioentwicklung", scenarioCompare: "Szenariovergleich", scenarioEnd: "Endwert nominal", returnAssumption: "Renditeannahme", scenarioNote: "Rechenbeispiele, keine Wahrscheinlichkeiten oder Prognose.", baseScenario: "Basis", forecast: "Portfolio (Projektion)", monthly: "Monatlicher Beitrag (EUR)", target: "Zielbetrag (EUR)", duration: "Laufzeit", years: "Jahre", want: "Gewünschter Betrag (EUR)", inYear: "Im Jahr", aboutYears: (years: number, monthly: string) => `noch etwa ${years} Jahre · benötigt ca. ${monthly}/Monat`, annualReturn: "Rendite / Jahr (%)", around: "Spanne", year: "Jahr", forecastNav: "Prognostizierter NAV", current: "Heute", collapse: "Weniger anzeigen", showAll: "Alle Jahre anzeigen", disclaimer: "Schätzung — keine Anlageberatung", range: "Bandbreite ± (%)", contributionGrowth: "Beitrag ändert sich jährlich", perYear: "% / Jahr", initialLump: "Einmalbetrag zu Beginn", startingBalance: "Startguthaben", purchasingPower: "Kaufkraft von heute", inflation: "Inflation % / Jahr", presentValue: "Aktuell: heutige Kaufkraft", nominal: "Aktuell: nominal", goal: "Ziel", savePlan: "In Plan übernehmen", noPlanChanges: "Der Plan stimmt bereits überein — nichts zu speichern.", undo: "Rückgängig", saveDialog: "Im Plan speichern", yearOne: "Jahr 1", fromYearTwo: "Ab Jahr 2", return: "Rendite", cancel: "Abbrechen",
+    aria: "Simulation", adjust: "Annahmen anpassen", close: "Schließen", parameters: "Parameter", modeA: "Einzahlen → Ergebnis", modeB: "Ziel → Sparrate", modeC: "Sparrate → Zeitraum", modeASub: "Startwert → Ergebnis", modeBSub: "Zielbetrag → Monatsrate", modeCSub: "Monatsrate → Zeitbedarf", badgeA: "Modus A · Endwert", badgeB: "Modus B · Monatsrate", badgeC: "Modus C · Zeitbedarf", targetBy: (amount: string, year: string) => `Ziel ${amount} bis ${year}`, goalWithMonthly: (amount: string, monthly: string) => `Ziel ${amount} bei ${monthly}/Monat`, unavailable: "Keine umsetzbare Rate", unavailableNote: "Ziel / Rendite prüfen", targetUnreachable: "Ziel innerhalb von 40 Jahren nicht erreichbar", afterYears: (years: number, monthly: string) => `nach ${years} Jahren · ${monthly}/Monat`, end: "Endwert", contributed: "Eingezahlt", gain: "Gewinn/Verlust", summary: "Simulationsergebnis", yearTable: "Jährliche Projektion", chart: "Portfolioentwicklung", scenarioCompare: "Szenariovergleich", scenarioEnd: "Endwert", returnAssumption: "Renditeannahme", scenarioNote: "Rechenbeispiele, keine Wahrscheinlichkeiten oder Prognose.", baseScenario: "Basis", forecast: "Portfolio (Projektion)", monthly: "Monatlicher Beitrag (EUR)", target: "Zielbetrag (EUR)", duration: "Laufzeit", years: "Jahre", want: "Gewünschter Betrag (EUR)", inYear: "Im Jahr", aboutYears: (years: number, monthly: string) => `noch etwa ${years} Jahre · benötigt ca. ${monthly}/Monat`, annualReturn: "Rendite / Jahr (%)", around: "Spanne", year: "Jahr", forecastNav: "Prognostizierter NAV", current: "Heute", collapse: "Weniger anzeigen", showAll: "Alle Jahre anzeigen", disclaimer: "Keine Anlageberatung", estimateInfoLabel: "Hinweise zur Schätzung", estimateBasis: "Das Ergebnis basiert auf der gewählten Renditeannahme.", estimateCosts: "Deutsche Steuern und Brokergebühren werden nicht abgezogen.", estimatePurchasingPower: "Aktiviere in Modus A „In heutiger Kaufkraft anzeigen“, um den Portfoliowert auf heutige Kaufkraft umzurechnen.", showPurchasingPower: "In heutiger Kaufkraft anzeigen", range: "Bandbreite ± (%)", contributionGrowth: "Beitrag ändert sich jährlich", perYear: "% / Jahr", initialLump: "Einmalbetrag zu Beginn", startingBalance: "Startguthaben", purchasingPower: "Inflation berücksichtigen", inflation: "Inflation % / Jahr", goal: "Ziel", savePlan: "In Plan übernehmen", noPlanChanges: "Der Plan stimmt bereits überein — nichts zu speichern.", undo: "Rückgängig", saveDialog: "Im Plan speichern", yearOne: "Jahr 1", fromYearTwo: "Ab Jahr 2", return: "Rendite", cancel: "Abbrechen",
   } : {
-    aria: "Mô phỏng", adjust: "Điều chỉnh giả định", close: "Đóng", parameters: "Thông số", modeA: "Góp → Nhận", modeB: "Mục tiêu → Góp", modeC: "Góp → Khi nào", modeASub: "Số dư → Kết quả", modeBSub: "Số tiền → Mức góp", modeCSub: "Mức góp → Thời gian", badgeA: "Chế độ A · Giá trị cuối kỳ", badgeB: "Chế độ B · Mức góp/tháng", badgeC: "Chế độ C · Thời gian cần", targetBy: (amount: string, year: string) => `Mục tiêu ${amount} vào năm ${year}`, goalWithMonthly: (amount: string, monthly: string) => `Mục tiêu ${amount} với mức góp ${monthly}/tháng`, unavailable: "Chưa có mức góp khả thi", unavailableNote: "kiểm tra mục tiêu / lợi nhuận", targetUnreachable: "Chưa thể đạt mục tiêu trong 40 năm", afterYears: (years: number, monthly: string) => `sau ${years} năm · ${monthly}/tháng`, end: "Cuối kỳ", contributed: "Đã góp", gain: "Lãi / lỗ (danh nghĩa)", summary: "Tóm tắt kết quả mô phỏng", yearTable: "Bảng mô phỏng theo năm", chart: "Tăng trưởng danh mục", scenarioCompare: "So sánh kịch bản", scenarioEnd: "Giá trị cuối kỳ danh nghĩa", returnAssumption: "Giả định lợi suất", scenarioNote: "Các phép tính minh họa, không phải xác suất hay dự báo.", baseScenario: "Cơ sở", forecast: "Danh mục (dự báo)", monthly: "Góp mỗi tháng (EUR)", target: "Mục tiêu (EUR)", duration: "Thời hạn", years: "năm", want: "Muốn có (EUR)", inYear: "Vào năm", aboutYears: (years: number, monthly: string) => `Còn khoảng ${years} năm · cần ~${monthly}/tháng`, annualReturn: "Lợi nhuận / năm (%)", around: "khoảng", year: "Năm", forecastNav: "NAV dự báo", current: "Hiện tại", collapse: "Thu gọn", showAll: "Hiện tất cả các năm", disclaimer: "Ước tính — không phải tư vấn đầu tư", range: "Biên độ ± (%)", contributionGrowth: "Góp thay đổi theo năm", perYear: "% / năm", initialLump: "Khoản lớn ban đầu", startingBalance: "Số dư xuất phát", purchasingPower: "Sức mua hôm nay", inflation: "Lạm phát %/năm", presentValue: "Đang: giá hôm nay", nominal: "Đang: danh nghĩa", goal: "Mục tiêu", savePlan: "Lưu vào kế hoạch", noPlanChanges: "Kế hoạch đã khớp — không có gì để lưu.", undo: "Hoàn tác", saveDialog: "Lưu vào kế hoạch", yearOne: "Năm 1", fromYearTwo: "Từ năm 2", return: "Lợi nhuận", cancel: "Hủy",
+    aria: "Mô phỏng", adjust: "Điều chỉnh giả định", close: "Đóng", parameters: "Thông số", modeA: "Góp → Nhận", modeB: "Mục tiêu → Góp", modeC: "Góp → Khi nào", modeASub: "Số dư → Kết quả", modeBSub: "Số tiền → Mức góp", modeCSub: "Mức góp → Thời gian", badgeA: "Chế độ A · Giá trị cuối kỳ", badgeB: "Chế độ B · Mức góp/tháng", badgeC: "Chế độ C · Thời gian cần", targetBy: (amount: string, year: string) => `Mục tiêu ${amount} vào năm ${year}`, goalWithMonthly: (amount: string, monthly: string) => `Mục tiêu ${amount} với mức góp ${monthly}/tháng`, unavailable: "Chưa có mức góp khả thi", unavailableNote: "kiểm tra mục tiêu / lợi nhuận", targetUnreachable: "Chưa thể đạt mục tiêu trong 40 năm", afterYears: (years: number, monthly: string) => `sau ${years} năm · ${monthly}/tháng`, end: "Cuối kỳ", contributed: "Đã góp", gain: "Lãi / lỗ", summary: "Tóm tắt kết quả mô phỏng", yearTable: "Bảng mô phỏng theo năm", chart: "Tăng trưởng danh mục", scenarioCompare: "So sánh kịch bản", scenarioEnd: "Giá trị cuối kỳ", returnAssumption: "Giả định lợi suất", scenarioNote: "Các phép tính minh họa, không phải xác suất hay dự báo.", baseScenario: "Cơ sở", forecast: "Danh mục (dự báo)", monthly: "Góp mỗi tháng (EUR)", target: "Mục tiêu (EUR)", duration: "Thời hạn", years: "năm", want: "Muốn có (EUR)", inYear: "Vào năm", aboutYears: (years: number, monthly: string) => `Còn khoảng ${years} năm · cần ~${monthly}/tháng`, annualReturn: "Lợi nhuận / năm (%)", around: "khoảng", year: "Năm", forecastNav: "NAV dự báo", current: "Hiện tại", collapse: "Thu gọn", showAll: "Hiện tất cả các năm", disclaimer: "Không phải tư vấn đầu tư", estimateInfoLabel: "Giải thích về ước tính", estimateBasis: "Kết quả dựa trên giả định lợi suất bạn chọn.", estimateCosts: "Mô phỏng chưa trừ thuế Đức và phí broker.", estimatePurchasingPower: "Ở chế độ A, bật “Hiện theo sức mua hôm nay” để quy đổi giá trị danh mục về sức mua hiện tại.", showPurchasingPower: "Hiện theo sức mua hôm nay", range: "Biên độ ± (%)", contributionGrowth: "Góp thay đổi theo năm", perYear: "% / năm", initialLump: "Khoản lớn ban đầu", startingBalance: "Số dư xuất phát", purchasingPower: "Điều chỉnh theo lạm phát", inflation: "Lạm phát %/năm", goal: "Mục tiêu", savePlan: "Lưu vào kế hoạch", noPlanChanges: "Kế hoạch đã khớp — không có gì để lưu.", undo: "Hoàn tác", saveDialog: "Lưu vào kế hoạch", yearOne: "Năm 1", fromYearTwo: "Từ năm 2", return: "Lợi nhuận", cancel: "Hủy",
   };
 }
 
@@ -122,6 +122,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
   } = p;
   const text = simulationCopy(locale);
   const [paramsOpen, setParamsOpen] = useState(false);
+  const [estimateInfoOpen, setEstimateInfoOpen] = useState(false);
 
   return (
     <main className="demo-v10-screen sim-screen" aria-label={text.aria}>
@@ -165,7 +166,26 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
                   ? text.goalWithMonthly(formatMoneyRounded(Number(targetAmount) || 0, locale), formatMoneyRounded(monthlyForProject, locale))
                   : text.afterYears(yearsForProject, formatMoneyRounded(monthlyForProject, locale))}
             </div>
-            <div className="sh-note">{headlineNote}</div>
+            <div className="sh-note sim-estimate-note">
+              <span>{headlineNote}</span>
+              <button
+                type="button"
+                className="sim-estimate-info"
+                aria-label={text.estimateInfoLabel}
+                aria-expanded={estimateInfoOpen}
+                aria-controls="sim-estimate-details"
+                onClick={() => setEstimateInfoOpen((open) => !open)}
+              >
+                ⓘ
+              </button>
+            </div>
+            {estimateInfoOpen ? (
+              <div className="sim-estimate-details" id="sim-estimate-details" role="note">
+                <p>{text.estimateBasis}</p>
+                <p>{text.estimateCosts}</p>
+                <p>{text.estimatePurchasingPower}</p>
+              </div>
+            ) : null}
           </>
         )}
       <div className="summary-strip" role="group" aria-label={text.summary}>
@@ -269,7 +289,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
       </button>
       </details>
 
-      <div className="sim-note">ⓘ {text.disclaimer}</div>
+      <div className="sim-note">{text.disclaimer}</div>
 
       {paramsOpen ? (
         <div className="sim-sheet-backdrop">
@@ -442,8 +462,13 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             </div>
           ) : null}
           {inflationOn ? (
-            <button type="button" className="show-all-btn" onClick={() => setShowPP((v) => !v)}>
-              {showPP ? text.presentValue : text.nominal}
+            <button
+              type="button"
+              className="show-all-btn"
+              aria-pressed={showPP}
+              onClick={() => setShowPP((v) => !v)}
+            >
+              {text.showPurchasingPower}
             </button>
           ) : null}
           {goals.length > 0 ? (
