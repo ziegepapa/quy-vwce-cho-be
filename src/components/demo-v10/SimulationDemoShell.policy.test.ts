@@ -199,7 +199,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
   });
 
   it("associates Vietnamese controls with labels and exposes accurate control semantics", () => {
-    renderShell("vi");
+    const { container } = renderShell("vi");
     expect(screen.queryByLabelText("Góp mỗi tháng (EUR)")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
     expect(screen.getByLabelText("Góp mỗi tháng (EUR)")).toBeTruthy();
@@ -209,6 +209,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByRole("group", { name: "Tóm tắt kết quả mô phỏng" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Góp → Nhận/ }).getAttribute("aria-pressed")).toBe("true");
     expect(document.querySelector(".sim-year-disclosure")?.hasAttribute("open")).toBe(false);
+    fireEvent.click(container.querySelector(".sim-sheet-close")!);
     fireEvent.click(screen.getByText("Bảng mô phỏng theo năm"));
     expect(screen.getByRole("table", { name: "Bảng mô phỏng theo năm" })).toBeTruthy();
     expect(document.querySelectorAll(".scenario-chip")).toHaveLength(3);
@@ -217,7 +218,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
   });
 
   it("associates German controls with labels and localizes chart duration", () => {
-    renderShell("de");
+    const { container } = renderShell("de");
     expect(screen.queryByLabelText("Monatlicher Beitrag (EUR)")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Annahmen anpassen" }));
     expect(screen.getByLabelText("Monatlicher Beitrag (EUR)")).toBeTruthy();
@@ -227,6 +228,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByRole("group", { name: "Simulationsergebnis" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Einzahlen → Ergebnis/ }).getAttribute("aria-pressed")).toBe("true");
     expect(document.querySelector(".sim-year-disclosure")?.hasAttribute("open")).toBe(false);
+    fireEvent.click(container.querySelector(".sim-sheet-close")!);
     fireEvent.click(screen.getByText("Jährliche Projektion"));
     expect(screen.getByRole("table", { name: "Jährliche Projektion" })).toBeTruthy();
     expect(document.querySelectorAll(".scenario-chip")).toHaveLength(3);
