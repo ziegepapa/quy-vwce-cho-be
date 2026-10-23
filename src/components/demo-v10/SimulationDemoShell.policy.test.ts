@@ -211,7 +211,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(document.querySelector(".sim-year-disclosure")?.hasAttribute("open")).toBe(false);
     fireEvent.click(screen.getByText("Bảng mô phỏng theo năm"));
     expect(screen.getByRole("table", { name: "Bảng mô phỏng theo năm" })).toBeTruthy();
-    expect(document.querySelectorAll(".scenario-card")).toHaveLength(3);
+    expect(document.querySelectorAll(".scenario-chip")).toHaveLength(3);
     expect(document.querySelector(".sim-year-disclosure")?.hasAttribute("open")).toBe(true);
     expect(document.querySelector(".sim-chart-svg")?.textContent).toContain("15 năm");
   });
