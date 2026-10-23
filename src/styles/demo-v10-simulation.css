@@ -631,3 +631,131 @@
   .sim-wrap .scenario-rate-value { font-size: 14px; }
   .sim-wrap .scenario-end-value { font-size: 12px; }
 }
+
+
+/* Premium mobile hierarchy: one mode-aware hero, calm secondary metrics, readable scenarios. */
+.sim-wrap .sim-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  margin-bottom: 12px;
+  padding: 5px 10px;
+  color: var(--primary-600);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+}
+
+.sim-wrap .sim-headline .sh-big {
+  max-width: 100%;
+  font-size: clamp(30px, 8vw, 44px);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-wrap .summary-strip {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sim-wrap .summary-strip > span {
+  padding: 12px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+}
+
+.sim-wrap .sim-year-disclosure {
+  padding: 0;
+  overflow: hidden;
+}
+
+.sim-wrap .sim-year-disclosure > summary {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.sim-wrap .sim-year-disclosure[open] > summary {
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sim-wrap .sim-year-disclosure .yr-table {
+  margin: 0 10px;
+  box-shadow: none;
+}
+
+.sim-wrap .sim-year-disclosure > .show-all-btn {
+  width: calc(100% - 20px);
+  margin: 8px 10px 10px;
+}
+
+.sim-wrap .sim-save-cta {
+  width: 100%;
+  min-height: 50px;
+  padding: 13px 16px;
+  color: var(--surface-raised);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+  cursor: pointer;
+  background: var(--primary-600);
+  border: 1px solid var(--primary-600);
+  border-radius: 16px;
+  box-shadow: var(--shadow-raised);
+}
+
+.sim-wrap .sim-save-cta:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.sim-wrap .sim-save-cta:focus-visible,
+.sim-wrap .sim-year-disclosure > summary:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 3px;
+}
+
+@media (min-width: 700px) {
+  .sim-wrap { max-width: 760px; }
+  .sim-wrap .scenario-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+}
+
+@media (max-width: 480px) {
+  .sim-wrap { gap: 12px; padding-inline: 0; }
+  .sim-wrap .mode-tabs { gap: 4px; }
+  .sim-wrap .mtab { min-height: 48px; padding: 9px 5px; font-size: 12px; }
+  .sim-wrap .mtab small { font-size: 10px; }
+  .sim-wrap .sim-headline { padding: 18px 16px 16px; border-radius: 20px; }
+  .sim-wrap .scenario-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .sim-wrap .scenario-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; row-gap: 3px; padding: 13px 14px; }
+  .sim-wrap .scenario-card-top { grid-column: 1; grid-row: 1; }
+  .sim-wrap .scenario-rate { grid-column: 1; grid-row: 2; margin-top: 3px; }
+  .sim-wrap .scenario-rate-value { grid-column: 2; grid-row: 1 / span 2; margin: 0; font-size: 16px; text-align: right; }
+  .sim-wrap .scenario-end-label { grid-column: 1; grid-row: 3; margin-top: 8px; }
+  .sim-wrap .scenario-end-value { grid-column: 2; grid-row: 3; margin-top: 8px; font-size: 15px; text-align: right; }
+  .sim-wrap .summary-strip { gap: 8px; }
+  .sim-wrap .summary-strip > span { padding: 11px 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sim-wrap *,
+  .sim-wrap *::before,
+  .sim-wrap *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
