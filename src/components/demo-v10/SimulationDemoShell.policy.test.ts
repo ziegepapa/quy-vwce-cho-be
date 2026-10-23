@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
 
+// @ts-ignore -- test-only CSS source audit; Node typings are intentionally omitted from the app tsconfig.
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SimulationDemoShell, { type SimulationDemoShellProps } from "./SimulationDemoShell";
+
+const simulationCss = readFileSync("src/styles/demo-v10-simulation.css", "utf8");
+
+
 
 const noop = vi.fn();
 
@@ -163,12 +169,15 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(container.querySelector(".scenario-chip-cautious")).toBeTruthy();
     expect(container.querySelector(".scenario-chip-base")).toBeTruthy();
     expect(container.querySelector(".scenario-chip-bull")).toBeTruthy();
-    const majorSections = Array.from(container.querySelectorAll(".sim-headline, .sim-chart-card, .mode-tabs")).map((element) => {
+    const majorSections = Array.from(container.querySelectorAll(".mode-tabs, .sim-headline, .sim-chart-card")).map((element) => {
+      if (element.classList.contains("mode-tabs")) return "modes";
       if (element.classList.contains("sim-headline")) return "hero";
-      if (element.classList.contains("sim-chart-card")) return "chart";
-      return "modes";
+      return "chart";
     });
-    expect(majorSections).toEqual(["hero", "chart", "modes"]);
+    expect(majorSections).toEqual(["modes", "hero", "chart"]);
+    expect(container.querySelectorAll(".mode-tabs")).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="simulation-growth-chart"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="simulation-hero-amount"]')).toHaveLength(1);
     expect(container.querySelector(".sim-sheet-backdrop")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
     expect(container.querySelector(".sim-sheet-panel")).toBeTruthy();
@@ -192,6 +201,27 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(timeResult.container.querySelector(".sim-mode-badge")?.textContent).toContain("Modus C");
     expect(timeResult.container.querySelector(".sim-headline .sh-big")?.textContent).toContain("15");
     expect(timeResult.container.querySelector(".sim-headline .sh-big")?.textContent).toContain("Jahre");
+  });
+
+  it("locks a calm mobile hero scale shared by modes A, B and C", () => {
+    const mobileScale = simulationCss.slice(simulationCss.lastIndexOf("@media (max-width: 600px)"));
+    expect(simulationCss).toMatch(/\.sim-wrap \.sim-hero-amount\s*\{[^}]*font-size:\s*clamp\(32px,\s*4\.5vw,\s*36px\)/s);
+    expect(mobileScale).toMatch(/\.sim-wrap \.sim-hero-amount\s*\{[^}]*font-size:\s*clamp\(28px,\s*8\.2vw,\s*32px\)/s);
+    expect(mobileScale).toMatch(/\.sim-wrap \.summary-strip > span strong\s*\{[^}]*font-size:\s*15px[^}]*font-weight:\s*750/s);
+    expect(mobileScale).toMatch(/\.sim-wrap \.sh-sub\s*\{[^}]*font-size:\s*14px/s);
+    expect(simulationCss).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+    expect(simulationCss).toMatch(/\.sim-wrap \.sim-parameters-trigger\s*\{[^}]*min-height:\s*48px/s);
+    expect(simulationCss).toMatch(/\.sim-wrap \.sim-sheet-close\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/s);
+
+    for (const mode of ["A", "B", "C"] as const) {
+      const { container } = renderShell("vi", "", 0, false, false, mode);
+      const amount = container.querySelector('[data-testid="simulation-hero-amount"]');
+      expect(amount).toBeTruthy();
+      expect(amount?.classList.contains("sim-hero-amount")).toBe(true);
+      expect(container.querySelectorAll(".mode-tabs")).toHaveLength(1);
+      expect(container.querySelectorAll('[data-testid="simulation-growth-chart"]')).toHaveLength(1);
+      cleanup();
+    }
   });
 
   it("keeps a projected loss visible as a loss", () => {

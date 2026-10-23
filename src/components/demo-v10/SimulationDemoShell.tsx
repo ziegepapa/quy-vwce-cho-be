@@ -126,17 +126,38 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
   return (
     <main className="demo-v10-screen sim-screen" aria-label={text.aria}>
       <div className="sim-wrap">
+      <div className="mode-tabs" data-testid="simulation-mode-switch" role="group" aria-label={text.aria}>
+        {(
+          [
+            ["A", text.modeA, text.modeASub],
+            ["B", text.modeB, text.modeBSub],
+            ["C", text.modeC, text.modeCSub],
+          ] as const
+        ).map(([id, label, sub]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={mode === id}
+            className={"mtab" + (mode === id ? " on" : "")}
+            onClick={() => setMode(id)}
+          >
+            {label}
+            <small>{sub}</small>
+          </button>
+        ))}
+      </div>
+
       <section key={mode} className="sim-headline">
         <span className="sim-mode-badge">{mode === "A" ? text.badgeA : mode === "B" ? text.badgeB : text.badgeC}</span>
         {planUnreachable ? (
           <>
-            <div className="sh-big">—</div>
+            <div className="sh-big sim-hero-amount" data-testid="simulation-hero-amount">—</div>
             <div className="sh-sub">{text.unavailable}</div>
             <div className="sh-note">{text.unavailableNote}</div>
           </>
         ) : (
           <>
-            <div className="sh-big">{mode === "C" ? `${headlineValue.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 0 })} ${text.years}` : formatMoneyRounded(headlineValue, locale)}</div>
+            <div className="sh-big sim-hero-amount" data-testid="simulation-hero-amount">{mode === "C" ? `${headlineValue.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { maximumFractionDigits: 0 })} ${text.years}` : formatMoneyRounded(headlineValue, locale)}</div>
             <div className="sh-sub">
               {mode === "B"
                 ? text.targetBy(formatMoneyRounded(Number(targetAmount) || 0, locale), targetYear)
@@ -179,27 +200,6 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <span><i style={{ background: "var(--success-600)" }} /> {text.forecast}</span>
         </div>
       </section>
-
-      <div className="mode-tabs" data-testid="simulation-mode-switch" role="group" aria-label={text.aria}>
-        {(
-          [
-            ["A", text.modeA, text.modeASub],
-            ["B", text.modeB, text.modeBSub],
-            ["C", text.modeC, text.modeCSub],
-          ] as const
-        ).map(([id, label, sub]) => (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={mode === id}
-            className={"mtab" + (mode === id ? " on" : "")}
-            onClick={() => setMode(id)}
-          >
-            {label}
-            <small>{sub}</small>
-          </button>
-        ))}
-      </div>
 
       <section className="scenario-comparison" aria-labelledby="scenario-comparison-title">
         <div className="scenario-heading">
