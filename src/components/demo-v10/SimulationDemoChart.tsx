@@ -92,6 +92,7 @@ export function SimulationDemoChart({
       role="img"
       aria-label={locale === "de" ? "Diagramm für Einzahlungen und prognostiziertes Portfolio nach Jahren" : "Biểu đồ vốn góp và danh mục dự báo theo năm"}
       className="sim-chart-svg"
+      data-chart-kind="portfolio-growth"
       style={{ display: "block" }}
     >
       <defs>
