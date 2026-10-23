@@ -92,6 +92,7 @@ export function SimulationDemoChart({
       role="img"
       aria-label={locale === "de" ? "Diagramm für Einzahlungen und prognostiziertes Portfolio nach Jahren" : "Biểu đồ vốn góp và danh mục dự báo theo năm"}
       className="sim-chart-svg"
+      data-chart-kind="portfolio-growth"
       style={{ display: "block" }}
     >
       <defs>
@@ -105,7 +106,7 @@ export function SimulationDemoChart({
         </linearGradient>
       </defs>
       {showBand && cautious && bull ? (
-        <path d={bandArea(cautious.out.yearEnds, bull.out.yearEnds)} fill={scenarioColor("base")} opacity={0.13} />
+        <path data-series="cautious-to-bull-band" d={bandArea(cautious.out.yearEnds, bull.out.yearEnds)} fill={scenarioColor("base")} opacity={0.13} />
       ) : null}
       {base ? (
         <>

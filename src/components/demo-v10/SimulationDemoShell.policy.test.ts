@@ -7,7 +7,7 @@ import SimulationDemoShell, { type SimulationDemoShellProps } from "./Simulation
 
 const noop = vi.fn();
 
-function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false, planChanged = false, mode: "A" | "B" | "C" = "A") {
+function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false, planChanged = false, mode: "A" | "B" | "C" = "A", band = 0) {
   const props: SimulationDemoShellProps = {
     locale,
     mode,
@@ -30,7 +30,7 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
       { sc: { id: "bull", label: locale === "de" ? "Günstig" : "Thuận lợi", rate: 0.1 }, out: { yearEnds: [], terminal: 1600, contributed: 900, interest: 700 } },
     ],
     goalMarkers: [],
-    band: 0,
+    band,
     baseRate: 0.06,
     monthly: "200",
     setMonthly: noop,
@@ -141,6 +141,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByText("Thuận lợi")).toBeTruthy();
     expect(document.querySelectorAll(".scenario-chip")).toHaveLength(3);
     expect(document.querySelectorAll(".scenario-card")).toHaveLength(0);
+    expect(document.querySelectorAll(".scenario-chip-value")).toHaveLength(3);
     expect(screen.getByText(/không phải xác suất hay dự báo/i)).toBeTruthy();
     cleanup();
     renderShell("de");
@@ -150,9 +151,14 @@ describe("SimulationDemoShell financial-policy containment", () => {
   });
 
   it("applies theme-aware premium presentation classes to the live Simulation route", () => {
-    const { container } = renderShell("vi");
+    const { container } = renderShell("vi", "", 0, false, false, "A", 0.02);
     expect(container.querySelector(".sim-screen")).toBeTruthy();
     expect(container.querySelector(".sim-headline .sim-mode-badge")).toBeTruthy();
+    expect(container.querySelectorAll('[data-testid="simulation-growth-chart"]')).toHaveLength(1);
+    expect(container.querySelectorAll('svg[data-chart-kind="portfolio-growth"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-series="cautious-to-bull-band"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-testid="simulation-mode-switch"]')).toHaveLength(1);
+    expect(container.querySelectorAll(".mode-tabs .mtab")).toHaveLength(3);
     expect(container.querySelectorAll(".scenario-chip")).toHaveLength(3);
     expect(container.querySelector(".scenario-chip-cautious")).toBeTruthy();
     expect(container.querySelector(".scenario-chip-base")).toBeTruthy();
@@ -237,15 +243,15 @@ describe("SimulationDemoShell financial-policy containment", () => {
 
   it("keeps advanced options collapsed and shows the save CTA only when the plan differs", () => {
     renderShell("vi");
-    expect(screen.queryByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Lưu vào kế hoạch" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
     const details = document.querySelector("details.gl:not(.sim-year-disclosure)") as HTMLDetailsElement | null;
     expect(details?.open).toBe(false);
-    expect(screen.queryByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Lưu vào kế hoạch" })).toBeNull();
 
     cleanup();
     renderShell("vi", "", 0, false, true);
-    const save = screen.getByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" });
+    const save = screen.getByRole("button", { name: "Lưu vào kế hoạch" });
     fireEvent.click(save);
     expect(noop).toHaveBeenCalled();
   });
