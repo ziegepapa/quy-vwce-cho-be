@@ -139,26 +139,40 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByText("Thận trọng")).toBeTruthy();
     expect(screen.getAllByText("Cơ sở")).toHaveLength(2);
     expect(screen.getByText("Thuận lợi")).toBeTruthy();
-    expect(screen.getAllByText("Giá trị cuối kỳ danh nghĩa")).toHaveLength(3);
+    expect(document.querySelectorAll(".scenario-chip")).toHaveLength(3);
+    expect(document.querySelectorAll(".scenario-card")).toHaveLength(0);
     expect(screen.getByText(/không phải xác suất hay dự báo/i)).toBeTruthy();
     cleanup();
     renderShell("de");
     expect(screen.getByRole("heading", { name: "Szenariovergleich" })).toBeTruthy();
-    expect(screen.getAllByText("Endwert nominal")).toHaveLength(3);
+    expect(document.querySelectorAll(".scenario-chip")).toHaveLength(3);
+    expect(document.querySelectorAll(".scenario-card")).toHaveLength(0);
   });
 
   it("applies theme-aware premium presentation classes to the live Simulation route", () => {
     const { container } = renderShell("vi");
     expect(container.querySelector(".sim-screen")).toBeTruthy();
     expect(container.querySelector(".sim-headline .sim-mode-badge")).toBeTruthy();
-    expect(container.querySelectorAll(".scenario-card")).toHaveLength(3);
-    expect(container.querySelector(".scenario-card-cautious")).toBeTruthy();
-    expect(container.querySelector(".scenario-card-base.scenario-card-selected")).toBeTruthy();
-    expect(container.querySelector(".scenario-card-bull")).toBeTruthy();
+    expect(container.querySelectorAll(".scenario-chip")).toHaveLength(3);
+    expect(container.querySelector(".scenario-chip-cautious")).toBeTruthy();
+    expect(container.querySelector(".scenario-chip-base")).toBeTruthy();
+    expect(container.querySelector(".scenario-chip-bull")).toBeTruthy();
+    const majorSections = Array.from(container.querySelectorAll(".sim-headline, .sim-chart-card, .mode-tabs")).map((element) => {
+      if (element.classList.contains("sim-headline")) return "hero";
+      if (element.classList.contains("sim-chart-card")) return "chart";
+      return "modes";
+    });
+    expect(majorSections).toEqual(["hero", "chart", "modes"]);
+    expect(container.querySelector(".sim-sheet-backdrop")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
+    expect(container.querySelector(".sim-sheet-panel")).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Điều chỉnh giả định" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    expect(container.querySelector(".sim-sheet-backdrop")).toBeNull();
     cleanup();
     const german = renderShell("de");
     expect(german.container.querySelector(".sim-screen")).toBeTruthy();
-    expect(german.container.querySelectorAll(".scenario-card")).toHaveLength(3);
+    expect(german.container.querySelectorAll(".scenario-chip")).toHaveLength(3);
   });
 
   it("shows the mode-specific hero metric without duplicating it in the secondary strip", () => {
@@ -186,6 +200,8 @@ describe("SimulationDemoShell financial-policy containment", () => {
 
   it("associates Vietnamese controls with labels and exposes accurate control semantics", () => {
     renderShell("vi");
+    expect(screen.queryByLabelText("Góp mỗi tháng (EUR)")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
     expect(screen.getByLabelText("Góp mỗi tháng (EUR)")).toBeTruthy();
     expect(screen.getByLabelText("Lợi nhuận / năm (%)")).toBeTruthy();
     expect(screen.getByLabelText("Thời hạn")).toBeTruthy();
@@ -202,6 +218,8 @@ describe("SimulationDemoShell financial-policy containment", () => {
 
   it("associates German controls with labels and localizes chart duration", () => {
     renderShell("de");
+    expect(screen.queryByLabelText("Monatlicher Beitrag (EUR)")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Annahmen anpassen" }));
     expect(screen.getByLabelText("Monatlicher Beitrag (EUR)")).toBeTruthy();
     expect(screen.getByLabelText("Rendite / Jahr (%)")).toBeTruthy();
     expect(screen.getByLabelText("Laufzeit")).toBeTruthy();
@@ -211,12 +229,14 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(document.querySelector(".sim-year-disclosure")?.hasAttribute("open")).toBe(false);
     fireEvent.click(screen.getByText("Jährliche Projektion"));
     expect(screen.getByRole("table", { name: "Jährliche Projektion" })).toBeTruthy();
-    expect(document.querySelectorAll(".scenario-card")).toHaveLength(3);
+    expect(document.querySelectorAll(".scenario-chip")).toHaveLength(3);
     expect(document.querySelector(".sim-chart-svg")?.textContent).toContain("15 Jahre");
   });
 
   it("keeps advanced options collapsed and shows the save CTA only when the plan differs", () => {
     renderShell("vi");
+    expect(screen.queryByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
     const details = document.querySelector("details.gl:not(.sim-year-disclosure)") as HTMLDetailsElement | null;
     expect(details?.open).toBe(false);
     expect(screen.queryByRole("button", { name: "Lưu mức góp & lợi nhuận cơ sở vào kế hoạch" })).toBeNull();
