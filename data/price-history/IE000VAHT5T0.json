@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "isin": "IE000VAHT5T0",
+  "currency": "EUR",
+  "points": [
+    {
+      "date": "2026-10-15",
+      "price": 4.4045,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-16",
+      "price": 4.3905,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-19",
+      "price": 4.401,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-20",
+      "price": 4.39,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-21",
+      "price": 4.416,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-22",
+      "price": 4.3625,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-23",
+      "price": 4.3625,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-26",
+      "price": 4.3805,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-27",
+      "price": 4.4225,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-28",
+      "price": 4.4285,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-29",
+      "price": 4.421,
+      "source": "cron"
+    },
+    {
+      "date": "2026-10-30",
+      "price": 4.357,
+      "source": "cron"
+    }
+  ]
+}
