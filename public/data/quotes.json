@@ -1,28 +1,32 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-10T01:37:07.734Z",
+  "generatedAt": "2026-11-10T15:36:55.217Z",
   "quotes": [
     {
       "instrumentIsin": "IE000VAHT5T0",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 4.354,
+      "price": 4.325,
       "asOf": "2026-11-09",
-      "fetchedAt": "2026-11-10T01:37:07.500Z",
+      "fetchedAt": "2026-11-10T15:36:55.086Z",
       "source": "auto",
-      "provider": "onvista",
-      "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE000VAHT5T0/snapshot"
+      "provider": "yahoo_finance_chart",
+      "providerUrl": "https://finance.yahoo.com/quote/VGLA.DE",
+      "crossCheckedWith": "onvista",
+      "crossCheckDifferencePct": 0
     },
     {
       "instrumentIsin": "IE00BK5BQT80",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 168,
+      "price": 167.42,
       "asOf": "2026-11-09",
-      "fetchedAt": "2026-11-10T01:37:06.779Z",
+      "fetchedAt": "2026-11-10T15:36:54.394Z",
       "source": "auto",
-      "provider": "onvista",
-      "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
+      "provider": "yahoo_finance_chart",
+      "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
+      "crossCheckedWith": "onvista",
+      "crossCheckDifferencePct": 0
     }
   ]
 }
