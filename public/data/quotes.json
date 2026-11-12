@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-12T00:48:49.611Z",
+  "generatedAt": "2026-11-12T23:41:44.697Z",
   "quotes": [
     {
       "instrumentIsin": "IE000VAHT5T0",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 4.4235,
-      "asOf": "2026-11-11",
-      "fetchedAt": "2026-11-12T00:48:49.412Z",
+      "price": 4.407,
+      "asOf": "2026-11-12",
+      "fetchedAt": "2026-11-12T23:41:44.593Z",
       "source": "auto",
       "provider": "onvista",
       "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE000VAHT5T0/snapshot"
@@ -17,9 +17,9 @@
       "instrumentIsin": "IE00BK5BQT80",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 171.02,
-      "asOf": "2026-11-11",
-      "fetchedAt": "2026-11-12T00:48:48.706Z",
+      "price": 170.6,
+      "asOf": "2026-11-12",
+      "fetchedAt": "2026-11-12T23:41:44.083Z",
       "source": "auto",
       "provider": "onvista",
       "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
