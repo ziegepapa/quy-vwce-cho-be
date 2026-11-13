@@ -5,8 +5,8 @@
   "venue": "XETRA",
   "currency": "EUR",
   "price": 170.6,
-  "asOf": "2026-11-12",
-  "fetchedAt": "2026-11-12T23:41:44.083Z",
+  "asOf": "2026-11-13",
+  "fetchedAt": "2026-11-13T23:38:56.421Z",
   "provider": "onvista",
   "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
 }
