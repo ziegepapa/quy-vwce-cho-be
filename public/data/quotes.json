@@ -1,32 +1,28 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-16T17:02:20.823Z",
+  "generatedAt": "2026-11-18T00:59:53.454Z",
   "quotes": [
     {
       "instrumentIsin": "IE000VAHT5T0",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 4.365,
-      "asOf": "2026-11-16",
-      "fetchedAt": "2026-11-16T17:02:20.700Z",
+      "price": 4.274,
+      "asOf": "2026-11-17",
+      "fetchedAt": "2026-11-18T00:59:53.206Z",
       "source": "auto",
-      "provider": "yahoo_finance_chart",
-      "providerUrl": "https://finance.yahoo.com/quote/VGLA.DE",
-      "crossCheckedWith": "onvista",
-      "crossCheckDifferencePct": 0
+      "provider": "onvista",
+      "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE000VAHT5T0/snapshot"
     },
     {
       "instrumentIsin": "IE00BK5BQT80",
       "currency": "EUR",
       "venue": "XETRA",
-      "price": 169.08,
-      "asOf": "2026-11-16",
-      "fetchedAt": "2026-11-16T17:02:20.174Z",
+      "price": 165.98,
+      "asOf": "2026-11-17",
+      "fetchedAt": "2026-11-18T00:59:52.323Z",
       "source": "auto",
-      "provider": "yahoo_finance_chart",
-      "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
-      "crossCheckedWith": "onvista",
-      "crossCheckDifferencePct": 0
+      "provider": "onvista",
+      "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
     }
   ]
 }
