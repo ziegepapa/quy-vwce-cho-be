@@ -4,9 +4,11 @@
   "ticker": "VWCE",
   "venue": "XETRA",
   "currency": "EUR",
-  "price": 165.98,
+  "price": 165.28,
   "asOf": "2026-11-17",
-  "fetchedAt": "2026-11-18T00:59:52.323Z",
-  "provider": "onvista",
-  "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
+  "fetchedAt": "2026-11-18T16:28:00.850Z",
+  "provider": "yahoo_finance_chart",
+  "providerUrl": "https://finance.yahoo.com/quote/VWCE.DE",
+  "crossCheckedWith": "onvista",
+  "crossCheckDifferencePct": 0
 }
