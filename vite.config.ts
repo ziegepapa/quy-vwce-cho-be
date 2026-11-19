@@ -101,6 +101,7 @@ export default defineConfig({
       "src/pages/Settings.operationErrors.test.tsx",
       "src/components/SettingsCboWorkspace.yearlyPlan.test.tsx",
       "src/pages/MigrateWizard.test.tsx",
+      "src/pages/ConfidenceTimeline.loadState.test.tsx",
     ],
   },
 });
