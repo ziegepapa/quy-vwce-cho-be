@@ -13,7 +13,6 @@ describe("buildDailyBriefing", () => {
       priceHistory: HISTORY,
       vwceQty: 10,
       assets: 2000,
-      streakMonths: 5,
       contributionDay: 15,
       now: new Date("2026-10-01T08:00:00"),
     });
@@ -32,7 +31,6 @@ describe("buildDailyBriefing", () => {
       ],
       vwceQty: 0,
       assets: 100,
-      streakMonths: 0,
       contributionDay: null,
     });
     expect(down.priceChange?.direction).toBe("down");
@@ -45,7 +43,6 @@ describe("buildDailyBriefing", () => {
       ],
       vwceQty: 5,
       assets: 100,
-      streakMonths: 0,
       contributionDay: null,
     });
     expect(flat.priceChange?.direction).toBe("flat");
@@ -58,7 +55,6 @@ describe("buildDailyBriefing", () => {
       priceHistory: [],
       vwceQty: 10,
       assets: 100,
-      streakMonths: 0,
       contributionDay: null,
     });
     expect(empty.priceToday).toBeNull();
@@ -69,7 +65,6 @@ describe("buildDailyBriefing", () => {
       priceHistory: [{ date: "2026-09-30", price: 169.78 }],
       vwceQty: 10,
       assets: 100,
-      streakMonths: 0,
       contributionDay: null,
     });
     expect(single.priceToday).toEqual({ date: "2026-09-30", price: 169.78 });
@@ -87,7 +82,6 @@ describe("buildDailyBriefing", () => {
       ],
       vwceQty: 0,
       assets: 100,
-      streakMonths: 0,
       contributionDay: null,
     });
     expect(briefing.priceToday).toEqual({ date: "2026-09-30", price: 169.78 });
@@ -99,7 +93,6 @@ describe("buildDailyBriefing", () => {
       priceHistory: HISTORY,
       vwceQty: 0,
       assets: 9200,
-      streakMonths: 0,
       contributionDay: null,
     });
     expect(briefing.nextMilestone?.target).toBe(10000);
@@ -110,7 +103,6 @@ describe("buildDailyBriefing", () => {
       priceHistory: HISTORY,
       vwceQty: 0,
       assets: 2_000_000,
-      streakMonths: 0,
       contributionDay: null,
     });
     expect(topped.nextMilestone).toBeNull();
@@ -121,19 +113,16 @@ describe("buildDailyBriefing", () => {
       priceHistory: HISTORY,
       vwceQty: 0,
       assets: 100,
-      streakMonths: 3,
       contributionDay: 15,
       now: new Date("2026-10-01T08:00:00"),
     });
     expect(upcoming.daysToNextContribution).toBe(15);
-    expect(upcoming.streakMonths).toBe(3);
 
     // after the 15th, rolls to next month
     const rolled = buildDailyBriefing({
       priceHistory: HISTORY,
       vwceQty: 0,
       assets: 100,
-      streakMonths: 3,
       contributionDay: 15,
       now: new Date("2026-10-20T08:00:00"),
     });
@@ -143,7 +132,6 @@ describe("buildDailyBriefing", () => {
       priceHistory: HISTORY,
       vwceQty: 0,
       assets: 100,
-      streakMonths: 0,
       contributionDay: 31,
     });
     expect(invalid.daysToNextContribution).toBeNull();
