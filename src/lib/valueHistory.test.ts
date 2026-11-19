@@ -66,6 +66,53 @@ describe("buildValueHistory", () => {
     expect(secFirst![2].contributed).toBeCloseTo(118.5, 2);
   });
 
+  it("never uses a future price for a position held before its first quote", () => {
+    const txs = [
+      tx("t1", "2026-08-05", "cash_in", 120),
+      tx("t2", "2026-08-06", "buy_vwce", 118.5, { unitPrice: 118.5, quantity: 1, fee: 1 }),
+      tx("t3", "2026-09-05", "cash_in", 120),
+    ];
+    // First quote only at the end of Sep — nothing is known in Aug.
+    const quotes = [quote("2026-09-30", 121)];
+    const points = buildValueHistory({ transactions: txs, quotes, locale: "vi", now: new Date("2026-10-03") });
+    expect(points).not.toBeNull();
+    // Aug: no quote known yet -> position excluded, NOT priced at the future 121
+    expect(points![0].value).toBeCloseTo(1.5, 2);
+    expect(points![0].unpricedIsins).toEqual(["IE00BK5BQT80"]);
+    // Sep: first quote known -> priced; Oct: carry-forward of the Sep quote
+    expect(points![1].value).toBeCloseTo(121 + 121.5, 2);
+    expect(points![1].unpricedIsins).toEqual([]);
+    expect(points![2].value).toBeCloseTo(121 + 121.5, 2);
+    expect(points![2].unpricedIsins).toEqual([]);
+    // Contributed is pricing-independent: the Aug buy still counts
+    expect(points![0].contributed).toBeCloseTo(118.5, 2);
+    expect(points![2].contributed).toBeCloseTo(118.5, 2);
+  });
+
+  it("excludes an instrument with no quotes at all and flags it", () => {
+    const txs = [
+      tx("t1", "2026-08-05", "cash_in", 120),
+      tx("t2", "2026-08-06", "buy_vwce", 118.5, { unitPrice: 118.5, quantity: 1, fee: 1 }),
+      tx("t3", "2026-09-05", "cash_in", 120),
+      tx("t4", "2026-09-06", "buy_security", 44.5, { instrumentIsin: "IE000VAHT5T0", unitPrice: 4.45, quantity: 10, fee: 0 }),
+    ];
+    // VWCE quotes only — VALL never has a quote.
+    const quotes = [quote("2026-08-29", 118), quote("2026-09-30", 121)];
+    const points = buildValueHistory({ transactions: txs, quotes, locale: "vi", now: new Date("2026-10-03") });
+    expect(points).not.toBeNull();
+    // Aug: VALL not bought yet, VWCE priced -> no flag
+    expect(points![0].value).toBeCloseTo(118 + 1.5, 2);
+    expect(points![0].unpricedIsins).toEqual([]);
+    // Sep + Oct: VALL held with no quote -> excluded from value, flagged
+    expect(points![1].value).toBeCloseTo(121 + 77, 2);
+    expect(points![1].unpricedIsins).toEqual(["IE000VAHT5T0"]);
+    expect(points![2].value).toBeCloseTo(121 + 77, 2);
+    expect(points![2].unpricedIsins).toEqual(["IE000VAHT5T0"]);
+    // Contributed still counts the VALL buy (pricing never changes contributions)
+    expect(points![1].contributed).toBeCloseTo(118.5 + 44.5, 2);
+    expect(points![2].contributed).toBeCloseTo(118.5 + 44.5, 2);
+  });
+
   it("sums VWCE + VALL positions at their own prices", () => {
     const txs = [
       tx("t1", "2026-08-05", "cash_in", 120),
