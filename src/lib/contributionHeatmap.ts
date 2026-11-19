@@ -22,7 +22,7 @@ export type ContributionHeatmap = {
 const MONTH_LABEL_VI = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"];
 const MONTH_LABEL_DE = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
-/** Transaction types that count as a contribution — same as contributionStreak. */
+/** Transaction types that count as a contribution. */
 const CONTRIBUTION_TYPES = new Set<Transaction["type"]>([
   "cash_in",
   "buy_vwce",
