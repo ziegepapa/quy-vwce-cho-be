@@ -8,7 +8,10 @@ pdfjs.GlobalWorkerOptions.workerPort = new PdfWorker();
 
 export async function readPdfText(file: Blob): Promise<string> {
   const data = new Uint8Array(await file.arrayBuffer());
-  const doc = await pdfjs.getDocument({ data }).promise;
+  // pdfjs-dist 6 removed PDFDocumentProxy.destroy(); the loading task owns
+  // teardown now (PDFDocumentLoadingTask.destroy()).
+  const loadingTask = pdfjs.getDocument({ data });
+  const doc = await loadingTask.promise;
   try {
     const out: string[] = [];
     for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
@@ -27,7 +30,7 @@ export async function readPdfText(file: Blob): Promise<string> {
     }
     return out.join("");
   } finally {
-    await doc.destroy();
+    await loadingTask.destroy();
   }
 }
 

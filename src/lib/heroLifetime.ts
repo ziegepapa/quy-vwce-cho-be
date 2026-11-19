@@ -106,7 +106,7 @@ export function heroLifetimeMode(
  * Lifetime contribution as the hero should state it. No time window: this is
  * the whole ledger, unlike `nhipWindowTotal` which is deliberately 35 days.
  *
- * Soft-deleted rows are skipped, matching `contributionStreak.ts`. Non-finite
+ * Soft-deleted rows are skipped, matching the other contribution totals. Non-finite
  * and non-positive amounts are skipped rather than summed, so one corrupt row
  * cannot turn X into NaN and blank the line.
  */

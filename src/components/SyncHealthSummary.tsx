@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useLocale } from "../lib/locale";
 import { syncHealthCopy, type SyncHealth } from "./syncHealth";
 import { IconAlert, IconCheck, IconCircle, IconSync } from "./Icons";

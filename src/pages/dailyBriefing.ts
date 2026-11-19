@@ -17,8 +17,6 @@ export type DailyBriefing = {
    * previous close (vwceQty * price delta). Never feeds the ledger.
    */
   valueDeltaEstimate: number | null;
-  /** Consecutive contribution months (see lib/contributionStreak). */
-  streakMonths: number;
   /** Next round milestone above current assets, or null when unknown. */
   nextMilestone: { target: number; remaining: number; progressPct: number } | null;
   /** Calendar days until the next monthly contribution date, or null. */
@@ -74,12 +72,10 @@ export function buildDailyBriefing(input: {
   priceHistory: ReadonlyArray<BriefingPricePoint>;
   vwceQty: number;
   assets: number;
-  streakMonths: number;
   contributionDay: number | null;
   now?: Date;
 }): DailyBriefing {
   const now = input.now ?? new Date();
-  const streakMonths = Math.max(0, Math.trunc(input.streakMonths));
 
   const points = [...input.priceHistory].filter(isValidPoint).sort((a, b) => a.date.localeCompare(b.date));
   const latest = points.length > 0 ? points[points.length - 1] : null;
@@ -122,7 +118,6 @@ export function buildDailyBriefing(input: {
     priceToday: latest ? { date: latest.date, price: latest.price } : null,
     priceChange,
     valueDeltaEstimate,
-    streakMonths,
     nextMilestone,
     daysToNextContribution,
   };

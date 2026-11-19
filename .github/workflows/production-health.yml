@@ -29,9 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     # Browsers + OS libs preinstalled — same image as CI preview-smoke,
     # so we never run `playwright install --with-deps` / apt here either.
-    # Image tag must match the pinned @playwright/test version (1.62.1).
+    # Image tag must match the pinned @playwright/test version (1.65.1).
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-jammy
+      image: mcr.microsoft.com/playwright:v1.65.1-jammy
       options: --ipc=host
     timeout-minutes: 10
     steps:

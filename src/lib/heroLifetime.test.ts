@@ -74,7 +74,7 @@ describe("computeHeroLifetimeContribution", () => {
     expect(overlap).toEqual([]);
   });
 
-  it("skips soft-deleted rows, like the streak engine does", () => {
+  it("skips soft-deleted rows", () => {
     const result = computeHeroLifetimeContribution({
       trackInAppCash: false,
       transactions: [

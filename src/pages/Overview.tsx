@@ -5,7 +5,6 @@ import { VALL_ISIN, VWCE_ISIN } from "../lib/types";
 import { buildOverviewHero } from "../lib/overviewNumbers";
 import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import { computeHeroLifetimeContribution } from "../lib/heroLifetime";
-import { computeContributionStreak } from "../lib/contributionStreak";
 import OverviewFrame, { type AllocationSlice, type UpdateItem } from "../components/demo-v10/OverviewFrame";
 import { useLocale } from "../lib/locale";
 import { findTransactionQualityIssues } from "./transactionQualityInbox";
@@ -242,13 +241,11 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       lastBackupAt,
     });
     const priceHistory = priceHistories.get(VWCE_ISIN) ?? [];
-    const streak = computeContributionStreak(transactions);
     const contributionDay = Number(settings.startDate.slice(8, 10));
     const briefing: DailyBriefing = buildDailyBriefing({
       priceHistory,
       vwceQty: portfolio.vwceQty,
       assets: hero.assets,
-      streakMonths: streak.streakMonths,
       contributionDay:
         Number.isInteger(contributionDay) && contributionDay >= 1 && contributionDay <= 28
           ? contributionDay

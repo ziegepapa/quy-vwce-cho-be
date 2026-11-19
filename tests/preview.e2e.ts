@@ -172,47 +172,81 @@ test("mobile Settings keeps P40 plan mechanics in a sheet and all tab actions re
   test.skip(!(await localVaultEntry.isVisible()), "requires the local-only preview entry");
 
   await page.goto("./#/settings", { waitUntil: "networkidle" });
-  await expect(page.locator(".settings-cbo.p40-settings")).toHaveCount(1);
-  await expect(page.getByRole("tab", { name: "Chung" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("heading", { name: "Kế hoạch" })).toBeVisible();
-  await expect(page.locator(".p40-plan")).toBeVisible();
-  await expect(page.locator(".p40-plan input, .p40-plan select")).toHaveCount(0);
-  await expect(page.locator(".p40-plan")).not.toContainText("0.05");
+  // The tabbed Settings UI is gone: Settings is now a set2 list whose rows
+  // open sheets. The list itself shows the plan group with no editable
+  // fields and no raw decimal rates leaking through.
+  await expect(page.locator(".set2")).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "Cài đặt", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "KẾ HOẠCH", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Mục tiêu/ }).first()).toBeVisible();
+  await expect(page.locator(".set2 input, .set2 select")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
-  const tabHeights = await page.getByRole("tab").evaluateAll((tabs) => tabs.map((tab) => Math.round(tab.getBoundingClientRect().height)));
-  expect(tabHeights).toEqual([44, 44, 44]);
+  // Former tab bar (3 tabs x 44px): every list row is now a >=44px touch target.
+  const rowHeights = await page.locator(".set2-row").evaluateAll((rows) => rows.map((row) => Math.round(row.getBoundingClientRect().height)));
+  expect(rowHeights.length).toBeGreaterThan(0);
+  expect(rowHeights.every((height) => height >= 44)).toBe(true);
 
-  const planAction = page.getByRole("button", { name: /Thêm mục tiêu|Tùy chỉnh kế hoạch/ }).first();
-  await planAction.click();
-  await expect(page.getByRole("dialog", { name: "Kế hoạch" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "3 năm" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "5 năm" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "7 năm" })).toBeVisible();
-  await expect(page.getByRole("option", { name: "8%" })).toBeAttached();
-  await expect(page.getByRole("option", { name: "12%" })).toBeAttached();
-  await expect(page.getByRole("option", { name: "16%" })).toBeAttached();
-  await page.getByRole("button", { name: /Nâng cao cho mô phỏng/ }).click();
-  await expect(page.getByRole("dialog", { name: "Giả định mô phỏng" })).toBeVisible();
-  await expect(page.getByText("%/năm")).toHaveCount(3);
-  await page.getByRole("button", { name: "Đóng" }).click();
-  await expect(page.getByRole("dialog", { name: "Kế hoạch" })).toBeVisible();
-  await page.getByRole("button", { name: "Đóng" }).click();
-
-  await page.getByRole("tab", { name: "Giá" }).click();
-  await expect(page.getByRole("tab", { name: "Giá" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("heading", { name: "Giá", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cập nhật giá bây giờ" })).toBeVisible();
-  await expect(page.getByText("Thông tin nguồn giá")).toBeVisible();
+  // Former "Chung" tab + "Thêm mục tiêu / Tùy chỉnh kế hoạch" action:
+  // the "Mục tiêu" row opens the plan sheet (dialog titled "Mục tiêu").
+  await page.getByRole("button", { name: /Mục tiêu/ }).first().click();
+  const planDialog = page.getByRole("dialog", { name: "Mục tiêu" });
+  await expect(planDialog).toBeVisible();
+  await expect(planDialog.getByRole("button", { name: "3 năm" })).toBeVisible();
+  await expect(planDialog.getByRole("button", { name: "5 năm" })).toBeVisible();
+  await expect(planDialog.getByRole("button", { name: "7 năm" })).toBeVisible();
+  await expect(planDialog).not.toContainText("0.05");
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
-  await page.getByRole("tab", { name: "Dữ liệu" }).click();
-  await expect(page.getByRole("tab", { name: "Dữ liệu" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("button", { name: /Sao lưu JSON/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Khôi phục dữ liệu/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Đồng bộ ngay/ })).toBeVisible();
-  const dataActionHeights = await page.locator(".p40-transfer-grid button, .p40-sync-button").evaluateAll((buttons) => buttons.map((button) => Math.round(button.getBoundingClientRect().height)));
-  expect(dataActionHeights.every((height) => height >= 44)).toBe(true);
+  // Former "Nâng cao cho mô phỏng" flow: the plan sheet's advanced link
+  // opens the "Giả định mô phỏng" sheet with three %/năm rate fields.
+  // (The old 8%/12%/16% <option> list no longer exists: rates are now
+  // numeric inputs in this sheet, so there is no option assertion to map.)
+  await planDialog.getByRole("button", { name: /Nâng cao cho mô phỏng/ }).click();
+  const simulationDialog = page.getByRole("dialog", { name: "Giả định mô phỏng" });
+  await expect(simulationDialog).toBeVisible();
+  await expect(simulationDialog.getByText("Lợi suất VWCE")).toBeVisible();
+  await expect(simulationDialog.getByText("Lạm phát")).toBeVisible();
+  await expect(simulationDialog.getByText("Phần an toàn")).toBeVisible();
+  await expect(simulationDialog.getByText("%/năm")).toHaveCount(3);
+  await simulationDialog.getByRole("button", { name: "Xong" }).click();
+  await expect(planDialog).toBeVisible();
+  await planDialog.getByRole("button", { name: "Xong" }).click();
+  await expect(planDialog).toHaveCount(0);
+
+  // Former "Giá" tab: the "Giá VWCE" row opens the prices sheet. The refresh
+  // action is now the published-feed sync ("Đồng bộ feed giá", QuoteFeedRefresh),
+  // not the old direct "Cập nhật giá bây giờ" button.
+  await page.getByRole("button", { name: "Giá VWCE", exact: true }).click();
+  const pricesDialog = page.getByRole("dialog", { name: "Giá VWCE" });
+  await expect(pricesDialog).toBeVisible();
+  await expect(pricesDialog.getByRole("button", { name: "Đồng bộ feed giá" })).toBeVisible();
+  await expect(pricesDialog.getByText("Thông tin nguồn giá")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await pricesDialog.getByRole("button", { name: "Đóng" }).click();
+  await expect(pricesDialog).toHaveCount(0);
+
+  // Former "Dữ liệu" tab: backup/restore live in the "Sao lưu & khôi phục"
+  // sheet and sync lives in the separate "Đồng bộ" sheet.
+  await page.getByRole("button", { name: "Sao lưu & khôi phục", exact: true }).click();
+  const transfersDialog = page.getByRole("dialog", { name: "Sao lưu & khôi phục" });
+  await expect(transfersDialog).toBeVisible();
+  await expect(transfersDialog.getByRole("button", { name: /Sao lưu JSON/ })).toBeVisible();
+  await expect(transfersDialog.getByRole("button", { name: /Khôi phục dữ liệu/ })).toBeVisible();
+  const transferActionHeights = await transfersDialog.locator(".set2-action").evaluateAll((buttons) => buttons.map((button) => Math.round(button.getBoundingClientRect().height)));
+  expect(transferActionHeights.length).toBeGreaterThan(0);
+  expect(transferActionHeights.every((height) => height >= 44)).toBe(true);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await transfersDialog.getByRole("button", { name: "Đóng" }).click();
+  await expect(transfersDialog).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Đồng bộ", exact: true }).click();
+  const syncDialog = page.getByRole("dialog", { name: "Đồng bộ" });
+  await expect(syncDialog).toBeVisible();
+  await expect(syncDialog.getByRole("button", { name: /Đồng bộ ngay/ })).toBeVisible();
+  const syncButtonHeights = await syncDialog.locator(".set2-sync-btn").evaluateAll((buttons) => buttons.map((button) => Math.round(button.getBoundingClientRect().height)));
+  expect(syncButtonHeights.length).toBe(1);
+  expect(syncButtonHeights.every((height) => height >= 44)).toBe(true);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
