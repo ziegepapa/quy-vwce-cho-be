@@ -148,8 +148,11 @@
 .set2-legacy .cbo-action-row strong { font-size: 15px; font-weight: 600; }
 .set2-legacy .cbo-action-row small { font-size: 12px; color: var(--text-tertiary); }
 .set2-legacy .cbo-action-row > svg { flex: none; color: var(--text-tertiary); }
-.set2-legacy .cbo-action-row.danger strong { color: var(--danger-600); }
-.set2-legacy .cbo-action-row.danger .cbo-action-icon { background: var(--danger-050); color: var(--danger-600); }
+/* Nút nền đỏ: chữ và icon phải trắng — tô màu danger lên nền danger làm tiêu đề biến mất. */
+.set2-legacy .cbo-action-row.danger strong { color: #fff; }
+.set2-legacy .cbo-action-row.danger small { color: rgba(255, 255, 255, 0.85); }
+.set2-legacy .cbo-action-row.danger > svg { color: #fff; }
+.set2-legacy .cbo-action-row.danger .cbo-action-icon { background: rgba(255, 255, 255, 0.2); color: #fff; }
 .set2-legacy .advanced-delete { padding: 14px 16px; border-top: 1px solid var(--hairline, var(--border-subtle)); }
 .set2-legacy .advanced-delete p { margin: 0 0 10px; font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
 .set2-legacy .advanced-delete input {

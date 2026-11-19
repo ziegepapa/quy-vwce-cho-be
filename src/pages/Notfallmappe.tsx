@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getSettings, listGoals, listTransactions, saveSettings } from "../lib/db";
+import { getSettings, listGoals, listQuotes, listTransactions, saveSettings } from "../lib/db";
 import type {
   AppSettings,
   DocumentLocation,
@@ -9,7 +9,7 @@ import type {
   Transaction,
 } from "../lib/types";
 import { defaultNotfallmappe, nowIso, uid } from "../lib/defaults";
-import { buildEquitySeries } from "../lib/calc";
+import { buildTodayCenterPortfolioSnapshot } from "../lib/todayCenterAdapter";
 import { printNotfallmappe } from "../lib/printNotfallmappe";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
@@ -49,6 +49,7 @@ export default function NotfallmappePage() {
   const [data, setData] = useState<NotfallmappeData | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [txs, setTxs] = useState<Transaction[]>([]);
+  const [quotes, setQuotes] = useState<Awaited<ReturnType<typeof listQuotes>>>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialLoadError, setInitialLoadError] = useState(false);
   const [initialLoadAttempt, setInitialLoadAttempt] = useState(0);
@@ -78,10 +79,11 @@ export default function NotfallmappePage() {
     setInitialLoadError(false);
     void (async () => {
       try {
-        const [nextSettings, nextGoals, nextTransactions] = await Promise.all([
+        const [nextSettings, nextGoals, nextTransactions, nextQuotes] = await Promise.all([
           getSettings(),
           listGoals(),
           listTransactions(),
+          listQuotes(),
         ]);
         if (cancelled) return;
         // Make the edit handlers ready in the same commit as the loaded UI.
@@ -93,6 +95,7 @@ export default function NotfallmappePage() {
         setData(nextData);
         setGoals(nextGoals);
         setTxs(nextTransactions);
+        setQuotes(nextQuotes);
       } catch {
         if (cancelled) return;
         setInitialLoadError(true);
@@ -104,16 +107,25 @@ export default function NotfallmappePage() {
   }, [initialLoadAttempt]);
 
   const snap = useMemo(() => {
-    const price = settings?.latestVwcePrice ?? 0;
-    const series = buildEquitySeries(txs, price);
-    const total = series.length ? series[series.length - 1].value : 0;
+    // Tổng tài sản = chứng khoán theo giá mới nhất + tiền mặt thực có.
+    // Tiền mặt âm do replay lệnh mua mà không có khoản nạp được chặn ở 0 —
+    // cùng quy tắc Overview dùng trong buildOverviewHero (cashAsset).
+    // Không dùng điểm cuối của buildEquitySeries nữa: nó cộng cả tiền mặt âm
+    // phantom nên bản in ra số âm khi sổ chỉ có lệnh mua.
+    const snapshot = buildTodayCenterPortfolioSnapshot({
+      transactions: txs,
+      quotes,
+      legacyVwcePrice: settings?.latestVwcePrice ?? 0,
+      legacyVwcePriceAsOf: settings?.latestPriceDate ?? "",
+    });
+    const total = snapshot.market.securities + Math.max(0, snapshot.portfolio.cashBalance);
     let qty = 0;
     for (const t of txs) {
       if (t.type === "buy_vwce") qty += t.quantity ?? 0;
       else if (t.type === "sell_vwce") qty -= t.quantity ?? 0;
     }
-    return { total, qty, price };
-  }, [txs, settings]);
+    return { total, qty, price: snapshot.vwcePrice };
+  }, [txs, settings, quotes]);
 
   const filled = useMemo(() => {
     if (!data) return [false, false, false, false, false];

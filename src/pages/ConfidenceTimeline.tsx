@@ -10,6 +10,7 @@ import {
   type ConfidenceTimelineLens,
   type ConfidenceTimelineSource,
 } from "./confidenceTimeline";
+import { IconDownload, IconSim, IconTx, IconUser } from "../components/Icons";
 import "../styles/confidence-timeline.css";
 
 function timelineCopy(locale: "vi" | "de") {
@@ -22,6 +23,9 @@ function timelineCopy(locale: "vi" | "de") {
     retry: "Erneut versuchen",
     noEvents: "Noch keine datierten Statusereignisse vorhanden.",
     noVisibleEvents: "Für diese Auswahl sind keine datierten Statusereignisse vorhanden.",
+    dayEvents: (count: number) => `${count} Ereignis${count === 1 ? "" : "se"}`,
+    today: "Heute",
+    yesterday: "Gestern",
     quote: "Kurs-Snapshot",
     transactionCreated: "Buchung erfasst",
     transactionUpdated: "Buchung geändert",
@@ -68,6 +72,9 @@ function timelineCopy(locale: "vi" | "de") {
     retry: "Thử lại",
     noEvents: "Chưa có sự kiện trạng thái nào có ngày giờ hợp lệ.",
     noVisibleEvents: "Không có sự kiện trạng thái phù hợp với bộ lọc hiện tại.",
+    dayEvents: (count: number) => `${count} sự kiện`,
+    today: "Hôm nay",
+    yesterday: "Hôm qua",
     quote: "Snapshot giá",
     transactionCreated: "Đã ghi giao dịch",
     transactionUpdated: "Đã chỉnh giao dịch",
@@ -117,6 +124,64 @@ function formatTime(value: string, locale: "vi" | "de") {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function sourceIcon(source: ConfidenceTimelineSource) {
+  if (source === "quote") return <IconSim />;
+  if (source === "ledger") return <IconTx />;
+  if (source === "import") return <IconDownload />;
+  return <IconUser />;
+}
+
+function dayKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function formatDay(date: Date, locale: "vi" | "de"): string {
+  return new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+type TimelineDayGroup = {
+  key: string;
+  label: string;
+  events: ConfidenceTimelineEvent[];
+};
+
+/**
+ * Nhóm sự kiện theo ngày lịch địa phương. Sự kiện đã xếp mới-nhất-trước
+ * nên ngày đầu tiên cũng là ngày mới nhất. Sự kiện có `at` không hợp lệ
+ * không vào nhóm nào (builder đã loại chúng khỏi danh sách).
+ */
+function groupTimelineEventsByDay(
+  events: readonly ConfidenceTimelineEvent[],
+  locale: "vi" | "de",
+  text: ReturnType<typeof timelineCopy>,
+): TimelineDayGroup[] {
+  const groups: TimelineDayGroup[] = [];
+  const today = new Date();
+  const todayKey = dayKey(today);
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const yesterdayKey = dayKey(yesterday);
+  for (const event of events) {
+    const date = new Date(event.at);
+    if (Number.isNaN(date.getTime())) continue;
+    const key = dayKey(date);
+    let group = groups.find((item) => item.key === key);
+    if (!group) {
+      const day = formatDay(date, locale);
+      const label = key === todayKey ? `${text.today} · ${day}` : key === yesterdayKey ? `${text.yesterday} · ${day}` : day;
+      group = { key, label, events: [] };
+      groups.push(group);
+    }
+    group.events.push(event);
+  }
+  return groups;
 }
 
 function formatSessionDate(value: string, locale: "vi" | "de") {
@@ -224,6 +289,11 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
     limit,
   }) : null, [data, lens, limit, pending, sources, syncStatus]);
 
+  const dayGroups = useMemo(
+    () => timeline ? groupTimelineEventsByDay(timeline.events, locale, text) : [],
+    [timeline, locale, text],
+  );
+
   const selectLens = (next: ConfidenceTimelineLens) => { setLens(next); setLimit(30); };
   const toggleSource = (source: ConfidenceTimelineSource) => {
     setSources((current) => current.includes(source) ? current.filter((item) => item !== source) : [...current, source]);
@@ -270,10 +340,17 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
       <section className="ct-card">
         <p className="ct-privacy" role="note">{text.privacy}</p>
         {timeline.events.length === 0 ? <p className="ct-empty">{emptyMessage}</p> : (
-          <ol className="ct-events">
-            {timeline.events.map((event) => (
-              <li key={event.id}>
-                <span className={`ct-dot is-${event.source}`} aria-hidden="true" />
+          <div className="ct-days">
+            {dayGroups.map((group, index) => (
+              <details className="ct-day" key={group.key} open={index === 0}>
+                <summary className="ct-day-summary">
+                  <span className="ct-day-title">{group.label}</span>
+                  <span className="ct-day-count">{text.dayEvents(group.events.length)}</span>
+                </summary>
+                <ol className="ct-events">
+                  {group.events.map((event) => (
+                    <li key={event.id}>
+                      <span className={`ct-source is-${event.source}`} aria-hidden="true">{sourceIcon(event.source)}</span>
                 <div className="ct-event-content">
                   <strong>{eventHeading(event, locale, text)}</strong>
                   <small className="ct-event-meta">{sourceLabel(event.source)} · {formatTime(event.at, locale)}</small>
@@ -322,9 +399,12 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
                     </small>
                   ) : null}
                 </div>
-              </li>
+                    </li>
+                  ))}
+                </ol>
+              </details>
             ))}
-          </ol>
+          </div>
         )}
         {timeline.events.length < timeline.totalEvents ? <button className="ct-more" type="button" onClick={() => setLimit((value) => value + 30)}>{text.showMore(timeline.events.length, timeline.totalEvents)}</button> : null}
       </section>
