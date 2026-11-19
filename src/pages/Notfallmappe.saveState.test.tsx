@@ -8,6 +8,7 @@ import type { AppSettings } from "../lib/types";
 const dbMocks = vi.hoisted(() => ({
   getSettings: vi.fn(),
   listGoals: vi.fn(),
+  listQuotes: vi.fn(),
   listTransactions: vi.fn(),
   saveSettings: vi.fn(),
 }));
@@ -47,6 +48,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   dbMocks.getSettings.mockResolvedValue(settings());
   dbMocks.listGoals.mockResolvedValue([]);
+  dbMocks.listQuotes.mockResolvedValue([]);
   dbMocks.listTransactions.mockResolvedValue([]);
   dbMocks.saveSettings.mockResolvedValue(undefined);
 });
