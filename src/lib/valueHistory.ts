@@ -16,6 +16,13 @@ export type ValueHistoryPoint = {
    * this next to `value`; the gap between the two lines is the real gain.
    */
   contributed: number;
+  /**
+   * ISINs held at month end with NO quote known on or before the cutoff.
+   * Such positions are EXCLUDED from `value` for that month — never priced
+   * with a later (future) quote — and listed here instead of silently
+   * contributing 0. Always set by buildValueHistory.
+   */
+  unpricedIsins: string[];
 };
 
 const MONTH_LABEL_VI = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"];
@@ -86,10 +93,12 @@ export function buildValueHistory(input: {
   for (const { year, monthIndex } of months) {
     const cutoff = lastDayOfMonth(year, monthIndex);
     const state = replayTransactions(dated.filter((t) => t.date <= cutoff));
-    // Sum every held position at its own price on the cutoff date. A position
-    // held before its first quote falls back to that instrument's latest
-    // price; an instrument with no quotes at all contributes 0.
+    // Sum every held position at the latest price KNOWN on the cutoff date
+    // (carry-forward). NEVER use a quote dated after the cutoff: a position
+    // held before its first quote is excluded from this month's value and
+    // listed in `unpricedIsins` instead of silently contributing 0.
     let value = Math.max(0, state.cashBalance);
+    const unpricedIsins: string[] = [];
     for (const [isin, pos] of Object.entries(state.positions)) {
       if (pos.qty <= 0) continue;
       const series = quotesByIsin.get(isin) ?? [];
@@ -98,7 +107,10 @@ export function buildValueHistory(input: {
         if (q.asOf <= cutoff) price = q.price;
         else break;
       }
-      if (price <= 0 && series.length > 0) price = series[series.length - 1].price;
+      if (price <= 0) {
+        unpricedIsins.push(isin);
+        continue;
+      }
       value += Math.max(0, pos.qty) * price;
     }
     // Cumulative contributions up to this cutoff — same definition as the
@@ -113,6 +125,7 @@ export function buildValueHistory(input: {
       label: labels[monthIndex],
       value: Math.round(value * 100) / 100,
       contributed: Math.round(contributed * 100) / 100,
+      unpricedIsins,
     });
   }
 
