@@ -45,7 +45,18 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
 
   if (!geometry) return null;
 
+  // Months where the value line excludes holdings that had no price yet.
+  // Plain ASCII text: this file must stay free of accented characters
+  // (locale audit) unless it uses the locale system.
+  const unpricedParts = points
+    .filter((p) => (p.unpricedIsins ?? []).length > 0)
+    .map((p) => `${p.label} (${(p.unpricedIsins ?? []).join(", ")})`);
+  const unpricedNote = unpricedParts.length > 0
+    ? `Value excludes holdings with no price yet: ${unpricedParts.join(", ")}.`
+    : null;
+
   return (
+    <>
     <svg
       viewBox={`0 0 ${W} ${H}`}
       className="ovb2-chart"
@@ -112,5 +123,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
         </text>
       ))}
     </svg>
+    {unpricedNote ? <p className="ovb2-sub">{unpricedNote}</p> : null}
+    </>
   );
 }
