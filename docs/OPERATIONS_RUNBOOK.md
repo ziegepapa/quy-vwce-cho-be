@@ -264,7 +264,7 @@ Branch protection (`main`): bắt buộc PR, required check `test-build`, cấm 
 ### 14.3 Production Health v2 (PR #305/#306, sửa #309/#310, 10/2026)
 
 - `verify`: kiểm tra HTTP-level (status 200, title, app shell, quote tươi). Xanh đều = production sống.
-- `route-smoke`: Playwright headless (container `playwright:v1.62.1-jammy`), script `scripts/verify-production-routes.mjs` (npm script `verify:production-routes`). **Đây là boot smoke màn hình đăng nhập — KHÔNG phải test route sau đăng nhập.**
+- `route-smoke`: Playwright headless (container `playwright:v1.65.1-jammy`), script `scripts/verify-production-routes.mjs` (npm script `verify:production-routes`). **Đây là boot smoke màn hình đăng nhập — KHÔNG phải test route sau đăng nhập.**
 - Vì sao: production build có Supabase (`auth.configured=true`) nên fresh profile render `<AuthPage />` (form login), không phải Onboarding. Thiết kế đầu (05/10/2026) sai giả định này → fail 2 lần → root-cause từ BOOT DIAG → sửa ở #309 (diagnostics) và #310 (smoke auth gate). **Đừng bao giờ assume fresh profile → Onboarding ở production.**
 - Assert (locale-free, không phụ thuộc chữ Việt/Đức): `.auth-shell .auth-card` + `input[type=email]` + `input[type=password]` + `button[type=submit]`; không pageerror/console.error; không render trắng. Screenshot chỉ khi fail.
 - Đọc BOOT DIAG khi boot fail (`{"readyState","title","rootChildren","bodyTextLen","scripts"}`):
