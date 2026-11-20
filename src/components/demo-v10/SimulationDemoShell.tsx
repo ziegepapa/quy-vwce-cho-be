@@ -127,6 +127,19 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
   return (
     <main className="demo-v10-screen sim-screen" aria-label={text.aria}>
       <div className="sim-wrap">
+      <header className="mwj-page-head">
+        <h1>{text.aria}</h1>
+        {!readOnly ? <button className="secondary mwj-sim-example" type="button" onClick={() => {
+          setMode("A");
+          setMonthly("120");
+          setRateInput("5");
+          setYears(30);
+          setLumpSum("0");
+          setBalanceOverride("0");
+          setGrowthOn(false);
+          setShowPP(false);
+        }}>{locale === "de" ? "Beispiel ab 0 € laden" : "Thử ví dụ từ 0 €"}</button> : null}
+      </header>
       <div className="mode-tabs" data-testid="simulation-mode-switch" role="group" aria-label={text.aria}>
         {(
           [
@@ -149,7 +162,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
       </div>
 
       <section key={mode} className="sim-headline">
-        <span className="sim-mode-badge">{mode === "A" ? text.badgeA : mode === "B" ? text.badgeB : text.badgeC}</span>
+        <h2 className="sim-mode-badge">{mode === "A" ? text.end : mode === "B" ? text.badgeB : text.badgeC}</h2>
         {planUnreachable ? (
           <>
             <div className="sh-big sim-hero-amount" data-testid="simulation-hero-amount">—</div>
@@ -188,13 +201,16 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             ) : null}
           </>
         )}
-      <div className="summary-strip" role="group" aria-label={text.summary}>
-        <span><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong> {text.contributed}</span>
-        <span><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong> {text.gain}</span>
+      <div role="group" aria-label={text.summary}>
+      <dl className="summary-strip">
+        <div><dt>{text.contributed}</dt><dd><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong></dd></div>
+        <div><dt>{text.gain}</dt><dd><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong></dd></div>
+        <div><dt>{locale === "de" ? "Rendite / Jahr" : "Lợi suất / năm"}</dt><dd><strong>{baseRate.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { style: "percent", maximumFractionDigits: 2 })}</strong></dd></div>
+      </dl>
       </div>
         <div className="sim-hero-actions">
           <button type="button" className="sim-parameters-trigger" aria-haspopup="dialog" onClick={() => setParamsOpen(true)}>
-            <span aria-hidden="true">☷</span><span>{text.adjust}</span><span className="sim-trigger-chevron" aria-hidden="true">↗</span>
+            <span aria-hidden="true">☷</span><span>{text.adjust}</span><span className="sim-trigger-chevron" aria-hidden="true">›</span>
           </button>
         </div>
       </section>
@@ -204,7 +220,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
 
       <section className="gl sim-chart-card" data-testid="simulation-growth-chart">
         <div className="sim-chart-heading">
-          <div className="sim-chart-title">{text.chart}</div>
+          <h2 className="sim-chart-title">{text.chart}</h2>
           <span className="sim-live-tag">{text.baseScenario}</span>
         </div>
         <SimulationDemoChart

@@ -121,12 +121,8 @@ function overviewCopy(locale: "vi" | "de") {
     pageLabel: "Übersicht",
     totalAssets: "Gesamtvermögen",
     contributedByYou: "Eingezahlt",
-    marketAdded: "Markt dazu",
     gainUnavailable: "Noch nicht bewertbar",
     fundCount: "Fonds",
-    pace: "Kumuliert eingezahlt",
-    nextContribution: "Geschätzter Gewinn / Verlust",
-    growthValue: "Nächste Schwelle",
     inDays: (days: number) => days === 0 ? "heute" : `in ${days} Tagen`,
     priceUpdated: "Kurse aktualisiert",
     stalePrice: "Alter Kurs",
@@ -178,12 +174,8 @@ function overviewCopy(locale: "vi" | "de") {
     pageLabel: "Tổng quan",
     totalAssets: "Tổng giá trị tài sản",
     contributedByYou: "Bạn đã góp",
-    marketAdded: "Thị trường thêm",
     gainUnavailable: "Chưa định giá",
     fundCount: "Số quỹ",
-    pace: "Đã góp lũy kế",
-    nextContribution: "Lãi / lỗ tạm tính",
-    growthValue: "Mốc kế tiếp",
     inDays: (days: number) => days === 0 ? "hôm nay" : `trong ${days} ngày`,
     priceUpdated: "Giá cập nhật",
     stalePrice: "Giá cũ",
@@ -417,6 +409,13 @@ export default function OverviewFrame(props: OverviewFrameProps) {
 
   return (
     <main className="ovb2" aria-label={text.pageLabel}>
+      <header className="mwj-page-head">
+        <h1>{text.pageLabel}</h1>
+        <nav className="mwj-page-links" aria-label={text.pageLabel}>
+          <Link to="/goals">{locale === "de" ? "Ziele" : "Mục tiêu"} <span aria-hidden="true">›</span></Link>
+          <Link to="/timeline">{locale === "de" ? "Zeitleiste" : "Dòng thời gian"} <span aria-hidden="true">›</span></Link>
+        </nav>
+      </header>
       <div className="ovb2-grid">
         <div className="ovb2-main">
           {/* Hero */}
@@ -424,20 +423,17 @@ export default function OverviewFrame(props: OverviewFrameProps) {
             <LandscapeArt />
             <div className="ovb2-k">{text.totalAssets}</div>
             <div className="ovb2-big">{assets}</div>
-            <div className="ovb2-comp">
-              {text.contributedByYou} <b>{contributedLabel}</b>
-              {gainLabel ? (
-                <> · {text.marketAdded} <span className={gainPositive ? "up" : "down"}>{gainLabel}{gainPctLabel ? ` (${gainPctLabel})` : ""}</span></>
-              ) : (
-                <> · <span className="muted">{text.gainUnavailable}</span></>
-              )}
-            </div>
-            <div className="ovb2-ministats">
-              <div><span>{text.pace}</span><b>{contributedLabel}</b></div>
-              <div><span>{text.nextContribution}</span><b>{gainLabel ?? text.gainUnavailable}{gainPctLabel ? ` (${gainPctLabel})` : ""}</b></div>
-              <div><span>{text.growthValue}</span><b>{milestone?.targetLabel ?? "—"}</b></div>
-              <div><span>{text.fundCount}</span><b>{fundCount}</b></div>
-            </div>
+            <dl className="ovb2-comp mwj-portfolio-stats">
+              <div><dt>{text.contributedByYou}</dt><dd>{contributedLabel}</dd></div>
+              <div>
+                <dt>{locale === "de" ? "Gewinn / Verlust" : "Lãi / lỗ"}</dt>
+                <dd className={gainLabel ? (gainPositive ? "up" : "down") : undefined}>
+                  {gainLabel ?? text.gainUnavailable}
+                  {gainLabel && gainPctLabel ? <small>{gainPctLabel}</small> : null}
+                </dd>
+              </div>
+              <div><dt>{text.fundCount}</dt><dd>{fundCount}</dd></div>
+            </dl>
           </section>
 
           {/* Chart + donut */}
@@ -633,7 +629,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
             <Link to="/goals" className="ovb2-card ovb2-mile" aria-label={text.nextMilestone}>
               <div className="ovb2-milehead">
                 <h3>🎯 {text.nextMilestone}</h3>
-                <span className="ovb2-action-arrow" aria-hidden="true">↗</span>
+                <span className="ovb2-action-arrow" aria-hidden="true">›</span>
               </div>
               <p className="ovb2-sub">{text.noFixedTarget}</p>
               <div className="ovb2-bar"><i style={{ width: `${Math.min(100, Math.max(0, milestone.progressPct))}%` }} /></div>

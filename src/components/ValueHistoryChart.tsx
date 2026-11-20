@@ -1,10 +1,11 @@
 import { useId, useMemo } from "react";
+import { useLocale } from "../lib/locale";
 import type { ValueHistoryPoint } from "../lib/valueHistory";
 
-const W = 560;
-const H = 240;
+const W = 400;
+const H = 220;
 const PAD_L = 46;
-const PAD_R = 64;
+const PAD_R = 17;
 const PAD_TOP = 16;
 const PAD_BOTTOM = 24;
 
@@ -20,6 +21,7 @@ function compact(n: number): string {
  * smoothing, no projection. Pure SVG, no chart library.
  */
 export default function ValueHistoryChart({ points, label }: { points: ValueHistoryPoint[]; label: string }) {
+  const { locale } = useLocale();
   const gradientId = useId();
   const geometry = useMemo(() => {
     if (points.length < 2) return null;
@@ -35,7 +37,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
     const contribLine = lineFor((p) => p.contributed);
     const area = `${valueLine} L${x(points.length - 1).toFixed(1)},${(H - PAD_BOTTOM).toFixed(1)} L${x(0).toFixed(1)},${(H - PAD_BOTTOM).toFixed(1)} Z`;
     const ticks = [0, max / 4, max / 2, (max * 3) / 4, max];
-    const labelCount = Math.min(6, points.length);
+    const labelCount = Math.min(4, points.length);
     const labelIdx = Array.from({ length: labelCount }, (_, i) =>
       Math.round((i * (points.length - 1)) / Math.max(1, labelCount - 1)),
     ).filter((idx, i, all) => all.indexOf(idx) === i);
@@ -46,13 +48,13 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
   if (!geometry) return null;
 
   // Months where the value line excludes holdings that had no price yet.
-  // Plain ASCII text: this file must stay free of accented characters
-  // (locale audit) unless it uses the locale system.
   const unpricedParts = points
     .filter((p) => (p.unpricedIsins ?? []).length > 0)
     .map((p) => `${p.label} (${(p.unpricedIsins ?? []).join(", ")})`);
   const unpricedNote = unpricedParts.length > 0
-    ? `Value excludes holdings with no price yet: ${unpricedParts.join(", ")}.`
+    ? locale === "de"
+      ? `Positionen ohne Kurs fehlen im Wertverlauf: ${unpricedParts.join(", ")}.`
+      : `Biểu đồ giá trị chưa tính các vị thế thiếu giá: ${unpricedParts.join(", ")}.`
     : null;
 
   return (
@@ -97,20 +99,6 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
         cy={geometry.y(geometry.last.value)}
         r="4.5" fill="var(--success-600)" stroke="var(--surface-raised)" strokeWidth="2"
       />
-      <text
-        x={geometry.x(points.length - 1) + 8}
-        y={geometry.y(geometry.last.value) - 6}
-        fontSize="11" fontWeight="700" fill="var(--success-600)"
-      >
-        {geometry.last.value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-      </text>
-      <text
-        x={geometry.x(points.length - 1) + 8}
-        y={geometry.y(geometry.last.contributed) + 14}
-        fontSize="12" fill="var(--text-secondary)"
-      >
-        {geometry.last.contributed.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-      </text>
       {geometry.labelIdx.map((i) => (
         <text
           key={points[i].month}

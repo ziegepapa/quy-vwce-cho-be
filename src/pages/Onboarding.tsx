@@ -1,5 +1,4 @@
 import { useLocale } from "../lib/locale";
-import "../styles/modern-wealth-journal.css";
 
 function onboardingCopy(locale: "vi" | "de") {
   return locale === "de" ? {
@@ -20,7 +19,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const text = onboardingCopy(locale);
   return (
     <main className="app-shell mwj-welcome">
-      <div className="mwj-welcome-brand" aria-hidden="true"><span className="mwj-leaf">✦</span> VWCE Vault</div>
+      <div className="mwj-welcome-brand" aria-hidden="true"><span className="mwj-brand-mark">✦</span> VWCE Vault</div>
       <div className="mwj-welcome-story">
         <div className="mwj-sun" aria-hidden="true" />
         <div className="mwj-hill mwj-hill-back" aria-hidden="true" />

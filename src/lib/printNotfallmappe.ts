@@ -18,7 +18,7 @@ const REMOVE_SELECTORS = [
   ".nfm-del",
   ".nfm-warn",
   ".nfm-risk",
-  ".nfm-progress",
+  ".mwj-emergency-head",
   ".nfm-print-note",
   ".nfm-sec-state",
   ".nfm-chev",

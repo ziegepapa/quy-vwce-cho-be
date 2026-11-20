@@ -210,12 +210,12 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       trackInAppCash: settings.trackInAppCash,
     });
     const pnl = hero.pnl;
-    const gainLabel = pnl == null || pnl === 0
+    const gainLabel = pnl == null
       ? null
-      : `${pnl > 0 ? "+" : "−"}${formatMoney(Math.abs(pnl))}`;
+      : `${pnl > 0 ? "+" : pnl < 0 ? "−" : ""}${formatMoney(Math.abs(pnl))}`;
     const gainPctLabel = hero.pnlPct == null
       ? null
-      : `${hero.pnlPct > 0 ? "+" : ""}${hero.pnlPct.toFixed(1).replace(".", ",")}%`;
+      : `${hero.pnlPct > 0 ? "+" : hero.pnlPct < 0 ? "−" : ""}${Math.abs(hero.pnlPct).toFixed(2).replace(".", ",")}%`;
     const currentDate = new Date();
     // Nhịp góp = tháng gần nhất có góp (actual behavior), not the settings.
     const recentPace = computeRecentPace({

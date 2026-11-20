@@ -196,7 +196,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(container.querySelector(".sim-mode-badge")?.textContent).toContain("Chế độ B");
     expect(container.querySelector(".sim-headline .sh-big")?.textContent).toContain("200");
     expect(container.querySelector(".sim-headline .sh-sub")?.textContent).toContain("2042");
-    expect(container.querySelectorAll(".summary-strip > span")).toHaveLength(2);
+    expect(container.querySelectorAll(".summary-strip dt")).toHaveLength(3);
     cleanup();
     const timeResult = renderShell("de", "", 0, true, false, "C");
     expect(timeResult.container.querySelector(".sim-mode-badge")?.textContent).toContain("Modus C");

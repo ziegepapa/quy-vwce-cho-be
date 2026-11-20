@@ -746,9 +746,8 @@ export default function Transactions() {
   return (
     <main className="txv2-screen tx-ledger-redesign" aria-label={text.title}>
       <div className="tx-wrap">
-        <header className="txv2-head tx-ledger-head">
+        <header className="txv2-head tx-ledger-head mwj-page-head">
           <div className="tx-ledger-heading">
-            <span className="tx-ledger-kicker">{locale === "de" ? "DEIN INVESTMENT-LOGBUCH" : "SỔ NHẬT KÝ ĐẦU TƯ"}</span>
             <h1 className="txv2-title">{text.title}</h1>
             <p>{locale === "de" ? "Käufe, Verkäufe und Geldflüsse — chronologisch an einem Ort." : "Mỗi lần mua, bán và dòng tiền — được ghi lại theo thời gian."}</p>
           </div>
@@ -766,33 +765,17 @@ export default function Transactions() {
         </header>
 
         <section className="tx-ledger-pulse" aria-label={text.journal}>
-          <div className="tx-ledger-pulse-top">
-            <span>{locale === "de" ? "AKTIVITÄT" : "HOẠT ĐỘNG"}</span>
-            <span className="tx-ledger-record-count"><i />{txs.length} {locale === "de" ? "Einträge" : "bản ghi"}</span>
-          </div>
-          <div className="tx-ledger-pulse-grid">
-            <div className="tx-ledger-stat tx-ledger-stat-primary">
-              <span>{locale === "de" ? "Buchungen" : "Giao dịch"}</span>
-              <strong>{txs.length}</strong>
-              <small>{locale === "de" ? "im gesamten Verlauf" : "trong toàn bộ lịch sử"}</small>
-            </div>
-            <div className="tx-ledger-stat">
-              <span>{locale === "de" ? "Trades" : "Lệnh mua/bán"}</span>
-              <strong>{securityTransactionCount}</strong>
-              <small>{locale === "de" ? "Käufe & Verkäufe" : "mua và bán"}</small>
-            </div>
-            <div className="tx-ledger-stat">
-              <span>{locale === "de" ? "Geldbewegung" : "Dòng tiền"}</span>
-              <strong>{incomingCount + outgoingCount}</strong>
-              <small>{locale === "de" ? "Ein- und Ausgänge" : "tiền vào và chi ra"}</small>
-            </div>
-          </div>
+          <h2 className="mwj-section-title">{locale === "de" ? "Aktivität" : "Hoạt động"}</h2>
+          <dl className="mwj-ledger-stats">
+            <div><dt>{locale === "de" ? "Buchungen" : "Giao dịch"}</dt><dd>{txs.length}</dd></div>
+            <div><dt>{locale === "de" ? "Käufe und Verkäufe" : "Lệnh mua/bán"}</dt><dd>{securityTransactionCount}</dd></div>
+            <div><dt>{locale === "de" ? "Geldbewegungen" : "Dòng tiền"}</dt><dd>{incomingCount + outgoingCount}</dd></div>
+          </dl>
         </section>
 
         <section className="tx-ledger-workspace" aria-label={text.journal}>
           <div className="tx-ledger-workspace-head">
             <div>
-              <span className="tx-ledger-section-kicker">{locale === "de" ? "ARCHIV" : "TRA CỨU"}</span>
               <h2>{text.journal}</h2>
             </div>
             <span className="tx-ledger-total">{listWindow.total} {locale === "de" ? "Treffer" : "kết quả"}</span>

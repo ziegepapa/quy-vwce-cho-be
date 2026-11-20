@@ -311,16 +311,16 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
 
   return (
     <main className="ct-shell" aria-label={text.title}>
-      <header className="ct-head">
+      <header className="ct-head mwj-page-head">
         <p>{text.eyebrow}</p>
         <h1>{text.title}</h1>
         <span>{text.intro}</span>
-      </header>
 
-      <section className={`ct-sync is-${timeline.sync.status}`}>
-        <div><span>{text.sync}</span><strong>{syncLabel}</strong></div>
-        <p>{timeline.sync.pending > 0 ? text.pending(timeline.sync.pending) : text.syncIdle}</p>
-      </section>
+        <div className={`ct-sync is-${timeline.sync.status}`}>
+          <div><span>{text.sync}</span><strong>{syncLabel}</strong></div>
+          <p>{timeline.sync.pending > 0 ? text.pending(timeline.sync.pending) : text.syncIdle}</p>
+        </div>
+      </header>
 
       <section className="ct-card ct-lenses">
         <div className="ct-lens-group">
@@ -337,7 +337,7 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
         </div>
       </section>
 
-      <section className="ct-card">
+      <section className="ct-journal">
         <p className="ct-privacy" role="note">{text.privacy}</p>
         {timeline.events.length === 0 ? <p className="ct-empty">{emptyMessage}</p> : (
           <div className="ct-days">

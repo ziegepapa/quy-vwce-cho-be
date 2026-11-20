@@ -70,7 +70,7 @@ export function defaultNotfallmappe(): Notfallmappe {
  */
 export function defaultSettings(): AppSettings {
   const t = nowIso();
-  return { id: "settings", planName: "Quỹ VWCE cho bé", childName: "", accountType: "parent", currency: "EUR", inflationRate: 0.02, vwceReturn: 0.05, safeReturn: 0.015, bufferPct: 0.1, endMode: "hard", startDate: "2026-07-01", endDate: "2042-06-30", latestVwcePrice: 0, latestPriceDate: "", contributionY1: 100, contributionY2: 120, disclaimerAccepted: false, onboardingDone: false, trackInAppCash: false, notfallmappe: defaultNotfallmappe(), createdAt: t, updatedAt: t };
+  return { id: "settings", planName: "Quỹ VWCE cho bé", childName: "", accountType: "parent", currency: "EUR", inflationRate: 0.02, vwceReturn: 0.05, safeReturn: 0.015, bufferPct: 0.1, endMode: "flexible", startDate: "2026-07-01", endDate: "", latestVwcePrice: 0, latestPriceDate: "", contributionY1: 100, contributionY2: 120, disclaimerAccepted: false, onboardingDone: false, trackInAppCash: false, notfallmappe: defaultNotfallmappe(), createdAt: t, updatedAt: t };
 }
 export function defaultGoals(): Goal[] {
   const t = nowIso();

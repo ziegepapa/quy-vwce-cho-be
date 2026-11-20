@@ -55,13 +55,13 @@ export default function Simulation() {
   const { readOnly, showBlocked } = useRecoveryReadOnly();
 
   const [mode, setMode] = useState<Mode>("A");
-  const [years, setYears] = useState(15);
-  const [monthly, setMonthly] = useState("200");
+  const [years, setYears] = useState(30);
+  const [monthly, setMonthly] = useState("120");
   const [growthOn, setGrowthOn] = useState(false);
   const [growthPct, setGrowthPct] = useState("2");
   const [lumpSum, setLumpSum] = useState("0");
   const [balanceOverride, setBalanceOverride] = useState("");
-  const [rateInput, setRateInput] = useState("6,5");
+  const [rateInput, setRateInput] = useState("5");
   const [bandInput, setBandInput] = useState("2");
   const [inflationOn, setInflationOn] = useState(true);
   const [inflationPct, setInflationPct] = useState("2");
@@ -94,14 +94,13 @@ export default function Simulation() {
       setGoals(await listGoals());
       setTxs(await listTransactions());
       setQuotes(await listQuotes());
-      if (s.contributionY1 > 0) setMonthly(String(s.contributionY1));
+      const recurringContribution = s.contributionY2 > 0 ? s.contributionY2 : s.contributionY1;
+      if (recurringContribution > 0) setMonthly(String(recurringContribution));
       if (s.inflationRate > 0) setInflationPct(String(round2(s.inflationRate * 100)));
-      if (s.endDate) {
-        const end = parseDate(s.endDate);
-        const now = new Date();
-        const y = Math.max(1, Math.min(MAX_YEARS, end.getFullYear() - now.getFullYear()));
-        setYears(y);
-        setTargetYear(String(end.getFullYear()));
+      if (Number.isFinite(s.vwceReturn)) setRateInput(String(round2(s.vwceReturn * 100)));
+      const targetDate = s.planTarget?.targetUseDate;
+      if (targetDate && Number.isFinite(parseDate(targetDate).getTime())) {
+        setTargetYear(String(parseDate(targetDate).getFullYear()));
       }
       setLoading(false);
     })();
@@ -117,7 +116,7 @@ export default function Simulation() {
   // Match Overview's asset semantics: all priced security positions plus positive cash.
   const realBalance = startValue.balance;
   const displayIsin = (isin: string) => isin === VWCE_ISIN ? "VWCE" : isin === VALL_ISIN ? "VALL" : isin;
-  const startingBalanceWarning = [
+  const startingBalanceWarning = balanceOverride.trim() ? "" : [
     startValue.missingIsins.length > 0 ? text.missingPrices(startValue.missingIsins.map(displayIsin).join(", ")) : "",
     startValue.staleIsins.length > 0 ? text.stalePrices(startValue.staleIsins.map(displayIsin).join(", ")) : "",
   ].filter(Boolean).join(" ");

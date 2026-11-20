@@ -173,7 +173,7 @@ describe("Overview bản 2", () => {
     const comp = container.querySelector(".ovb2-comp")?.textContent ?? "";
     expect(comp).toContain("Bạn đã góp");
     expect(comp).toContain("100,00");
-    expect(comp).toContain("Thị trường thêm");
+    expect(comp).toContain("Lãi / lỗ");
     expect(comp).toContain("+50,00");
   });
 

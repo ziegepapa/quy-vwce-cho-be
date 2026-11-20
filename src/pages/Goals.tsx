@@ -198,9 +198,11 @@ export default function Goals() {
   }
 
   return (
-    <div>
-      {/* V9 B2: hàng FAB cũ đã xoá. Nút "+" giờ nằm trên top bar
-          qua useNavAction("addGoal") — tiết được ~56px ở đầu màn. */}
+    <div className="mwj-goals">
+      <header className="mwj-page-head">
+        <h1>{locale === "de" ? "Ziele" : "Mục tiêu"}</h1>
+        {goals.length > 0 && !readOnly ? <button type="button" onClick={openCreate}><span aria-hidden="true">＋</span> {text.addGoal}</button> : null}
+      </header>
 
       <div className="goals-hero surface-raised">
         <Ring pct={summary.pct} status={summary.pct >= 80 ? "green" : summary.pct >= 40 ? "yellow" : "red"} />
@@ -230,7 +232,7 @@ export default function Goals() {
         </div>
       )}
 
-      <div className="timeline">
+      <div className="mwj-goal-list">
         {goals.map((g) => {
           const due = parseDate(g.dueDate);
           const years = Math.max(0, due.getFullYear() - g.baseYear);
@@ -247,14 +249,12 @@ export default function Goals() {
           const perMonth = months > 0 ? gap / months : gap;
 
           return (
-            <div className="timeline-item" key={g.id}>
-              <div className={`timeline-dot ${status}`} aria-hidden />
+            <article className="mwj-goal-entry" key={g.id}>
               <div className="card surface-raised goal-card">
                 <div className="row-between" style={{ alignItems: "flex-start" }}>
                   <div style={{ display: "flex", gap: 12, flex: 1, minWidth: 0 }}>
-                    <Ring pct={pct} status={status} />
                     <div style={{ minWidth: 0 }}>
-                      <strong style={{ fontSize: 16, fontWeight: 650 }}>{g.name}</strong>
+                      <h2>{g.name}</h2>
                       <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
                         {formatDisplayDate(g.dueDate, locale)} · {months} {text.months}
                       </div>
@@ -293,8 +293,10 @@ export default function Goals() {
                   )}
                 </div>
 
-                <div className="progress-track">
-                  <span style={{ width: `${pct}%` }} />
+                <div className="mwj-goal-progress">
+                  <span>{text.protected}</span>
+                  <strong>{formatDisplayMoney(g.protectedAmount, locale)}</strong>
+                  <meter min={0} max={100} value={Math.max(0, pct)} aria-label={text.protected} />
                 </div>
 
                 <div className="row-between" style={{ marginTop: 4 }}>
@@ -308,7 +310,7 @@ export default function Goals() {
                   </p>
                 )}
               </div>
-            </div>
+            </article>
           );
         })}
       </div>

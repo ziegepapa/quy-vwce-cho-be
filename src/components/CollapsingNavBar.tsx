@@ -60,7 +60,7 @@ export default function CollapsingNavBar({
 
   return (
     <header className="bar">
-      <span className="bar-logo">VWCE Vault</span>
+      <div className="mwj-brand"><span className="mwj-brand-mark" aria-hidden="true">✦</span><span className="bar-logo">VWCE Vault</span></div>
       <div className="bar-r">
         {onSyncNow ? (
           <button type="button" className={`sync-iconbtn ${syncHealth.tone}`} onClick={() => void onSyncNow()} disabled={syncing || syncHealth.action === "none"} aria-live="polite" title={syncText} aria-label={syncText}>

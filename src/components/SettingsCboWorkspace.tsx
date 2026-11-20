@@ -133,7 +133,8 @@ function buildContributionInsight(
 
 function buildYearlyPlanRows(settings: AppSettings, target: PlanTarget, deRiskYears: number, currentYear: number): YearlyPlanRow[] {
   const start = planDate(settings.startDate, currentYear);
-  const goal = planDate(target.targetUseDate || settings.endDate, currentYear);
+  if (!target.targetUseDate) return [];
+  const goal = planDate(target.targetUseDate, currentYear);
   if (!start || !goal) return [];
 
   const startYear = start.getFullYear();
@@ -321,8 +322,8 @@ export default function SettingsCboWorkspace(props: Props) {
   const avatarInitial = (props.settings.childName || planName).trim().slice(0, 1).toUpperCase();
 
   return <div className="set2">
+    <header className="mwj-page-head mwj-settings-head">
     <h1 className="set2-title">{copy.title}</h1>
-
     <button type="button" className="set2-profile" onClick={() => setSheet("profile")}>
       <span className="set2-avatar" aria-hidden="true">{avatarInitial}</span>
       <span className="set2-ptext">
@@ -331,7 +332,9 @@ export default function SettingsCboWorkspace(props: Props) {
       </span>
       <IconChevronRight aria-hidden="true" />
     </button>
+    </header>
 
+    <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.planGroup}</h2>
     <div className="set2-group">
       <SetRow icon={<IconCash />} label={copy.contribution} value={contribution != null ? money(contribution, props.locale) : "—"} onClick={() => { setPlanFocus("contribution"); setSheet("plan"); }} />
@@ -340,6 +343,8 @@ export default function SettingsCboWorkspace(props: Props) {
       <SetRow icon={<IconArchive />} label={copy.yearPlanTitle} onClick={() => { setPlanFocus("yearplan"); setSheet("plan"); }} />
     </div>
 
+    </section>
+    <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.displayGroup}</h2>
     <div className="set2-group">
       <button type="button" className="set2-row" onClick={() => setSheet("theme")}>
@@ -355,6 +360,8 @@ export default function SettingsCboWorkspace(props: Props) {
       <SetRow icon={<IconLanguage />} label={copy.language} value={props.locale === "de" ? "Deutsch" : "Tiếng Việt"} onClick={() => setSheet("language")} />
     </div>
 
+    </section>
+    <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.dataGroup}</h2>
     <div className="set2-group">
       <SetRow icon={<IconArchive />} label={copy.backupRestore} onClick={() => setSheet("transfers")} />
@@ -367,6 +374,8 @@ export default function SettingsCboWorkspace(props: Props) {
       </button>
     </div>
 
+    </section>
+    <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.securityGroup}</h2>
     <div className="set2-group">
       <SetRow icon={<IconLock />} label={copy.passwordRow} onClick={() => props.onOpenChild("password-change")} />
@@ -381,11 +390,15 @@ export default function SettingsCboWorkspace(props: Props) {
       ) : null}
     </div>
 
+    </section>
+    <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.otherGroup}</h2>
     <div className="set2-group set2-legacy">
       {props.handoffAction}
       {props.dangerAction}
     </div>
+
+    </section>
 
     <p className="set2-foot">
       <span className="set2-saved" role="status">✓ {props.saveLabel || copy.saved}</span>

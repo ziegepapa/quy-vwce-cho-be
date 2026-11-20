@@ -37,7 +37,6 @@ import AuthPage from "./pages/Auth";
 const MigrateWizard = lazy(() => import("./pages/MigrateWizard"));
 import "./styles/premium-command-layout.css";
 import "./styles/recovery-banner.css";
-import "./styles/modern-wealth-journal.css";
 
 const LOGOUT_CLEANUP_PENDING_KEY = "vwce:logout-cleanup-pending";
 
@@ -429,22 +428,22 @@ export default function App() {
   const displayName = (auth.user?.user_metadata?.display_name as string) || auth.user?.email?.split("@")[0] || settings.planName;
   const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
   const focusConflictRequest = readSyncConflictFocusToken(location.state);
-  return <div className="app-layout">
+  return <div className="app-layout mwj-layout">
     <aside className="sidebar" aria-label={text.navigation}><div className="sidebar-brand">VWCE Vault</div><nav className="sidebar-nav">{primaryNav.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
     <div className="app-shell">
-      {auth.user ? <CollapsingNavBar
+      <CollapsingNavBar
         displayName={displayName}
         syncStatus={syncStatus}
         pending={pending}
         syncHealth={syncHealth}
         onSignOut={handleSignOut}
-        onSyncNow={recoveryActive ? undefined : handleSyncHealthAction}
+        onSyncNow={auth.user && !recoveryActive ? handleSyncHealthAction : undefined}
         onUpdatePrice={undefined}
         onSearch={navAction("search")}
         onFilter={navAction("filter")}
         onAddGoal={recoveryActive ? undefined : navAction("addGoal")}
         onChangeScenario={recoveryActive ? undefined : navAction("changeScenario")}
-      /> : null}
+      />
 
       {recoveryActive ? (
         <section className="banner recovery-banner" role="status" data-testid="recovery-banner">

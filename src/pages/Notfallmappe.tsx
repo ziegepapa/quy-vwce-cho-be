@@ -340,6 +340,18 @@ export default function NotfallmappePage() {
 
   return (
     <div className="nfm" ref={rootRef}>
+      <header className="mwj-page-head mwj-emergency-head">
+        <h1>{copy("Hồ sơ khẩn cấp", "Notfallmappe")}</h1>
+        <div className="mwj-emergency-readiness">
+          <div className="mwj-emergency-meter">
+            <label htmlFor="nfm-readiness">{locale === "de" ? `${filledCount}/5 Abschnitte ausgefüllt` : `${filledCount}/5 mục đã điền`}</label>
+            <progress id="nfm-readiness" value={filledCount} max={5} />
+          </div>
+          <div className="nfm-actions">
+            <button type="button" className="secondary" onClick={handlePrint}>{copy("In / Lưu PDF", "Drucken / PDF speichern")}</button>
+          </div>
+        </div>
+      </header>
       <p className="nfm-warn">
         <strong>{copy("Lưu ý", "Hinweis")}</strong>
         <span>
@@ -354,16 +366,6 @@ export default function NotfallmappePage() {
           ))}
         </ul>
       )}
-
-      <div className="nfm-progress">
-        <div className="nfm-progress-track">
-          <div
-            className="nfm-progress-fill"
-            style={{ width: `${(filledCount / 5) * 100}%` }}
-          />
-        </div>
-        <span className="nfm-progress-text">{locale === "de" ? `${filledCount}/5 Abschnitte ausgefüllt` : `${filledCount}/5 mục đã điền`}</span>
-      </div>
 
       <div className="nfm-print-note">
         <p>
@@ -550,9 +552,6 @@ export default function NotfallmappePage() {
         </div>
       ) : null}
 
-      <div className="nfm-actions">
-        <button type="button" className="secondary" onClick={handlePrint}>{copy("In / Lưu PDF", "Drucken / PDF speichern")}</button>
-      </div>
     </div>
   );
 }
