@@ -341,6 +341,69 @@ function AllocationDonut({ allocation, totalLabel, totalSub }: {
   );
 }
 
+/** Layered mountain sunset for the hero (Modern Wealth Journal rev2).
+ *  Atmospheric perspective: far ridges are lighter and lower-contrast,
+ *  near ridges darker; a warm glow sits low near the horizon. Colors come
+ *  from per-theme CSS variables on `.mwj-hero-scene`, so each theme gets
+ *  its own sky and ridges. Pure SVG/CSS — no mockup image is used. */
+function HeroScene() {
+  return (
+    <svg className="mwj-hero-scene-svg" viewBox="0 0 390 200" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="mwj-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" style={{ stopColor: "var(--mwj-sky-1)" }} />
+          <stop offset="38%" style={{ stopColor: "var(--mwj-sky-2)" }} />
+          <stop offset="62%" style={{ stopColor: "var(--mwj-sky-3)" }} />
+          <stop offset="82%" style={{ stopColor: "var(--mwj-sky-4)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--mwj-sky-5)" }} />
+        </linearGradient>
+        <radialGradient id="mwj-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" style={{ stopColor: "var(--mwj-glow-core)" }} stopOpacity="0.95" />
+          <stop offset="45%" style={{ stopColor: "var(--mwj-glow)" }} stopOpacity="0.55" />
+          <stop offset="100%" style={{ stopColor: "var(--mwj-glow)" }} stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="mwj-aurora" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" style={{ stopColor: "var(--mwj-aurora-1)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--mwj-aurora-2)" }} />
+        </linearGradient>
+        <linearGradient id="mwj-scrim" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#0b0b2c" stopOpacity="0.22" />
+          <stop offset="55%" stopColor="#0b0b2c" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="#0b0b2c" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <rect width="390" height="200" fill="url(#mwj-sky)" />
+      <circle cx="320" cy="128" r="55" fill="url(#mwj-glow)" />
+      <circle cx="320" cy="128" r="12" style={{ fill: "var(--mwj-sun)" }} />
+      <path
+        className="mwj-aurora-band"
+        d="M0,58 Q80,34 170,52 T390,44 L390,66 Q300,84 200,70 T0,80 Z"
+        fill="url(#mwj-aurora)"
+      />
+      <path
+        d="M0,142 Q40,128 80,136 T160,128 T240,118 T320,112 T390,116 L390,200 L0,200 Z"
+        style={{ fill: "var(--mwj-mtn-far)" }}
+        opacity="0.5"
+      />
+      <path
+        d="M0,156 Q50,142 100,150 T200,142 T300,136 T390,140 L390,200 L0,200 Z"
+        style={{ fill: "var(--mwj-mtn-mid)" }}
+        opacity="0.75"
+      />
+      <path
+        d="M0,172 Q60,156 120,166 T240,158 T360,162 T390,160 L390,200 L0,200 Z"
+        style={{ fill: "var(--mwj-mtn-near)" }}
+        opacity="0.95"
+      />
+      <path
+        d="M0,188 Q100,176 200,184 T390,180 L390,200 L0,200 Z"
+        style={{ fill: "var(--mwj-mtn-front)" }}
+      />
+      <rect width="390" height="200" fill="url(#mwj-scrim)" />
+    </svg>
+  );
+}
+
 export default function OverviewFrame(props: OverviewFrameProps) {
   const {
     assetsLabel, assets, contributedLabel, gainLabel, gainPctLabel, gainPositive,
@@ -428,9 +491,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
               </Link>
             </div>
             <div className="mwj-hero-scene">
-              <div className="mwj-hero-sun" aria-hidden="true" />
-              <div className="mwj-hero-hill mwj-hero-hill-back" aria-hidden="true" />
-              <div className="mwj-hero-hill mwj-hero-hill-front" aria-hidden="true" />
+              <HeroScene />
               <div className="mwj-hero-copy">
                 <div className="ovb2-k"><span className="mwj-hero-label-icon" aria-hidden="true"><IconTimeline /></span>{text.totalAssets}</div>
                 <div className="ovb2-big">{assets}</div>
