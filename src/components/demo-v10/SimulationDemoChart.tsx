@@ -31,14 +31,15 @@ export function SimulationDemoChart({
   const W = 320;
   const H = 224;
   const padL = 8;
-  const padR = 52;
+  const padR = 8;
   const padT = 12;
   const padB = 24;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
   const allVals = results.flatMap((r) => r.out.yearEnds.flatMap((p) => [p.total, p.contributed]));
-  const maxV = Math.max(1, ...allVals, ...markers.map((m) => m.amount));
+  const visibleMarkers = markers.filter((marker) => marker.yearIndex <= years);
+  const maxV = Math.max(1, ...allVals, ...visibleMarkers.map((m) => m.amount));
   const maxX = Math.max(1, years);
 
   function x(yi: number): number {
@@ -85,51 +86,51 @@ export function SimulationDemoChart({
   const bandPctText = `${loPct.toLocaleString(locale === "de" ? "de-DE" : "vi-VN")}% – ${hiPct.toLocaleString(locale === "de" ? "de-DE" : "vi-VN")}%`;
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      width="100%"
-      height={H}
-      role="img"
-      aria-label={locale === "de" ? "Diagramm für Einzahlungen und prognostiziertes Portfolio nach Jahren" : "Biểu đồ vốn góp và danh mục dự báo theo năm"}
-      className="sim-chart-svg"
-      data-chart-kind="portfolio-growth"
-      style={{ display: "block" }}
-    >
-      <defs>
-        <linearGradient id="chart-deposit-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--primary-600)" stopOpacity=".45" />
-          <stop offset="100%" stopColor="var(--primary-600)" stopOpacity=".04" />
-        </linearGradient>
-        <linearGradient id="chart-projection-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--success-600)" stopOpacity=".55" />
-          <stop offset="100%" stopColor="var(--success-600)" stopOpacity=".05" />
-        </linearGradient>
-      </defs>
-      {showBand && cautious && bull ? (
-        <path data-series="cautious-to-bull-band" d={bandArea(cautious.out.yearEnds, bull.out.yearEnds)} fill={scenarioColor("base")} opacity={0.13} />
-      ) : null}
-      {base ? (
-        <>
-          <path d={areaToBaseline(base.out.yearEnds, "contributed")} fill="url(#chart-deposit-gradient)" />
-          <path d={areaToBaseline(base.out.yearEnds, "total")} fill="url(#chart-projection-gradient)" />
-          <path d={pathFor(base.out.yearEnds, "contributed")} fill="none" stroke="var(--primary-600)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-          <path d={pathFor(base.out.yearEnds, "total")} fill="none" stroke="var(--success-600)" strokeWidth={2.7} strokeLinecap="round" strokeLinejoin="round" />
-        </>
-      ) : null}
-      {markers.map((m) => (
-        <g key={m.name + m.yearIndex}>
-          <line x1={x(m.yearIndex)} x2={x(m.yearIndex)} y1={padT} y2={padT + innerH} stroke="var(--border-subtle)" strokeDasharray="4 3" />
-          <circle cx={x(m.yearIndex)} cy={y(m.amount)} r={3} fill="var(--text-tertiary)" />
-        </g>
-      ))}
-      {baseEnd ? (
-        <text x={W - 4} y={y(baseEnd.total)} fontSize={10} fill="var(--text-primary)" textAnchor="end" dominantBaseline="middle">
-          {formatDisplayMoney(Math.round(baseEnd.total), locale)}
-        </text>
-      ) : null}
-      {showBand ? <text x={W - 4} y={padT + 10} fontSize={9} fill="var(--text-secondary)" textAnchor="end">{bandPctText}</text> : null}
-      <text x={padL} y={H - 6} fontSize={10} fill="var(--text-secondary)">0</text>
-      <text x={W - padR} y={H - 6} fontSize={10} fill="var(--text-secondary)" textAnchor="end">{years}{locale === "de" ? " Jahre" : " năm"}</text>
-    </svg>
+    <>
+      <div className="sim-chart-values">
+        {baseEnd ? <strong>{formatDisplayMoney(Math.round(baseEnd.total), locale)}</strong> : null}
+        {showBand ? <span>{bandPctText}</span> : null}
+      </div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        height={H}
+        role="img"
+        aria-label={locale === "de" ? "Diagramm für Einzahlungen und prognostiziertes Portfolio nach Jahren" : "Biểu đồ vốn góp và danh mục dự báo theo năm"}
+        className="sim-chart-svg"
+        data-chart-kind="portfolio-growth"
+        style={{ display: "block" }}
+      >
+        <defs>
+          <linearGradient id="chart-deposit-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--primary-600)" stopOpacity=".45" />
+            <stop offset="100%" stopColor="var(--primary-600)" stopOpacity=".04" />
+          </linearGradient>
+          <linearGradient id="chart-projection-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--success-600)" stopOpacity=".55" />
+            <stop offset="100%" stopColor="var(--success-600)" stopOpacity=".05" />
+          </linearGradient>
+        </defs>
+        {showBand && cautious && bull ? (
+          <path data-series="cautious-to-bull-band" d={bandArea(cautious.out.yearEnds, bull.out.yearEnds)} fill={scenarioColor("base")} opacity={0.13} />
+        ) : null}
+        {base ? (
+          <>
+            <path d={areaToBaseline(base.out.yearEnds, "contributed")} fill="url(#chart-deposit-gradient)" />
+            <path d={areaToBaseline(base.out.yearEnds, "total")} fill="url(#chart-projection-gradient)" />
+            <path d={pathFor(base.out.yearEnds, "contributed")} fill="none" stroke="var(--primary-600)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+            <path d={pathFor(base.out.yearEnds, "total")} fill="none" stroke="var(--success-600)" strokeWidth={2.7} strokeLinecap="round" strokeLinejoin="round" />
+          </>
+        ) : null}
+        {visibleMarkers.map((m) => (
+          <g key={m.name + m.yearIndex}>
+            <line x1={x(m.yearIndex)} x2={x(m.yearIndex)} y1={padT} y2={padT + innerH} stroke="var(--border-subtle)" strokeDasharray="4 3" />
+            <circle cx={x(m.yearIndex)} cy={y(m.amount)} r={3} fill="var(--text-tertiary)" />
+          </g>
+        ))}
+        <text x={padL} y={H - 6} fontSize={10} fill="var(--text-secondary)">0</text>
+        <text x={W - padR} y={H - 6} fontSize={10} fill="var(--text-secondary)" textAnchor="end">{years}{locale === "de" ? " Jahre" : " năm"}</text>
+      </svg>
+    </>
   );
 }

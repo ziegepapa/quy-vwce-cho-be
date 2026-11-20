@@ -160,7 +160,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     };
   }, [refreshKey, loadAttempt]);
 
-  // Historical closes for supported funds power the per-fund day-trend metric.
+  // Historical closes for supported funds power the day trend and value chart.
   // This stays best-effort and never blocks the overview or changes the total.
   useEffect(() => {
     let alive = true;
@@ -373,9 +373,13 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       latestPriceDate: snapshot.vwceAsOf ?? "",
       year: selectedYearReviewYear,
     });
+    const historicalQuotes = [...priceHistories].flatMap(([instrumentIsin, points]) =>
+      points.map(({ date, price }) => ({ instrumentIsin, asOf: date, price })),
+    );
     const valueHistory = buildValueHistory({
       transactions,
-      quotes,
+      quotes: [...historicalQuotes, ...quotes.filter((quote) => quote.currency === "EUR")],
+      now: currentDate,
       locale,
       trackInAppCash: settings.trackInAppCash,
     });

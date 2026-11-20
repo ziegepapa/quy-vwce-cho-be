@@ -244,7 +244,7 @@
 .mwj-layout .ovb2-table-card { overflow-x: auto; }
 .mwj-layout .ovb2-chart { display: block; width: 100%; }
 
-/* Transactions: a compact index above the date-grouped ledger. */
+/* Transactions: compact filters and a date-grouped ledger. */
 .mwj-layout .tx-ledger-head { background: none; box-shadow: none; border-radius: 0; }
 .mwj-layout .tx-ledger-head > * { min-width: 0; }
 .mwj-layout .tx-ledger-actions { flex-wrap: wrap; }

@@ -1214,3 +1214,15 @@
   border-radius: 13px;
 }
 .sim-wrap .sim-estimate-details p { margin: 0; }
+
+.sim-wrap .sim-chart-values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.sim-wrap .sim-chart-values strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }

@@ -141,3 +141,27 @@
   overflow-wrap: anywhere;
 }
 .ct-event-contact a { color: var(--demo-vi, #8b5cf6); text-decoration: underline; text-underline-offset: 2px; }
+
+.ct-trades h2, .ct-confidence h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+}
+.ct-trade-day { padding: 9px 0 4px; }
+.ct-trade-day h3 { margin: 0; }
+.ct-trade-day .ct-events li {
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 44px;
+}
+.ct-trade-day .ct-events strong { overflow-wrap: anywhere; }
+.ct-trade-day .ct-event-value { text-align: end; }
+.ct-confidence > summary {
+  min-height: 44px;
+  padding-block: 9px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.ct-confidence > summary h2 { display: inline; }
+.ct-confidence > :not(summary) { margin-block: 0 12px; }
+.ct-confidence-intro { color: var(--text-secondary); font-size: 13px; }

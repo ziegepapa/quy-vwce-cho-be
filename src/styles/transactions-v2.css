@@ -1346,3 +1346,53 @@ html.tx-filter-open .app-shell::after {
 
 /* Keep the verified ISIN visible when a specific fund is selected. */
 .tx-wrap .txv2-instrument-hint { display:block; margin-top:5px; color:var(--text-secondary); font-size:11px; font-variant-numeric:tabular-nums; }
+
+.tx-ledger-redesign .tx-ledger-head {
+  align-items: center;
+  justify-content: space-between;
+}
+.tx-ledger-redesign .tx-ledger-head .txv2-title { margin: 0; }
+.tx-ledger-redesign .tx-ledger-actions { padding-top: 0; }
+.tx-ledger-workspace .tx-ledger-activity-tabs,
+.tx-ledger-workspace .tx-active-filter-chips {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+.tx-ledger-workspace .tx-active-filter-chips button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.tx-ledger-year-controls { display: grid; gap: 4px; min-width: 0; }
+.tx-ledger-year-controls .txv2-years {
+  min-width: 0;
+  padding: 3px 2px 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-tertiary) transparent;
+}
+.tx-ledger-year-controls .txv2-years::-webkit-scrollbar { display: block; height: 5px; }
+.tx-ledger-year-controls .txv2-years::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 5px; }
+.tx-ledger-workspace .tx-ledger-total {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  white-space: normal;
+  text-align: end;
+}
+
+@media (max-width: 480px) {
+  .tx-ledger-redesign .tx-wrap { gap: 10px; }
+  .tx-ledger-redesign .tx-ledger-workspace { gap: 9px; }
+  .tx-ledger-workspace .tx-ledger-activity-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tx-ledger-activity-tabs button {
+    justify-content: center;
+    min-height: 44px;
+    min-width: 0;
+    padding: 4px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .tx-ledger-tab-mark { display: none; }
+  .tx-ledger-workspace-head { align-items: center; }
+  .tx-ledger-workspace .tx-ledger-total { flex: 0 1 auto; max-width: 48%; }
+}

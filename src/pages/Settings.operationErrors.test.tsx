@@ -386,7 +386,7 @@ describe("Settings operation errors", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(await screen.findByRole("heading", { name: "DỮ LIỆU" })).toBeTruthy();
     const deleteButton = await waitFor(() => {
-      const button = [...document.querySelectorAll("button")].find((candidate) => candidate.textContent?.includes("Xóa toàn bộ dữ liệu local"));
+      const button = [...document.querySelectorAll("button")].find((candidate) => candidate.textContent?.includes("Xóa toàn bộ dữ liệu trên thiết bị"));
       expect(button).toBeTruthy();
       return button as HTMLButtonElement;
     });

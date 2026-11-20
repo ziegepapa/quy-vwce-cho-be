@@ -59,7 +59,7 @@ const copy = {
     exportTransactionsCsvSub: "Bảng dữ liệu dùng cho phân tích ngoài ứng dụng",
     restoreDeviceData: "Khôi phục dữ liệu trên thiết bị",
     restoreDeviceDataSub: "Mở quy trình kiểm tra dữ liệu an toàn",
-    clearLocalData: "Xóa toàn bộ dữ liệu local",
+    clearLocalData: "Xóa toàn bộ dữ liệu trên thiết bị",
     clearLocalDataSub: "Chỉ dùng khi bạn đã có bản sao lưu",
     deleteConfirmText: "Gõ XOA để xác nhận. Hành động này không thể hoàn tác trên thiết bị này.",
     deletePlaceholder: "XOA",

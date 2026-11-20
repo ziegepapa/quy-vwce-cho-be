@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getSettings, listQuotes, listTransactions } from "../lib/db";
 import type { SyncStatus } from "../lib/sync/types";
+import { isSecuritySell, isSecurityTx, isValidAsOfDate, resolveInstrumentIsin } from "../lib/instrument";
+import { VALL_ISIN, VWCE_ISIN, type Transaction } from "../lib/types";
 import { useLocale } from "../lib/locale";
 import {
   buildConfidenceTimeline,
-  type ConfidenceEventKind,
   type ConfidenceTimelineEvent,
   type ConfidenceTimelineLens,
   type ConfidenceTimelineSource,
@@ -15,7 +16,11 @@ import "../styles/confidence-timeline.css";
 
 function timelineCopy(locale: "vi" | "de") {
   return locale === "de" ? {
-    eyebrow: "Datenvertrauen",
+    heading: "Zeitleiste",
+    journey: "Wertpapiertransaktionen",
+    noTrades: "Noch keine Wertpapiertransaktionen.",
+    buy: "Kauf",
+    sell: "Verkauf",
     title: "Status-Zeitleiste",
     intro: "Datierte Ereignisse aus diesem Vault. Die Zeitleiste verändert keine Buchung.",
     loading: "Status-Zeitleiste wird geladen…",
@@ -64,7 +69,11 @@ function timelineCopy(locale: "vi" | "de") {
     contactSnapshotNote: "Aktueller gespeicherter Stand; keine Historie pro Kontakt.",
     back: "Zur Übersicht",
   } : {
-    eyebrow: "Độ tin cậy dữ liệu",
+    heading: "Dòng thời gian",
+    journey: "Hành trình đầu tư",
+    noTrades: "Chưa có giao dịch chứng khoán.",
+    buy: "Mua",
+    sell: "Bán",
     title: "Dòng thời gian trạng thái",
     intro: "Các sự kiện có ngày giờ từ Vault này. Dòng thời gian không thay đổi giao dịch.",
     loading: "Đang tải dòng thời gian trạng thái…",
@@ -207,9 +216,9 @@ function formatMoney(value: number, currency: string, locale: "vi" | "de") {
   }
 }
 
-function instrumentLabel(isin: string, locale: "vi" | "de") {
-  if (isin === "IE00BK5BQT80") return "VWCE";
-  if (isin === "IE000VAHT5T0") return "VALL";
+function instrumentLabel(isin: string) {
+  if (isin === VWCE_ISIN) return "VWCE";
+  if (isin === VALL_ISIN) return "VALL";
   return isin;
 }
 
@@ -237,7 +246,7 @@ function transactionAmount(amount: number, type: string, locale: "vi" | "de") {
 function eventHeading(event: ConfidenceTimelineEvent, locale: "vi" | "de", text: ReturnType<typeof timelineCopy>) {
   if (event.contacts) return text.contactSnapshot(event.contacts.length);
   if (event.quote) {
-    const instrument = instrumentLabel(event.quote.instrumentIsin, locale);
+    const instrument = instrumentLabel(event.quote.instrumentIsin);
     return locale === "de" ? `Kurs-Snapshot · ${instrument}` : `Snapshot giá · ${instrument}`;
   }
   if (event.transaction) {
@@ -267,6 +276,7 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
   const [lens, setLens] = useState<ConfidenceTimelineLens>("all");
   const [sources, setSources] = useState<ConfidenceTimelineSource[]>(["quote", "ledger", "import", "contacts"]);
   const [limit, setLimit] = useState(30);
+  const [tradeDayLimit, setTradeDayLimit] = useState(30);
 
   useEffect(() => {
     let alive = true;
@@ -294,6 +304,17 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
     [timeline, locale, text],
   );
 
+  const tradeDays = useMemo(() => {
+    const groups = new Map<string, Transaction[]>();
+    for (const tx of data?.transactions ?? []) {
+      if (tx.deletedAt || !isSecurityTx(tx.type) || !isValidAsOfDate(tx.date)) continue;
+      const group = groups.get(tx.date);
+      if (group) group.push(tx);
+      else groups.set(tx.date, [tx]);
+    }
+    return [...groups].sort(([left], [right]) => right.localeCompare(left));
+  }, [data]);
+
   const selectLens = (next: ConfidenceTimelineLens) => { setLens(next); setLimit(30); };
   const toggleSource = (source: ConfidenceTimelineSource) => {
     setSources((current) => current.includes(source) ? current.filter((item) => item !== source) : [...current, source]);
@@ -310,104 +331,135 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
   const emptyMessage = timeline.totalEvents === 0 && data && (data.quotes.length + data.transactions.length + (data.settings.depotStatements?.length ?? 0) + (data.settings.notfallmappe?.contacts.length ?? 0) > 0) ? text.noVisibleEvents : text.noEvents;
 
   return (
-    <main className="ct-shell" aria-label={text.title}>
+    <main className="ct-shell" aria-label={text.heading}>
       <header className="ct-head mwj-page-head">
-        <p>{text.eyebrow}</p>
-        <h1>{text.title}</h1>
-        <span>{text.intro}</span>
+        <h1>{text.heading}</h1>
+      </header>
 
+      <section className="ct-card ct-trades" aria-labelledby="ct-trades-title">
+        <h2 id="ct-trades-title">{text.journey}</h2>
+        {tradeDays.length === 0 ? <p className="ct-empty">{text.noTrades}</p> : (
+          <div className="ct-days">
+            {tradeDays.slice(0, tradeDayLimit).map(([date, trades]) => (
+              <section className="ct-day ct-trade-day" key={date}>
+                <h3 className="ct-day-title"><time dateTime={date}>{formatSessionDate(date, locale)}</time></h3>
+                <ul className="ct-events">
+                  {trades.map((tx) => {
+                    const isin = resolveInstrumentIsin(tx);
+                    const action = isSecuritySell(tx.type) ? text.sell : text.buy;
+                    const name = isin ? `${action} ${instrumentLabel(isin)}` : transactionTypeLabel(tx.type, locale);
+                    return (
+                      <li key={tx.id}>
+                        <span className={`ct-source ${isin === VALL_ISIN ? "is-quote" : "is-ledger"}`} aria-hidden="true"><IconTx /></span>
+                        <strong>{name}</strong>
+                        <span className="ct-event-value">{formatMoney(tx.amount, "EUR", locale)}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+        {tradeDayLimit < tradeDays.length ? (
+          <button className="ct-more" type="button" onClick={() => setTradeDayLimit((value) => value + 30)}>{text.showMore(tradeDayLimit, tradeDays.length)}</button>
+        ) : null}
+      </section>
+
+      <details className="ct-card ct-confidence" open={tradeDays.length === 0}>
+        <summary><h2>{text.title}</h2></summary>
+        <p className="ct-confidence-intro">{text.intro}</p>
         <div className={`ct-sync is-${timeline.sync.status}`}>
           <div><span>{text.sync}</span><strong>{syncLabel}</strong></div>
           <p>{timeline.sync.pending > 0 ? text.pending(timeline.sync.pending) : text.syncIdle}</p>
         </div>
-      </header>
-
-      <section className="ct-card ct-lenses">
-        <div className="ct-lens-group">
-          <span>{text.timeLens}</span>
-          <div role="group" aria-label={text.timeLens}>
-            {lenses.map((option) => <button type="button" key={option.key} aria-pressed={lens === option.key} onClick={() => selectLens(option.key)}>{option.label}</button>)}
+        <section className="ct-card ct-lenses">
+          <div className="ct-lens-group">
+            <span>{text.timeLens}</span>
+            <div role="group" aria-label={text.timeLens}>
+              {lenses.map((option) => <button type="button" key={option.key} aria-pressed={lens === option.key} onClick={() => selectLens(option.key)}>{option.label}</button>)}
+            </div>
           </div>
-        </div>
-        <div className="ct-lens-group">
-          <span>{text.sources}</span>
-          <div role="group" aria-label={text.sources}>
-            {sourceOptions.map((option) => <button type="button" key={option.key} aria-pressed={sources.includes(option.key)} onClick={() => toggleSource(option.key)}>{option.label}</button>)}
+          <div className="ct-lens-group">
+            <span>{text.sources}</span>
+            <div role="group" aria-label={text.sources}>
+              {sourceOptions.map((option) => <button type="button" key={option.key} aria-pressed={sources.includes(option.key)} onClick={() => toggleSource(option.key)}>{option.label}</button>)}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="ct-journal">
-        <p className="ct-privacy" role="note">{text.privacy}</p>
-        {timeline.events.length === 0 ? <p className="ct-empty">{emptyMessage}</p> : (
-          <div className="ct-days">
-            {dayGroups.map((group, index) => (
-              <details className="ct-day" key={group.key} open={index === 0}>
-                <summary className="ct-day-summary">
-                  <span className="ct-day-title">{group.label}</span>
-                  <span className="ct-day-count">{text.dayEvents(group.events.length)}</span>
-                </summary>
-                <ol className="ct-events">
-                  {group.events.map((event) => (
-                    <li key={event.id}>
-                      <span className={`ct-source is-${event.source}`} aria-hidden="true">{sourceIcon(event.source)}</span>
-                <div className="ct-event-content">
-                  <strong>{eventHeading(event, locale, text)}</strong>
-                  <small className="ct-event-meta">{sourceLabel(event.source)} · {formatTime(event.at, locale)}</small>
+        <section className="ct-journal">
+          <p className="ct-privacy" role="note">{text.privacy}</p>
+          {timeline.events.length === 0 ? <p className="ct-empty">{emptyMessage}</p> : (
+            <div className="ct-days">
+              {dayGroups.map((group, index) => (
+                <details className="ct-day" key={group.key} open={index === 0}>
+                  <summary className="ct-day-summary">
+                    <span className="ct-day-title">{group.label}</span>
+                    <span className="ct-day-count">{text.dayEvents(group.events.length)}</span>
+                  </summary>
+                  <ol className="ct-events">
+                    {group.events.map((event) => (
+                      <li key={event.id}>
+                        <span className={`ct-source is-${event.source}`} aria-hidden="true">{sourceIcon(event.source)}</span>
+                        <div className="ct-event-content">
+                          <strong>{eventHeading(event, locale, text)}</strong>
+                          <small className="ct-event-meta">{sourceLabel(event.source)} · {formatTime(event.at, locale)}</small>
 
-                  {event.quote ? (
-                    <div className="ct-event-details">
-                      <span className="ct-event-value">{formatMoney(event.quote.price, event.quote.currency, locale)}</span>
-                      <small>{text.session}: {formatSessionDate(event.quote.asOf, locale)}{event.quote.venue ? ` · ${text.venue}: ${event.quote.venue}` : ""}</small>
-                      {event.quote.fetchedAt ? <small>{text.botFetched}: {formatTime(event.quote.fetchedAt, locale)}</small> : <small>{event.quote.source === "manual" ? text.manualPrice : ""}</small>}
-                    </div>
-                  ) : null}
+                          {event.quote ? (
+                            <div className="ct-event-details">
+                              <span className="ct-event-value">{formatMoney(event.quote.price, event.quote.currency, locale)}</span>
+                              <small>{text.session}: {formatSessionDate(event.quote.asOf, locale)}{event.quote.venue ? ` · ${text.venue}: ${event.quote.venue}` : ""}</small>
+                              {event.quote.fetchedAt ? <small>{text.botFetched}: {formatTime(event.quote.fetchedAt, locale)}</small> : <small>{event.quote.source === "manual" ? text.manualPrice : ""}</small>}
+                            </div>
+                          ) : null}
 
-                  {event.transaction ? (
-                    <div className="ct-event-details">
-                      <span className="ct-event-value">{transactionAmount(event.transaction.amount, event.transaction.type, locale)}</span>
-                      {event.transaction.instrumentIsin ? <small>{instrumentLabel(event.transaction.instrumentIsin, locale)}</small> : null}
-                      {event.transaction.notes?.trim() ? (
-                        <details className="ct-event-note">
-                          <summary>{text.showNote}</summary>
-                          <p>{event.transaction.notes}</p>
-                        </details>
-                      ) : null}
-                    </div>
-                  ) : null}
+                          {event.transaction ? (
+                            <div className="ct-event-details">
+                              <span className="ct-event-value">{transactionAmount(event.transaction.amount, event.transaction.type, locale)}</span>
+                              {event.transaction.instrumentIsin ? <small>{instrumentLabel(event.transaction.instrumentIsin)}</small> : null}
+                              {event.transaction.notes?.trim() ? (
+                                <details className="ct-event-note">
+                                  <summary>{text.showNote}</summary>
+                                  <p>{event.transaction.notes}</p>
+                                </details>
+                              ) : null}
+                            </div>
+                          ) : null}
 
-                  {event.contacts ? (
-                    <details className="ct-event-contact">
-                      <summary>{text.showContacts(event.contacts.length)}</summary>
-                      <p className="ct-event-contact-note">{text.contactSnapshotNote}</p>
-                      <ul>
-                        {event.contacts.map((contact) => (
-                          <li key={contact.id}>
-                            <strong>{contact.name}</strong>
-                            {contact.relation ? <small>{text.relation}: {contact.relation}</small> : null}
-                            {contact.phone ? <small>{text.phone}: <a href={`tel:${contact.phone}`}>{contact.phone}</a></small> : null}
-                            {contact.email ? <small>{text.email}: <a href={`mailto:${contact.email}`}>{contact.email}</a></small> : null}
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  ) : null}
+                          {event.contacts ? (
+                            <details className="ct-event-contact">
+                              <summary>{text.showContacts(event.contacts.length)}</summary>
+                              <p className="ct-event-contact-note">{text.contactSnapshotNote}</p>
+                              <ul>
+                                {event.contacts.map((contact) => (
+                                  <li key={contact.id}>
+                                    <strong>{contact.name}</strong>
+                                    {contact.relation ? <small>{text.relation}: {contact.relation}</small> : null}
+                                    {contact.phone ? <small>{text.phone}: <a href={`tel:${contact.phone}`}>{contact.phone}</a></small> : null}
+                                    {contact.email ? <small>{text.email}: <a href={`mailto:${contact.email}`}>{contact.email}</a></small> : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    ) : null}
 
-                  {event.statement ? (
-                    <small className="ct-event-detail-line">
-                      {text.reportDate}: {formatSessionDate(event.statement.date, locale)} · {event.statement.positionsCount} {text.positions}
-                    </small>
-                  ) : null}
-                </div>
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            ))}
-          </div>
-        )}
-        {timeline.events.length < timeline.totalEvents ? <button className="ct-more" type="button" onClick={() => setLimit((value) => value + 30)}>{text.showMore(timeline.events.length, timeline.totalEvents)}</button> : null}
-      </section>
+                    {event.statement ? (
+                      <small className="ct-event-detail-line">
+                        {text.reportDate}: {formatSessionDate(event.statement.date, locale)} · {event.statement.positionsCount} {text.positions}
+                      </small>
+                    ) : null}
+                  </div>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              ))}
+            </div>
+          )}
+          {timeline.events.length < timeline.totalEvents ? <button className="ct-more" type="button" onClick={() => setLimit((value) => value + 30)}>{text.showMore(timeline.events.length, timeline.totalEvents)}</button> : null}
+        </section>
+      </details>
       <Link className="ct-back" to="/">‹ {text.back}</Link>
     </main>
   );

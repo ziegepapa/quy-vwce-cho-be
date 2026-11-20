@@ -1,4 +1,4 @@
-import { useId, useMemo } from "react";
+import { useMemo } from "react";
 import { useLocale } from "../lib/locale";
 import type { ValueHistoryPoint } from "../lib/valueHistory";
 
@@ -14,48 +14,38 @@ function compact(n: number): string {
   return `${Math.round(n)}`;
 }
 
-/**
- * Honest value history: the portfolio VALUE line next to the cumulative
- * CONTRIBUTIONS line. Most of the climb is money the owner put in — the gap
- * between the two lines is the real gain. Real monthly points only, no
- * smoothing, no projection. Pure SVG, no chart library.
- */
+/** Plot contributions throughout, and break the portfolio line where a monthly valuation is missing. */
 export default function ValueHistoryChart({ points, label }: { points: ValueHistoryPoint[]; label: string }) {
   const { locale } = useLocale();
-  const gradientId = useId();
   const geometry = useMemo(() => {
     if (points.length < 2) return null;
-    const maxV = Math.max(...points.map((p) => Math.max(p.value, p.contributed)));
+    const covered = points.map((p) => p.unpricedIsins.length === 0 && p.carriedForwardIsins.length === 0);
+    const maxV = Math.max(...points.map((p, i) => Math.max(covered[i] ? p.value : 0, p.contributed)));
     const max = maxV <= 0 ? 1 : maxV * 1.08;
     const innerW = W - PAD_L - PAD_R;
     const innerH = H - PAD_TOP - PAD_BOTTOM;
     const x = (i: number) => PAD_L + (i / (points.length - 1)) * innerW;
     const y = (v: number) => PAD_TOP + innerH - (v / max) * innerH;
-    const lineFor = (pick: (p: ValueHistoryPoint) => number) =>
-      points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(pick(p)).toFixed(1)}`).join(" ");
-    const valueLine = lineFor((p) => p.value);
-    const contribLine = lineFor((p) => p.contributed);
-    const area = `${valueLine} L${x(points.length - 1).toFixed(1)},${(H - PAD_BOTTOM).toFixed(1)} L${x(0).toFixed(1)},${(H - PAD_BOTTOM).toFixed(1)} Z`;
+    const coords = (i: number, value: number) => `${x(i).toFixed(1)},${y(value).toFixed(1)}`;
+    const contribLine = points.map((p, i) => `${i === 0 ? "M" : "L"}${coords(i, p.contributed)}`).join(" ");
+    const valueLine = points.flatMap((p, i) => covered[i] && (covered[i - 1] || covered[i + 1])
+      ? [`${covered[i - 1] ? "L" : "M"}${coords(i, p.value)}`]
+      : [],
+    ).join(" ");
+    const valueDots = points.flatMap((p, i) => covered[i] && !covered[i + 1] ? [{ x: x(i), y: y(p.value), month: p.month }] : []);
     const ticks = [0, max / 4, max / 2, (max * 3) / 4, max];
     const labelCount = Math.min(4, points.length);
     const labelIdx = Array.from({ length: labelCount }, (_, i) =>
       Math.round((i * (points.length - 1)) / Math.max(1, labelCount - 1)),
     ).filter((idx, i, all) => all.indexOf(idx) === i);
-    const last = points[points.length - 1];
-    return { valueLine, contribLine, area, x, y, ticks, labelIdx, last, max };
+    return { valueLine, contribLine, valueDots, x, y, ticks, labelIdx, hasGaps: covered.includes(false) };
   }, [points]);
 
   if (!geometry) return null;
 
-  // Months where the value line excludes holdings that had no price yet.
-  const unpricedParts = points
-    .filter((p) => (p.unpricedIsins ?? []).length > 0)
-    .map((p) => `${p.label} (${(p.unpricedIsins ?? []).join(", ")})`);
-  const unpricedNote = unpricedParts.length > 0
-    ? locale === "de"
-      ? `Positionen ohne Kurs fehlen im Wertverlauf: ${unpricedParts.join(", ")}.`
-      : `Biểu đồ giá trị chưa tính các vị thế thiếu giá: ${unpricedParts.join(", ")}.`
-    : null;
+  const unpricedNote = locale === "de"
+    ? "Lücken im Wertverlauf zeigen Monate mit fehlenden Kursen."
+    : "Khoảng trống trên đường giá trị là những tháng thiếu dữ liệu giá.";
 
   return (
     <>
@@ -66,12 +56,6 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
       aria-label={label}
       preserveAspectRatio="xMidYMid meet"
     >
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--success-600)" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="var(--success-600)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
       {geometry.ticks.map((t) => (
         <g key={t}>
           <line
@@ -83,22 +67,23 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
           </text>
         </g>
       ))}
-      <path d={geometry.area} fill={`url(#${gradientId})`} />
       <path
         d={geometry.contribLine}
         fill="none" stroke="var(--text-tertiary)" strokeWidth="2"
         strokeDasharray="6,5" strokeLinecap="round"
       />
-      <path
-        d={geometry.valueLine}
-        fill="none" stroke="var(--success-600)" strokeWidth="2.5"
-        strokeLinecap="round" strokeLinejoin="round"
-      />
-      <circle
-        cx={geometry.x(points.length - 1)}
-        cy={geometry.y(geometry.last.value)}
-        r="4.5" fill="var(--success-600)" stroke="var(--surface-raised)" strokeWidth="2"
-      />
+      {geometry.valueLine ? (
+        <path
+          data-series="portfolio-value" d={geometry.valueLine}
+          fill="none" stroke="var(--success-600)" strokeWidth="2.5"
+          strokeLinecap="round" strokeLinejoin="round"
+        />
+      ) : null}
+      {geometry.valueDots.map((dot) => (
+        <circle key={dot.month} data-month={dot.month} cx={dot.x} cy={dot.y}
+          r="4.5" fill="var(--success-600)" stroke="var(--surface-raised)" strokeWidth="2"
+        />
+      ))}
       {geometry.labelIdx.map((i) => (
         <text
           key={points[i].month}
@@ -111,7 +96,7 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
         </text>
       ))}
     </svg>
-    {unpricedNote ? <p className="ovb2-sub">{unpricedNote}</p> : null}
+    {geometry.hasGaps ? <p className="ovb2-sub">{unpricedNote}</p> : null}
     </>
   );
 }

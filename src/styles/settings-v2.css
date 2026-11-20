@@ -148,13 +148,18 @@
 .set2-legacy .cbo-action-row strong { font-size: 15px; font-weight: 600; }
 .set2-legacy .cbo-action-row small { font-size: 12px; color: var(--text-tertiary); }
 .set2-legacy .cbo-action-row > svg { flex: none; color: var(--text-tertiary); }
-/* Nút nền đỏ: chữ và icon phải trắng — tô màu danger lên nền danger làm tiêu đề biến mất. */
-.set2-legacy .cbo-action-row.danger strong { color: #fff; }
-.set2-legacy .cbo-action-row.danger small { color: rgba(255, 255, 255, 0.85); }
-.set2-legacy .cbo-action-row.danger > svg { color: #fff; }
-.set2-legacy .cbo-action-row.danger .cbo-action-icon { background: rgba(255, 255, 255, 0.2); color: #fff; }
+.set2-legacy .cbo-action-row.local-delete-trigger {
+  background: var(--danger-050);
+  border-radius: 12px;
+}
+.set2-legacy .local-delete-trigger .cbo-action-icon {
+  background: var(--surface-raised);
+  color: var(--danger-600);
+}
+.set2-legacy .local-delete-trigger small { color: var(--text-secondary); }
 .set2-legacy .advanced-delete { padding: 14px 16px; border-top: 1px solid var(--hairline, var(--border-subtle)); }
-.set2-legacy .advanced-delete p { margin: 0 0 10px; font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
+.advanced-delete label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-primary); line-height: 1.45; }
+.local-delete-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .set2-legacy .advanced-delete input {
   width: 100%;
   min-height: 44px;
@@ -168,16 +173,16 @@
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
 }
-.set2-legacy .advanced-delete button {
+.set2-legacy .advanced-delete .local-delete-submit {
   min-height: 44px;
   padding: 0 20px;
   cursor: pointer;
   font: inherit;
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
-  background: var(--danger-600);
-  border: none;
+  color: var(--text-primary);
+  background: var(--danger-050);
+  border: 1px solid var(--danger-600);
   border-radius: 12px;
 }
 .set2-legacy .advanced-delete button:disabled { opacity: 0.45; cursor: default; }

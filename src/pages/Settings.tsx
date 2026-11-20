@@ -390,6 +390,11 @@ export default function SettingsPage({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const deleteInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (deleteOpen) deleteInputRef.current?.focus();
+  }, [deleteOpen]);
   const [settingsChild, setSettingsChild] = useState<SettingsChildView>(null);
   const childBackRef = useRef<HTMLButtonElement | null>(null);
   const [openAdvancedGroup, setOpenAdvancedGroup] = useState<"prices" | "sync" | "plan" | "data" | null>(() =>
@@ -806,6 +811,51 @@ export default function SettingsPage({
     );
   }
 
+  function closeDelete() {
+    if (deleteBusy) return;
+    setDeleteConfirm("");
+    setDeleteOpen(false);
+    deleteTriggerRef.current?.focus();
+  }
+
+  async function confirmDelete() {
+    if (deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken) return;
+    if (readOnly) {
+      showBlocked();
+      return;
+    }
+    setDeleteBusy(true);
+    try {
+      await clearAllData();
+      window.location.reload();
+    } catch {
+      setActionError(text.deleteError);
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
+  const deleteConfirmation = deleteOpen ? (
+    <div className="advanced-delete" id="local-delete-confirmation" onKeyDown={(event) => {
+      if (event.key === "Escape") closeDelete();
+    }}>
+      <label htmlFor="local-delete-token">
+        {locale === "de" ? `Geben Sie ${text.deleteToken} zur Bestätigung ein. Dieser Vorgang kann auf diesem Gerät nicht rückgängig gemacht werden.` : t("deleteConfirmText")}
+      </label>
+      <input id="local-delete-token" ref={deleteInputRef} placeholder={text.deleteToken} autoComplete="off" spellCheck={false} disabled={deleteBusy} value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} />
+      <div className="local-delete-actions">
+        <button type="button" className="secondary" disabled={deleteBusy} onClick={closeDelete}>{t("cancel")}</button>
+        <button type="button" className="local-delete-submit" disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken} onClick={() => void confirmDelete()}>{t("confirmDelete")}</button>
+      </div>
+    </div>
+  ) : null;
+  const deleteTriggerProps = {
+    ref: deleteTriggerRef,
+    "aria-expanded": deleteOpen,
+    "aria-controls": deleteOpen ? "local-delete-confirmation" : undefined,
+    onClick: () => deleteOpen ? closeDelete() : setDeleteOpen(true),
+  };
+
   if (cboMode) {
     const conflictPanel = auth.user?.id ? (
       <SyncConflictSection
@@ -861,8 +911,12 @@ export default function SettingsPage({
           onSignOut={onRequestSignOut ? () => void onRequestSignOut() : undefined}
           handoffAction={<Link to="/notfallmappe" className="cbo-action-row" style={{ textDecoration: "none" }}><span className="cbo-action-icon"><IconLifebuoy /></span><span><strong>{text.supportHandover}</strong><small>{text.emergencySub}</small></span><IconChevronRight /></Link>}
           dangerAction={<>
-            <button type="button" className="cbo-action-row danger" onClick={() => setDeleteOpen(true)}><span className="cbo-action-icon"><IconClose /></span><span><strong>{t("clearLocalData")}</strong><small>{t("clearLocalDataSub")}</small></span><IconChevronRight /></button>
-            {deleteOpen ? <div className="advanced-delete"><p>{locale === "de" ? `Geben Sie ${text.deleteToken} zur Bestätigung ein. Dieser Vorgang kann auf diesem Gerät nicht rückgängig gemacht werden.` : t("deleteConfirmText")}</p><input placeholder={text.deleteToken} value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} /><button type="button" disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken} onClick={() => void (async () => { if (readOnly) { showBlocked(); return; } setDeleteBusy(true); try { await clearAllData(); window.location.reload(); } catch { setActionError(text.deleteError); } finally { setDeleteBusy(false); } })()}>{t("confirmDelete")}</button></div> : null}
+            <button type="button" className="cbo-action-row local-delete-trigger" {...deleteTriggerProps}>
+              <span className="cbo-action-icon" aria-hidden="true"><IconClose /></span>
+              <span><strong>{t("clearLocalData")}</strong><small>{t("clearLocalDataSub")}</small></span>
+              <IconChevronRight aria-hidden="true" />
+            </button>
+            {deleteConfirmation}
           </>}
         />
         {settingsChild ? (
@@ -1181,39 +1235,11 @@ export default function SettingsPage({
                 <span className="sr-sub">{t("restoreDeviceDataSub")}</span>
               </button>
             ) : null}
-            <button type="button" className="set-row" onClick={() => setDeleteOpen(true)}>
+            <button type="button" className="set-row" {...deleteTriggerProps}>
               <span className="sr-name" style={{ color: "var(--demo-re)" }}>{t("clearLocalData")}</span>
               <span className="sr-sub">{t("clearLocalDataSub")}</span>
             </button>
-            {deleteOpen ? (
-              <div className="advanced-delete">
-                <p>{locale === "de" ? `Geben Sie ${text.deleteToken} zur Bestätigung ein. Dieser Vorgang kann auf diesem Gerät nicht rückgängig gemacht werden.` : t("deleteConfirmText")}</p>
-                <input placeholder={text.deleteToken} value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
-                <button
-                  type="button"
-                  disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken}
-                  onClick={() =>
-                    void (async () => {
-                      if (readOnly) {
-                        showBlocked();
-                        return;
-                      }
-                      setDeleteBusy(true);
-                      try {
-                        await clearAllData();
-                        window.location.reload();
-                      } catch {
-                        setActionError(text.deleteError);
-                      } finally {
-                        setDeleteBusy(false);
-                      }
-                    })()
-                  }
-                >
-                  {t("confirmDelete")}
-                </button>
-              </div>
-            ) : null}
+            {deleteConfirmation}
           </div>
         </details>
       </details>

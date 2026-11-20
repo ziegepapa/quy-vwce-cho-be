@@ -28,8 +28,8 @@ const transactions = ["2026-08-02", "2026-09-02", "2026-10-02", "2026-11-02", "2
   fee: 0,
   notes: "",
   tax: 0,
-  createdAt: `${date}T10:00:00.000Z`,
-  updatedAt: `${date}T10:00:00.000Z`,
+  createdAt: index === 4 ? stamp : `${date}T10:00:00.000Z`,
+  updatedAt: index === 4 ? stamp : `${date}T10:00:00.000Z`,
   source: "manual",
 }));
 const quotes = [
@@ -62,7 +62,7 @@ const goal: Goal = {
   updatedAt: stamp,
 };
 
-async function seedLedger(page: Page) {
+async function seedLedger(page: Page, ledger = transactions) {
   await page.evaluate(({ transactions, quotes, goal }) => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open("quy_vwce_cho_be");
     request.onerror = () => reject(request.error);
@@ -75,7 +75,7 @@ async function seedLedger(page: Page) {
       for (const quote of quotes) write.objectStore("quotes").put(quote);
       write.objectStore("goals").put(goal);
     };
-  }), { transactions, quotes, goal });
+  }), { transactions: ledger, quotes, goal });
 }
 
 async function assertFits(page: Page) {
@@ -93,6 +93,14 @@ for (const theme of themes) {
       localStorage.setItem("vwce-locale", "vi");
     }, theme);
     await page.route("**/data/quotes.json", (route) => route.abort());
+    await page.route("**/data/price-history/*.json", (route) => route.fulfill({
+      json: {
+        points: route.request().url().endsWith(`${vwce}.json`) ? [
+          { date: "2026-08-31", price: 118 },
+          { date: "2026-10-30", price: 119 },
+        ] : [],
+      },
+    }));
     await page.goto("./");
     const start = page.getByRole("button", { name: "Bắt đầu", exact: true });
     const signIn = page.getByRole("heading", { name: "Đăng nhập", exact: true });
@@ -123,10 +131,28 @@ for (const theme of themes) {
       if (name === "overview") {
         await expect(page.locator(".ovb2-big")).toHaveText(/591,95\s*€/);
         await expect(page.locator(".ovb2-comp .down")).toHaveText(/−8,05\s*€\s*−1,34%/);
-        await expect(page.locator(".ovb2-chart")).toBeVisible();
+        const chart = page.locator(".ovb2-chart");
+        await expect(chart).toBeVisible();
+        // September has only a carry-forward price. August remains an isolated point.
+        await expect(chart.locator("[data-month]")).toHaveCount(2);
+        await expect(chart.locator('[data-month="2026-08"]')).toHaveCount(1);
+        await expect(chart.locator('[data-month="2026-11"]')).toHaveCount(1);
+        await expect(chart.locator('[data-series="portfolio-value"]')).toHaveAttribute("d", /^M[0-9.,]+ L[0-9.,]+$/);
+        await expect(page.getByText(/Khoảng trống trên đường giá trị/)).toBeVisible();
       }
       if (name === "transactions") {
         await expect(page.locator(".tx-ledger-month-group")).toHaveCount(4);
+        const firstRow = await page.locator(".tx-ledger-row").first().boundingBox();
+        expect(firstRow!.y + firstRow!.height).toBeLessThan(520);
+        const activity = page.getByRole("group", { name: "Dòng tiền" });
+        await expect(activity.getByRole("button", { name: "Chi ra" })).toBeInViewport();
+        const search = page.getByRole("textbox", { name: "Tìm kiếm giao dịch" });
+        await search.fill("a".repeat(100));
+        const chip = page.locator(".tx-active-filter-chips button");
+        await expect(chip).toBeVisible();
+        expect(await chip.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+        await assertFits(page);
+        await chip.click();
         const november = page.locator('[data-month-key="2026-11"] .tx-ledger-row');
         await expect(november).toHaveCount(2);
         await expect(november.filter({ hasText: "VALL" })).toHaveCount(2);
@@ -137,6 +163,18 @@ for (const theme of themes) {
       }
       if (name === "settings") {
         await expect(page.locator(".set2")).not.toContainText("2042");
+      }
+      if (name === "timeline") {
+        const journey = page.getByRole("region", { name: "Hành trình đầu tư" });
+        await expect(journey.getByText("Mua VALL")).toHaveCount(2);
+        await expect(journey.getByText("Mua VWCE")).toHaveCount(3);
+        await expect(journey.locator(".ct-trade-day time")).toHaveText([
+          "16/11/2026", "02/11/2026", "02/10/2026", "02/09/2026", "02/08/2026",
+        ]);
+        await expect(journey.locator(".ct-event-value")).toHaveText(Array(5).fill(/120,00\s*€/));
+      }
+      if (name === "notfallmappe") {
+        await expect(page.locator(".nfm-snap-v")).toHaveText([/591,95\s*€/, "3", /118,69\s*€/, "5"]);
       }
       if (name === "goals") {
         await expect(page.getByRole("meter")).toHaveAttribute("value", "25");
@@ -154,10 +192,87 @@ for (const theme of themes) {
         await expect(page.getByTestId("simulation-hero-amount")).toContainText(rounded(projected));
         await expect(page.locator(".summary-strip")).toContainText(rounded(120 * 12 * 30));
         await expect(page.locator(".summary-strip")).toContainText(rounded(projected - 120 * 12 * 30));
-        await expect(page.getByTestId("simulation-growth-chart").locator("svg")).toBeVisible();
+        const chart = page.getByTestId("simulation-growth-chart");
+        await expect(chart.locator(".sim-chart-values strong")).toContainText(rounded(projected));
+        await expect(chart.locator("svg")).toBeVisible();
+        expect(await chart.locator("svg").evaluate((svg) => {
+          const { width, height } = (svg as SVGSVGElement).viewBox.baseVal;
+          return [...svg.querySelectorAll("text")].every((label) => {
+            const { x, y, width: labelWidth, height: labelHeight } = label.getBBox();
+            return x >= 0 && y >= 0 && x + labelWidth <= width && y + labelHeight <= height;
+          });
+        })).toBe(true);
       }
       await page.screenshot({ path: testInfo.outputPath(`${name}.png`), animations: "disabled" });
+      if (name === "overview") {
+        await page.locator(".ovb2-chart-card").scrollIntoViewIfNeeded();
+        await page.screenshot({ path: testInfo.outputPath("overview-chart.png"), animations: "disabled" });
+      }
+      if (name === "timeline") {
+        const confidence = page.locator(".ct-confidence");
+        await confidence.locator("summary").first().click();
+        await expect(confidence.getByText("Snapshot giá · VWCE")).toBeVisible();
+        await expect(confidence.locator(".ct-day").first()).toHaveAttribute("open", "");
+      }
+      if (name === "goals") {
+        await page.locator(".mwj-goal-entry button").first().click();
+        await page.getByText("Sửa", { exact: true }).click();
+        await expect(page.locator("#g-prot")).toHaveValue("250");
+        await page.locator("#g-name").fill("Mục tiêu học tập mới");
+        await page.getByRole("button", { name: "Lưu", exact: true }).click();
+        const savedGoal = page.getByRole("heading", { name: "Mục tiêu học tập mới" });
+        await expect(savedGoal).toBeVisible();
+        await page.reload();
+        await expect(savedGoal).toBeVisible();
+        await expect(page.getByRole("meter")).toHaveAttribute("value", "25");
+      }
+      if (name === "settings") {
+        const trigger = page.getByRole("button", { name: /Xóa toàn bộ dữ liệu trên thiết bị/ });
+        await trigger.click();
+        const token = page.getByLabel(/Gõ XOA để xác nhận/);
+        const confirm = page.getByRole("button", { name: "Xác nhận xóa" });
+        await expect(token).toBeFocused();
+        await expect(confirm).toBeDisabled();
+        await token.fill("XO");
+        await expect(confirm).toBeDisabled();
+        await token.fill("XOA");
+        await expect(confirm).toBeEnabled();
+        await page.screenshot({ path: testInfo.outputPath("settings-delete.png"), animations: "disabled" });
+        await token.press("Escape");
+        await expect(trigger).toBeFocused();
+        await trigger.click();
+        await expect(token).toHaveValue("");
+        await page.getByRole("button", { name: "Hủy", exact: true }).click();
+        await expect(confirm).toHaveCount(0);
+      }
+      if (name === "notfallmappe") {
+        await page.locator(".nfm-sec-static").evaluate((section) => section.scrollIntoView({ block: "center" }));
+        await page.screenshot({ path: testInfo.outputPath("notfallmappe-assets.png"), animations: "disabled" });
+        await page.evaluate(() => {
+          const observer = new MutationObserver(() => {
+            const frame = document.querySelector<HTMLIFrameElement>('iframe[aria-hidden="true"]');
+            if (!frame?.contentWindow) return;
+            frame.contentWindow.print = () => {
+              frame.dataset.printCalled = "true";
+            };
+            observer.disconnect();
+          });
+          observer.observe(document.body, { childList: true });
+        });
+        await page.getByRole("button", { name: "In / Lưu PDF" }).click();
+        await expect(page.locator('iframe[data-print-called="true"]')).toHaveCount(1);
+        const printed = page.frameLocator('iframe[data-print-called="true"]');
+        await expect(printed.locator(".nfm-snap-v")).toHaveText([/591,95\s*€/, "3", /118,69\s*€/, "5"]);
+        await expect(printed.locator("input, textarea, details")).toHaveCount(0);
+        const printHtml = await printed.locator("html").evaluate((html) => html.outerHTML);
+        const printPage = await page.context().newPage();
+        await printPage.setContent(`<!doctype html>${printHtml}`);
+        await printPage.pdf({ path: testInfo.outputPath("notfallmappe.pdf"), preferCSSPageSize: true });
+        await printPage.close();
+      }
       if (name === "simulation") {
+        await page.getByTestId("simulation-growth-chart").evaluate((chart) => chart.scrollIntoView({ block: "center" }));
+        await page.screenshot({ path: testInfo.outputPath("simulation-chart.png"), animations: "disabled" });
         await page.getByRole("button", { name: "Điều chỉnh giả định" }).click();
         await expect(page.locator(".bottom-dock")).toBeHidden();
         await page.locator("details", { has: page.locator("#sim-starting-balance") }).locator("summary").click();
@@ -166,5 +281,27 @@ for (const theme of themes) {
         await expect(page.locator(".bottom-dock")).toBeVisible();
       }
     }
+
+    const olderTrades = Array.from({ length: 8 }, (_, index): Transaction => ({
+      ...transactions[0],
+      id: `test-older-${index}`,
+      date: `${2018 + index}-08-02`,
+    }));
+    await seedLedger(page, [...olderTrades, { ...transactions[4], id: "test-same-day" }]);
+    await page.goto("./#/transactions");
+    const years = page.getByRole("tablist", { name: "Chọn năm xem" });
+    await expect(page.getByText("↔ Cuộn ngang để xem thêm")).toBeVisible();
+    await assertFits(page);
+    await page.screenshot({ path: testInfo.outputPath("transactions-years.png"), animations: "disabled" });
+    const oldest = years.getByRole("tab", { name: "2018" });
+    await oldest.focus();
+    await expect.poll(() => years.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+    await oldest.press("Enter");
+    await expect(oldest).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator(".tx-ledger-row")).toHaveCount(1);
+    await page.goto("./#/timeline");
+    const sameDay = page.locator(".ct-trade-day").filter({ has: page.locator('time[datetime="2026-11-16"]') });
+    await expect(sameDay).toHaveCount(1);
+    await expect(sameDay.getByText("Mua VALL")).toHaveCount(2);
   });
 }

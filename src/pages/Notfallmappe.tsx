@@ -1,3 +1,4 @@
+import { VWCE_ISIN } from "../lib/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getSettings, listGoals, listQuotes, listTransactions, saveSettings } from "../lib/db";
 import type {
@@ -119,12 +120,12 @@ export default function NotfallmappePage() {
       legacyVwcePriceAsOf: settings?.latestPriceDate ?? "",
     });
     const total = snapshot.market.securities + Math.max(0, snapshot.portfolio.cashBalance);
-    let qty = 0;
-    for (const t of txs) {
-      if (t.type === "buy_vwce") qty += t.quantity ?? 0;
-      else if (t.type === "sell_vwce") qty -= t.quantity ?? 0;
-    }
-    return { total, qty, price: snapshot.vwcePrice };
+    return {
+      total,
+      qty: snapshot.portfolio.positions[VWCE_ISIN]?.qty ?? 0,
+      price: snapshot.vwcePrice > 0 ? snapshot.vwcePrice : null,
+      valueComplete: snapshot.valueComplete,
+    };
   }, [txs, settings, quotes]);
 
   const filled = useMemo(() => {
@@ -529,11 +530,12 @@ export default function NotfallmappePage() {
         </h2>
         <div className="nfm-box">
           <div className="nfm-snap">
-            <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Tổng tài sản", "Gesamtvermögen")}</span><span className="nfm-snap-v">{formatDisplayMoney(snap.total, locale)}</span></div>
+            <div className="nfm-snap-cell"><span className="nfm-snap-k">{snap.valueComplete ? copy("Tổng tài sản", "Gesamtvermögen") : copy("Tài sản đã định giá", "Bewertetes Vermögen")}</span><span className="nfm-snap-v">{formatDisplayMoney(snap.total, locale)}</span></div>
             <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Số lượng VWCE", "VWCE-Anteile")}</span><span className="nfm-snap-v">{formatDisplayQuantity(snap.qty, locale, 4)}</span></div>
-            <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Giá VWCE dùng để tính", "Verwendeter VWCE-Preis")}</span><span className="nfm-snap-v">{formatDisplayMoney(snap.price, locale)}</span></div>
+            <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Giá VWCE dùng để tính", "Verwendeter VWCE-Preis")}</span><span className="nfm-snap-v">{snap.price === null ? "—" : formatDisplayMoney(snap.price, locale)}</span></div>
             <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Số giao dịch đã ghi", "Erfasste Transaktionen")}</span><span className="nfm-snap-v">{txs.length}</span></div>
           </div>
+          {!snap.valueComplete ? <p>{copy("Một số vị thế thiếu dữ liệu giá.", "Für einige Positionen fehlen Kurse.")}</p> : null}
           <ul className="nfm-goals">
             {goals.map((g) => (
               <li key={g.id}>{g.name}<span>{formatDisplayDate(g.dueDate, locale)} · {formatDisplayMoney(g.amount, locale)}</span></li>
