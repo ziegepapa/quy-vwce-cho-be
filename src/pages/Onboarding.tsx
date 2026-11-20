@@ -1,4 +1,5 @@
 import { useLocale } from "../lib/locale";
+import "../styles/modern-wealth-journal.css";
 
 function onboardingCopy(locale: "vi" | "de") {
   return locale === "de" ? {
@@ -18,15 +19,21 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const { locale } = useLocale();
   const text = onboardingCopy(locale);
   return (
-    <div className="app-shell">
-      <h1 className="page-title">{text.title}</h1>
-      <p className="muted">{text.subtitle}</p>
-      <div className="card disclaimer" style={{ marginTop: "1rem" }}>
-        {text.disclaimer}
+    <main className="app-shell mwj-welcome">
+      <div className="mwj-welcome-brand" aria-hidden="true"><span className="mwj-leaf">✦</span> VWCE Vault</div>
+      <div className="mwj-welcome-story">
+        <div className="mwj-sun" aria-hidden="true" />
+        <div className="mwj-hill mwj-hill-back" aria-hidden="true" />
+        <div className="mwj-hill mwj-hill-front" aria-hidden="true" />
+        <div className="mwj-welcome-copy">
+          <h1>{text.title}</h1>
+          <p>{text.subtitle}</p>
+        </div>
       </div>
-      <div className="stack" style={{ marginTop: "1.25rem" }}>
-        <button type="button" onClick={onDone}>{text.start}</button>
+      <div className="mwj-welcome-actions">
+        <p className="mwj-disclaimer">{text.disclaimer}</p>
+        <button className="mwj-start" type="button" onClick={onDone}>{text.start}<span aria-hidden="true">→</span></button>
       </div>
-    </div>
+    </main>
   );
 }
