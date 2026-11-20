@@ -1,0 +1,178 @@
+/* Modern Wealth Journal — visual layer only. All colors inherit the active theme. */
+:root {
+  --mwj-ink: var(--text-primary);
+  --mwj-paper: var(--surface-raised);
+  --mwj-accent: var(--primary-600);
+}
+.app-layout:has(.bar) > .app-shell {
+  max-width: 35rem;
+  padding-inline: clamp(16px, 4vw, 26px) !important;
+}
+.app-layout .ovb2-card,
+.app-layout .card,
+.app-layout .surface-raised {
+  border-radius: 24px;
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-raised);
+}
+.app-layout .ovb2-hero {
+  border-radius: 30px;
+  overflow: hidden;
+  background: linear-gradient(130deg, var(--hero-from), var(--hero-mid) 70%, var(--hero-to));
+  box-shadow: 0 18px 38px var(--hero-shadow);
+}
+.app-layout .ovb2-big {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.045em;
+  line-height: 1.08;
+}
+.app-layout .ovb2-grid { gap: 14px; }
+.app-layout .ovb2-ministats { gap: 10px; }
+.app-layout .ovb2-cardhead { gap: 12px; }
+.app-layout .ovb2-tbl { width: 100%; }
+.app-layout .ovb2-chart-card,
+.app-layout .ovb2-donut-card { overflow: hidden; }
+.app-layout .ovb2-table-card { overflow-x: auto; }
+.app-layout .bar {
+  background: color-mix(in srgb, var(--surface-raised) 87%, var(--bg-base));
+  border-bottom: 1px solid var(--border-subtle);
+}
+.app-layout .bar-logo { font-size: 18px; letter-spacing: -.04em; }
+.app-layout .pill.bottom-dock {
+  width: calc(100vw - 28px);
+  max-width: 420px;
+  padding: 5px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  background: color-mix(in srgb, var(--surface-raised) 92%, var(--bg-base));
+  border: 1px solid var(--border-strong);
+  border-radius: 25px;
+  box-shadow: var(--shadow-dock);
+}
+.app-layout .pill.bottom-dock .pb {
+  min-width: 0;
+  flex: 1 1 0;
+  padding: 8px 2px;
+  min-height: 53px;
+  border-radius: 19px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+.app-layout .pill.bottom-dock .pb.on {
+  color: var(--primary-600);
+  background: var(--primary-050);
+  box-shadow: none;
+}
+.mwj-dock-icon { display: flex; align-items: center; justify-content: center; height: 20px; }
+.mwj-dock-icon svg { width: 19px; height: 19px; }
+.mwj-dock-label { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mwj-welcome {
+  --mwj-sky: color-mix(in srgb, var(--hero-mid) 76%, var(--hero-from));
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding: calc(24px + var(--safe-top)) 20px calc(22px + var(--safe-bottom));
+  max-width: 560px;
+  gap: 20px;
+}
+.mwj-welcome-brand {
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -.035em;
+}
+.mwj-leaf { color: var(--primary-600); }
+.mwj-welcome-story {
+  flex: 1 1 auto;
+  min-height: 360px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 32px;
+  isolation: isolate;
+  background: linear-gradient(160deg, var(--hero-from) 2%, var(--mwj-sky) 57%, var(--hero-to));
+  box-shadow: 0 18px 44px var(--hero-shadow);
+}
+.mwj-welcome-story::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 30%, rgba(8, 14, 22, .55) 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+.mwj-sun {
+  position: absolute;
+  width: 155px;
+  height: 155px;
+  border-radius: 50%;
+  right: 12%;
+  bottom: 26%;
+  background: radial-gradient(circle at 42% 40%, #fff4cf, #ffcd78 67%, #efa966);
+  box-shadow: 0 0 85px 24px rgba(255, 207, 136, .28);
+}
+.mwj-hill {
+  position: absolute;
+  width: 160%;
+  height: 48%;
+  left: -30%;
+  bottom: -18%;
+  border-radius: 50% 50% 0 0;
+  transform: rotate(-10deg);
+}
+.mwj-hill-back { background: #527e73; bottom: -8%; left: 12%; transform: rotate(15deg); }
+.mwj-hill-front { background: #1e554e; }
+.mwj-welcome-copy {
+  position: absolute;
+  z-index: 3;
+  left: 24px;
+  right: 24px;
+  top: 26px;
+  color: #fff;
+}
+.mwj-welcome-copy h1 {
+  max-width: 340px;
+  font-size: clamp(30px, 8vw, 43px);
+  line-height: 1.12;
+  letter-spacing: -.05em;
+  margin: 0 0 15px;
+}
+.mwj-welcome-copy p { max-width: 310px; line-height: 1.5; color: #f0eafa; font-size: 14px; }
+.mwj-welcome-actions { display: grid; gap: 14px; }
+.mwj-disclaimer {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  padding: 12px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  margin: 0;
+}
+.mwj-start {
+  width: 100%;
+  min-height: 56px;
+  justify-content: space-between;
+  border-radius: 18px;
+  padding-inline: 22px;
+  background: var(--primary-600);
+  color: var(--color-text-inverse);
+  font-size: 16px;
+  font-weight: 800;
+}
+@media (max-width: 390px) {
+  .app-layout .ovb2-grid { gap: 10px; }
+  .app-layout .ovb2-big { overflow-wrap: anywhere; }
+  .mwj-welcome { gap: 12px; padding-inline: 14px; }
+  .mwj-welcome-story { min-height: 330px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mwj-welcome *, .app-layout .pill.bottom-dock * { animation: none !important; transition: none !important; }
+}
+@media print {
+  .mwj-welcome-brand, .app-layout .pill.bottom-dock { display: none !important; }
+}
