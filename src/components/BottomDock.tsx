@@ -17,14 +17,15 @@ export default function BottomDock({ items }: { items: DockItem[] }) {
 
   return (
     <nav className="pill bottom-dock" aria-label={locale === "de" ? "Hauptnavigation" : "Điều hướng chính"}>
-      {primaryItems.map(({ to, label }) => (
+      {primaryItems.map(({ to, label, icon }) => (
         <NavLink
           key={to}
           to={to}
           end={to === "/"}
           className={({ isActive }) => "pb" + (isActive ? " on" : "")}
         >
-          {label}
+          <span className="mwj-dock-icon" aria-hidden="true">{icon}</span>
+          <span className="mwj-dock-label">{label}</span>
         </NavLink>
       ))}
     </nav>
