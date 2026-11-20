@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLocale } from "../../lib/locale";
 import { formatMoney } from "../../lib/calc";
+import { IconBell, IconCash, IconDownload, IconInfo, IconSim, IconTimeline } from "../Icons";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
 import type { PortfolioDataHealth, PortfolioDataHealthIssue } from "../../pages/portfolioDataHealth";
 import type { YearInReview } from "../../pages/yearInReview";
@@ -119,8 +120,14 @@ type OverviewFrameProps = {
 function overviewCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     pageLabel: "Übersicht",
-    totalAssets: "Gesamtvermögen",
+    greetingMorning: "Guten Morgen 👋",
+    greetingDay: "Guten Tag 👋",
+    greetingEvening: "Guten Abend 👋",
+    heroSub: "Der Fonds für unseren Sohn",
+    bellLabel: "Aktuelles ansehen",
+    totalAssets: "Vermögen heute",
     contributedByYou: "Eingezahlt",
+    realGain: "Realer Gewinn",
     gainUnavailable: "Noch nicht bewertbar",
     fundCount: "Fonds",
     inDays: (days: number) => days === 0 ? "heute" : `in ${days} Tagen`,
@@ -134,9 +141,9 @@ function overviewCopy(locale: "vi" | "de") {
     journeyTitle: "Langfristige Reise",
     journeyLine1: "beginnt mit kleinen Beträgen",
     journeyLine2: "Jeden Tag ein bisschen — die Zukunft wird ganz anders!",
-    valueVsContributed: "Wert vs Eingezahlt",
+    valueVsContributed: "Wertentwicklung",
     honestCaption: "Monatswerte auf Basis der verfügbaren Kurse.",
-    valueLine: "Wert",
+    valueLine: "Portfoliowert",
     contributedLine: "Eingezahlt",
     allocation: "Vermögensaufteilung",
     allocationSub: "Nach aktuellem Wert.",
@@ -172,8 +179,14 @@ function overviewCopy(locale: "vi" | "de") {
     reviewYear: "Prüfjahr",
   } : {
     pageLabel: "Tổng quan",
-    totalAssets: "Tổng giá trị tài sản",
+    greetingMorning: "Chào buổi sáng 👋",
+    greetingDay: "Chào buổi chiều 👋",
+    greetingEvening: "Chào buổi tối 👋",
+    heroSub: "Quỹ cho con trai",
+    bellLabel: "Xem cập nhật mới",
+    totalAssets: "Tài sản hôm nay",
     contributedByYou: "Bạn đã góp",
+    realGain: "Lãi / lỗ thực",
     gainUnavailable: "Chưa định giá",
     fundCount: "Số quỹ",
     inDays: (days: number) => days === 0 ? "hôm nay" : `trong ${days} ngày`,
@@ -187,9 +200,9 @@ function overviewCopy(locale: "vi" | "de") {
     journeyTitle: "Hành trình dài hạn",
     journeyLine1: "bắt đầu từ những khoản nhỏ",
     journeyLine2: "Mỗi ngày một chút, tương lai sẽ rất khác!",
-    valueVsContributed: "Giá trị vs Đã góp",
+    valueVsContributed: "Diễn biến giá trị",
     honestCaption: "Giá trị theo tháng dựa trên dữ liệu giá hiện có.",
-    valueLine: "Giá trị",
+    valueLine: "Giá trị danh mục",
     contributedLine: "Đã góp",
     allocation: "Phân bổ tài sản",
     allocationSub: "Theo giá trị hiện tại.",
@@ -274,21 +287,11 @@ function buildAttentionItems(
   return items;
 }
 
-/** Soft landscape illustration for the hero — hills, sun, trees. */
-function LandscapeArt() {
-  return (
-    <svg className="ovb2-art" viewBox="0 0 400 220" preserveAspectRatio="xMaxYMax slice" aria-hidden="true">
-      <circle cx="330" cy="42" r="26" fill="var(--warning-050)" />
-      <path d="M0 150 L90 70 L170 140 L250 60 L340 140 L400 90 L400 220 L0 220 Z" fill="var(--success-050)" opacity=".7" />
-      <path d="M0 175 L120 110 L230 170 L330 120 L400 160 L400 220 L0 220 Z" fill="var(--success-050)" opacity=".8" />
-      <g fill="var(--success-600)" opacity=".58">
-        <circle cx="60" cy="170" r="14" /><rect x="58" y="170" width="4" height="18" />
-        <circle cx="150" cy="160" r="18" /><rect x="148" y="160" width="4" height="22" />
-        <circle cx="250" cy="168" r="15" /><rect x="248" y="168" width="4" height="20" />
-        <circle cx="330" cy="158" r="19" /><rect x="328" y="158" width="4" height="24" />
-      </g>
-    </svg>
-  );
+/** Time-of-day greeting for the navy hero header (mockup: "Guten Morgen"). */
+function greetingForHour(hour: number, text: ReturnType<typeof overviewCopy>): string {
+  if (hour < 11) return text.greetingMorning;
+  if (hour < 18) return text.greetingDay;
+  return text.greetingEvening;
 }
 
 /** Donut of the allocation. Colors cycle blue → green → amber → purple. */
@@ -353,6 +356,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
   const metricTriggerRef = useRef<HTMLButtonElement>(null);
   const metricOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedMetricOption = OVERVIEW_METRICS.find((metric) => metric.id === selectedMetric) ?? OVERVIEW_METRICS[0];
+  const greeting = greetingForHour(new Date().getHours(), text);
 
   useEffect(() => {
     try {
@@ -409,30 +413,44 @@ export default function OverviewFrame(props: OverviewFrameProps) {
 
   return (
     <main className="ovb2" aria-label={text.pageLabel}>
-      <header className="mwj-page-head">
-        <h1>{text.pageLabel}</h1>
-        <nav className="mwj-page-links" aria-label={text.pageLabel}>
-          <Link to="/goals">{locale === "de" ? "Ziele" : "Mục tiêu"} <span aria-hidden="true">›</span></Link>
-          <Link to="/timeline">{locale === "de" ? "Zeitleiste" : "Dòng thời gian"} <span aria-hidden="true">›</span></Link>
-        </nav>
-      </header>
       <div className="ovb2-grid">
         <div className="ovb2-main">
-          {/* Hero */}
-          <section className="ovb2-card ovb2-hero" aria-label={assetsLabel}>
-            <LandscapeArt />
-            <div className="ovb2-k">{text.totalAssets}</div>
-            <div className="ovb2-big">{assets}</div>
+          {/* Hero — Modern Wealth Journal: navy greeting, warm landscape,
+              big total with gain pill, then the three real figures. */}
+          <section className="ovb2-card ovb2-hero mwj-hero" aria-label={assetsLabel}>
+            <div className="mwj-hero-head">
+              <div className="mwj-hero-greeting">
+                <p className="mwj-hero-hello">{greeting}</p>
+                <p className="mwj-hero-sub">{text.heroSub}</p>
+              </div>
+              <Link to="/timeline" className="mwj-hero-bell" aria-label={text.bellLabel}>
+                <IconBell />
+              </Link>
+            </div>
+            <div className="mwj-hero-scene">
+              <div className="mwj-hero-sun" aria-hidden="true" />
+              <div className="mwj-hero-hill mwj-hero-hill-back" aria-hidden="true" />
+              <div className="mwj-hero-hill mwj-hero-hill-front" aria-hidden="true" />
+              <div className="mwj-hero-copy">
+                <div className="ovb2-k"><span className="mwj-hero-label-icon" aria-hidden="true"><IconTimeline /></span>{text.totalAssets}</div>
+                <div className="ovb2-big">{assets}</div>
+                {gainLabel && gainPctLabel ? (
+                  <span className={"mwj-hero-pill" + (gainPositive ? " up" : " down")}>
+                    {gainLabel} {gainPctLabel}
+                  </span>
+                ) : null}
+              </div>
+            </div>
             <dl className="ovb2-comp mwj-portfolio-stats">
-              <div><dt>{text.contributedByYou}</dt><dd>{contributedLabel}</dd></div>
+              <div><span className="mwj-stat-icon" aria-hidden="true"><IconDownload /></span><dt>{text.contributedByYou}</dt><dd>{contributedLabel}</dd></div>
+              <div><span className="mwj-stat-icon" aria-hidden="true"><IconCash /></span><dt>{text.currentValue}</dt><dd>{assets}</dd></div>
               <div>
-                <dt>{locale === "de" ? "Gewinn / Verlust" : "Lãi / lỗ"}</dt>
+                <span className="mwj-stat-icon" aria-hidden="true"><IconSim /></span>
+                <dt>{text.realGain}</dt>
                 <dd className={gainLabel ? (gainPositive ? "up" : "down") : undefined}>
                   {gainLabel ?? text.gainUnavailable}
-                  {gainLabel && gainPctLabel ? <small>{gainPctLabel}</small> : null}
                 </dd>
               </div>
-              <div><dt>{text.fundCount}</dt><dd>{fundCount}</dd></div>
             </dl>
           </section>
 
@@ -440,10 +458,10 @@ export default function OverviewFrame(props: OverviewFrameProps) {
           <div className="ovb2-mid">
             {valueHistory ? (
               <section className="ovb2-card ovb2-chart-card" aria-label={text.valueVsContributed}>
-                <h3>{text.valueVsContributed}</h3>
+                <h3>{text.valueVsContributed}<span className="mwj-info-icon" aria-hidden="true"><IconInfo /></span></h3>
                 <p className="ovb2-sub">{text.honestCaption}</p>
                 <div className="ovb2-legend">
-                  <span><i style={{ background: "var(--success-600)" }} />{text.valueLine}</span>
+                  <span><i style={{ background: "var(--primary-600)" }} />{text.valueLine}</span>
                   <span><i className="dashed" />{text.contributedLine}</span>
                 </div>
                 <ValueHistoryChart points={valueHistory} label={text.valueVsContributed} />

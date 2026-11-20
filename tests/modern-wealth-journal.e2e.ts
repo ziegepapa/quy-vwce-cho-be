@@ -126,16 +126,28 @@ for (const theme of themes) {
       await page.goto(`./#${route}`);
       await expect(page.locator(ready)).toBeVisible();
       await expect(start).toHaveCount(0);
-      await expect(page.locator(".bottom-dock a")).toHaveCount(4);
+      await expect(page.locator(".bottom-dock .pb")).toHaveCount(4);
+      await expect(page.locator(".bottom-dock")).toContainText("Tổng quan");
+      await expect(page.locator(".bottom-dock")).toContainText("Dòng thời gian");
+      await expect(page.locator(".bottom-dock")).toContainText("Thêm");
       await assertFits(page);
       if (name === "overview") {
         await expect(page.locator(".ovb2-big")).toHaveText(/591,95\s*€/);
-        await expect(page.locator(".ovb2-comp .down")).toHaveText(/−8,05\s*€\s*−1,34%/);
+        await expect(page.locator(".mwj-hero-pill")).toHaveText(/−8,05\s*€\s*−1,34%/);
+        await expect(page.locator(".mwj-hero-hello")).toHaveText(/Chào buổi chiều/);
+        await expect(page.locator(".mwj-hero-sub")).toHaveText("Quỹ cho con trai");
+        await expect(page.locator(".mwj-hero-bell")).toHaveAttribute("href", "#/timeline");
+        const stats = page.locator(".mwj-portfolio-stats");
+        await expect(stats).toContainText(/Bạn đã góp\s*600,00\s*€/);
+        await expect(stats).toContainText(/Giá trị hiện tại\s*591,95\s*€/);
+        await expect(stats).toContainText(/Lãi \/ lỗ thực\s*−8,05\s*€/);
         const chart = page.locator(".ovb2-chart");
         await expect(chart).toBeVisible();
         // September has only a carry-forward price. August remains an isolated point.
-        await expect(chart.locator("[data-month]")).toHaveCount(2);
+        // Dots mark every drawn segment end, including a resumed segment's start (October).
+        await expect(chart.locator("[data-month]")).toHaveCount(3);
         await expect(chart.locator('[data-month="2026-08"]')).toHaveCount(1);
+        await expect(chart.locator('[data-month="2026-10"]')).toHaveCount(1);
         await expect(chart.locator('[data-month="2026-11"]')).toHaveCount(1);
         await expect(chart.locator('[data-series="portfolio-value"]')).toHaveAttribute("d", /^M[0-9.,]+ L[0-9.,]+$/);
         await expect(page.getByText(/Khoảng trống trên đường giá trị/)).toBeVisible();
@@ -207,6 +219,15 @@ for (const theme of themes) {
       if (name === "overview") {
         await page.locator(".ovb2-chart-card").scrollIntoViewIfNeeded();
         await page.screenshot({ path: testInfo.outputPath("overview-chart.png"), animations: "disabled" });
+        await page.locator(".mwj-hero").scrollIntoViewIfNeeded();
+        await page.getByRole("button", { name: "Thêm", exact: true }).click();
+        const sheet = page.getByRole("dialog", { name: "Thêm" });
+        await expect(sheet.getByRole("link", { name: "Mô phỏng" })).toBeVisible();
+        await expect(sheet.getByRole("link", { name: "Mục tiêu" })).toBeVisible();
+        await expect(sheet.getByRole("link", { name: "Hồ sơ khẩn cấp" })).toBeVisible();
+        await expect(sheet.getByRole("link", { name: "Cài đặt" })).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(sheet).toHaveCount(0);
       }
       if (name === "timeline") {
         const confidence = page.locator(".ct-confidence");

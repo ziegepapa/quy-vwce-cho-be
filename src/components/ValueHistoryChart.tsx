@@ -32,13 +32,32 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
       ? [`${covered[i - 1] ? "L" : "M"}${coords(i, p.value)}`]
       : [],
     ).join(" ");
-    const valueDots = points.flatMap((p, i) => covered[i] && !covered[i + 1] ? [{ x: x(i), y: y(p.value), month: p.month }] : []);
+    // One soft area per drawn segment (never across a gap).
+    const valueAreas: string[] = [];
+    let run: number[] = [];
+    const flushRun = () => {
+      if (run.length >= 2) {
+        const first = run[0];
+        const last = run[run.length - 1];
+        const line = run.map((i) => `${i === first ? "M" : "L"}${coords(i, points[i].value)}`).join(" ");
+        valueAreas.push(`${line} L${coords(last, 0)} L${coords(first, 0)} Z`);
+      }
+      run = [];
+    };
+    points.forEach((_p, i) => {
+      if (covered[i] && (covered[i - 1] || covered[i + 1])) run.push(i);
+      else flushRun();
+    });
+    flushRun();
+    // Dots mark every drawn segment end — including its start — so a
+    // resumed line (e.g. October after a September gap) is visible.
+    const valueDots = points.flatMap((p, i) => covered[i] && (!covered[i - 1] || !covered[i + 1]) ? [{ x: x(i), y: y(p.value), month: p.month }] : []);
     const ticks = [0, max / 4, max / 2, (max * 3) / 4, max];
     const labelCount = Math.min(4, points.length);
     const labelIdx = Array.from({ length: labelCount }, (_, i) =>
       Math.round((i * (points.length - 1)) / Math.max(1, labelCount - 1)),
     ).filter((idx, i, all) => all.indexOf(idx) === i);
-    return { valueLine, contribLine, valueDots, x, y, ticks, labelIdx, hasGaps: covered.includes(false) };
+    return { valueLine, valueAreas, contribLine, valueDots, x, y, ticks, labelIdx, hasGaps: covered.includes(false) };
   }, [points]);
 
   if (!geometry) return null;
@@ -67,6 +86,9 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
           </text>
         </g>
       ))}
+      {geometry.valueAreas.map((d, i) => (
+        <path key={i} d={d} fill="var(--primary-600)" fillOpacity={0.08} />
+      ))}
       <path
         d={geometry.contribLine}
         fill="none" stroke="var(--text-tertiary)" strokeWidth="2"
@@ -75,13 +97,13 @@ export default function ValueHistoryChart({ points, label }: { points: ValueHist
       {geometry.valueLine ? (
         <path
           data-series="portfolio-value" d={geometry.valueLine}
-          fill="none" stroke="var(--success-600)" strokeWidth="2.5"
+          fill="none" stroke="var(--primary-600)" strokeWidth="2.5"
           strokeLinecap="round" strokeLinejoin="round"
         />
       ) : null}
       {geometry.valueDots.map((dot) => (
         <circle key={dot.month} data-month={dot.month} cx={dot.x} cy={dot.y}
-          r="4.5" fill="var(--success-600)" stroke="var(--surface-raised)" strokeWidth="2"
+          r="4.5" fill="var(--primary-600)" stroke="var(--surface-raised)" strokeWidth="2"
         />
       ))}
       {geometry.labelIdx.map((i) => (

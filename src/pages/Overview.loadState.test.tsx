@@ -142,7 +142,7 @@ describe("Overview German locale", () => {
 
     renderGermanOverview();
 
-    expect(await screen.findByText("Gesamtvermögen")).toBeTruthy();
+    expect(await screen.findByText("Vermögen heute")).toBeTruthy();
     expect(screen.getByText(/Nächster Meilenstein/)).toBeTruthy();
     expect(screen.getByLabelText("Zu beachten")).toBeTruthy();
     expect(screen.getByLabelText("Jahresrückblick")).toBeTruthy();
@@ -189,7 +189,7 @@ describe("Overview bản 2", () => {
     const { container } = renderOverview();
 
     await waitFor(() => expect(container.querySelector(".ovb2-chart")).toBeTruthy());
-    expect(screen.getByText("Giá trị vs Đã góp")).toBeTruthy();
+    expect(screen.getByText("Diễn biến giá trị")).toBeTruthy();
     // Two lines: solid value + dashed contributions.
     const paths = container.querySelectorAll(".ovb2-chart path");
     expect(paths.length).toBeGreaterThanOrEqual(2);

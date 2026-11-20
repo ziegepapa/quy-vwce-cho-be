@@ -19,7 +19,8 @@ import { RecoveryReadOnlyProvider } from "./lib/recoveryReadOnly";
 import { useLocale, type AppLocale } from "./lib/locale";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
-import { IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
+import MoreSheet from "./components/MoreSheet";
+import { IconHome, IconMenu, IconSettings, IconSim, IconTimeline, IconTx } from "./components/Icons";
 import { conflictCtaLabel, hasLogoutBlockers, openSyncConflictSection, readSyncConflictFocusToken, reconcileVisibleLogoutBlockers, type LogoutBlockerCounts } from "./components/SyncConflictSection";
 import { buildSyncHealth } from "./components/syncHealth";
 import { recordLocalDiagnostic } from "./components/localDiagnostics";
@@ -176,6 +177,23 @@ export default function App() {
     { to: "/simulation", label: t("simulation"), icon: <IconSim /> },
     { to: "/settings", label: t("settings"), icon: <IconSettings /> },
   ], [t]);
+  // Mobile dock (Modern Wealth Journal): Timeline is a primary tab and the
+  // remaining destinations live behind "Mehr". The desktop sidebar keeps
+  // primaryNav unchanged.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const secondaryRoutes = ["/simulation", "/goals", "/notfallmappe", "/settings", "/handoff", "/lot-evidence"];
+  const dockItems = useMemo(() => [
+    { to: "/", label: t("overviewTab"), icon: <IconHome /> },
+    { to: "/transactions", label: t("transactions"), icon: <IconTx /> },
+    { to: "/timeline", label: t("timeline"), icon: <IconTimeline /> },
+    {
+      label: t("more"),
+      icon: <IconMenu />,
+      onClick: () => setMoreOpen(true),
+      active: secondaryRoutes.some((route) => pathname === route),
+      expanded: moreOpen,
+    },
+  ], [t, pathname, moreOpen]);
   const [ready, setReady] = useState(false);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
@@ -270,6 +288,9 @@ export default function App() {
     setLogoutNotice(null);
     setSkipError(null);
   }, [locale]);
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
 
   const recoveryActive = Boolean(auth.user) && recoveryRequired;
   const syncHealth = useMemo(() => buildSyncHealth({
@@ -471,7 +492,8 @@ export default function App() {
         <Route path="/lot-evidence" element={<LotEvidence />} />
         <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} onSyncNow={auth.user ? handleSyncNow : undefined} syncHealth={syncHealth} onSyncHealthAction={handleSyncHealthAction} onRequestSignOut={auth.user ? handleSignOut : undefined} />} />
       </Routes></Suspense></RecoveryReadOnlyProvider></main></NavActionsProvider>
-    </div><BottomDock items={primaryNav} />
+    </div><BottomDock items={dockItems} />
+    <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
 
     {showSkipConfirm ? (
       <div className="modal-backdrop" role="presentation">

@@ -72,6 +72,42 @@ export function IconMore() {
     </svg>
   );
 }
+export function IconBell() {
+  return (
+    <svg {...s}>
+      <path d="M6 9a6 6 0 0 1 12 0c0 4.5 1.8 5.8 1.8 5.8H4.2S6 13.5 6 9" />
+      <path d="M10 19.5a2.2 2.2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+export function IconTimeline() {
+  return (
+    <svg {...s}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3.2 2" />
+    </svg>
+  );
+}
+
+export function IconMenu() {
+  return (
+    <svg {...s}>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
+
+export function IconInfo() {
+  return (
+    <svg {...s}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11v5" />
+      <path d="M12 7.6h.01" />
+    </svg>
+  );
+}
+
 export function IconCash() {
   return (
     <svg {...s} width={18} height={18}>

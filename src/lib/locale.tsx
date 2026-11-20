@@ -6,7 +6,11 @@ export const LOCALE_KEY = "vwce-locale";
 const copy = {
   vi: {
     overview: "Tổng quan",
+    overviewTab: "Tổng quan",
     transactions: "Giao dịch",
+    timeline: "Dòng thời gian",
+    goals: "Mục tiêu",
+    more: "Thêm",
     simulation: "Mô phỏng",
     settings: "Cài đặt",
     sync: "Đồng bộ",
@@ -73,7 +77,11 @@ const copy = {
   },
   de: {
     overview: "Übersicht",
+    overviewTab: "Überblick",
     transactions: "Transaktionen",
+    timeline: "Timeline",
+    goals: "Ziele",
+    more: "Mehr",
     simulation: "Simulation",
     settings: "Einstellungen",
     sync: "Synchronisieren",

@@ -132,7 +132,7 @@ test("mobile local-vault routes keep primary controls reachable without horizont
   for (const route of ["./", "./#/transactions", "./#/settings"]) {
     await page.goto(route, { waitUntil: "networkidle" });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-    const dockHeights = await page.locator(".bottom-dock a").evaluateAll((links) => links.map((link) => Math.round(link.getBoundingClientRect().height)));
+    const dockHeights = await page.locator(".bottom-dock .pb").evaluateAll((links) => links.map((link) => Math.round(link.getBoundingClientRect().height)));
     expect(dockHeights).toHaveLength(4);
     expect(dockHeights.every((height) => height >= 44)).toBe(true);
   }
