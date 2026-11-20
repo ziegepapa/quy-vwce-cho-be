@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLocale } from "../../lib/locale";
 import { formatMoney } from "../../lib/calc";
-import { IconBell, IconCash, IconDownload, IconInfo, IconSim, IconTimeline } from "../Icons";
+import { IconCoins, IconDeposit, IconInfo, IconShield, IconTrend } from "../Icons";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
 import type { PortfolioDataHealth, PortfolioDataHealthIssue } from "../../pages/portfolioDataHealth";
 import type { YearInReview } from "../../pages/yearInReview";
@@ -92,6 +92,7 @@ type OverviewFrameProps = {
   assetsLabel: string;
   /** Formatted total, e.g. "446,58 €". */
   assets: string;
+  valueComplete: boolean;
   /** Formatted lifetime contributions, e.g. "440,00 €". */
   contributedLabel: string;
   /** Formatted gain, e.g. "+6,58 €", null when unavailable. */
@@ -120,14 +121,9 @@ type OverviewFrameProps = {
 function overviewCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     pageLabel: "Übersicht",
-    greetingMorning: "Guten Morgen 👋",
-    greetingDay: "Guten Tag 👋",
-    greetingEvening: "Guten Abend 👋",
-    heroSub: "Der Fonds für unseren Sohn",
-    bellLabel: "Aktuelles ansehen",
-    totalAssets: "Vermögen heute",
     contributedByYou: "Eingezahlt",
     realGain: "Realer Gewinn",
+    noHistory: "Noch nicht genügend Daten für den Wertverlauf.",
     gainUnavailable: "Noch nicht bewertbar",
     fundCount: "Fonds",
     inDays: (days: number) => days === 0 ? "heute" : `in ${days} Tagen`,
@@ -179,14 +175,9 @@ function overviewCopy(locale: "vi" | "de") {
     reviewYear: "Prüfjahr",
   } : {
     pageLabel: "Tổng quan",
-    greetingMorning: "Chào buổi sáng 👋",
-    greetingDay: "Chào buổi chiều 👋",
-    greetingEvening: "Chào buổi tối 👋",
-    heroSub: "Quỹ cho con trai",
-    bellLabel: "Xem cập nhật mới",
-    totalAssets: "Tài sản hôm nay",
     contributedByYou: "Bạn đã góp",
     realGain: "Lãi / lỗ thực",
+    noHistory: "Chưa đủ dữ liệu để hiển thị lịch sử giá trị.",
     gainUnavailable: "Chưa định giá",
     fundCount: "Số quỹ",
     inDays: (days: number) => days === 0 ? "hôm nay" : `trong ${days} ngày`,
@@ -287,13 +278,6 @@ function buildAttentionItems(
   return items;
 }
 
-/** Time-of-day greeting for the navy hero header (mockup: "Guten Morgen"). */
-function greetingForHour(hour: number, text: ReturnType<typeof overviewCopy>): string {
-  if (hour < 11) return text.greetingMorning;
-  if (hour < 18) return text.greetingDay;
-  return text.greetingEvening;
-}
-
 /** Donut of the allocation. Colors cycle blue → green → amber → purple. */
 const DONUT_COLORS = ["var(--primary-600)", "var(--success-600)", "var(--warning-600)", "var(--danger-600)"];
 function AllocationDonut({ allocation, totalLabel, totalSub }: {
@@ -341,73 +325,10 @@ function AllocationDonut({ allocation, totalLabel, totalSub }: {
   );
 }
 
-/** Layered mountain sunset for the hero (Modern Wealth Journal rev2).
- *  Atmospheric perspective: far ridges are lighter and lower-contrast,
- *  near ridges darker; a warm glow sits low near the horizon. Colors come
- *  from per-theme CSS variables on `.mwj-hero-scene`, so each theme gets
- *  its own sky and ridges. Pure SVG/CSS — no mockup image is used. */
-function HeroScene() {
-  return (
-    <svg className="mwj-hero-scene-svg" viewBox="0 0 390 200" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      <defs>
-        <linearGradient id="mwj-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" style={{ stopColor: "var(--mwj-sky-1)" }} />
-          <stop offset="38%" style={{ stopColor: "var(--mwj-sky-2)" }} />
-          <stop offset="62%" style={{ stopColor: "var(--mwj-sky-3)" }} />
-          <stop offset="82%" style={{ stopColor: "var(--mwj-sky-4)" }} />
-          <stop offset="100%" style={{ stopColor: "var(--mwj-sky-5)" }} />
-        </linearGradient>
-        <radialGradient id="mwj-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" style={{ stopColor: "var(--mwj-glow-core)" }} stopOpacity="0.95" />
-          <stop offset="45%" style={{ stopColor: "var(--mwj-glow)" }} stopOpacity="0.55" />
-          <stop offset="100%" style={{ stopColor: "var(--mwj-glow)" }} stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id="mwj-aurora" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" style={{ stopColor: "var(--mwj-aurora-1)" }} />
-          <stop offset="100%" style={{ stopColor: "var(--mwj-aurora-2)" }} />
-        </linearGradient>
-        <linearGradient id="mwj-scrim" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#0b0b2c" stopOpacity="0.22" />
-          <stop offset="55%" stopColor="#0b0b2c" stopOpacity="0.05" />
-          <stop offset="100%" stopColor="#0b0b2c" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <rect width="390" height="200" fill="url(#mwj-sky)" />
-      <circle cx="320" cy="128" r="55" fill="url(#mwj-glow)" />
-      <circle cx="320" cy="128" r="12" style={{ fill: "var(--mwj-sun)" }} />
-      <path
-        className="mwj-aurora-band"
-        d="M0,58 Q80,34 170,52 T390,44 L390,66 Q300,84 200,70 T0,80 Z"
-        fill="url(#mwj-aurora)"
-      />
-      <path
-        d="M0,142 Q40,128 80,136 T160,128 T240,118 T320,112 T390,116 L390,200 L0,200 Z"
-        style={{ fill: "var(--mwj-mtn-far)" }}
-        opacity="0.5"
-      />
-      <path
-        d="M0,156 Q50,142 100,150 T200,142 T300,136 T390,140 L390,200 L0,200 Z"
-        style={{ fill: "var(--mwj-mtn-mid)" }}
-        opacity="0.75"
-      />
-      <path
-        d="M0,172 Q60,156 120,166 T240,158 T360,162 T390,160 L390,200 L0,200 Z"
-        style={{ fill: "var(--mwj-mtn-near)" }}
-        opacity="0.95"
-      />
-      <path
-        d="M0,188 Q100,176 200,184 T390,180 L390,200 L0,200 Z"
-        style={{ fill: "var(--mwj-mtn-front)" }}
-      />
-      <rect width="390" height="200" fill="url(#mwj-scrim)" />
-    </svg>
-  );
-}
-
 export default function OverviewFrame(props: OverviewFrameProps) {
   const {
-    assetsLabel, assets, contributedLabel, gainLabel, gainPctLabel, gainPositive,
-    priceDateLabel, stale, fundCount, paceLabel, daysToNext, milestone,
+    assetsLabel, assets, valueComplete, contributedLabel, gainLabel, gainPctLabel, gainPositive,
+    fundCount, milestone,
     allocation, valueHistory, updates, heartbeat, dataHealth,
     yearInReview, yearReviewYears, onYearReviewYearChange,
   } = props;
@@ -419,7 +340,6 @@ export default function OverviewFrame(props: OverviewFrameProps) {
   const metricTriggerRef = useRef<HTMLButtonElement>(null);
   const metricOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedMetricOption = OVERVIEW_METRICS.find((metric) => metric.id === selectedMetric) ?? OVERVIEW_METRICS[0];
-  const greeting = greetingForHour(new Date().getHours(), text);
 
   useEffect(() => {
     try {
@@ -475,63 +395,57 @@ export default function OverviewFrame(props: OverviewFrameProps) {
   };
 
   return (
-    <main className="ovb2" aria-label={text.pageLabel}>
+    <div className="ovb2" role="region" aria-label={text.pageLabel}>
       <div className="ovb2-grid">
         <div className="ovb2-main">
-          {/* Hero — Modern Wealth Journal: navy greeting, warm landscape,
-              big total with gain pill, then the three real figures. */}
-          <section className="ovb2-card ovb2-hero mwj-hero" aria-label={assetsLabel}>
-            <div className="mwj-hero-head">
-              <div className="mwj-hero-greeting">
-                <p className="mwj-hero-hello">{greeting}</p>
-                <p className="mwj-hero-sub">{text.heroSub}</p>
-              </div>
-              <Link to="/timeline" className="mwj-hero-bell" aria-label={text.bellLabel}>
-                <IconBell />
-              </Link>
-            </div>
-            <div className="mwj-hero-scene">
-              <HeroScene />
-              <div className="mwj-hero-copy">
-                <div className="ovb2-k"><span className="mwj-hero-label-icon" aria-hidden="true"><IconTimeline /></span>{text.totalAssets}</div>
-                <div className="ovb2-big">{assets}</div>
-                {gainLabel && gainPctLabel ? (
-                  <span className={"mwj-hero-pill" + (gainPositive ? " up" : " down")}>
-                    {gainLabel} {gainPctLabel}
+          <div className="ovb2-summary">
+            <section className="ovb2-card ovb2-hero" aria-label={assetsLabel}>
+              <div className="ovb2-k"><IconShield />{assetsLabel}</div>
+              <div className="ovb2-big">{assets}</div>
+              {gainLabel ? (
+                <div className="ovb2-pnl-row">
+                  <span className={gainPositive ? "ovb2-pnl-pill mwj-hero-pill up" : "ovb2-pnl-pill mwj-hero-pill down"}>
+                    {gainLabel}{gainPctLabel ? <> <span>{gainPctLabel}</span></> : null}
                   </span>
-                ) : null}
-              </div>
-            </div>
+                </div>
+              ) : null}
+            </section>
             <dl className="ovb2-comp mwj-portfolio-stats">
-              <div><span className="mwj-stat-icon" aria-hidden="true"><IconDownload /></span><dt>{text.contributedByYou}</dt><dd>{contributedLabel}</dd></div>
-              <div><span className="mwj-stat-icon" aria-hidden="true"><IconCash /></span><dt>{text.currentValue}</dt><dd>{assets}</dd></div>
+              <div><IconDeposit /><dt>{text.contributedByYou}</dt><dd>{contributedLabel}</dd></div>
+              <div><IconCoins /><dt>{text.currentValue}</dt><dd>{valueComplete ? assets : "—"}</dd></div>
               <div>
-                <span className="mwj-stat-icon" aria-hidden="true"><IconSim /></span>
+                <IconTrend />
                 <dt>{text.realGain}</dt>
                 <dd className={gainLabel ? (gainPositive ? "up" : "down") : undefined}>
                   {gainLabel ?? text.gainUnavailable}
                 </dd>
               </div>
             </dl>
-          </section>
+          </div>
 
-          {/* Chart + donut */}
           <div className="ovb2-mid">
-            {valueHistory ? (
-              <section className="ovb2-card ovb2-chart-card" aria-label={text.valueVsContributed}>
-                <h3>{text.valueVsContributed}<span className="mwj-info-icon" aria-hidden="true"><IconInfo /></span></h3>
-                <p className="ovb2-sub">{text.honestCaption}</p>
-                <div className="ovb2-legend">
-                  <span><i style={{ background: "var(--primary-600)" }} />{text.valueLine}</span>
-                  <span><i className="dashed" />{text.contributedLine}</span>
-                </div>
+            <section className="ovb2-card ovb2-chart-card" aria-label={text.valueVsContributed}>
+              <div className="ovb2-chart-heading">
+                <h3>{text.valueVsContributed}</h3>
+                <details className="ovb2-chart-info">
+                  <summary aria-label={text.honestCaption}><IconInfo /></summary>
+                  <p>{text.honestCaption}</p>
+                </details>
+              </div>
+              <div className="ovb2-legend">
+                <span><i />{text.valueLine}</span>
+                <span><i className="dashed" />{text.contributedLine}</span>
+              </div>
+              {valueHistory ? (
                 <ValueHistoryChart points={valueHistory} label={text.valueVsContributed} />
-              </section>
-            ) : null}
+              ) : (
+                <p className="ovb2-chart-empty">{text.noHistory}</p>
+              )}
+            </section>
             {allocation.length > 0 ? (
               <section className="ovb2-card ovb2-donut-card" aria-label={text.allocation}>
                 <h3>{text.allocation}</h3>
-                <p className="ovb2-sub">{text.allocationSub}</p>
+                <p className="ovb2-sub">{text.allocationSub} · {fundCount} {text.fundCount}</p>
                 <AllocationDonut allocation={allocation} totalLabel={assets} totalSub={text.totalValue} />
               </section>
             ) : null}
@@ -738,6 +652,6 @@ export default function OverviewFrame(props: OverviewFrameProps) {
           ) : null}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

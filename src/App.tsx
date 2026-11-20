@@ -446,14 +446,13 @@ export default function App() {
   if (!recoveryActive && !settings?.onboardingDone) return <Suspense fallback={<RouteLoading label={text.loading} />}><Onboarding onDone={async () => { await ensureInitialized(false); await reload(); }} /></Suspense>;
   if (!settings) return <RouteLoading label={text.loading} />;
 
-  const displayName = (auth.user?.user_metadata?.display_name as string) || auth.user?.email?.split("@")[0] || settings.planName;
   const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
   const focusConflictRequest = readSyncConflictFocusToken(location.state);
-  return <div className="app-layout mwj-layout">
+  return <div className={`app-layout mwj-layout${screenName === "overview" ? " mwj-overview-layout" : ""}`}>
     <aside className="sidebar" aria-label={text.navigation}><div className="sidebar-brand">VWCE Vault</div><nav className="sidebar-nav">{primaryNav.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
     <div className="app-shell">
       <CollapsingNavBar
-        displayName={displayName}
+        overviewPlanName={screenName === "overview" ? settings.planName ?? "" : undefined}
         syncStatus={syncStatus}
         pending={pending}
         syncHealth={syncHealth}

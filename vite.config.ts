@@ -50,7 +50,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2,json,webmanifest}"],
+        globPatterns: ["**/*.{js,css,html,svg,png,webp,ico,woff2,json,webmanifest}"],
         // Price data changes daily and is fetched fresh on every app boot /
         // refresh (fetch uses cache: "no-store"). Precaching it would serve
         // the build-time price until the service worker updates, which is

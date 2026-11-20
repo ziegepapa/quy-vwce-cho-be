@@ -135,7 +135,7 @@ for (const theme of themes) {
         await expect(page.locator(".ovb2-big")).toHaveText(/591,95\s*€/);
         await expect(page.locator(".mwj-hero-pill")).toHaveText(/−8,05\s*€\s*−1,34%/);
         await expect(page.locator(".mwj-hero-hello")).toHaveText(/Chào buổi chiều/);
-        await expect(page.locator(".mwj-hero-sub")).toHaveText("Quỹ cho con trai");
+        await expect(page.locator(".mwj-hero-sub")).toHaveText("Quỹ VWCE cho bé");
         await expect(page.locator(".mwj-hero-bell")).toHaveAttribute("href", "#/timeline");
         const stats = page.locator(".mwj-portfolio-stats");
         await expect(stats).toContainText(/Bạn đã góp\s*600,00\s*€/);
@@ -219,7 +219,7 @@ for (const theme of themes) {
       if (name === "overview") {
         await page.locator(".ovb2-chart-card").scrollIntoViewIfNeeded();
         await page.screenshot({ path: testInfo.outputPath("overview-chart.png"), animations: "disabled" });
-        await page.locator(".mwj-hero").scrollIntoViewIfNeeded();
+        await page.locator(".ovb2-hero").scrollIntoViewIfNeeded();
         await page.getByRole("button", { name: "Thêm", exact: true }).click();
         const sheet = page.getByRole("dialog", { name: "Thêm" });
         await expect(sheet.getByRole("link", { name: "Mô phỏng" })).toBeVisible();

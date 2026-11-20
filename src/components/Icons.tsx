@@ -181,3 +181,15 @@ export function IconUpload() {
 export function IconLifebuoy() {
   return <svg {...s}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /><path d="m6.35 6.35 3.55 3.55m4.2 4.2 3.55 3.55m0-11.3-3.55 3.55m-4.2 4.2-3.55 3.55" /></svg>;
 }
+
+export function IconDeposit() {
+  return <svg {...s}><path d="M5 10v9h14v-9h-3M5 10h3M12 15V3m-3 3 3-3 3 3M8 15v1h8v-1" /></svg>;
+}
+
+export function IconCoins() {
+  return <svg {...s}><ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 10c0 1.7 3.6 3 8 3s8-1.3 8-3M4 14c0 1.7 3.6 3 8 3s8-1.3 8-3" /></svg>;
+}
+
+export function IconTrend() {
+  return <svg {...s}><path d="m3 17 6-6 4 4 7-9m-5 0h5v5" /></svg>;
+}
