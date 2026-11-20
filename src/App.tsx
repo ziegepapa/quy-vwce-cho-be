@@ -37,6 +37,7 @@ import AuthPage from "./pages/Auth";
 const MigrateWizard = lazy(() => import("./pages/MigrateWizard"));
 import "./styles/premium-command-layout.css";
 import "./styles/recovery-banner.css";
+import "./styles/modern-wealth-journal.css";
 
 const LOGOUT_CLEANUP_PENDING_KEY = "vwce:logout-cleanup-pending";
 
