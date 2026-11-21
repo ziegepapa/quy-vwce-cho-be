@@ -261,6 +261,7 @@ for (const theme of themes) {
         await page.locator("#exit-plan-budget").fill("600,00");
         await expect(plan.locator("tbody tr")).toHaveCount(6);
         await expect(plan.locator("tbody tr").last()).toContainText(/0,00/);
+        await expect.poll(() => plan.locator(".exit-plan-table-wrap").evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
         await assertFits(page);
         await page.locator(".exit-plan-table").evaluate((element) => element.scrollIntoView({ block: "center" }));
         await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-schedule.png"), animations: "disabled" });
@@ -490,6 +491,7 @@ test(`German reference screenshots · 390x844 · ${germanTheme}`, async ({ page 
       await page.locator("#exit-plan-goal").selectOption("test-goal");
       await page.locator("#exit-plan-budget").fill("140,25");
       await expect(plan.locator("tbody tr")).toHaveCount(6);
+      await expect.poll(() => plan.locator(".exit-plan-table-wrap").evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
       await assertFits(page);
       await plan.locator(".exit-plan-table").scrollIntoViewIfNeeded();
       await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-de-schedule.png"), animations: "disabled" });
