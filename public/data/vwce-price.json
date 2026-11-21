@@ -4,9 +4,9 @@
   "ticker": "VWCE",
   "venue": "XETRA",
   "currency": "EUR",
-  "price": 162.78,
-  "asOf": "2026-11-19",
-  "fetchedAt": "2026-11-20T00:40:57.439Z",
+  "price": 156.76,
+  "asOf": "2026-11-20",
+  "fetchedAt": "2026-11-21T00:01:44.084Z",
   "provider": "onvista",
   "providerUrl": "https://api.onvista.de/api/v1/funds/ISIN:IE00BK5BQT80/snapshot"
 }
