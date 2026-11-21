@@ -451,6 +451,11 @@ test("German reference screenshots · 390x844 · light", async ({ page }, testIn
   for (const [name, [route, ready]] of Object.entries(routes)) {
     await page.goto(`./#${route}`);
     await expect(page.locator(ready)).toBeVisible();
+    if (name === "simulation") {
+      // Same zero-start 120 €/month, 5 %, 30 years, TER fixture as the approved mockup.
+      await page.getByRole("button", { name: /Beispiel ab 0 € laden/ }).click();
+      await expect(page.locator(".sim-chart-values strong")).toContainText(/95\.277/);
+    }
     await assertFits(page);
     await page.screenshot({ path: testInfo.outputPath(`${name}-de.png`), animations: "disabled" });
   }
