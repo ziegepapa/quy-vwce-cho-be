@@ -386,7 +386,6 @@
 .mwj-ledger-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 12px 0 0; }
 .mwj-ledger-stats > div { padding-inline: 9px; border-inline-start: 1px solid var(--mwj-rule); }
 .mwj-ledger-stats dd { margin: 5px 0 0; font: 600 clamp(16px, 4.4vw, 24px)/1.15 var(--mwj-display); overflow-wrap: anywhere; }
-.mwj-layout .tx-ledger-workspace { background: transparent; border: 0; padding-inline: 0; box-shadow: none; }
 .mwj-layout .tx-ledger-month-group { border-radius: 16px; }
 .mwj-layout .tx-ledger-month-heading { border-bottom: 1px solid var(--mwj-rule); }
 
@@ -462,7 +461,6 @@
   border-radius: 24px 24px 24px 6px;
   background: linear-gradient(145deg, var(--mwj-card), var(--primary-050));
 }
-.mwj-layout .mwj-goals .goals-hero .hero-money { font: 500 clamp(28px, 8vw, 50px)/1.1 var(--mwj-display) !important; }
 .mwj-goal-list { display: grid; gap: 12px; margin-top: 14px; }
 .mwj-goal-entry { min-width: 0; }
 .mwj-layout .mwj-goal-entry .goal-card { height: 100%; border-radius: 18px; background: var(--mwj-card); }
@@ -680,7 +678,7 @@
 /* Ledger: navy page masthead, inset real contribution / count / year card,
    immediately followed by usable filters and day-grouped transactions. */
 .mwj-layout .tx-ledger-redesign .tx-wrap{gap:10px}
-.mwj-layout .mwj-ledger-cover{padding:14px 11px 12px;border-radius:23px;background:#142544;box-shadow:0 12px 26px #1023442b}
+.mwj-layout .mwj-ledger-cover{padding:14px 11px 12px;border-radius:23px;background:#142544}
 .mwj-layout .mwj-ledger-cover .tx-ledger-head{border:0;margin:0;padding:0 5px 13px;background:none;box-shadow:none}
 .mwj-layout .mwj-ledger-cover .tx-ledger-head h1{color:#fff!important;font:750 clamp(25px,7vw,32px)/1.1 system-ui!important;letter-spacing:-.045em}
 .mwj-layout .mwj-ledger-cover .tx-ledger-actions{gap:5px}
