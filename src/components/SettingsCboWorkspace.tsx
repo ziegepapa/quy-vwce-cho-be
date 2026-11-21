@@ -36,6 +36,7 @@ type Props = {
   lastSync: string | null;
   pricesPanel: ReactNode;
   dataHealthPanel: ReactNode;
+  guardianPanel?: ReactNode;
   syncHealthPanel: ReactNode;
   syncConflictPanel: ReactNode;
   onPatchSettings: (next: Partial<AppSettings>) => void;
@@ -381,6 +382,9 @@ export default function SettingsCboWorkspace(props: Props) {
     </div>
 
     </section>
+    {props.guardianPanel ? <section className="mwj-settings-group" aria-label="Silent Guardian">
+      <div>{props.guardianPanel}</div>
+    </section> : null}
     <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.securityGroup}</h2>
     <div className="set2-group">
