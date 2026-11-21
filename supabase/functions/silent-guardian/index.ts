@@ -115,6 +115,8 @@ async function send(email: string, userId: string, events: Deliverable[]): Promi
       "Idempotency-Key": await messageId(userId, events.map((event) => event.key).sort().join("/")),
     },
     body: JSON.stringify({ from: FROM, to: [email], subject, text }),
+    // Bound provider hang; an ambiguous timeout is deliberately NOT retried.
+    signal: AbortSignal.timeout(12000),
   });
   if (!response.ok) throw new Error(`guardian_email_http_${response.status}`);
 }
