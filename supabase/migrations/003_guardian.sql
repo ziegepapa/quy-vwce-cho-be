@@ -58,3 +58,21 @@ revoke all on public.guardian_alert_deliveries from anon, authenticated;
 
 -- Subscription is user-owned, while the receipt table remains server-only.
 grant select, insert, update on public.guardian_subscriptions to authenticated;
+
+-- Fail-closed operational readiness gate. Never activated by a migration,
+-- merge, settings toggle, test, or a frontend request. A privileged operator
+-- can mark active ONLY after the Edge secret, email domain and Cron have
+-- passed an independent staging/production activation check.
+create table if not exists public.guardian_service_status (
+  id boolean primary key default true check (id),
+  active boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+alter table public.guardian_service_status enable row level security;
+insert into public.guardian_service_status (id, active)
+  values (true, false) on conflict (id) do nothing;
+revoke all on public.guardian_service_status from anon, authenticated;
+grant select on public.guardian_service_status to authenticated;
+drop policy if exists guardian_read_service_status on public.guardian_service_status;
+create policy guardian_read_service_status on public.guardian_service_status
+  for select to authenticated using (id = true);
