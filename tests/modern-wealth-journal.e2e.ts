@@ -13,6 +13,9 @@ const routes = {
 } as const;
 const themes = ["light", "dark", "premium"] as const;
 
+// Keep the intercepted quotes authoritative even after reloading the seeded ledger.
+test.use({ serviceWorkers: "block" });
+
 // Isolated browser fixture. No records are added to the app's initialization.
 const vwce = "IE00BK5BQT80";
 const vall = "IE000VAHT5T0";
