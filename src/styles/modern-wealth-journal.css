@@ -684,7 +684,7 @@
 .mwj-layout .mwj-ledger-cover .tx-ledger-head{border:0;margin:0;padding:0 5px 13px;background:none;box-shadow:none}
 .mwj-layout .mwj-ledger-cover .tx-ledger-head h1{color:#fff!important;font:750 clamp(25px,7vw,32px)/1.1 system-ui!important;letter-spacing:-.045em}
 .mwj-layout .mwj-ledger-cover .tx-ledger-actions{gap:5px}
-.mwj-layout .mwj-ledger-cover .tx-import-tools>summary{color:#e7eaff;border-color:#ffffff55}
+.mwj-layout .mwj-ledger-cover .tx-import-tools>summary{color:#142544!important;background:#f8f7ff!important;border-color:#ffffff55;font-size:10px}
 .mwj-layout .mwj-ledger-cover .mwj-ledger-summary{margin:0;padding:9px 7px;border:0;border-radius:15px;background:var(--surface-raised);box-shadow:0 3px 12px #08183324}
 .mwj-layout .mwj-ledger-summary .mwj-ledger-stats{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:5px;margin:0}
 .mwj-layout .mwj-ledger-summary .mwj-ledger-stats>div{min-width:0;padding:8px 5px;border:0;border-radius:11px;background:var(--primary-050);text-align:center}
@@ -708,7 +708,7 @@
 .mwj-journey-hero-content{display:flex;flex-direction:column;gap:7px;min-height:189px;max-width:none}
 .mwj-journey-eyebrow{color:#ffe1af;text-transform:uppercase;letter-spacing:.12em;font-size:10px;font-weight:850}
 .mwj-layout .mwj-journey-hero h1{color:#fff!important;font:750 clamp(27px,8vw,38px)/1.08 system-ui!important;letter-spacing:-.05em;text-shadow:0 1px 12px #0c204066}
-.mwj-journey-hero p{margin:0;color:#fffe;font-size:12px;line-height:1.3}
+.mwj-layout .ct-head.mwj-journey-hero p{margin:0;color:#f9f6ff!important;font-size:12px;line-height:1.3}
 .mwj-journey-highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;width:100%;margin:auto 0 0;padding:7px;border-radius:13px;background:#0f244899;backdrop-filter:blur(3px)}
 .mwj-journey-highlights>div{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;gap:5px;text-align:center}
 .mwj-journey-highlights>div+div{border-left:1px solid #ffffff3b}
@@ -738,8 +738,12 @@
 .mwj-layout .sim-assumptions dd{font-size:clamp(10px,2.8vw,13px);line-height:1.2;font-weight:800}
 .mwj-layout .sim-wrap .sim-parameters-trigger{min-height:35px}
 .mwj-layout .sim-wrap .sim-chart-card{margin:0;padding:8px 10px 5px;border-radius:18px;background:var(--mwj-card);border:1px solid var(--border-subtle);box-shadow:var(--shadow-raised)}
-.mwj-layout .sim-chart-card .sim-chart-svg{height:152px;max-width:100%}
+.mwj-layout .sim-chart-card .sim-chart-svg{height:154px;min-height:0;max-width:100%}
 .mwj-layout .sim-chart-title{font-size:19px}
+.mwj-layout .sim-headline.mwj-sim-projection-first{position:relative}
+.mwj-layout .sim-headline.mwj-sim-projection-first .sim-hero-actions{position:absolute;top:10px;right:10px;margin:0}
+.mwj-layout .sim-headline .mwj-sim-float-button{display:grid;place-items:center;width:38px;min-width:38px;min-height:38px;padding:4px;border-radius:12px}
+.mwj-layout .sim-headline .mwj-sim-float-button .sim-trigger-chevron{display:none}
 .mwj-layout .sim-headline.mwj-sim-projection-first .sim-mode-badge{display:none}
 .mwj-layout .sim-results>h2{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
 .mwj-layout .sim-results{margin:0}
