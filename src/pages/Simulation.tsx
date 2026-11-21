@@ -488,6 +488,8 @@ export default function Simulation() {
       bandPctLabel={bandPctLabel}
       readOnly={readOnly}
       goals={goals}
+      exitPlanActualBalance={startValue.valuationStatus === "fresh" ? realBalance : null}
+      exitPlanActualMonthly={settings && Number.isFinite(settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1) ? (settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1) : null}
       applyYearsFromGoal={applyYearsFromGoal}
       advSummary={advSummary}
       bandInput={bandInput}
