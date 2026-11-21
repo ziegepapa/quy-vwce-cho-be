@@ -1018,3 +1018,24 @@
   .mwj-layout .tx-ledger-month-heading { margin-block: 0 5px; }
   .mwj-layout .tx-ledger-redesign .tx-ledger-row { min-height: 57px; padding-block: 8px; }
 }
+
+
+/* Mode A is a projection studio: the very same terminal value is already
+   visible below the chart in the three-result summary. Avoid duplicating a
+   large figure above the chart so the actual growth curve moves into view.
+   Modes B and C retain their prominent target/time headline unchanged. */
+.mwj-layout .sim-headline.mwj-sim-projection-first .sim-hero-amount { display: none; }
+.mwj-layout .sim-headline.mwj-sim-projection-first {
+  padding-block: 10px;
+  gap: 6px;
+}
+.mwj-layout .sim-headline.mwj-sim-projection-first .sh-sub {
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.mwj-layout .sim-headline.mwj-sim-projection-first .sim-assumptions {
+  border-block: 0;
+  padding-block: 5px;
+}
+.mwj-layout .sim-headline.mwj-sim-projection-first .sim-hero-actions { margin: 0; }
