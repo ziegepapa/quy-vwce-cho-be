@@ -207,6 +207,9 @@ for (const theme of themes) {
         await expect(page.getByTestId("simulation-hero-amount")).toContainText(rounded(projected));
         await expect(page.locator(".summary-strip")).toContainText(rounded(120 * 12 * 30));
         await expect(page.locator(".summary-strip")).toContainText(rounded(projected - 120 * 12 * 30));
+        await expect(page.locator(".sim-assumptions")).toContainText(/TER \/ năm\s*0,14\s*%/);
+        await expect(page.locator(".sim-assumptions")).toContainText(/Lợi suất \/ năm\s*5\s*%/);
+        await expect(page.locator(".sim-chart-card + .sim-results")).toBeVisible();
         const chart = page.getByTestId("simulation-growth-chart");
         await expect(chart.locator(".sim-chart-values strong")).toContainText(rounded(projected));
         await expect(chart.locator("svg")).toBeVisible();

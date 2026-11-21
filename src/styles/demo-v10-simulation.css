@@ -1226,3 +1226,17 @@
   overflow-wrap: anywhere;
 }
 .sim-wrap .sim-chart-values strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+.sim-wrap .sim-assumptions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  padding-block: 12px;
+  margin: 0;
+  border-block: 1px solid var(--border-subtle);
+}
+.sim-assumptions dt { color: var(--text-secondary); font-size: 12px; }
+.sim-assumptions dd { margin: 3px 0 0; font-weight: 750; overflow-wrap: anywhere; }
+.sim-wrap .sim-results { padding: 14px; border: 1px solid var(--border-subtle); border-radius: 18px; background: var(--mwj-card); }
+.sim-results h2 { margin: 0 0 10px; font: 600 20px/1.15 var(--mwj-display); }
+.sim-results .summary-strip > div { min-width: 0; padding: 9px; border-radius: 10px; background: var(--surface-raised); }

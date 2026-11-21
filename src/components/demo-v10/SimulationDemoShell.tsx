@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Mode, ProjectOutput, Scenario } from "../../lib/simulation/engine";
 import type { Goal } from "../../lib/types";
-import { MAX_YEARS } from "../../lib/simulation/engine";
+import { DEFAULT_TER, MAX_YEARS } from "../../lib/simulation/engine";
 import { SimulationDemoChart } from "./SimulationDemoChart";
 import { formatDisplayMoney, type DisplayLocale } from "../../ui/localeFormatting";
 
@@ -121,6 +121,9 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
     confirmPersist,
   } = p;
   const text = simulationCopy(locale);
+  const displayLocale = locale === "de" ? "de-DE" : "vi-VN";
+  const percent = new Intl.NumberFormat(displayLocale, { style: "percent", maximumFractionDigits: 2 });
+  const modeledEndValue = primary && !planUnreachable ? formatMoneyRounded(primary.out.terminal, locale) : "—";
   const [paramsOpen, setParamsOpen] = useState(false);
   const [estimateInfoOpen, setEstimateInfoOpen] = useState(false);
 
@@ -201,13 +204,12 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             ) : null}
           </>
         )}
-      <div role="group" aria-label={text.summary}>
-      <dl className="summary-strip">
-        <div><dt>{text.contributed}</dt><dd><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong></dd></div>
-        <div><dt>{text.gain}</dt><dd><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong></dd></div>
-        <div><dt>{locale === "de" ? "Rendite / Jahr" : "Lợi suất / năm"}</dt><dd><strong>{baseRate.toLocaleString(locale === "de" ? "de-DE" : "vi-VN", { style: "percent", maximumFractionDigits: 2 })}</strong></dd></div>
-      </dl>
-      </div>
+        <dl className="sim-assumptions" aria-label={text.parameters}>
+          <div><dt>{locale === "de" ? "Monatsbeitrag" : "Góp mỗi tháng"}</dt><dd>{planUnreachable ? "—" : formatMoneyRounded(monthlyForProject, locale)}</dd></div>
+          <div><dt>{text.duration}</dt><dd>{yearsForProject} {text.years}</dd></div>
+          <div><dt>{locale === "de" ? "Rendite / Jahr" : "Lợi suất / năm"}</dt><dd>{percent.format(baseRate)}</dd></div>
+          <div><dt>{locale === "de" ? "TER / Jahr" : "TER / năm"}</dt><dd>{percent.format(DEFAULT_TER)}</dd></div>
+        </dl>
         <div className="sim-hero-actions">
           <button type="button" className="sim-parameters-trigger" aria-haspopup="dialog" onClick={() => setParamsOpen(true)}>
             <span aria-hidden="true">☷</span><span>{text.adjust}</span><span className="sim-trigger-chevron" aria-hidden="true">›</span>
@@ -235,6 +237,15 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <span><i style={{ background: "var(--primary-600)" }} /> {text.contributed}</span>
           <span><i style={{ background: "var(--success-600)" }} /> {text.forecast}</span>
         </div>
+      </section>
+
+      <section className="sim-results" role="group" aria-labelledby="sim-results-title">
+        <h2 id="sim-results-title">{text.summary}</h2>
+        <dl className="summary-strip">
+          <div><dt>{text.end}</dt><dd><strong>{mode === "A" && inflationOn && showPP && primary && !planUnreachable ? formatMoneyRounded(primary.pp, locale) : modeledEndValue}</strong></dd></div>
+          <div><dt>{text.contributed}</dt><dd><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong></dd></div>
+          <div><dt>{text.gain}</dt><dd><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong></dd></div>
+        </dl>
       </section>
 
       <section className="scenario-comparison" aria-labelledby="scenario-comparison-title">

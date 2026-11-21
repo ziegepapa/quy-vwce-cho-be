@@ -466,14 +466,12 @@
   text-align: start;
   overflow-wrap: anywhere;
 }
-.mwj-layout .sim-headline .summary-strip {
+.mwj-layout .sim-results .summary-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   text-align: start;
   gap: 9px;
-  padding: 12px 0;
-  border-block: 1px solid var(--mwj-rule);
-  margin-inline: 0;
+  margin: 0;
 }
 .mwj-layout .summary-strip dt { color: var(--text-secondary); font-size: 12px; }
 .mwj-layout .summary-strip dd { margin: 4px 0 0; overflow-wrap: anywhere; color: var(--text-primary); }
