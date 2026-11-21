@@ -346,6 +346,7 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
 
   const firstTradeDate = tradeDays.at(-1)?.[0];
   const totalTrades = tradeDays.reduce((count, [, trades]) => count + trades.length, 0);
+  const firstMonth = firstTradeDate ? `${firstTradeDate.slice(5, 7)}${locale === "de" ? "." : "/"}${firstTradeDate.slice(0, 4)}` : "—";
   const boughtVolume = tradeDays.reduce((sum, [, trades]) => sum + trades.reduce((daySum, tx) => daySum + (isSecuritySell(tx.type) ? 0 : tx.amount), 0), 0);
   const syncLabel = timeline.sync.status === "synced" ? text.synced : timeline.sync.status === "syncing" ? text.syncing : timeline.sync.status === "conflict" ? text.conflict : text.offline;
   const sourceLabel = (source: ConfidenceTimelineSource) => source === "quote" ? text.quoteSource : source === "ledger" ? text.ledgerSource : source === "contacts" ? text.contactSource : text.importSource;
@@ -363,7 +364,7 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
           <dl className="mwj-journey-highlights">
             <div><dd>{totalTrades}</dd><dt>{text.tradesLabel}</dt></div>
             <div><dd>{formatMoney(boughtVolume, "EUR", locale)}</dd><dt>{text.volumeLabel}</dt></div>
-            <div><dd>{firstTradeDate ? formatTradeMonth(firstTradeDate, locale) : "—"}</dd><dt>{text.sinceLabel}</dt></div>
+            <div><dd>{firstMonth}</dd><dt>{text.sinceLabel}</dt></div>
           </dl>
         </div>
       </header>
