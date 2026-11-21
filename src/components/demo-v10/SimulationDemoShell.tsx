@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ExitPlanSection from "../ExitPlanSection";
 import type { Mode, ProjectOutput, Scenario } from "../../lib/simulation/engine";
 import type { Goal } from "../../lib/types";
 import { DEFAULT_TER, MAX_YEARS } from "../../lib/simulation/engine";
@@ -238,6 +239,8 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <span><i style={{ background: "var(--success-600)" }} /> {text.forecast}</span>
         </div>
       </section>
+
+      <ExitPlanSection goals={goals} locale={locale} />
 
       <section className="sim-results" role="group" aria-labelledby="sim-results-title">
         <h2 id="sim-results-title">{text.summary}</h2>
