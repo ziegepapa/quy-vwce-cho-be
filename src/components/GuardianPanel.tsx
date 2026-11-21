@@ -52,15 +52,20 @@ export default function GuardianPanel({ locale, userId, emailVerified }: {
       setStatus("unavailable");
       return;
     }
-    void supabase.from("guardian_subscriptions").select("enabled")
-      .eq("user_id", userId).maybeSingle().then(({ data, error }) => {
+    void (async () => {
+      try {
+        const { data, error } = await supabase.from("guardian_subscriptions")
+          .select("enabled").eq("user_id", userId).maybeSingle();
         if (!active) return;
         if (error) setStatus("unavailable");
         else {
           setEnabled(data?.enabled === true);
           setStatus("ready");
         }
-      }).catch(() => { if (active) setStatus("unavailable"); });
+      } catch {
+        if (active) setStatus("unavailable");
+      }
+    })();
     return () => { active = false; };
   }, [userId, emailVerified]);
 
