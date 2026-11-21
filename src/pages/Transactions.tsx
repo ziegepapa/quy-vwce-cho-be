@@ -760,6 +760,7 @@ export default function Transactions() {
   return (
     <main className="txv2-screen tx-ledger-redesign" aria-label={text.title}>
       <div className="tx-wrap">
+        <div className="mwj-ledger-cover">
         <header className="txv2-head tx-ledger-head mwj-page-head">
           <h1 className="txv2-title">{text.title}</h1>
           <div className="txv2-head-actions tx-ledger-actions">
@@ -786,6 +787,7 @@ export default function Transactions() {
             ? `${securityTransactionCount} Wertpapierbuchungen · ${incomingCount + outgoingCount} Geldbewegungen`
             : `${securityTransactionCount} lệnh chứng khoán · ${incomingCount + outgoingCount} giao dịch tiền`}</p>
         </section>
+        </div>
 
         <section className="tx-ledger-workspace" aria-label={text.journal}>
           <div className="tx-ledger-workspace-head">
