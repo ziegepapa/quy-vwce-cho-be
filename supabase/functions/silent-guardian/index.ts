@@ -4,7 +4,8 @@ import type { SyncedGuardianRow, GuardianSignal } from "./rules.ts";
 
 /**
  * Server-only, scheduled via Supabase pg_cron -> pg_net. No dependency on an
- * iPhone/PWA process and no external HTTP endpoint for public callers.
+ * iPhone/PWA process. Both POST and the read-only GET health endpoint
+ * require distinct, high-entropy server secrets.
  * The service key never goes to GitHub Actions logs, app bundles or browsers.
  */
 const BASE = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "") ?? "";
