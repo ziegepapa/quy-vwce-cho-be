@@ -36,7 +36,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
         <ul className="mwj-welcome-benefits">
           {text.features.map((feature, index) => (
             <li key={feature.title} className="mwj-welcome-benefit">
-              <span className="mwj-welcome-benefit-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+              <span className="mwj-welcome-benefit-number" aria-hidden="true">{"0"}{index + 1}</span>
               <span className="mwj-welcome-benefit-copy">
                 <strong>{feature.title}</strong>
               </span>
