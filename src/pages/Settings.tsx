@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   clearAllData,
@@ -30,7 +30,14 @@ import SettingsPlanStudio from "../components/SettingsPlanStudio";
 import AnnualPlanStudio from "../components/AnnualPlanStudio";
 import SettingsClarityWorkspace from "../components/SettingsClarityWorkspace";
 import SettingsCboWorkspace from "../components/SettingsCboWorkspace";
-import GuardianPanel from "../components/GuardianPanel";
+const GuardianPanel = lazy(async () => {
+  try { return await import("../components/GuardianPanel"); }
+  catch {
+    return { default: ({ locale }: { locale: AppLocale; userId: string | null; emailVerified: boolean }) => (
+      <p role="status">{locale === "de" ? "Silent Guardian ist momentan nicht erreichbar." : "Silent Guardian tạm thời không kết nối được."}</p>
+    ) };
+  }
+});
 import LocalDiagnosticsPanel from "../components/LocalDiagnosticsPanel";
 import LocalDataInventoryPanel from "../components/LocalDataInventoryPanel";
 import {
@@ -892,7 +899,9 @@ export default function SettingsPage({
           lastSync={lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : null}
           pricesPanel={<SettingsPricePanel refreshKey={refreshKey} onQuotesChanged={onQuotesChanged} />}
           dataHealthPanel={<LocalDataInventoryPanel localeOverride={locale} />}
-          guardianPanel={<GuardianPanel locale={locale} userId={auth.user?.id ?? null} emailVerified={Boolean(auth.user?.email_confirmed_at)} />}
+          guardianPanel={online
+            ? <Suspense fallback={<p role="status">{locale === "de" ? "Silent Guardian wird geladen…" : "Đang tải Silent Guardian…"}</p>}><GuardianPanel locale={locale} userId={auth.user?.id ?? null} emailVerified={Boolean(auth.user?.email_confirmed_at)} /></Suspense>
+            : <div className="set2-group"><p>{locale === "de" ? "Silent Guardian benötigt eine Internetverbindung. Offline bleibt alles andere verfügbar." : "Silent Guardian cần Internet. Các chức năng khác vẫn dùng offline."}</p><button type="button" disabled>{locale === "de" ? "E-Mail-Warnungen aktivieren" : "Bật cảnh báo email"}</button></div>}
           syncHealthPanel={syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
           syncConflictPanel={conflictPanel}
           mfaEnrolled={auth.mfaEnrolled}
