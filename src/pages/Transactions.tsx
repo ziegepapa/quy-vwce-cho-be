@@ -775,6 +775,21 @@ export default function Transactions() {
           </div>
         </header>
 
+        <section className="tx-ledger-pulse mwj-ledger-summary" aria-label={text.journal}>
+          <div className="mwj-ledger-summary-top">
+            <span className="mwj-ledger-summary-kicker">{text.journal}</span>
+            <span className="mwj-ledger-summary-period">{yearFilter === "all" ? text.all : yearFilter}</span>
+          </div>
+          <dl className="mwj-ledger-stats">
+            <div><dt>{text.contributed}</dt><dd>{formatDisplayMoney(analysis.contributed, locale)}</dd></div>
+            <div><dt>{text.transactionCount}</dt><dd>{txs.length}</dd></div>
+            <div><dt>{text.year}</dt><dd>{yearFilter !== "all" ? yearFilter : years[0] ?? "—"}</dd></div>
+          </dl>
+          <p className="mwj-ledger-summary-note">{locale === "de"
+            ? `${securityTransactionCount} Wertpapierbuchungen · ${incomingCount + outgoingCount} Geldbewegungen`
+            : `${securityTransactionCount} lệnh chứng khoán · ${incomingCount + outgoingCount} giao dịch tiền`}</p>
+        </section>
+
         <section className="tx-ledger-workspace" aria-label={text.journal}>
           <div className="tx-ledger-workspace-head">
             <div>
@@ -936,14 +951,7 @@ export default function Transactions() {
             </>
           )}
         </section>
-        <section className="tx-ledger-pulse" aria-label={text.journal}>
-          <h2 className="mwj-section-title">{locale === "de" ? "Aktivität" : "Hoạt động"}</h2>
-          <dl className="mwj-ledger-stats">
-            <div><dt>{text.contributed}</dt><dd>{formatDisplayMoney(analysis.contributed, locale)}</dd></div>
-            <div><dt>{locale === "de" ? "Käufe und Verkäufe" : "Lệnh mua/bán"}</dt><dd>{securityTransactionCount}</dd></div>
-            <div><dt>{locale === "de" ? "Geldbewegungen" : "Dòng tiền"}</dt><dd>{incomingCount + outgoingCount}</dd></div>
-          </dl>
-        </section>
+
 
       {filterSheetOpen ? (
         <div className="tx-filter-backdrop" role="presentation" onMouseDown={closeFilterSheet}>
