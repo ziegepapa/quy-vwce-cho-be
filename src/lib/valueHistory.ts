@@ -23,6 +23,8 @@ export type ValueHistoryPoint = {
    * contributing 0. Always set by buildValueHistory.
    */
   unpricedIsins: string[];
+  /** Held positions whose latest known price comes from an earlier month. */
+  carriedForwardIsins: string[];
 };
 
 const MONTH_LABEL_VI = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"];
@@ -45,7 +47,7 @@ function lastDayOfMonth(year: number, monthIndex: number): string {
  */
 export function buildValueHistory(input: {
   transactions: readonly Transaction[];
-  quotes: readonly Quote[];
+  quotes: readonly Pick<Quote, "instrumentIsin" | "price" | "asOf">[];
   locale: "vi" | "de";
   /** settings.trackInAppCash — picks the contribution mode, same as the hero. */
   trackInAppCash?: boolean | null;
@@ -79,7 +81,7 @@ export function buildValueHistory(input: {
 
   // Group quotes by ISIN (each group stays sorted by asOf). Legacy quotes
   // without an ISIN are VWCE, matching the transaction alias rule.
-  const quotesByIsin = new Map<string, Quote[]>();
+  const quotesByIsin = new Map<string, typeof sortedQuotes>();
   for (const q of sortedQuotes) {
     const isin = q.instrumentIsin || VWCE_ISIN;
     const list = quotesByIsin.get(isin);
@@ -87,11 +89,13 @@ export function buildValueHistory(input: {
     else quotesByIsin.set(isin, [q]);
   }
 
+  const today = `${monthKey(endYear, endMonth)}-${String(now.getDate()).padStart(2, "0")}`;
   const labels = locale === "de" ? MONTH_LABEL_DE : MONTH_LABEL_VI;
   const points: ValueHistoryPoint[] = [];
 
   for (const { year, monthIndex } of months) {
-    const cutoff = lastDayOfMonth(year, monthIndex);
+    const month = monthKey(year, monthIndex);
+    const cutoff = month === today.slice(0, 7) ? today : lastDayOfMonth(year, monthIndex);
     const state = replayTransactions(dated.filter((t) => t.date <= cutoff));
     // Sum every held position at the latest price KNOWN on the cutoff date
     // (carry-forward). NEVER use a quote dated after the cutoff: a position
@@ -99,19 +103,21 @@ export function buildValueHistory(input: {
     // listed in `unpricedIsins` instead of silently contributing 0.
     let value = Math.max(0, state.cashBalance);
     const unpricedIsins: string[] = [];
+    const carriedForwardIsins: string[] = [];
     for (const [isin, pos] of Object.entries(state.positions)) {
       if (pos.qty <= 0) continue;
       const series = quotesByIsin.get(isin) ?? [];
-      let price = 0;
+      let latest;
       for (const q of series) {
-        if (q.asOf <= cutoff) price = q.price;
+        if (q.asOf <= cutoff) latest = q;
         else break;
       }
-      if (price <= 0) {
+      if (!latest) {
         unpricedIsins.push(isin);
         continue;
       }
-      value += Math.max(0, pos.qty) * price;
+      if (latest.asOf.slice(0, 7) !== month) carriedForwardIsins.push(isin);
+      value += pos.qty * latest.price;
     }
     // Cumulative contributions up to this cutoff — same definition as the
     // hero's lifetime figure, so the chart's "Đã góp" line always agrees
@@ -121,11 +127,12 @@ export function buildValueHistory(input: {
       trackInAppCash,
     }).amount;
     points.push({
-      month: monthKey(year, monthIndex),
+      month,
       label: labels[monthIndex],
       value: Math.round(value * 100) / 100,
       contributed: Math.round(contributed * 100) / 100,
       unpricedIsins,
+      carriedForwardIsins,
     });
   }
 

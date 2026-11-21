@@ -21,7 +21,6 @@ vi.mock("../lib/recoveryReadOnly", () => ({
   useRecoveryReadOnly: () => ({ readOnly: false, showBlocked: vi.fn() }),
 }));
 vi.mock("../components/ActionMenu", () => ({ default: () => null }));
-vi.mock("../components/Icons", () => ({ IconPlus: () => null }));
 vi.mock("../components/TradeRepublicPdfImport", () => ({ default: () => "pdf-import-loaded" }));
 
 vi.mock("react-router-dom", async () => {
@@ -207,7 +206,7 @@ describe("Transactions load and empty states", () => {
     render(createElement(Transactions));
 
     await screen.findByText(/4 giao dịch trong năm/);
-    expect(screen.getByText("SỔ NHẬT KÝ ĐẦU TƯ")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Hoạt động" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Dòng tiền" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Nhật ký giao dịch" })).toBeTruthy();
     expect(document.querySelectorAll(".txv2-bars span")).toHaveLength(0);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Mode, ProjectOutput, Scenario } from "../../lib/simulation/engine";
 import type { Goal } from "../../lib/types";
-import { MAX_YEARS } from "../../lib/simulation/engine";
+import { DEFAULT_TER, MAX_YEARS } from "../../lib/simulation/engine";
 import { SimulationDemoChart } from "./SimulationDemoChart";
 import { formatDisplayMoney, type DisplayLocale } from "../../ui/localeFormatting";
 
@@ -121,12 +121,28 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
     confirmPersist,
   } = p;
   const text = simulationCopy(locale);
+  const displayLocale = locale === "de" ? "de-DE" : "vi-VN";
+  const percent = new Intl.NumberFormat(displayLocale, { style: "percent", maximumFractionDigits: 2 });
+  const modeledEndValue = primary && !planUnreachable ? formatMoneyRounded(primary.out.terminal, locale) : "—";
   const [paramsOpen, setParamsOpen] = useState(false);
   const [estimateInfoOpen, setEstimateInfoOpen] = useState(false);
 
   return (
     <main className="demo-v10-screen sim-screen" aria-label={text.aria}>
       <div className="sim-wrap">
+      <header className="mwj-page-head">
+        <h1>{text.aria}</h1>
+        {!readOnly ? <button className="secondary mwj-sim-example" type="button" onClick={() => {
+          setMode("A");
+          setMonthly("120");
+          setRateInput("5");
+          setYears(30);
+          setLumpSum("0");
+          setBalanceOverride("0");
+          setGrowthOn(false);
+          setShowPP(false);
+        }}>{locale === "de" ? "Beispiel ab 0 € laden" : "Thử ví dụ từ 0 €"}</button> : null}
+      </header>
       <div className="mode-tabs" data-testid="simulation-mode-switch" role="group" aria-label={text.aria}>
         {(
           [
@@ -148,8 +164,8 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         ))}
       </div>
 
-      <section key={mode} className="sim-headline">
-        <span className="sim-mode-badge">{mode === "A" ? text.badgeA : mode === "B" ? text.badgeB : text.badgeC}</span>
+      <section key={mode} className={mode === "A" ? "sim-headline mwj-sim-projection-first" : "sim-headline"}>
+        <h2 className="sim-mode-badge">{mode === "A" ? text.end : mode === "B" ? text.badgeB : text.badgeC}</h2>
         {planUnreachable ? (
           <>
             <div className="sh-big sim-hero-amount" data-testid="simulation-hero-amount">—</div>
@@ -188,13 +204,15 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
             ) : null}
           </>
         )}
-      <div className="summary-strip" role="group" aria-label={text.summary}>
-        <span><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong> {text.contributed}</span>
-        <span><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong> {text.gain}</span>
-      </div>
+        <dl className="sim-assumptions" aria-label={text.parameters}>
+          <div><dt>{locale === "de" ? "Monatsbeitrag" : "Góp mỗi tháng"}</dt><dd>{planUnreachable ? "—" : formatMoneyRounded(monthlyForProject, locale)}</dd></div>
+          <div><dt>{text.duration}</dt><dd>{yearsForProject} {text.years}</dd></div>
+          <div><dt>{locale === "de" ? "Rendite / Jahr" : "Lợi suất / năm"}</dt><dd>{percent.format(baseRate)}</dd></div>
+          <div><dt>{locale === "de" ? "TER / Jahr" : "TER / năm"}</dt><dd>{percent.format(DEFAULT_TER)}</dd></div>
+        </dl>
         <div className="sim-hero-actions">
           <button type="button" className="sim-parameters-trigger" aria-haspopup="dialog" onClick={() => setParamsOpen(true)}>
-            <span aria-hidden="true">☷</span><span>{text.adjust}</span><span className="sim-trigger-chevron" aria-hidden="true">↗</span>
+            <span aria-hidden="true">☷</span><span>{text.adjust}</span><span className="sim-trigger-chevron" aria-hidden="true">›</span>
           </button>
         </div>
       </section>
@@ -204,7 +222,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
 
       <section className="gl sim-chart-card" data-testid="simulation-growth-chart">
         <div className="sim-chart-heading">
-          <div className="sim-chart-title">{text.chart}</div>
+          <h2 className="sim-chart-title">{text.chart}</h2>
           <span className="sim-live-tag">{text.baseScenario}</span>
         </div>
         <SimulationDemoChart
@@ -219,6 +237,15 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <span><i style={{ background: "var(--primary-600)" }} /> {text.contributed}</span>
           <span><i style={{ background: "var(--success-600)" }} /> {text.forecast}</span>
         </div>
+      </section>
+
+      <section className="sim-results" role="group" aria-labelledby="sim-results-title">
+        <h2 id="sim-results-title">{text.summary}</h2>
+        <dl className="summary-strip">
+          <div><dt>{text.end}</dt><dd><strong>{mode === "A" && inflationOn && showPP && primary && !planUnreachable ? formatMoneyRounded(primary.pp, locale) : modeledEndValue}</strong></dd></div>
+          <div><dt>{text.contributed}</dt><dd><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong></dd></div>
+          <div><dt>{text.gain}</dt><dd><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong></dd></div>
+        </dl>
       </section>
 
       <section className="scenario-comparison" aria-labelledby="scenario-comparison-title">

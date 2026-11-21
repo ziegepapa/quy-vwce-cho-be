@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { signOutBeforeLocalClear, useAuth } from "./lib/auth";
 import { clearUserBusinessData, countLocalData, ensureInitialized, getSettings, ingestQuotesFeed, runPendingMigrations } from "./lib/db";
@@ -19,7 +19,8 @@ import { RecoveryReadOnlyProvider } from "./lib/recoveryReadOnly";
 import { useLocale, type AppLocale } from "./lib/locale";
 import CollapsingNavBar from "./components/CollapsingNavBar";
 import BottomDock from "./components/BottomDock";
-import { IconHome, IconSettings, IconSim, IconTx } from "./components/Icons";
+import MoreSheet from "./components/MoreSheet";
+import { IconHome, IconMenu, IconSettings, IconSim, IconTimeline, IconTx } from "./components/Icons";
 import { conflictCtaLabel, hasLogoutBlockers, openSyncConflictSection, readSyncConflictFocusToken, reconcileVisibleLogoutBlockers, type LogoutBlockerCounts } from "./components/SyncConflictSection";
 import { buildSyncHealth } from "./components/syncHealth";
 import { recordLocalDiagnostic } from "./components/localDiagnostics";
@@ -168,6 +169,10 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const { pathname } = location;
+  const appShell = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (appShell.current) appShell.current.scrollTop = 0;
+  }, [pathname]);
   const { locale, t } = useLocale();
   const text = useMemo(() => appStrings(locale), [locale]);
   const primaryNav = useMemo(() => [
@@ -176,6 +181,23 @@ export default function App() {
     { to: "/simulation", label: t("simulation"), icon: <IconSim /> },
     { to: "/settings", label: t("settings"), icon: <IconSettings /> },
   ], [t]);
+  // Mobile dock (Modern Wealth Journal): Timeline is a primary tab and the
+  // remaining destinations live behind "Mehr". The desktop sidebar keeps
+  // primaryNav unchanged.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const secondaryRoutes = ["/simulation", "/goals", "/notfallmappe", "/settings", "/handoff", "/lot-evidence"];
+  const dockItems = useMemo(() => [
+    { to: "/", label: t("overviewTab"), icon: <IconHome /> },
+    { to: "/transactions", label: t("transactions"), icon: <IconTx /> },
+    { to: "/timeline", label: t("timeline"), icon: <IconTimeline /> },
+    {
+      label: t("more"),
+      icon: <IconMenu />,
+      onClick: () => setMoreOpen(true),
+      active: secondaryRoutes.some((route) => pathname === route),
+      expanded: moreOpen,
+    },
+  ], [t, pathname, moreOpen]);
   const [ready, setReady] = useState(false);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("offline");
@@ -270,6 +292,9 @@ export default function App() {
     setLogoutNotice(null);
     setSkipError(null);
   }, [locale]);
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
 
   const recoveryActive = Boolean(auth.user) && recoveryRequired;
   const syncHealth = useMemo(() => buildSyncHealth({
@@ -422,28 +447,27 @@ export default function App() {
     }} onBack={() => setShowWizard(false)} /></Suspense>;
   }
 
-  if (!recoveryActive && !settings?.onboardingDone) return <Suspense fallback={<RouteLoading label={text.loading} />}><Onboarding onDone={async () => { await ensureInitialized(false); await reload(); }} /></Suspense>;
+  if (!recoveryActive && !settings?.onboardingDone) return <Suspense fallback={<RouteLoading label={text.loading} />}><Onboarding onDone={async () => { await ensureInitialized(false, locale); await reload(); }} /></Suspense>;
   if (!settings) return <RouteLoading label={text.loading} />;
 
-  const displayName = (auth.user?.user_metadata?.display_name as string) || auth.user?.email?.split("@")[0] || settings.planName;
   const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
   const focusConflictRequest = readSyncConflictFocusToken(location.state);
-  return <div className="app-layout">
+  return <div className={`app-layout mwj-layout${screenName === "overview" ? " mwj-overview-layout" : ""}`}>
     <aside className="sidebar" aria-label={text.navigation}><div className="sidebar-brand">VWCE Vault</div><nav className="sidebar-nav">{primaryNav.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
-    <div className="app-shell">
-      {auth.user ? <CollapsingNavBar
-        displayName={displayName}
+    <div className="app-shell" ref={appShell}>
+      <CollapsingNavBar
+        isOverview={screenName === "overview"}
         syncStatus={syncStatus}
         pending={pending}
         syncHealth={syncHealth}
         onSignOut={handleSignOut}
-        onSyncNow={recoveryActive ? undefined : handleSyncHealthAction}
+        onSyncNow={auth.user && !recoveryActive ? handleSyncHealthAction : undefined}
         onUpdatePrice={undefined}
         onSearch={navAction("search")}
         onFilter={navAction("filter")}
         onAddGoal={recoveryActive ? undefined : navAction("addGoal")}
         onChangeScenario={recoveryActive ? undefined : navAction("changeScenario")}
-      /> : null}
+      />
 
       {recoveryActive ? (
         <section className="banner recovery-banner" role="status" data-testid="recovery-banner">
@@ -471,7 +495,8 @@ export default function App() {
         <Route path="/lot-evidence" element={<LotEvidence />} />
         <Route path="/settings" element={<SettingsPage onReload={reload} onOpenMigrate={auth.user ? () => setShowWizard(true) : undefined} refreshKey={quoteRefreshVersion} onQuotesChanged={handleQuotesChanged} onSettingsChanged={handleSettingsChanged} onConflictResolved={handleConflictResolved} focusConflictRequest={focusConflictRequest} onSyncNow={auth.user ? handleSyncNow : undefined} syncHealth={syncHealth} onSyncHealthAction={handleSyncHealthAction} onRequestSignOut={auth.user ? handleSignOut : undefined} />} />
       </Routes></Suspense></RecoveryReadOnlyProvider></main></NavActionsProvider>
-    </div><BottomDock items={primaryNav} />
+    </div><BottomDock items={dockItems} />
+    <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
 
     {showSkipConfirm ? (
       <div className="modal-backdrop" role="presentation">

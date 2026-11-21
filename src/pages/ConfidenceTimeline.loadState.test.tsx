@@ -91,7 +91,7 @@ describe("ConfidenceTimeline", () => {
     renderTimeline();
 
     expect(await screen.findByText("Đã ghi giao dịch · Mua VWCE")).toBeTruthy();
-    expect(screen.getByText(/120,00/)).toBeTruthy();
+    expect(document.querySelector(".ct-confidence .ct-source.is-ledger + .ct-event-content .ct-event-value")?.textContent).toMatch(/120,00/);
     const noteDetails = document.querySelector("details.ct-event-note") as HTMLDetailsElement | null;
     expect(noteDetails).toBeTruthy();
     expect(noteDetails?.open).toBe(false);

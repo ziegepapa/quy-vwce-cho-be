@@ -72,6 +72,42 @@ export function IconMore() {
     </svg>
   );
 }
+export function IconBell() {
+  return (
+    <svg {...s}>
+      <path d="M6 9a6 6 0 0 1 12 0c0 4.5 1.8 5.8 1.8 5.8H4.2S6 13.5 6 9" />
+      <path d="M10 19.5a2.2 2.2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+export function IconTimeline() {
+  return (
+    <svg {...s}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3.2 2" />
+    </svg>
+  );
+}
+
+export function IconMenu() {
+  return (
+    <svg {...s}>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
+
+export function IconInfo() {
+  return (
+    <svg {...s}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11v5" />
+      <path d="M12 7.6h.01" />
+    </svg>
+  );
+}
+
 export function IconCash() {
   return (
     <svg {...s} width={18} height={18}>
@@ -144,4 +180,16 @@ export function IconUpload() {
 
 export function IconLifebuoy() {
   return <svg {...s}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /><path d="m6.35 6.35 3.55 3.55m4.2 4.2 3.55 3.55m0-11.3-3.55 3.55m-4.2 4.2-3.55 3.55" /></svg>;
+}
+
+export function IconDeposit() {
+  return <svg {...s}><path d="M5 10v9h14v-9h-3M5 10h3M12 15V3m-3 3 3-3 3 3M8 15v1h8v-1" /></svg>;
+}
+
+export function IconCoins() {
+  return <svg {...s}><ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 10c0 1.7 3.6 3 8 3s8-1.3 8-3M4 14c0 1.7 3.6 3 8 3s8-1.3 8-3" /></svg>;
+}
+
+export function IconTrend() {
+  return <svg {...s}><path d="m3 17 6-6 4 4 7-9m-5 0h5v5" /></svg>;
 }

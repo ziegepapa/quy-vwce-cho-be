@@ -71,7 +71,7 @@ export function buildNhipInsights({
     return {
       insights: [{
         kind: "empty_start",
-        text: "Bắt đầu bằng khoản góp đầu tiên để tạo nhịp quỹ cho bé.",
+        text: "Bắt đầu bằng khoản góp đầu tiên để theo dõi nhịp đầu tư.",
       }],
     };
   }

@@ -172,7 +172,7 @@ function settingsStrings(locale: AppLocale): SettingsText {
     savedLocal: "Auf diesem Gerät gespeichert",
     savingLocal: "Wird auf diesem Gerät gespeichert…",
     changesPending: "Änderungen warten auf Speicherung",
-    accountSubtitle: "Anmeldung und Schutz dieses Familien-Vaults.",
+    accountSubtitle: "Anmeldung und Schutz Ihres Vaults.",
     syncSubtitle: "Status und bewusste Synchronisierung zwischen Ihren Geräten.",
     dataSubtitle: "Sicherung und Wiederherstellung bleiben owner-gesteuert.",
     preferences: "Darstellung & Sprache",
@@ -244,7 +244,7 @@ function settingsStrings(locale: AppLocale): SettingsText {
     savedLocal: "Đã lưu trên thiết bị này",
     savingLocal: "Đang lưu trên thiết bị này…",
     changesPending: "Thay đổi đang chờ lưu",
-    accountSubtitle: "Đăng nhập và bảo vệ kho gia đình này.",
+    accountSubtitle: "Đăng nhập và bảo vệ Vault của bạn.",
     syncSubtitle: "Trạng thái và đồng bộ có chủ đích giữa các thiết bị.",
     dataSubtitle: "Sao lưu và khôi phục luôn do owner chủ động kiểm soát.",
     preferences: "Giao diện & ngôn ngữ",
@@ -390,6 +390,11 @@ export default function SettingsPage({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const deleteInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (deleteOpen) deleteInputRef.current?.focus();
+  }, [deleteOpen]);
   const [settingsChild, setSettingsChild] = useState<SettingsChildView>(null);
   const childBackRef = useRef<HTMLButtonElement | null>(null);
   const [openAdvancedGroup, setOpenAdvancedGroup] = useState<"prices" | "sync" | "plan" | "data" | null>(() =>
@@ -806,6 +811,51 @@ export default function SettingsPage({
     );
   }
 
+  function closeDelete() {
+    if (deleteBusy) return;
+    setDeleteConfirm("");
+    setDeleteOpen(false);
+    deleteTriggerRef.current?.focus();
+  }
+
+  async function confirmDelete() {
+    if (deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken) return;
+    if (readOnly) {
+      showBlocked();
+      return;
+    }
+    setDeleteBusy(true);
+    try {
+      await clearAllData();
+      window.location.reload();
+    } catch {
+      setActionError(text.deleteError);
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
+  const deleteConfirmation = deleteOpen ? (
+    <div className="advanced-delete" id="local-delete-confirmation" onKeyDown={(event) => {
+      if (event.key === "Escape") closeDelete();
+    }}>
+      <label htmlFor="local-delete-token">
+        {locale === "de" ? `Geben Sie ${text.deleteToken} zur Bestätigung ein. Dieser Vorgang kann auf diesem Gerät nicht rückgängig gemacht werden.` : t("deleteConfirmText")}
+      </label>
+      <input id="local-delete-token" ref={deleteInputRef} placeholder={text.deleteToken} autoComplete="off" spellCheck={false} disabled={deleteBusy} value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} />
+      <div className="local-delete-actions">
+        <button type="button" className="secondary" disabled={deleteBusy} onClick={closeDelete}>{t("cancel")}</button>
+        <button type="button" className="local-delete-submit" disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken} onClick={() => void confirmDelete()}>{t("confirmDelete")}</button>
+      </div>
+    </div>
+  ) : null;
+  const deleteTriggerProps = {
+    ref: deleteTriggerRef,
+    "aria-expanded": deleteOpen,
+    "aria-controls": deleteOpen ? "local-delete-confirmation" : undefined,
+    onClick: () => deleteOpen ? closeDelete() : setDeleteOpen(true),
+  };
+
   if (cboMode) {
     const conflictPanel = auth.user?.id ? (
       <SyncConflictSection
@@ -861,8 +911,12 @@ export default function SettingsPage({
           onSignOut={onRequestSignOut ? () => void onRequestSignOut() : undefined}
           handoffAction={<Link to="/notfallmappe" className="cbo-action-row" style={{ textDecoration: "none" }}><span className="cbo-action-icon"><IconLifebuoy /></span><span><strong>{text.supportHandover}</strong><small>{text.emergencySub}</small></span><IconChevronRight /></Link>}
           dangerAction={<>
-            <button type="button" className="cbo-action-row danger" onClick={() => setDeleteOpen(true)}><span className="cbo-action-icon"><IconClose /></span><span><strong>{t("clearLocalData")}</strong><small>{t("clearLocalDataSub")}</small></span><IconChevronRight /></button>
-            {deleteOpen ? <div className="advanced-delete"><p>{locale === "de" ? `Geben Sie ${text.deleteToken} zur Bestätigung ein. Dieser Vorgang kann auf diesem Gerät nicht rückgängig gemacht werden.` : t("deleteConfirmText")}</p><input placeholder={text.deleteToken} value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} /><button type="button" disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken} onClick={() => void (async () => { if (readOnly) { showBlocked(); return; } setDeleteBusy(true); try { await clearAllData(); window.location.reload(); } catch { setActionError(text.deleteError); } finally { setDeleteBusy(false); } })()}>{t("confirmDelete")}</button></div> : null}
+            <button type="button" className="cbo-action-row local-delete-trigger" {...deleteTriggerProps}>
+              <span className="cbo-action-icon" aria-hidden="true"><IconClose /></span>
+              <span><strong>{t("clearLocalData")}</strong><small>{t("clearLocalDataSub")}</small></span>
+              <IconChevronRight aria-hidden="true" />
+            </button>
+            {deleteConfirmation}
           </>}
         />
         {settingsChild ? (
@@ -977,7 +1031,7 @@ export default function SettingsPage({
       {clarityMode ? null : horizonMode ? (
         <section className="settings-horizon-console" aria-label={text.account}>
           <div className="settings-horizon-console-orbit" aria-hidden><i /><i /><i /></div>
-          <div className="settings-horizon-console-copy"><span>{locale === "de" ? "Familien-Vault" : "Family Vault"}</span><strong>{text.vaultName}</strong><small>{auth.user?.email ?? t("syncNeedsSignIn")}</small></div>
+          <div className="settings-horizon-console-copy"><span>VWCE Vault</span><strong>{text.vaultName}</strong><small>{auth.user?.email ?? t("syncNeedsSignIn")}</small></div>
           <div className="settings-horizon-sync-state" aria-live="polite"><span className={`settings-horizon-sync-dot ${syncHealth?.tone ?? "info"}`} aria-hidden /><strong>{syncingNow ? t("syncing") : syncLabel}</strong><small>{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : auth.user?.id ? text.syncSubtitle : t("syncNeedsSignIn")}</small></div>
           <button type="button" className="settings-horizon-sync" disabled={syncingNow} onClick={() => void runVisibleSync()}><IconSync /><span>{syncingNow ? t("syncing") : t("syncNow")}</span></button>
         </section>
@@ -1181,39 +1235,11 @@ export default function SettingsPage({
                 <span className="sr-sub">{t("restoreDeviceDataSub")}</span>
               </button>
             ) : null}
-            <button type="button" className="set-row" onClick={() => setDeleteOpen(true)}>
+            <button type="button" className="set-row" {...deleteTriggerProps}>
               <span className="sr-name" style={{ color: "var(--demo-re)" }}>{t("clearLocalData")}</span>
               <span className="sr-sub">{t("clearLocalDataSub")}</span>
             </button>
-            {deleteOpen ? (
-              <div className="advanced-delete">
-                <p>{locale === "de" ? `Geben Sie ${text.deleteToken} zur Bestätigung ein. Dieser Vorgang kann auf diesem Gerät nicht rückgängig gemacht werden.` : t("deleteConfirmText")}</p>
-                <input placeholder={text.deleteToken} value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
-                <button
-                  type="button"
-                  disabled={deleteBusy || deleteConfirm.trim().toUpperCase() !== text.deleteToken}
-                  onClick={() =>
-                    void (async () => {
-                      if (readOnly) {
-                        showBlocked();
-                        return;
-                      }
-                      setDeleteBusy(true);
-                      try {
-                        await clearAllData();
-                        window.location.reload();
-                      } catch {
-                        setActionError(text.deleteError);
-                      } finally {
-                        setDeleteBusy(false);
-                      }
-                    })()
-                  }
-                >
-                  {t("confirmDelete")}
-                </button>
-              </div>
-            ) : null}
+            {deleteConfirmation}
           </div>
         </details>
       </details>

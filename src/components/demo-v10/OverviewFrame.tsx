@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLocale } from "../../lib/locale";
 import { formatMoney } from "../../lib/calc";
+import { IconCoins, IconDeposit, IconInfo, IconShield, IconTrend } from "../Icons";
 import type { PortfolioHeartbeat } from "../../pages/portfolioHeartbeat";
 import type { PortfolioDataHealth, PortfolioDataHealthIssue } from "../../pages/portfolioDataHealth";
 import type { YearInReview } from "../../pages/yearInReview";
@@ -91,6 +92,7 @@ type OverviewFrameProps = {
   assetsLabel: string;
   /** Formatted total, e.g. "446,58 €". */
   assets: string;
+  valueComplete: boolean;
   /** Formatted lifetime contributions, e.g. "440,00 €". */
   contributedLabel: string;
   /** Formatted gain, e.g. "+6,58 €", null when unavailable. */
@@ -119,14 +121,11 @@ type OverviewFrameProps = {
 function overviewCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     pageLabel: "Übersicht",
-    totalAssets: "Gesamtvermögen",
     contributedByYou: "Eingezahlt",
-    marketAdded: "Markt dazu",
+    realGain: "Realer Gewinn",
+    noHistory: "Noch nicht genügend Daten für den Wertverlauf.",
     gainUnavailable: "Noch nicht bewertbar",
     fundCount: "Fonds",
-    pace: "Kumuliert eingezahlt",
-    nextContribution: "Geschätzter Gewinn / Verlust",
-    growthValue: "Nächste Schwelle",
     inDays: (days: number) => days === 0 ? "heute" : `in ${days} Tagen`,
     priceUpdated: "Kurse aktualisiert",
     stalePrice: "Alter Kurs",
@@ -138,9 +137,9 @@ function overviewCopy(locale: "vi" | "de") {
     journeyTitle: "Langfristige Reise",
     journeyLine1: "beginnt mit kleinen Beträgen",
     journeyLine2: "Jeden Tag ein bisschen — die Zukunft wird ganz anders!",
-    valueVsContributed: "Wert vs Eingezahlt",
-    honestCaption: "Der Anstieg kommt hauptsächlich von Ihren Einzahlungen — der Abstand der Linien ist der echte Gewinn.",
-    valueLine: "Wert",
+    valueVsContributed: "Wertentwicklung",
+    honestCaption: "Monatswerte auf Basis der verfügbaren Kurse.",
+    valueLine: "Portfoliowert",
     contributedLine: "Eingezahlt",
     allocation: "Vermögensaufteilung",
     allocationSub: "Nach aktuellem Wert.",
@@ -176,14 +175,11 @@ function overviewCopy(locale: "vi" | "de") {
     reviewYear: "Prüfjahr",
   } : {
     pageLabel: "Tổng quan",
-    totalAssets: "Tổng giá trị tài sản",
     contributedByYou: "Bạn đã góp",
-    marketAdded: "Thị trường thêm",
+    realGain: "Lãi / lỗ thực",
+    noHistory: "Chưa đủ dữ liệu để hiển thị lịch sử giá trị.",
     gainUnavailable: "Chưa định giá",
     fundCount: "Số quỹ",
-    pace: "Đã góp lũy kế",
-    nextContribution: "Lãi / lỗ tạm tính",
-    growthValue: "Mốc kế tiếp",
     inDays: (days: number) => days === 0 ? "hôm nay" : `trong ${days} ngày`,
     priceUpdated: "Giá cập nhật",
     stalePrice: "Giá cũ",
@@ -195,9 +191,9 @@ function overviewCopy(locale: "vi" | "de") {
     journeyTitle: "Hành trình dài hạn",
     journeyLine1: "bắt đầu từ những khoản nhỏ",
     journeyLine2: "Mỗi ngày một chút, tương lai sẽ rất khác!",
-    valueVsContributed: "Giá trị vs Đã góp",
-    honestCaption: "Đường đi lên chủ yếu là tiền bạn góp — khoảng cách 2 đường mới là lãi thật.",
-    valueLine: "Giá trị",
+    valueVsContributed: "Diễn biến giá trị",
+    honestCaption: "Giá trị theo tháng dựa trên dữ liệu giá hiện có.",
+    valueLine: "Giá trị danh mục",
     contributedLine: "Đã góp",
     allocation: "Phân bổ tài sản",
     allocationSub: "Theo giá trị hiện tại.",
@@ -282,23 +278,6 @@ function buildAttentionItems(
   return items;
 }
 
-/** Soft landscape illustration for the hero — hills, sun, trees. */
-function LandscapeArt() {
-  return (
-    <svg className="ovb2-art" viewBox="0 0 400 220" preserveAspectRatio="xMaxYMax slice" aria-hidden="true">
-      <circle cx="330" cy="42" r="26" fill="var(--warning-050)" />
-      <path d="M0 150 L90 70 L170 140 L250 60 L340 140 L400 90 L400 220 L0 220 Z" fill="var(--success-050)" opacity=".7" />
-      <path d="M0 175 L120 110 L230 170 L330 120 L400 160 L400 220 L0 220 Z" fill="var(--success-050)" opacity=".8" />
-      <g fill="var(--success-600)" opacity=".58">
-        <circle cx="60" cy="170" r="14" /><rect x="58" y="170" width="4" height="18" />
-        <circle cx="150" cy="160" r="18" /><rect x="148" y="160" width="4" height="22" />
-        <circle cx="250" cy="168" r="15" /><rect x="248" y="168" width="4" height="20" />
-        <circle cx="330" cy="158" r="19" /><rect x="328" y="158" width="4" height="24" />
-      </g>
-    </svg>
-  );
-}
-
 /** Donut of the allocation. Colors cycle blue → green → amber → purple. */
 const DONUT_COLORS = ["var(--primary-600)", "var(--success-600)", "var(--warning-600)", "var(--danger-600)"];
 function AllocationDonut({ allocation, totalLabel, totalSub }: {
@@ -348,8 +327,8 @@ function AllocationDonut({ allocation, totalLabel, totalSub }: {
 
 export default function OverviewFrame(props: OverviewFrameProps) {
   const {
-    assetsLabel, assets, contributedLabel, gainLabel, gainPctLabel, gainPositive,
-    priceDateLabel, stale, fundCount, paceLabel, daysToNext, milestone,
+    assetsLabel, assets, valueComplete, contributedLabel, gainLabel, gainPctLabel, gainPositive,
+    fundCount, milestone,
     allocation, valueHistory, updates, heartbeat, dataHealth,
     yearInReview, yearReviewYears, onYearReviewYearChange,
   } = props;
@@ -416,47 +395,57 @@ export default function OverviewFrame(props: OverviewFrameProps) {
   };
 
   return (
-    <main className="ovb2" aria-label={text.pageLabel}>
+    <div className="ovb2" role="region" aria-label={text.pageLabel}>
       <div className="ovb2-grid">
         <div className="ovb2-main">
-          {/* Hero */}
-          <section className="ovb2-card ovb2-hero" aria-label={assetsLabel}>
-            <LandscapeArt />
-            <div className="ovb2-k">{text.totalAssets}</div>
-            <div className="ovb2-big">{assets}</div>
-            <div className="ovb2-comp">
-              {text.contributedByYou} <b>{contributedLabel}</b>
+          <div className="ovb2-summary">
+            <section className="ovb2-card ovb2-hero" aria-label={assetsLabel}>
+              <div className="ovb2-k"><IconShield />{assetsLabel}</div>
+              <div className="ovb2-big">{assets}</div>
               {gainLabel ? (
-                <> · {text.marketAdded} <span className={gainPositive ? "up" : "down"}>{gainLabel}{gainPctLabel ? ` (${gainPctLabel})` : ""}</span></>
-              ) : (
-                <> · <span className="muted">{text.gainUnavailable}</span></>
-              )}
-            </div>
-            <div className="ovb2-ministats">
-              <div><span>{text.pace}</span><b>{contributedLabel}</b></div>
-              <div><span>{text.nextContribution}</span><b>{gainLabel ?? text.gainUnavailable}{gainPctLabel ? ` (${gainPctLabel})` : ""}</b></div>
-              <div><span>{text.growthValue}</span><b>{milestone?.targetLabel ?? "—"}</b></div>
-              <div><span>{text.fundCount}</span><b>{fundCount}</b></div>
-            </div>
-          </section>
-
-          {/* Chart + donut */}
-          <div className="ovb2-mid">
-            {valueHistory ? (
-              <section className="ovb2-card ovb2-chart-card" aria-label={text.valueVsContributed}>
-                <h3>{text.valueVsContributed}</h3>
-                <p className="ovb2-sub">{text.honestCaption}</p>
-                <div className="ovb2-legend">
-                  <span><i style={{ background: "var(--success-600)" }} />{text.valueLine}</span>
-                  <span><i className="dashed" />{text.contributedLine}</span>
+                <div className="ovb2-pnl-row">
+                  <span className={gainPositive ? "ovb2-pnl-pill mwj-hero-pill up" : "ovb2-pnl-pill mwj-hero-pill down"}>
+                    {gainLabel}{gainPctLabel ? <> <span>{gainPctLabel}</span></> : null}
+                  </span>
                 </div>
+              ) : null}
+            </section>
+            <dl className="ovb2-comp mwj-portfolio-stats">
+              <div><IconDeposit /><dt>{text.contributedByYou}</dt><dd>{contributedLabel}</dd></div>
+              <div><IconCoins /><dt>{text.currentValue}</dt><dd>{valueComplete ? assets : "—"}</dd></div>
+              <div>
+                <IconTrend />
+                <dt>{text.realGain}</dt>
+                <dd className={gainLabel ? (gainPositive ? "up" : "down") : undefined}>
+                  {gainLabel ?? text.gainUnavailable}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="ovb2-mid">
+            <section className="ovb2-card ovb2-chart-card" aria-label={text.valueVsContributed}>
+              <div className="ovb2-chart-heading">
+                <h3>{text.valueVsContributed}</h3>
+                <details className="ovb2-chart-info">
+                  <summary aria-label={text.honestCaption}><IconInfo /></summary>
+                  <p>{text.honestCaption}</p>
+                </details>
+              </div>
+              <div className="ovb2-legend">
+                <span><i />{text.valueLine}</span>
+                <span><i className="dashed" />{text.contributedLine}</span>
+              </div>
+              {valueHistory ? (
                 <ValueHistoryChart points={valueHistory} label={text.valueVsContributed} />
-              </section>
-            ) : null}
+              ) : (
+                <p className="ovb2-chart-empty">{text.noHistory}</p>
+              )}
+            </section>
             {allocation.length > 0 ? (
               <section className="ovb2-card ovb2-donut-card" aria-label={text.allocation}>
                 <h3>{text.allocation}</h3>
-                <p className="ovb2-sub">{text.allocationSub}</p>
+                <p className="ovb2-sub">{text.allocationSub} · {fundCount} {text.fundCount}</p>
                 <AllocationDonut allocation={allocation} totalLabel={assets} totalSub={text.totalValue} />
               </section>
             ) : null}
@@ -633,7 +622,7 @@ export default function OverviewFrame(props: OverviewFrameProps) {
             <Link to="/goals" className="ovb2-card ovb2-mile" aria-label={text.nextMilestone}>
               <div className="ovb2-milehead">
                 <h3>🎯 {text.nextMilestone}</h3>
-                <span className="ovb2-action-arrow" aria-hidden="true">↗</span>
+                <span className="ovb2-action-arrow" aria-hidden="true">›</span>
               </div>
               <p className="ovb2-sub">{text.noFixedTarget}</p>
               <div className="ovb2-bar"><i style={{ width: `${Math.min(100, Math.max(0, milestone.progressPct))}%` }} /></div>
@@ -663,6 +652,6 @@ export default function OverviewFrame(props: OverviewFrameProps) {
           ) : null}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

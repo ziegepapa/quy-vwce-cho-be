@@ -9,11 +9,13 @@ type PreviewLocale = "vi" | "de";
 function entryCopy(locale: PreviewLocale) {
   return locale === "de" ? {
     start: "Starten",
+    tagline: "Dein Vermögen. Klar im Blick.",
     login: "Anmelden",
     missingConfig: "Anmeldung nicht konfiguriert",
     overview: "Übersicht",
   } : {
     start: "Bắt đầu",
+    tagline: "Tài sản của bạn. Luôn rõ ràng.",
     login: "Đăng nhập",
     missingConfig: "Chưa cấu hình đăng nhập",
     overview: "Tổng quan",
@@ -38,7 +40,10 @@ async function openPrivateVaultEntry(page: Page, locale: PreviewLocale = "vi") {
   const supportedEntry = authEntryHeading.or(localVaultEntry);
 
   await expect(startButton.or(supportedEntry)).toBeVisible();
-  if (await startButton.isVisible()) await startButton.click();
+  if (await startButton.isVisible()) {
+    await expect(page.getByRole("heading", { name: copy.tagline })).toBeVisible();
+    await startButton.click();
+  }
   await expect(supportedEntry).toBeVisible();
 
   return { loginHeading, missingConfigHeading, localVaultEntry };
@@ -88,7 +93,7 @@ test("private-vault entry point remains usable", async ({ page }) => {
     await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByLabel("Mật khẩu")).toBeVisible();
     await expect(page.getByText("Tối thiểu 14 ký tự")).toBeVisible();
-    await expect(page.getByText(/Kho gia đình riêng tư/)).toBeVisible();
+    await expect(page.getByText(/Vault riêng tư/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Đăng nhập", exact: true })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Tạo tài khoản mới" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Quên mật khẩu?" })).toBeVisible();
@@ -107,13 +112,13 @@ test("German private-vault entry remains locale-pure and keyboard reachable", as
 
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
   if (await loginHeading.isVisible()) {
-    await expect(page.getByText("Privater Familien-Vault. Neue Konten werden ausschließlich vom Owner angelegt und bestätigt.")).toBeVisible();
+    await expect(page.getByText("Privater Vault. Neue Konten werden ausschließlich vom Owner angelegt und bestätigt.")).toBeVisible();
     await expect(page.locator("#email")).toBeVisible();
     await page.locator("#email").focus();
     await page.keyboard.press("Tab");
     await expect(page.locator("#password")).toBeFocused();
     await expect(page.getByRole("button", { name: "Passwort vergessen?", exact: true })).toBeVisible();
-    await expect(page.getByText("Kho gia đình riêng tư")).toHaveCount(0);
+    await expect(page.getByText("Vault riêng tư")).toHaveCount(0);
     await expect(page.getByText("Đăng nhập", { exact: true })).toHaveCount(0);
   } else if (await missingConfigHeading.isVisible()) {
     await expect(missingConfigHeading).toBeVisible();
@@ -132,7 +137,7 @@ test("mobile local-vault routes keep primary controls reachable without horizont
   for (const route of ["./", "./#/transactions", "./#/settings"]) {
     await page.goto(route, { waitUntil: "networkidle" });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-    const dockHeights = await page.locator(".bottom-dock a").evaluateAll((links) => links.map((link) => Math.round(link.getBoundingClientRect().height)));
+    const dockHeights = await page.locator(".bottom-dock .pb").evaluateAll((links) => links.map((link) => Math.round(link.getBoundingClientRect().height)));
     expect(dockHeights).toHaveLength(4);
     expect(dockHeights.every((height) => height >= 44)).toBe(true);
   }

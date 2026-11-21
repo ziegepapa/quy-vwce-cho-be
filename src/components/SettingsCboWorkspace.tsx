@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { AppLocale } from "../lib/locale";
 import type { AppSettings, PlanTarget } from "../lib/types";
-import type { ThemeChoice } from "../lib/theme";
+import { THEME_OPTIONS, type ThemeChoice } from "../lib/theme";
 import { IconArchive, IconCash, IconChevronRight, IconClose, IconGoal, IconLanguage, IconLock, IconShield, IconSim, IconSliders, IconSync, IconUpload } from "./Icons";
 import "../styles/settings-cbo.css";
 import "../styles/settings-v2.css";
@@ -133,7 +133,8 @@ function buildContributionInsight(
 
 function buildYearlyPlanRows(settings: AppSettings, target: PlanTarget, deRiskYears: number, currentYear: number): YearlyPlanRow[] {
   const start = planDate(settings.startDate, currentYear);
-  const goal = planDate(target.targetUseDate || settings.endDate, currentYear);
+  if (!target.targetUseDate) return [];
+  const goal = planDate(target.targetUseDate, currentYear);
   if (!start || !goal) return [];
 
   const startYear = start.getFullYear();
@@ -172,7 +173,7 @@ function buildYearlyPlanRows(settings: AppSettings, target: PlanTarget, deRiskYe
 function copyFor(locale: AppLocale) {
   if (locale === "de") return {
     title: "Einstellungen", tabs: { general: "Allgemein", prices: "Kurse", data: "Daten" }, saved: "Gespeichert",
-    fund: "FAMILIENFONDS", editProfile: "Profil bearbeiten", profile: "Familienprofil", planName: "Name des Plans", childName: "Name des Kindes", account: "Konto läuft auf", parent: "Eltern", child: "Kind",
+    fund: "FAMILIENFONDS", editProfile: "Profil bearbeiten", profile: "Planprofil", planName: "Name des Plans", childName: "Name des Kindes", account: "Konto läuft auf", parent: "Eltern", child: "Kind",
     plan: "Plan", planEmpty: "Noch kein Ziel", planEmptyCopy: "Hinterlegen Sie Jahr und Zielbetrag, um den Jahresüberblick zu sehen.", addGoal: "Ziel hinzufügen", configurePlan: "Plan anpassen", annual: "DIESES JAHR", disclaimer: "Illustrative Ansicht · erfasste Buchungen bleiben unverändert.",
     phase: { accumulate: ["Aufbau", "Noch weit bis zum Zieltermin – Beiträge werden im Aufbau-Szenario gezeigt."], transition: ["Übergang", "Der Sicherheitszeitraum beginnt – Beiträge werden als neutrale Szenarioansicht gezeigt."], protect: ["Schutz", "Der Zieltermin rückt näher – der sichere Teil steht im Vordergrund."], use: ["Verwenden", "Zieljahr erreicht – bestätigten Bedarf und verfügbare Mittel vergleichen."] },
     contribution: "Monatlicher Beitrag", contributionHint: "Nur Vorschau · keine Buchung", contributionYear: "Jahr",
@@ -193,7 +194,7 @@ function copyFor(locale: AppLocale) {
   };
   return {
     title: "Cài đặt", tabs: { general: "Chung", prices: "Giá", data: "Dữ liệu" }, saved: "Đã lưu",
-    fund: "QUỸ GIA ĐÌNH", editProfile: "Chỉnh hồ sơ", profile: "Hồ sơ gia đình", planName: "Tên kế hoạch", childName: "Tên bé", account: "Tài khoản đứng tên", parent: "Cha/mẹ", child: "Bé",
+    fund: "QUỸ GIA ĐÌNH", editProfile: "Chỉnh hồ sơ", profile: "Hồ sơ kế hoạch", planName: "Tên kế hoạch", childName: "Tên bé", account: "Tài khoản đứng tên", parent: "Cha/mẹ", child: "Bé",
     plan: "Kế hoạch", planEmpty: "Chưa có mục tiêu", planEmptyCopy: "Thêm năm và số tiền cần để xem kế hoạch năm nay.", addGoal: "Thêm mục tiêu", configurePlan: "Tùy chỉnh kế hoạch", annual: "NĂM NAY", disclaimer: "Gợi ý minh họa · không thay đổi giao dịch đã ghi.",
     phase: { accumulate: ["Tích lũy", "Còn xa hạn — khoản góp được hiển thị theo pha tích lũy."], transition: ["Chuyển dần", "Đang vào cửa sổ an toàn — bảng chỉ là kịch bản minh họa."], protect: ["Bảo vệ", "Gần hạn — phần an toàn được hiển thị nổi bật."], use: ["Rút", "Năm cần tiền — đối chiếu nhu cầu với phần an toàn đã xác nhận."] },
     contribution: "Khoản góp hằng tháng", contributionHint: "Chỉ minh họa · không tạo giao dịch", contributionYear: "năm",
@@ -271,7 +272,10 @@ export default function SettingsCboWorkspace(props: Props) {
   const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
   const goalYear = /^\d{4}/.test(target.targetUseDate) ? Number(target.targetUseDate.slice(0, 4)) : currentYear;
-  const themes: Array<{ value: ThemeChoice; label: string }> = props.locale === "de" ? [{ value: "premium", label: "Vault" }, { value: "dark", label: "Ozean" }, { value: "light", label: "Ember" }] : [{ value: "premium", label: "Vault" }, { value: "dark", label: "Ocean" }, { value: "light", label: "Ember" }];
+  const germanThemes: Record<ThemeChoice, string> = { light: "Hell", dark: "Dunkel", premium: "Aurora" };
+  const themes = props.locale === "de"
+    ? THEME_OPTIONS.map(({ value }) => ({ value, label: germanThemes[value] }))
+    : THEME_OPTIONS;
   const contributionParsed = parseNumber(contributionDraft);
   const partialEuroForInsight =
     !target.needFullAmount && Number.isFinite(target.partialNeedEuro) && (target.partialNeedEuro ?? 0) > 0
@@ -321,8 +325,8 @@ export default function SettingsCboWorkspace(props: Props) {
   const avatarInitial = (props.settings.childName || planName).trim().slice(0, 1).toUpperCase();
 
   return <div className="set2">
+    <header className="mwj-page-head mwj-settings-head">
     <h1 className="set2-title">{copy.title}</h1>
-
     <button type="button" className="set2-profile" onClick={() => setSheet("profile")}>
       <span className="set2-avatar" aria-hidden="true">{avatarInitial}</span>
       <span className="set2-ptext">
@@ -331,7 +335,9 @@ export default function SettingsCboWorkspace(props: Props) {
       </span>
       <IconChevronRight aria-hidden="true" />
     </button>
+    </header>
 
+    <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.planGroup}</h2>
     <div className="set2-group">
       <SetRow icon={<IconCash />} label={copy.contribution} value={contribution != null ? money(contribution, props.locale) : "—"} onClick={() => { setPlanFocus("contribution"); setSheet("plan"); }} />
@@ -340,21 +346,28 @@ export default function SettingsCboWorkspace(props: Props) {
       <SetRow icon={<IconArchive />} label={copy.yearPlanTitle} onClick={() => { setPlanFocus("yearplan"); setSheet("plan"); }} />
     </div>
 
+    </section>
+    <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.displayGroup}</h2>
     <div className="set2-group">
       <button type="button" className="set2-row" onClick={() => setSheet("theme")}>
         <span className="set2-ric" aria-hidden="true"><IconSliders /></span>
         <span className="set2-rtitle">{copy.appearance}</span>
-        <span className="set2-dots" aria-hidden="true">
-          {(Object.keys(THEME_DOT) as ThemeChoice[]).map((value) => (
-            <i key={value} style={{ background: THEME_DOT[value] }} className={props.theme === value ? "on" : ""} />
-          ))}
+        <span className="set2-rval set2-theme-current">
+          <span className="set2-dots" aria-hidden="true">
+            {themes.map(({ value }) => (
+              <i key={value} style={{ background: THEME_DOT[value] }} className={props.theme === value ? "on" : ""} />
+            ))}
+          </span>
+          {themes.find((theme) => theme.value === props.theme)?.label}
         </span>
         <IconChevronRight aria-hidden="true" />
       </button>
       <SetRow icon={<IconLanguage />} label={copy.language} value={props.locale === "de" ? "Deutsch" : "Tiếng Việt"} onClick={() => setSheet("language")} />
     </div>
 
+    </section>
+    <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.dataGroup}</h2>
     <div className="set2-group">
       <SetRow icon={<IconArchive />} label={copy.backupRestore} onClick={() => setSheet("transfers")} />
@@ -367,6 +380,8 @@ export default function SettingsCboWorkspace(props: Props) {
       </button>
     </div>
 
+    </section>
+    <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.securityGroup}</h2>
     <div className="set2-group">
       <SetRow icon={<IconLock />} label={copy.passwordRow} onClick={() => props.onOpenChild("password-change")} />
@@ -381,11 +396,19 @@ export default function SettingsCboWorkspace(props: Props) {
       ) : null}
     </div>
 
-    <h2 className="set2-gtitle">{copy.otherGroup}</h2>
-    <div className="set2-group set2-legacy">
-      {props.handoffAction}
-      {props.dangerAction}
-    </div>
+    </section>
+    {props.handoffAction ? (
+      <section className="mwj-settings-group">
+        <h2 className="set2-gtitle">{copy.otherGroup}</h2>
+        <div className="set2-group set2-legacy">{props.handoffAction}</div>
+      </section>
+    ) : null}
+    {props.dangerAction ? (
+      <section className="mwj-settings-group set2-danger">
+        <h2 className="set2-gtitle">{props.locale === "de" ? "Daten löschen" : "Xóa dữ liệu"}</h2>
+        <div className="set2-group set2-legacy">{props.dangerAction}</div>
+      </section>
+    ) : null}
 
     <p className="set2-foot">
       <span className="set2-saved" role="status">✓ {props.saveLabel || copy.saved}</span>

@@ -43,7 +43,7 @@ vi.mock("../lib/recoveryReadOnly", () => ({
   useRecoveryReadOnly: () => ({ readOnly: false, showBlocked: vi.fn() }),
 }));
 vi.mock("../lib/theme", () => ({
-  THEME_OPTIONS: [{ value: "system", label: "Hệ thống" }],
+  THEME_OPTIONS: [{ value: "light", label: "Sáng" }, { value: "dark", label: "Tối" }, { value: "premium", label: "Aurora" }],
   persistTheme: vi.fn(),
   readTheme: () => "system",
 }));
@@ -136,10 +136,10 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     expect(screen.getByRole("button", { name: /Sprache/ })).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Darstellung" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Darstellung/ }));
     const themeDialog = await screen.findByRole("dialog", { name: "Darstellung" });
-    expect(within(themeDialog).getByText("Ozean")).toBeTruthy();
-    expect(screen.queryByText("Ocean")).toBeNull();
+    expect(within(themeDialog).getByText("Dunkel")).toBeTruthy();
+    expect(screen.queryByText("Tối")).toBeNull();
     fireEvent.click(within(themeDialog).getByRole("button", { name: "Schließen" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
@@ -386,7 +386,7 @@ describe("Settings operation errors", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(await screen.findByRole("heading", { name: "DỮ LIỆU" })).toBeTruthy();
     const deleteButton = await waitFor(() => {
-      const button = [...document.querySelectorAll("button")].find((candidate) => candidate.textContent?.includes("Xóa toàn bộ dữ liệu local"));
+      const button = [...document.querySelectorAll("button")].find((candidate) => candidate.textContent?.includes("Xóa toàn bộ dữ liệu trên thiết bị"));
       expect(button).toBeTruthy();
       return button as HTMLButtonElement;
     });

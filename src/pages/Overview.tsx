@@ -69,7 +69,7 @@ function overviewPageCopy(locale: "vi" | "de") {
     deviceDataSafe: "Ihre Gerätedaten bleiben unverändert.",
     retry: "Erneut versuchen",
     valuedAssets: "Bewertetes Vermögen",
-    portfolioLabel: "Gesamtportfolio",
+    portfolioLabel: "Vermögen heute",
     quoteUpdated: "Kursupdate erfolgreich",
     txBuy: (ticker: string) => `Kauf ${ticker} ausgeführt`,
     txBuyDetail: (shares: string, amount: string) => `Kauf ${shares} Ant. · ${amount}`,
@@ -80,7 +80,7 @@ function overviewPageCopy(locale: "vi" | "de") {
     deviceDataSafe: "Dữ liệu trên thiết bị vẫn được giữ nguyên.",
     retry: "Thử lại",
     valuedAssets: "Tài sản đã định giá",
-    portfolioLabel: "Tổng danh mục",
+    portfolioLabel: "Tài sản hôm nay",
     quoteUpdated: "Cập nhật giá thành công",
     txBuy: (ticker: string) => `Lệnh ${ticker} khớp`,
     txBuyDetail: (shares: string, amount: string) => `Mua ${shares} cp · ${amount}`,
@@ -160,7 +160,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     };
   }, [refreshKey, loadAttempt]);
 
-  // Historical closes for supported funds power the per-fund day-trend metric.
+  // Historical closes for supported funds power the day trend and value chart.
   // This stays best-effort and never blocks the overview or changes the total.
   useEffect(() => {
     let alive = true;
@@ -210,12 +210,12 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       trackInAppCash: settings.trackInAppCash,
     });
     const pnl = hero.pnl;
-    const gainLabel = pnl == null || pnl === 0
+    const gainLabel = pnl == null
       ? null
-      : `${pnl > 0 ? "+" : "−"}${formatMoney(Math.abs(pnl))}`;
+      : `${pnl > 0 ? "+" : pnl < 0 ? "−" : ""}${formatMoney(Math.abs(pnl))}`;
     const gainPctLabel = hero.pnlPct == null
       ? null
-      : `${hero.pnlPct > 0 ? "+" : ""}${hero.pnlPct.toFixed(1).replace(".", ",")}%`;
+      : `${hero.pnlPct > 0 ? "+" : hero.pnlPct < 0 ? "−" : ""}${Math.abs(hero.pnlPct).toFixed(2).replace(".", ",")}%`;
     const currentDate = new Date();
     // Nhịp góp = tháng gần nhất có góp (actual behavior), not the settings.
     const recentPace = computeRecentPace({
@@ -373,9 +373,13 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
       latestPriceDate: snapshot.vwceAsOf ?? "",
       year: selectedYearReviewYear,
     });
+    const historicalQuotes = [...priceHistories].flatMap(([instrumentIsin, points]) =>
+      points.map(({ date, price }) => ({ instrumentIsin, asOf: date, price })),
+    );
     const valueHistory = buildValueHistory({
       transactions,
-      quotes,
+      quotes: [...historicalQuotes, ...quotes.filter((quote) => quote.currency === "EUR")],
+      now: currentDate,
       locale,
       trackInAppCash: settings.trackInAppCash,
     });
@@ -383,6 +387,7 @@ export default function Overview({ refreshKey = 0 }: { refreshKey?: number }) {
     return {
       assetsLabel: snapshot.valueComplete ? text.portfolioLabel : text.valuedAssets,
       assets: formatMoney(hero.assets),
+      valueComplete: snapshot.valueComplete,
       contributedLabel: formatMoney(lifetime.amount),
       gainLabel,
       gainPctLabel,

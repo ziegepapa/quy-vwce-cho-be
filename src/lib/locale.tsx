@@ -5,8 +5,14 @@ export const LOCALE_KEY = "vwce-locale";
 
 const copy = {
   vi: {
+    tagline: "Tài sản của bạn. Luôn rõ ràng.",
+    appDescription: "Theo dõi danh mục, đặt mục tiêu và mô phỏng kế hoạch đầu tư dài hạn. Dùng được ngoại tuyến.",
     overview: "Tổng quan",
+    overviewTab: "Tổng quan",
     transactions: "Giao dịch",
+    timeline: "Dòng thời gian",
+    goals: "Mục tiêu",
+    more: "Thêm",
     simulation: "Mô phỏng",
     settings: "Cài đặt",
     sync: "Đồng bộ",
@@ -59,7 +65,7 @@ const copy = {
     exportTransactionsCsvSub: "Bảng dữ liệu dùng cho phân tích ngoài ứng dụng",
     restoreDeviceData: "Khôi phục dữ liệu trên thiết bị",
     restoreDeviceDataSub: "Mở quy trình kiểm tra dữ liệu an toàn",
-    clearLocalData: "Xóa toàn bộ dữ liệu local",
+    clearLocalData: "Xóa toàn bộ dữ liệu trên thiết bị",
     clearLocalDataSub: "Chỉ dùng khi bạn đã có bản sao lưu",
     deleteConfirmText: "Gõ XOA để xác nhận. Hành động này không thể hoàn tác trên thiết bị này.",
     deletePlaceholder: "XOA",
@@ -72,8 +78,14 @@ const copy = {
     settingsAria: "Cài đặt",
   },
   de: {
+    tagline: "Dein Vermögen. Klar im Blick.",
+    appDescription: "Behalte dein Portfolio im Blick, setze Ziele und simuliere deine langfristige Anlage. Auch offline verfügbar.",
     overview: "Übersicht",
+    overviewTab: "Überblick",
     transactions: "Transaktionen",
+    timeline: "Timeline",
+    goals: "Ziele",
+    more: "Mehr",
     simulation: "Simulation",
     settings: "Einstellungen",
     sync: "Synchronisieren",
@@ -158,6 +170,8 @@ export function readLocale(): AppLocale {
 export function applyLocale(locale: AppLocale): void {
   document.documentElement.lang = locale === "de" ? "de" : "vi";
   document.documentElement.dataset.locale = locale;
+  const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+  if (description) description.content = copy[locale].appDescription;
 }
 
 export function persistLocale(locale: AppLocale): void {

@@ -30,6 +30,7 @@ import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
 import { analyzeTransactions } from "../lib/transactionAnalytics";
 import ActionMenu from "../components/ActionMenu";
+import { IconTx } from "../components/Icons";
 import {
   findTransactionQualityIssues,
   type TransactionQualityCode,
@@ -304,6 +305,19 @@ export default function Transactions() {
     const values = new Set(txs.map((tx) => tx.date.slice(0, 4)));
     return [...values].sort().reverse();
   }, [txs]);
+
+  const yearTabsRef = useRef<HTMLDivElement>(null);
+  const [yearTabsOverflow, setYearTabsOverflow] = useState(false);
+  useEffect(() => {
+    const tabs = yearTabsRef.current;
+    if (!tabs) return;
+    const measure = () => setYearTabsOverflow(tabs.scrollWidth > tabs.clientWidth);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(tabs);
+    return () => observer.disconnect();
+  }, [years]);
 
   const typeSearchTerms = useMemo(
     () => Object.fromEntries(types.map((type) => [type.value, type.label])) as Partial<Record<TxType, string>>,
@@ -746,12 +760,8 @@ export default function Transactions() {
   return (
     <main className="txv2-screen tx-ledger-redesign" aria-label={text.title}>
       <div className="tx-wrap">
-        <header className="txv2-head tx-ledger-head">
-          <div className="tx-ledger-heading">
-            <span className="tx-ledger-kicker">{locale === "de" ? "DEIN INVESTMENT-LOGBUCH" : "SỔ NHẬT KÝ ĐẦU TƯ"}</span>
-            <h1 className="txv2-title">{text.title}</h1>
-            <p>{locale === "de" ? "Käufe, Verkäufe und Geldflüsse — chronologisch an einem Ort." : "Mỗi lần mua, bán và dòng tiền — được ghi lại theo thời gian."}</p>
-          </div>
+        <header className="txv2-head tx-ledger-head mwj-page-head">
+          <h1 className="txv2-title">{text.title}</h1>
           <div className="txv2-head-actions tx-ledger-actions">
             {!readOnly ? (
               <details className="tx-import-tools" onToggle={(event) => setPdfToolsOpen(event.currentTarget.open)}>
@@ -765,37 +775,29 @@ export default function Transactions() {
           </div>
         </header>
 
-        <section className="tx-ledger-pulse" aria-label={text.journal}>
-          <div className="tx-ledger-pulse-top">
-            <span>{locale === "de" ? "AKTIVITÄT" : "HOẠT ĐỘNG"}</span>
-            <span className="tx-ledger-record-count"><i />{txs.length} {locale === "de" ? "Einträge" : "bản ghi"}</span>
-          </div>
-          <div className="tx-ledger-pulse-grid">
-            <div className="tx-ledger-stat tx-ledger-stat-primary">
-              <span>{locale === "de" ? "Buchungen" : "Giao dịch"}</span>
-              <strong>{txs.length}</strong>
-              <small>{locale === "de" ? "im gesamten Verlauf" : "trong toàn bộ lịch sử"}</small>
-            </div>
-            <div className="tx-ledger-stat">
-              <span>{locale === "de" ? "Trades" : "Lệnh mua/bán"}</span>
-              <strong>{securityTransactionCount}</strong>
-              <small>{locale === "de" ? "Käufe & Verkäufe" : "mua và bán"}</small>
-            </div>
-            <div className="tx-ledger-stat">
-              <span>{locale === "de" ? "Geldbewegung" : "Dòng tiền"}</span>
-              <strong>{incomingCount + outgoingCount}</strong>
-              <small>{locale === "de" ? "Ein- und Ausgänge" : "tiền vào và chi ra"}</small>
-            </div>
-          </div>
+        <section className="tx-ledger-pulse mwj-ledger-summary" aria-label={text.journal}>
+          <h2 className="sr-only">{locale === "de" ? "Aktivität" : "Hoạt động"}</h2>
+          <dl className="mwj-ledger-stats">
+            <div><dt>{text.contributed}</dt><dd>{formatDisplayMoney(analysis.contributed, locale)}</dd></div>
+            <div><dt>{text.transactionCount}</dt><dd>{txs.length}</dd></div>
+            <div><dt>{text.year}</dt><dd>{yearFilter !== "all" ? yearFilter : years.length === 1 ? years[0] : text.all}</dd></div>
+          </dl>
+          <p className="mwj-ledger-summary-note">{locale === "de"
+            ? `${securityTransactionCount} Wertpapierbuchungen · ${incomingCount + outgoingCount} Geldbewegungen`
+            : `${securityTransactionCount} lệnh chứng khoán · ${incomingCount + outgoingCount} giao dịch tiền`}</p>
         </section>
 
         <section className="tx-ledger-workspace" aria-label={text.journal}>
           <div className="tx-ledger-workspace-head">
             <div>
-              <span className="tx-ledger-section-kicker">{locale === "de" ? "ARCHIV" : "TRA CỨU"}</span>
               <h2>{text.journal}</h2>
             </div>
-            <span className="tx-ledger-total">{listWindow.total} {locale === "de" ? "Treffer" : "kết quả"}</span>
+            <div className="tx-ledger-total" role="status">
+              <span>{yearFilter !== "all"
+                ? text.yearSummary.replace("{count}", String(listWindow.total)).replace("{year}", yearFilter)
+                : text.allYearsSummary.replace("{count}", String(listWindow.total))}</span>
+              {listWindow.hasMore ? <span>{text.visibleCount.replace("{visible}", String(listWindow.visible)).replace("{total}", String(listWindow.total))}</span> : null}
+            </div>
           </div>
 
           <div className="txv2-tools tx-ledger-tools">
@@ -837,36 +839,31 @@ export default function Transactions() {
             </div>
           ) : null}
 
-          <div className="tx-ledger-years-head">
-            <h3>{locale === "de" ? "Nach Jahr" : "Duyệt theo năm"}</h3>
-            <span>{yearFilter === "all" ? text.all : yearFilter}</span>
-          </div>
-          <div className="txv2-years" role="tablist" aria-label={text.yearPills}>
-            {years.map((year) => (
-              <button
-                key={year}
-                type="button"
-                role="tab"
-                aria-selected={yearFilter === year}
-                className={"txv2-ypill" + (yearFilter === year ? " on" : "")}
-                onClick={() => selectYear(year)}
-              >
-                {year}
-              </button>
-            ))}
-          </div>
-          <div className="tx-ledger-result-meta">
-            <p className="txv2-ysum" role="status" aria-live="polite">
-              {yearFilter !== "all"
-                ? text.yearSummary.replace("{count}", String(listWindow.total)).replace("{year}", yearFilter)
-                : text.allYearsSummary.replace("{count}", String(listWindow.total))}
-            </p>
-            <span className="tx-ledger-visible-count" aria-live="polite">
-              {listWindow.hasMore
-                ? text.visibleCount.replace("{visible}", String(listWindow.visible)).replace("{total}", String(listWindow.total))
-                : text.allVisible.replace("{total}", String(listWindow.total))}
-            </span>
-          </div>
+          {years.length > 0 ? (
+            <div className="tx-ledger-year-controls">
+              <div className="tx-ledger-years-head">
+                <h3>{text.yearPills}</h3>
+                {yearTabsOverflow ? (
+                  <span id="tx-year-scroll-hint">{locale === "de" ? "↔ Seitlich scrollen" : "↔ Cuộn ngang để xem thêm"}</span>
+                ) : null}
+              </div>
+              <div className="txv2-years" role="tablist" ref={yearTabsRef} aria-label={text.yearPills} aria-describedby={yearTabsOverflow ? "tx-year-scroll-hint" : undefined}>
+                <button type="button" role="tab" aria-selected={yearFilter === "all"} className={"txv2-ypill" + (yearFilter === "all" ? " on" : "")} onClick={() => selectYear("all")}>{text.all}</button>
+                {years.map((year) => (
+                  <button
+                    key={year}
+                    type="button"
+                    role="tab"
+                    aria-selected={yearFilter === year}
+                    className={"txv2-ypill" + (yearFilter === year ? " on" : "")}
+                    onClick={() => selectYear(year)}
+                  >
+                    {year}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {listWindow.total === 0 ? (
             <section className="txv2-empty">
@@ -874,7 +871,7 @@ export default function Transactions() {
               <p>{txs.length === 0 ? text.noTransactions : text.noMatches}</p>
               {txs.length === 0 && !readOnly ? (
                 <button type="button" className="txv2-add-first" onClick={() => openCreate()}>
-                  + {text.quickBuy}
+                  + {text.addFirst}
                 </button>
               ) : null}
             </section>
@@ -904,18 +901,20 @@ export default function Transactions() {
                               ? text.quickSellVall
                               : meta?.label ?? tx.type;
                           const sign = meta?.sign ?? "~";
+                          const fund = transactionIsin === VWCE_ISIN ? "vwce" : transactionIsin === VALL_ISIN ? "vall" : undefined;
+                          const quantity = tx.quantity == null ? null : `${text.quantity}: ${formatDisplayQuantity(tx.quantity, locale)}`;
                           return (
                             <li key={tx.id}>
                               <button
                                 type="button"
                                 className="txv2-row tx-ledger-row"
                                 onClick={() => setDetailId(tx.id)}
-                                aria-label={`${label}, ${formatDisplayDate(tx.date, locale)}, ${formatDisplayMoney(tx.amount, locale)}`}
+                                aria-label={[label, formatDisplayDate(tx.date, locale), formatDisplayMoney(tx.amount, locale), quantity].filter(Boolean).join(", ")}
                               >
-                                <span className={`txv2-ico tx-ledger-kind ${iconClass(tx.type)}`} aria-hidden="true">{iconGlyph(tx.type)}</span>
+                                <span className={`txv2-ico tx-ledger-kind ${iconClass(tx.type)}`} data-fund={fund} aria-hidden="true">{fund ? <IconTx /> : iconGlyph(tx.type)}</span>
                                 <span className="txv2-main">
                                   <span className="txv2-name">{label}</span>
-                                  <span className="txv2-date">{formatDisplayDate(tx.date, locale)}</span>
+                                  <span className="txv2-date"><time dateTime={tx.date}>{formatDisplayDate(tx.date, locale)}</time>{quantity ? <> <span aria-hidden="true">·</span> {quantity}</> : null}</span>
                                 </span>
                                 <span className="tx-ledger-amount-cell">
                                   <span className={"txv2-amt" + (sign === "+" ? " pos" : sign === "-" ? " neg" : "")}>
@@ -949,6 +948,8 @@ export default function Transactions() {
             </>
           )}
         </section>
+
+
       {filterSheetOpen ? (
         <div className="tx-filter-backdrop" role="presentation" onMouseDown={closeFilterSheet}>
           <section

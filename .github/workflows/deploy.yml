@@ -102,6 +102,37 @@ jobs:
           path: test-results/**/visual-evidence-*.png
           if-no-files-found: error
           retention-days: 14
+      # Capture the actual eight mobile routes using an isolated local-only
+      # preview build. No Supabase credentials are used for this fixture; this
+      # does not publish a preview or touch any user's stored portfolio.
+      - name: Build isolated mobile visual preview
+        if: github.event_name == 'pull_request'
+        env:
+          VITE_SUPABASE_URL: ""
+          VITE_SUPABASE_ANON_KEY: ""
+        run: npm run build
+      - name: Verify and capture 390x844 mobile screens
+        if: github.event_name == 'pull_request'
+        run: npx playwright test tests/modern-wealth-journal.e2e.ts --project=chromium
+      - name: Upload eight-screen mobile review images
+        if: github.event_name == 'pull_request' && success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vault-mobile-390x844-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-results/**/overview.png
+            test-results/**/transactions.png
+            test-results/**/timeline.png
+            test-results/**/simulation.png
+            test-results/**/goals.png
+            test-results/**/notfallmappe.png
+            test-results/**/settings.png
+            test-results/**/onboarding.png
+            test-results/**/overview-chart.png
+            test-results/**/transactions-empty.png
+            test-results/**/goals-empty.png
+          if-no-files-found: error
+          retention-days: 14
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
