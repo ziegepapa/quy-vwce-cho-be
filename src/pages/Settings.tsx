@@ -30,6 +30,7 @@ import SettingsPlanStudio from "../components/SettingsPlanStudio";
 import AnnualPlanStudio from "../components/AnnualPlanStudio";
 import SettingsClarityWorkspace from "../components/SettingsClarityWorkspace";
 import SettingsCboWorkspace from "../components/SettingsCboWorkspace";
+import GuardianPanel from "../components/GuardianPanel";
 import LocalDiagnosticsPanel from "../components/LocalDiagnosticsPanel";
 import LocalDataInventoryPanel from "../components/LocalDataInventoryPanel";
 import {
@@ -891,6 +892,7 @@ export default function SettingsPage({
           lastSync={lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : null}
           pricesPanel={<SettingsPricePanel refreshKey={refreshKey} onQuotesChanged={onQuotesChanged} />}
           dataHealthPanel={<LocalDataInventoryPanel localeOverride={locale} />}
+          guardianPanel={<GuardianPanel locale={locale} userId={auth.user?.id ?? null} emailVerified={Boolean(auth.user?.email_confirmed_at)} />}
           syncHealthPanel={syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
           syncConflictPanel={conflictPanel}
           mfaEnrolled={auth.mfaEnrolled}
