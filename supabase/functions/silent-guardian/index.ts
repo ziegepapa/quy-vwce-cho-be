@@ -131,7 +131,11 @@ async function checkSubscription(sub: Subscription): Promise<{ sent: number; fai
   const latest = await adminJson<Subscription[]>(
     `/rest/v1/guardian_subscriptions?select=user_id,enrolled_at&user_id=eq.${encodeURIComponent(sub.user_id)}&enabled=eq.true`,
   );
-  if (latest.length !== 1 || latest[0].enrolled_at !== sub.enrolled_at) {
+  const readiness = await adminJson<{ active: boolean }[]>(
+    "/rest/v1/guardian_service_status?select=active&id=eq.true",
+  );
+  if (latest.length !== 1 || latest[0].enrolled_at !== sub.enrolled_at
+    || readiness.length !== 1 || readiness[0].active !== true) {
     for (const event of newlyReserved) await stamp(sub.user_id, event.key, "failed");
     return { sent: 0, failed: 0 };
   }
