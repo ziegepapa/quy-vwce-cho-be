@@ -1041,12 +1041,22 @@
 .mwj-layout .sim-headline.mwj-sim-projection-first .sim-hero-actions { margin: 0; }
 
 
-/* Journal: useful welcome, real-value progress cover, premium settings. */
-.mwj-welcome-story{display:flex;flex-direction:column}
-.mwj-welcome-benefits{z-index:3;position:relative;display:grid;list-style:none;margin:auto 10px 10px;padding:6px;border-radius:18px;background:#fbf9fff0;box-shadow:0 12px 26px #09193638}
-.mwj-welcome-benefit{display:flex;align-items:center;gap:9px;padding:6px}
-.mwj-welcome-benefit-number{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:10px;background:#eeebff;color:#4c46ae;font:800 12px system-ui}
-.mwj-welcome-benefit-copy strong{color:#192347;font-size:12px}
+/* Approved journal composition: scenic cover, distinct benefits, fixed CTA. */
+.mwj-welcome{justify-content:space-between;gap:9px;padding:calc(12px + var(--safe-top)) 14px calc(12px + var(--safe-bottom))}
+.mwj-welcome-story{flex:none;min-height:0;height:clamp(300px,46svh,440px);background:linear-gradient(180deg,#162b4f80,#162b4f00 75%),url("../assets/overview-mountain.webp") 65% 52%/cover}
+.mwj-welcome-story::after{background:linear-gradient(180deg,#0d1c3799,transparent 62%,#07152b28)}
+.mwj-welcome-copy{text-align:center;padding:33px 17px 12px}
+.mwj-welcome-copy h1{max-width:320px;margin:0 auto 11px;font-size:clamp(31px,8.7vw,43px);line-height:1.1;text-shadow:0 2px 12px #07163266}
+.mwj-welcome-copy p{margin-inline:auto;max-width:280px;text-shadow:0 1px 8px #0716328c}
+.mwj-welcome-benefits{display:grid;gap:2px;list-style:none;margin:0;padding:6px 10px;border-radius:19px;background:var(--surface-raised);border:1px solid var(--border-subtle);box-shadow:var(--shadow-raised)}
+.mwj-welcome-benefit{display:flex;align-items:center;gap:11px;min-height:43px;padding:5px 7px;border-radius:12px}
+.mwj-welcome-benefit+.mwj-welcome-benefit{border-top:1px solid var(--border-subtle)}
+.mwj-welcome-benefit-number{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:10px;background:var(--primary-050);color:var(--primary-600)}
+.mwj-welcome-benefit-number svg{width:19px;height:19px}
+.mwj-welcome-benefit strong{color:var(--text-primary);font-size:13px;line-height:1.25}
+.mwj-welcome-actions{gap:8px}
+.mwj-welcome-actions .mwj-disclaimer{padding:9px 11px;font-size:11px;line-height:1.33}
+@media(max-height:750px){.mwj-welcome-story{height:39svh}.mwj-welcome-benefit{min-height:39px}.mwj-welcome-copy{padding-top:21px}}
 .mwj-layout .mwj-goals .goals-hero{min-height:180px;color:#fff;background:linear-gradient(105deg,#101d3fe8,#1c214ba9),url("../assets/overview-mountain.webp") 66% 55%/cover}
 .mwj-layout .mwj-goals .goals-hero .ring-bg{stroke:#fff5}
 .mwj-layout .mwj-goals .goals-hero .ring-text{fill:#fff}
