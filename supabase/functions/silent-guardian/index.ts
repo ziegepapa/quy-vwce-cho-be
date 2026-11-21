@@ -88,18 +88,23 @@ async function messageId(userId: string, key: string): Promise<string> {
   return Array.from(digest).map((v) => v.toString(16).padStart(2, "0")).join("");
 }
 
-async function send(email: string, userId: string, event: Deliverable): Promise<void> {
-  const sale = event.kind === "recorded_sale";
-  const subject = sale ? "VWCE Vault: Verkaufseintrag überprüfen" : "VWCE Vault: möglichen doppelten Import prüfen";
-  const text = sale
-    ? `Im synchronisierten VWCE Vault wurde ein neuer Verkaufseintrag erfasst. Bitte prüfen Sie den Eintrag direkt in Ihrem Vault. Dies ist keine Bestätigung einer Broker-Ausführung und keine Handelsempfehlung.\n\n${ACTION}`
-    : `Im synchronisierten VWCE Vault gibt es Hinweise auf einen möglicherweise doppelt erfassten importierten Vorgang. Bitte prüfen Sie die Einträge direkt im Vault. Es wurden keine Buchungen verändert.\n\n${ACTION}`;
+async function send(email: string, userId: string, events: Deliverable[]): Promise<void> {
+  const sale = events.some((event) => event.kind === "recorded_sale");
+  const duplicate = events.some((event) => event.kind === "possible_duplicate_import");
+  const subject = "VWCE Vault: wichtige Änderung prüfen";
+  const text = [
+    "Im synchronisierten VWCE Vault wurde eine Änderung entdeckt, die Sie prüfen sollten.",
+    sale ? "Mindestens ein neuer Verkaufseintrag ist im Ledger erfasst (keine Broker-Ausführungsbestätigung)." : "",
+    duplicate ? "Mindestens ein importierter Vorgang könnte doppelt erfasst worden sein." : "",
+    "Es wurden keine Buchungen verändert. Dies ist keine Handelsempfehlung.",
+    ACTION,
+  ].filter(Boolean).join("\n\n");
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${EMAIL_KEY}`,
       "Content-Type": "application/json",
-      "Idempotency-Key": await messageId(userId, event.key),
+      "Idempotency-Key": await messageId(userId, events.map((event) => event.key).sort().join("/")),
     },
     body: JSON.stringify({ from: FROM, to: [email], subject, text }),
   });
@@ -116,22 +121,32 @@ async function checkSubscription(sub: Subscription): Promise<{ sent: number; fai
 
   const rows = await getAllTransactions(sub.user_id);
   const events = detectGuardianSignals(rows, sub.enrolled_at);
-  let sent = 0;
-  let failed = 0;
+  const newlyReserved: Deliverable[] = [];
   for (const event of events.slice(0, 50)) {
-    if (!(await reserve(sub.user_id, event))) continue;
-    try {
-      await send(user.email, sub.user_id, event);
-      await stamp(sub.user_id, event.key, "sent");
-      sent++;
-    } catch {
-      // At-most-once attempt: an ambiguous email-provider response MUST NOT
-      // become repeated alerts. Delivery failure is visible to the operator.
-      failed++;
-      await stamp(sub.user_id, event.key, "failed");
-    }
+    if (await reserve(sub.user_id, event)) newlyReserved.push(event);
   }
-  return { sent, failed };
+  if (newlyReserved.length === 0) return { sent: 0, failed: 0 };
+  // Re-check consent immediately before sending. Changes to subscriptions
+  // cannot create a guaranteed cancellation of an already in-flight email.
+  const latest = await adminJson<Subscription[]>(
+    `/rest/v1/guardian_subscriptions?select=user_id,enrolled_at&user_id=eq.${encodeURIComponent(sub.user_id)}&enabled=eq.true`,
+  );
+  if (latest.length !== 1 || latest[0].enrolled_at !== sub.enrolled_at) {
+    for (const event of newlyReserved) await stamp(sub.user_id, event.key, "failed");
+    return { sent: 0, failed: 0 };
+  }
+  let delivered = false;
+  try {
+    await send(user.email, sub.user_id, newlyReserved);
+    delivered = true;
+  } catch {
+    // At-most-once attempt: ambiguous provider response is never retried as
+    // a second email; recipients will not get a daily notification loop.
+  }
+  for (const event of newlyReserved) {
+    await stamp(sub.user_id, event.key, delivered ? "sent" : "failed");
+  }
+  return { sent: delivered ? 1 : 0, failed: delivered ? 0 : 1 };
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
