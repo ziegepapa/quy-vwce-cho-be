@@ -242,6 +242,26 @@ for (const theme of themes) {
         })).toBe(true);
       }
       await page.screenshot({ path: testInfo.outputPath(`${name}.png`), animations: "disabled" });
+      if (name === "simulation") {
+        const plan = page.getByTestId("simulation-exit-plan");
+        await expect(plan).toBeVisible();
+        // The fixture's Goal is present, but MUST NOT be selected automatically.
+        await expect(page.locator("#exit-plan-goal")).toHaveValue("");
+        await expect(plan.locator("table")).toHaveCount(0);
+        await plan.evaluate((element) => element.scrollIntoView({ block: "start" }));
+        await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-empty.png"), animations: "disabled" });
+
+        // Only an explicit owner action reveals the illustrative schedule.
+        await page.locator("#exit-plan-goal").selectOption("test-goal");
+        await expect(plan.locator("table")).toHaveCount(0);
+        await page.locator("#exit-plan-budget").fill("600,00");
+        await expect(plan.locator("tbody tr")).toHaveCount(6);
+        await expect(plan.locator("tbody tr").last()).toContainText(/0,00/);
+        await assertFits(page);
+        await page.locator(".exit-plan-table").evaluate((element) => element.scrollIntoView({ block: "center" }));
+        await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-schedule.png"), animations: "disabled" });
+      }
+
       if (name === "overview") {
         await page.locator(".ovb2-chart-card").scrollIntoViewIfNeeded();
         await page.screenshot({ path: testInfo.outputPath("overview-chart.png"), animations: "disabled" });
