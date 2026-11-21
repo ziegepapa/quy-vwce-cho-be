@@ -777,7 +777,7 @@ export default function Transactions() {
 
         <section className="tx-ledger-pulse mwj-ledger-summary" aria-label={text.journal}>
           <div className="mwj-ledger-summary-top">
-            <span className="mwj-ledger-summary-kicker">{text.journal}</span>
+            <h2 className="mwj-ledger-summary-kicker">{locale === "de" ? "Aktivität" : "Hoạt động"}</h2>
             <span className="mwj-ledger-summary-period">{yearFilter === "all" ? text.all : yearFilter}</span>
           </div>
           <dl className="mwj-ledger-stats">
