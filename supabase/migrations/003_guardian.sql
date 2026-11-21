@@ -76,3 +76,24 @@ grant select on public.guardian_service_status to authenticated;
 drop policy if exists guardian_read_service_status on public.guardian_service_status;
 create policy guardian_read_service_status on public.guardian_service_status
   for select to authenticated using (id = true);
+
+-- Server-only operational heartbeat. This is not a ledger or browser API.
+-- Every scheduled run reports an attempt, outcome and last completed success.
+-- Do not infer successful monitoring merely from an HTTP response.
+create table if not exists public.guardian_run_health (
+  id boolean primary key default true check (id),
+  last_started_at timestamptz,
+  last_succeeded_at timestamptz,
+  last_failed_at timestamptz,
+  last_outcome text not null default 'never'
+    check (last_outcome in ('never','running','success','degraded','disabled','failed')),
+  last_error_code text
+    check (last_error_code in ('config','cloud_read','cloud_write','provider','partial','unexpected')),
+  failure_streak integer not null default 0 check (failure_streak >= 0),
+  last_duration_ms integer check (last_duration_ms between 0 and 300000),
+  updated_at timestamptz not null default now()
+);
+alter table public.guardian_run_health enable row level security;
+insert into public.guardian_run_health(id) values(true) on conflict(id) do nothing;
+revoke all on public.guardian_run_health from public, anon, authenticated;
+-- service_role bypasses RLS, and clients have neither grants nor policies.
