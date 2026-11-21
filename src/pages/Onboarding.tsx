@@ -1,4 +1,5 @@
 import { useLocale } from "../lib/locale";
+import { IconTrend, IconGoal, IconShield } from "../components/Icons";
 
 function onboardingCopy(locale: "vi" | "de") {
   return locale === "de" ? {
@@ -33,17 +34,17 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
           <h1>{t("tagline")}</h1>
           <p>{text.subtitle}</p>
         </div>
-        <ul className="mwj-welcome-benefits">
-          {text.features.map((feature, index) => (
-            <li key={feature.title} className="mwj-welcome-benefit">
-              <span className="mwj-welcome-benefit-number" aria-hidden="true">{"0"}{index + 1}</span>
-              <span className="mwj-welcome-benefit-copy">
-                <strong>{feature.title}</strong>
-              </span>
-            </li>
-          ))}
-        </ul>
       </div>
+      <ul className="mwj-welcome-benefits">
+        {text.features.map((feature, index) => (
+          <li key={feature.title} className="mwj-welcome-benefit">
+            <span className="mwj-welcome-benefit-number" aria-hidden="true">
+              {index === 0 ? <IconTrend /> : index === 1 ? <IconGoal /> : <IconShield />}
+            </span>
+            <strong>{feature.title}</strong>
+          </li>
+        ))}
+      </ul>
       <div className="mwj-welcome-actions">
         <p className="mwj-disclaimer">{text.disclaimer}</p>
         <button className="mwj-start" type="button" onClick={onDone}>{text.start}<span aria-hidden="true">→</span></button>
