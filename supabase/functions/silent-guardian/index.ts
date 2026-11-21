@@ -1,3 +1,4 @@
+import { retryRead } from "./retry.ts";
 import { detectGuardianSignals } from "./rules.ts";
 import type { SyncedGuardianRow, GuardianSignal } from "./rules.ts";
 
@@ -9,6 +10,7 @@ import type { SyncedGuardianRow, GuardianSignal } from "./rules.ts";
 const BASE = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const CRON_SECRET = Deno.env.get("GUARDIAN_CRON_SECRET") ?? "";
+const WATCHDOG_SECRET = Deno.env.get("GUARDIAN_WATCHDOG_SECRET") ?? "";
 const EMAIL_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM = Deno.env.get("GUARDIAN_FROM_EMAIL") ?? "";
 const ACTION = "https://ziegepapa.github.io/quy-vwce-cho-be/#/transactions";
@@ -27,14 +29,20 @@ function equalSecret(a: string, b: string): boolean {
 }
 
 async function adminRequest(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(`${BASE}${path}`, {
+  const execute = () => fetch(`${BASE}${path}`, {
     ...init,
     headers: {
       apikey: SERVICE_KEY,
       Authorization: `Bearer ${SERVICE_KEY}`,
       ...(init?.headers ?? {}),
     },
+    signal: AbortSignal.timeout(9000),
   });
+  // Only GET is retried; a POST to Resend or an ambiguous receipt mutation
+  // must never become a second delivery attempt.
+  return !init?.method || init.method.toUpperCase() === "GET"
+    ? retryRead(execute)
+    : execute();
 }
 
 async function adminJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -153,21 +161,82 @@ async function checkSubscription(sub: Subscription): Promise<{ sent: number; fai
   return { sent: delivered ? 1 : 0, failed: delivered ? 0 : 1 };
 }
 
+type GuardianHealth = {
+  last_started_at: string | null;
+  last_succeeded_at: string | null;
+  last_failed_at: string | null;
+  last_outcome: "never" | "running" | "success" | "degraded" | "disabled" | "failed";
+  last_error_code: string | null;
+  failure_streak: number;
+};
+
+async function markRun(input: Record<string, string | number | null>): Promise<void> {
+  const response = await adminRequest("/rest/v1/guardian_run_health?id=eq.true", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...input, updated_at: new Date().toISOString() }),
+  });
+  if (!response.ok) throw new Error(`guardian_health_http_${response.status}`);
+}
+
+function elapsed(start: number): number {
+  return Math.min(300000, Math.max(0, Math.floor(performance.now() - start)));
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
+  if (req.method === "GET") {
+    // Authenticated status only. No financial, identity, or subscription data.
+    // The independent GitHub watchdog uses a DIFFERENT secret than Cron.
+    if (WATCHDOG_SECRET.length < 32 ||
+        !equalSecret(req.headers.get("x-guardian-watchdog-secret") ?? "", WATCHDOG_SECRET)) {
+      return new Response(null, { status: 403 });
+    }
+    if (!BASE.startsWith("https://") || !SERVICE_KEY) {
+      return Response.json({ error: "not_configured" }, { status: 503 });
+    }
+    try {
+      const [rows, gate] = await Promise.all([
+        adminJson<GuardianHealth[]>("/rest/v1/guardian_run_health?select=last_started_at,last_succeeded_at,last_failed_at,last_outcome,last_error_code,failure_streak&id=eq.true"),
+        adminJson<{ active: boolean }[]>("/rest/v1/guardian_service_status?select=active&id=eq.true"),
+      ]);
+      if (rows.length !== 1 || gate.length !== 1) throw new Error("guardian_health_missing");
+      return Response.json({
+        active: gate[0].active === true,
+        lastStartedAt: rows[0].last_started_at,
+        lastSucceededAt: rows[0].last_succeeded_at,
+        lastOutcome: rows[0].last_outcome,
+        lastErrorCode: rows[0].last_error_code,
+        failureStreak: rows[0].failure_streak,
+      }, { headers: { "Cache-Control": "no-store" } });
+    } catch {
+      return Response.json({ error: "health_unavailable" }, { status: 503 });
+    }
+  }
   if (req.method !== "POST") return new Response(null, { status: 405 });
-  if (!CRON_SECRET || !equalSecret(req.headers.get("x-guardian-secret") ?? "", CRON_SECRET)) {
+  if (CRON_SECRET.length < 32 || !equalSecret(req.headers.get("x-guardian-secret") ?? "", CRON_SECRET)) {
     return new Response(null, { status: 403 });
   }
   if (!BASE.startsWith("https://") || !SERVICE_KEY || !EMAIL_KEY || !FROM || !FROM.includes("@")) {
     return Response.json({ error: "not_configured" }, { status: 503 });
   }
+  const start = performance.now();
+  let previousFailures = 0;
   try {
+    const existing = await adminJson<Pick<GuardianHealth, "failure_streak">[]>(
+      "/rest/v1/guardian_run_health?select=failure_streak&id=eq.true",
+    );
+    if (existing.length !== 1) throw new Error("guardian_health_missing");
+    previousFailures = existing[0].failure_streak;
+    await markRun({ last_started_at: new Date().toISOString(), last_outcome: "running", last_error_code: null });
+
     const status = await adminJson<{ active: boolean }[]>(
       "/rest/v1/guardian_service_status?select=active&id=eq.true",
     );
     if (status.length !== 1 || status[0].active !== true) {
+      await markRun({ last_outcome: "disabled", failure_streak: 0, last_duration_ms: elapsed(start) });
       return Response.json({ checked: 0, sent: 0, failed: 0, active: false });
     }
+
     const subscriptions = await adminJson<Subscription[]>(
       "/rest/v1/guardian_subscriptions?select=user_id,enrolled_at&enabled=eq.true&limit=1000",
     );
@@ -180,12 +249,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
         sent += outcome.sent;
         failed += outcome.failed;
       } catch {
-        // Never log user_id, email, transaction IDs or financial details.
+        // Diagnostics are aggregate-only, no user ID or transaction detail.
         failed++;
       }
     }
+    const now = new Date().toISOString();
+    if (failed > 0) {
+      await markRun({
+        last_outcome: "degraded", last_error_code: "partial",
+        last_failed_at: now, failure_streak: previousFailures + 1, last_duration_ms: elapsed(start),
+      });
+    } else {
+      await markRun({
+        last_outcome: "success", last_error_code: null,
+        last_succeeded_at: now, failure_streak: 0, last_duration_ms: elapsed(start),
+      });
+    }
     return Response.json({ checked: subscriptions.length, sent, failed });
   } catch {
+    // An unreliable database connection can prevent recording failure itself;
+    // the independent watchdog will still detect the stale success timestamp.
+    try {
+      await markRun({
+        last_outcome: "failed", last_error_code: "cloud_read",
+        last_failed_at: new Date().toISOString(),
+        failure_streak: previousFailures + 1, last_duration_ms: elapsed(start),
+      });
+    } catch { /* no unsafe fallback to a client write */ }
     return Response.json({ error: "guardian_unavailable" }, { status: 503 });
   }
 });
