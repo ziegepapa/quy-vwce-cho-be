@@ -33,12 +33,12 @@ const contracts = [
     path: "src/components/ExitPlanSection.tsx",
     forbidden: [
       /estimateGermanExitTax/,
-      /\\bafterTax\\b/,
-      /\\bgetPlanPhase\\b/,
-      /\\bequityPct\\b/,
-      /\\bcreateClient\\b/,
-      /\\b(upsertGoal|saveSettings|upsertTransaction|deleteTransaction|insertTransaction)\\b/,
-      /\\b(VWCE_ISIN|VALL_ISIN)\\b/,
+      /\bafterTax\b/,
+      /\bgetPlanPhase\b/,
+      /\bequityPct\b/,
+      /\bcreateClient\b/,
+      /\b(upsertGoal|saveSettings|upsertTransaction|deleteTransaction|insertTransaction)\b/,
+      /\b(VWCE_ISIN|VALL_ISIN)\b/,
     ],
   },
   {
