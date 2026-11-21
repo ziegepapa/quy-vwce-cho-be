@@ -5,6 +5,8 @@ export const LOCALE_KEY = "vwce-locale";
 
 const copy = {
   vi: {
+    tagline: "Tài sản của bạn. Luôn rõ ràng.",
+    appDescription: "Theo dõi danh mục, đặt mục tiêu và mô phỏng kế hoạch đầu tư dài hạn. Dùng được ngoại tuyến.",
     overview: "Tổng quan",
     overviewTab: "Tổng quan",
     transactions: "Giao dịch",
@@ -76,6 +78,8 @@ const copy = {
     settingsAria: "Cài đặt",
   },
   de: {
+    tagline: "Dein Vermögen. Klar im Blick.",
+    appDescription: "Behalte dein Portfolio im Blick, setze Ziele und simuliere deine langfristige Anlage. Auch offline verfügbar.",
     overview: "Übersicht",
     overviewTab: "Überblick",
     transactions: "Transaktionen",
@@ -166,6 +170,8 @@ export function readLocale(): AppLocale {
 export function applyLocale(locale: AppLocale): void {
   document.documentElement.lang = locale === "de" ? "de" : "vi";
   document.documentElement.dataset.locale = locale;
+  const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+  if (description) description.content = copy[locale].appDescription;
 }
 
 export function persistLocale(locale: AppLocale): void {

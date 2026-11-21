@@ -91,7 +91,7 @@ export default function NotfallmappePage() {
         // Make the edit handlers ready in the same commit as the loaded UI.
         // Waiting for the data→ref effect leaves a one-render window where the
         // first user edit is ignored because dataRef is still null.
-        const nextData = nextSettings.notfallmappe ?? defaultNotfallmappe();
+        const nextData = nextSettings.notfallmappe ?? defaultNotfallmappe(locale);
         dataRef.current = nextData;
         setSettings(nextSettings);
         setData(nextData);
@@ -106,7 +106,7 @@ export default function NotfallmappePage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [initialLoadAttempt]);
+  }, [initialLoadAttempt, locale]);
 
   const snap = useMemo(() => {
     // Tổng tài sản = chứng khoán theo giá mới nhất + tiền mặt thực có.

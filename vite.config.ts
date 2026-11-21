@@ -28,9 +28,9 @@ export default defineConfig({
       includeAssets: ["icons/*.svg", "icons/*.png"],
       manifest: {
         id: "/quy-vwce-cho-be/",
-        name: "Qu\u1ef9 VWCE cho b\u00e9",
-        short_name: "VWCE b\u00e9",
-        description: "Theo d\u00f5i k\u1ebf ho\u1ea1ch VWCE d\u00e0i h\u1ea1n, g\u00f3p \u0111\u1ec1u 120 \u20ac/th\u00e1ng, kh\u00f4ng c\u00f3 ng\u00e0y \u0111\u00edch c\u1ed1 \u0111\u1ecbnh. D\u00f9ng \u0111\u01b0\u1ee3c offline.",
+        name: "VWCE Vault",
+        short_name: "VWCE Vault",
+        description: "Theo dõi danh mục, đặt mục tiêu và mô phỏng kế hoạch đầu tư dài hạn. Dùng được ngoại tuyến.",
         theme_color: "#1e3a5f",
         background_color: "#06060a",
         display: "standalone",

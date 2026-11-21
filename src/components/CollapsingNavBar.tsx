@@ -24,12 +24,12 @@ export default function CollapsingNavBar({
   onFilter,
   onAddGoal,
   onChangeScenario,
-  overviewPlanName,
+  isOverview,
   syncStatus,
   pending,
   syncHealth,
 }: {
-  overviewPlanName?: string;
+  isOverview: boolean;
   syncStatus: string;
   pending: number;
   syncHealth: SyncHealth;
@@ -41,7 +41,7 @@ export default function CollapsingNavBar({
   onAddGoal?: () => void;
   onChangeScenario?: () => void;
 }) {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const hour = new Date().getHours();
   const greetings = locale === "de"
     ? ["Guten Morgen", "Guten Tag", "Guten Abend"]
@@ -65,16 +65,16 @@ export default function CollapsingNavBar({
 
   return (
     <header className="bar">
-      {overviewPlanName != null ? (
+      {isOverview ? (
         <div className="mwj-overview-brand">
           <h1 className="mwj-hero-hello">{greeting} <span aria-hidden="true">👋</span></h1>
-          <p className="mwj-hero-sub">{overviewPlanName || "VWCE Vault"}</p>
+          <p className="mwj-hero-sub">{t("tagline")}</p>
         </div>
       ) : (
         <div className="mwj-brand"><span className="mwj-brand-mark" aria-hidden="true">✦</span><span className="bar-logo">VWCE Vault</span></div>
       )}
       <div className="bar-r">
-        {overviewPlanName != null ? (
+        {isOverview ? (
           <Link to="/timeline" className="mwj-overview-bell mwj-hero-bell" aria-label={locale === "de" ? "Neueste Aktivitäten" : "Hoạt động gần đây"}>
             <IconBell />
           </Link>

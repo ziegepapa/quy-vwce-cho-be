@@ -1,6 +1,7 @@
 import type { AnnualChecklist, AppSettings, Goal, Instrument, Notfallmappe, Quote } from "./types";
 import { VWCE_ISIN } from "./types";
 import { quoteId } from "./instrument";
+import type { AppLocale } from "./locale";
 export const ETF = { name: "Vanguard FTSE All-World UCITS ETF (USD) Accumulating", ticker: "VWCE", isin: VWCE_ISIN, type: "Accumulating" as const };
 
 export function defaultVwceInstrument(): Instrument {
@@ -41,7 +42,10 @@ export function uid(prefix = "id"): string { return `${prefix}_${crypto.randomUU
  * Bốn dòng giấy tờ được tạo sẵn vì đó là bốn thứ người thân thực sự phải đi tìm
  * ở Đức. Ô "nơi cất" để trống — chính việc nó trống là lời nhắc.
  */
-export function defaultNotfallmappe(): Notfallmappe {
+export function defaultNotfallmappe(locale: AppLocale = "vi"): Notfallmappe {
+  const documentLabels = locale === "de"
+    ? ["Vorsorgevollmacht", "Patientenverfügung", "Testament", "Versicherungsunterlagen"]
+    : ["Giấy ủy quyền dự phòng", "Chỉ dẫn y tế trước", "Di chúc", "Hồ sơ bảo hiểm"];
   return {
     purpose: "",
     custodyNote: "",
@@ -51,12 +55,7 @@ export function defaultNotfallmappe(): Notfallmappe {
     cashBankName: "",
     cashAccountNote: "",
     contacts: [],
-    documents: [
-      { id: uid("doc"), label: "Vorsorgevollmacht", location: "" },
-      { id: uid("doc"), label: "Patientenverfügung", location: "" },
-      { id: uid("doc"), label: "Testament", location: "" },
-      { id: uid("doc"), label: "Giấy khai sinh của bé", location: "" },
-    ],
+    documents: documentLabels.map((label) => ({ id: uid("doc"), label, location: "" })),
     wishes: "",
     updatedAt: nowIso(),
   };
@@ -68,9 +67,9 @@ export function defaultNotfallmappe(): Notfallmappe {
  * this app never sees. Onboarding and the demo seed both route through here, so
  * a new install is securities-first from its first screen.
  */
-export function defaultSettings(): AppSettings {
+export function defaultSettings(locale: AppLocale = "vi"): AppSettings {
   const t = nowIso();
-  return { id: "settings", planName: "Quỹ VWCE cho bé", childName: "", accountType: "parent", currency: "EUR", inflationRate: 0.02, vwceReturn: 0.05, safeReturn: 0.015, bufferPct: 0.1, endMode: "flexible", startDate: "2026-07-01", endDate: "", latestVwcePrice: 0, latestPriceDate: "", contributionY1: 100, contributionY2: 120, disclaimerAccepted: false, onboardingDone: false, trackInAppCash: false, notfallmappe: defaultNotfallmappe(), createdAt: t, updatedAt: t };
+  return { id: "settings", planName: "VWCE Vault", childName: "", accountType: "parent", currency: "EUR", inflationRate: 0.02, vwceReturn: 0.05, safeReturn: 0.015, bufferPct: 0.1, endMode: "flexible", startDate: "2026-07-01", endDate: "", latestVwcePrice: 0, latestPriceDate: "", contributionY1: 100, contributionY2: 120, disclaimerAccepted: false, onboardingDone: false, trackInAppCash: false, notfallmappe: defaultNotfallmappe(locale), createdAt: t, updatedAt: t };
 }
 export function defaultGoals(): Goal[] {
   const t = nowIso();

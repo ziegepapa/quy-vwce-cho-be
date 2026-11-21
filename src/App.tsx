@@ -443,7 +443,7 @@ export default function App() {
     }} onBack={() => setShowWizard(false)} /></Suspense>;
   }
 
-  if (!recoveryActive && !settings?.onboardingDone) return <Suspense fallback={<RouteLoading label={text.loading} />}><Onboarding onDone={async () => { await ensureInitialized(false); await reload(); }} /></Suspense>;
+  if (!recoveryActive && !settings?.onboardingDone) return <Suspense fallback={<RouteLoading label={text.loading} />}><Onboarding onDone={async () => { await ensureInitialized(false, locale); await reload(); }} /></Suspense>;
   if (!settings) return <RouteLoading label={text.loading} />;
 
   const screenName = pathname === "/" ? "overview" : pathname.split("/")[1] || "overview";
@@ -452,7 +452,7 @@ export default function App() {
     <aside className="sidebar" aria-label={text.navigation}><div className="sidebar-brand">VWCE Vault</div><nav className="sidebar-nav">{primaryNav.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
     <div className="app-shell">
       <CollapsingNavBar
-        overviewPlanName={screenName === "overview" ? settings.planName ?? "" : undefined}
+        isOverview={screenName === "overview"}
         syncStatus={syncStatus}
         pending={pending}
         syncHealth={syncHealth}

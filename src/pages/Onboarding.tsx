@@ -2,30 +2,25 @@ import { useLocale } from "../lib/locale";
 
 function onboardingCopy(locale: "vi" | "de") {
   return locale === "de" ? {
-    title: "VWCE-Fonds für das Kind",
-    subtitle: "Verfolgen Sie den langfristigen VWCE-Plan mit regelmäßigen Beiträgen — ohne festes Zieldatum. Die Familienaufzeichnung bleibt nur auf diesem Gerät.",
+    subtitle: "Verfolge dein Portfolio, plane deine Ziele und erkunde langfristige Anlageszenarien.",
     disclaimer: "Diese App dient ausschließlich der Planung und Simulation. Sie ist keine Anlage- oder Steuerberatung und gibt keine Renditegarantie. Rendite, Inflation und Steuern sind Annahmen.",
     start: "Starten",
   } : {
-    title: "Quỹ VWCE cho bé",
-    subtitle: "Theo dõi kế hoạch VWCE dài hạn, góp đều hằng tháng — không có ngày đích cố định. Hồ sơ gia đình chỉ lưu trên thiết bị này.",
+    subtitle: "Theo dõi danh mục, đặt mục tiêu và khám phá các kịch bản đầu tư dài hạn.",
     disclaimer: "Ứng dụng này chỉ hỗ trợ theo dõi và mô phỏng kế hoạch. Đây không phải tư vấn đầu tư, tư vấn thuế hoặc cam kết lợi nhuận. Lợi suất, lạm phát và thuế là giả định.",
     start: "Bắt đầu",
   };
 }
 
 export default function Onboarding({ onDone }: { onDone: () => void }) {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const text = onboardingCopy(locale);
   return (
     <main className="app-shell mwj-welcome">
-      <div className="mwj-welcome-brand" aria-hidden="true"><span className="mwj-brand-mark">✦</span> VWCE Vault</div>
+      <div className="mwj-welcome-brand"><span className="mwj-brand-mark" aria-hidden="true">✦</span> VWCE Vault</div>
       <div className="mwj-welcome-story">
-        <div className="mwj-sun" aria-hidden="true" />
-        <div className="mwj-hill mwj-hill-back" aria-hidden="true" />
-        <div className="mwj-hill mwj-hill-front" aria-hidden="true" />
         <div className="mwj-welcome-copy">
-          <h1>{text.title}</h1>
+          <h1>{t("tagline")}</h1>
           <p>{text.subtitle}</p>
         </div>
       </div>

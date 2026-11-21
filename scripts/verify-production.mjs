@@ -45,7 +45,7 @@ const [expectedAppReleaseVersion, indexHtml, manifest, serviceWorker, quotes, le
   fetchResource("data/vwce-price.json", "json"),
 ]);
 
-assert.match(indexHtml, /<title>Quỹ VWCE cho bé<\/title>/i, "Production shell title is missing");
+assert.match(indexHtml, /<title>VWCE Vault<\/title>/i, "Production shell title is missing");
 assertVersionMatch(expectedAppReleaseVersion, readReleaseVersionFromHtml(indexHtml), "Production artifact");
 assert.match(indexHtml, /id="root"/i, "Production root element is missing");
 assert.equal(manifest.start_url, "/quy-vwce-cho-be/");

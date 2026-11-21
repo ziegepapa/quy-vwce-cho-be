@@ -135,7 +135,7 @@ for (const theme of themes) {
         await expect(page.locator(".ovb2-big")).toHaveText(/591,95\s*€/);
         await expect(page.locator(".mwj-hero-pill")).toHaveText(/−8,05\s*€\s*−1,34%/);
         await expect(page.locator(".mwj-hero-hello")).toHaveText(/Chào buổi chiều/);
-        await expect(page.locator(".mwj-hero-sub")).toHaveText("Quỹ VWCE cho bé");
+        await expect(page.locator(".mwj-hero-sub")).toHaveText("Tài sản của bạn. Luôn rõ ràng.");
         await expect(page.locator(".mwj-hero-bell")).toHaveAttribute("href", "#/timeline");
         const stats = page.locator(".mwj-portfolio-stats");
         await expect(stats).toContainText(/Bạn đã góp\s*600,00\s*€/);

@@ -102,6 +102,17 @@ for (const theme of ["light", "dark", "premium"]) {
     await page.screenshot({ path: testInfo.outputPath("overview-empty.png") });
     await seedOverview(page);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(page.locator(".mwj-hero-sub")).toHaveText("Dein Vermögen. Klar im Blick.");
+    expect(await page.evaluate(() => new Promise((resolve, reject) => {
+      const open = indexedDB.open("quy_vwce_cho_be");
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        const read = db.transaction("settings").objectStore("settings").get("settings");
+        read.onerror = () => reject(read.error);
+        read.onsuccess = () => { db.close(); resolve(read.result.planName); };
+      };
+    }))).toBe("Der Fonds für unseren Sohn");
     await expect(page.locator(".ovb2-big")).toHaveText("591,95 €");
     await expect(page.locator(".ovb2-pnl-pill")).toHaveText("−8,05 € −1,34%");
     await expect(page.locator(".mwj-portfolio-stats dd")).toHaveText(["600,00 €", "591,95 €", "−8,05 €"]);
