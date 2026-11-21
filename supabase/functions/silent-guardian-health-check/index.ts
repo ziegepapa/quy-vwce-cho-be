@@ -16,10 +16,12 @@ Deno.serve(async (req: Request) => {
   if (!url || !key) return json({ ok: false, error: "Server configuration unavailable" }, 503);
   if (!/^Bearer[ ]+[^ ]+$/i.test(auth)) return json({ ok: false, error: "Sign-in required" }, 401);
 
+  const apiKey: string = key;
+
   try {
     // Do not trust the caller-supplied user_id. Verify the token against Auth.
     const response = await fetch(url + "/auth/v1/user", {
-      headers: { Authorization: auth, apikey: key },
+      headers: { Authorization: auth, apikey: apiKey },
       signal: AbortSignal.timeout(8000),
     });
     if (!response.ok) return json({ ok: false, error: "Sign-in required" }, 401);
@@ -32,7 +34,7 @@ Deno.serve(async (req: Request) => {
     async function load(domain: string) {
       const query = new URLSearchParams({ select: "id,data,deleted_at", user_id: "eq." + userId, limit: "1000" });
       const result = await fetch(url + "/rest/v1/" + domain + "?" + query, {
-        headers: { Authorization: auth, apikey: key, Accept: "application/json" },
+        headers: { Authorization: auth, apikey: apiKey, Accept: "application/json" },
         signal: AbortSignal.timeout(10000),
       });
       if (!result.ok) throw new Error("Database read blocked: " + domain + ":" + result.status);
