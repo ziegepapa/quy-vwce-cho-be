@@ -673,3 +673,301 @@
 .mwj-more-icon svg { width: 20px; height: 20px; }
 .mwj-more-arrow { margin-left: auto; color: var(--text-tertiary); font-size: 20px; }
 .mwj-more-note { margin: 8px 6px 0; color: var(--text-secondary); font-size: 12px; }
+
+
+/* ===== MWJ final visual polish: data-first ledger, journey, studio, dossier =====
+   Kept separate from financial calculations. Uses the existing design tokens and
+   the already-bundled text-free mountain artwork. No new dependencies. */
+
+/* Transactions: a three-part financial overview, followed immediately by
+   search, quick filters, and the actual monthly ledger. */
+.mwj-layout .tx-ledger-redesign .tx-wrap { gap: 11px; }
+.mwj-layout .tx-ledger-redesign .mwj-ledger-summary {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 16px 14px 12px;
+  border: 1px solid color-mix(in srgb, var(--primary-600) 14%, var(--border-subtle));
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--surface-raised), color-mix(in srgb, var(--primary-050) 52%, var(--surface-raised)));
+  box-shadow: var(--shadow-raised);
+}
+.mwj-ledger-summary-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.mwj-ledger-summary-kicker {
+  color: var(--text-primary);
+  font: 600 18px/1.15 var(--mwj-display);
+}
+.mwj-ledger-summary-period {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: var(--primary-050);
+  color: var(--primary-600);
+  font-size: 12px;
+  font-weight: 750;
+}
+.mwj-layout .mwj-ledger-summary .mwj-ledger-stats {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, .75fr));
+  gap: 6px;
+  margin: 1px 0 0;
+}
+.mwj-layout .mwj-ledger-summary .mwj-ledger-stats > div {
+  min-width: 0;
+  padding: 10px 7px;
+  border-inline-start: 0;
+  border-radius: 13px;
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+.mwj-layout .mwj-ledger-summary .mwj-ledger-stats dt {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.mwj-layout .mwj-ledger-summary .mwj-ledger-stats dd {
+  margin-top: 5px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: clamp(15px, 4.1vw, 22px);
+  font-weight: 800;
+  letter-spacing: -.035em;
+  font-variant-numeric: tabular-nums;
+}
+.mwj-ledger-summary-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.mwj-layout .tx-ledger-workspace { gap: 9px; }
+.mwj-layout .tx-ledger-workspace-head { padding: 0 3px; }
+.mwj-layout .tx-ledger-workspace-head h2 {
+  margin: 0;
+  font: 600 18px/1.12 var(--mwj-display);
+}
+.mwj-layout .tx-ledger-tools { margin-block: 0; }
+.mwj-layout .tx-ledger-activity-tabs {
+  background: color-mix(in srgb, var(--surface-raised) 88%, var(--primary-050));
+  border: 1px solid var(--border-subtle);
+  border-radius: 15px;
+  padding: 4px;
+  gap: 3px;
+}
+.mwj-layout .tx-ledger-activity-tabs button {
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.mwj-layout .tx-ledger-activity-tabs button.active {
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary-600) 9%, transparent);
+}
+.mwj-layout .tx-ledger-years-head h3 { font-size: 11px; color: var(--text-secondary); }
+.mwj-layout .tx-ledger-month-title h3 {
+  font-family: var(--mwj-display);
+  font-size: 17px;
+  letter-spacing: -.015em;
+}
+.mwj-layout .tx-ledger-month-group .tx-ledger-row {
+  border-radius: 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  min-height: 63px;
+  box-shadow: 0 3px 9px color-mix(in srgb, var(--text-primary) 3%, transparent);
+}
+.mwj-layout .tx-ledger-month-group .txv2-name { font-size: 14px; font-weight: 800; }
+.mwj-layout .tx-ledger-month-group .txv2-amt { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 800; }
+
+/* Timeline: an illustrated, responsive investment-journal cover that reports
+   only counts and dates from the existing transaction ledger. */
+.mwj-layout .ct-head.mwj-journey-hero {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 198px;
+  margin: 0 0 14px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 40%, transparent);
+  border-radius: 26px;
+  background:
+    linear-gradient(105deg, rgba(13, 27, 54, .91), rgba(29, 40, 75, .30)),
+    url("../assets/overview-mountain.webp") 70% 54% / cover no-repeat;
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--text-primary) 12%, transparent);
+  color: #fff;
+}
+.mwj-layout .mwj-journey-hero::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(9, 24, 48, .37), transparent 62%);
+}
+.mwj-journey-hero-content { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; max-width: 370px; }
+.mwj-journey-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #f7dfbb;
+  text-transform: uppercase;
+  letter-spacing: .11em;
+  font-size: 10px;
+  font-weight: 850;
+}
+.mwj-layout .mwj-journey-hero h1 {
+  color: #fff !important;
+  font: 600 clamp(27px, 8vw, 39px)/1.05 var(--mwj-display) !important;
+  letter-spacing: -.04em;
+  text-shadow: 0 2px 10px rgba(13, 25, 48, .28);
+}
+.mwj-journey-hero p { margin: 0; max-width: 240px; color: rgba(255,255,255,.9); font-size: 12px; line-height: 1.42; }
+.mwj-journey-highlights { display: flex; gap: 20px; flex-wrap: wrap; margin: auto 0 0; padding-top: 12px; }
+.mwj-journey-highlights > div { display: grid; gap: 3px; }
+.mwj-journey-highlights dt { font-size: 10px; color: rgba(255,255,255,.75); }
+.mwj-journey-highlights dd { margin: 0; font-size: 18px; color: #fff; font-weight: 800; font-variant-numeric: tabular-nums; }
+:root[data-theme="premium"] .mwj-journey-hero {
+  background-image: linear-gradient(100deg, rgba(20, 16, 44, .91), rgba(38, 30, 70, .32)), url("../assets/overview-mountain.webp");
+}
+.mwj-layout .ct-trades {
+  border-radius: 22px;
+  background: var(--mwj-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-raised);
+}
+.mwj-layout .ct-trade-rail { border-inline-start: 2px solid var(--primary-600); }
+.mwj-layout .ct-trade-day {
+  margin-block: 3px 9px;
+  border-radius: 15px;
+}
+.mwj-layout .ct-trade-day .ct-events li { gap: 7px; }
+
+/* Simulation: reduce controls above the projection and make the chart the
+   central visual with a legible three-card result row below it. */
+.mwj-layout .sim-wrap { gap: 11px; }
+.mwj-layout .sim-wrap .mode-tabs { gap: 5px; margin-block: 0; }
+.mwj-layout .sim-wrap .mode-tabs .mtab { min-height: 46px; padding: 8px 5px; border-radius: 12px; }
+.mwj-layout .sim-wrap .sim-headline {
+  gap: 8px;
+  padding: 13px 14px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, var(--surface-raised), color-mix(in srgb, var(--primary-050) 68%, var(--surface-raised)));
+  border: 1px solid var(--border-subtle);
+}
+.mwj-layout .sim-wrap .sim-headline .sim-mode-badge { margin: 0; }
+.mwj-layout .sim-wrap .sim-headline .sh-big {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: clamp(27px, 8vw, 39px);
+  font-weight: 800;
+  letter-spacing: -.052em;
+  line-height: 1.04;
+}
+.mwj-layout .sim-wrap .sim-headline .sh-sub { margin: 0; font-size: 12px; }
+.mwj-layout .sim-wrap .sim-headline .sh-note { margin: 0; font-size: 11px; }
+.mwj-layout .sim-wrap .sim-assumptions {
+  gap: 6px;
+  margin: 0;
+  padding: 7px 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.mwj-layout .sim-assumptions > div { min-width: 0; padding: 5px 2px; }
+.mwj-layout .sim-assumptions dt { font-size: 10px; line-height: 1.2; }
+.mwj-layout .sim-assumptions dd { font-size: 12px; font-weight: 850; line-height: 1.25; }
+.mwj-layout .sim-wrap .sim-parameters-trigger { min-height: 38px; }
+.mwj-layout .sim-wrap .sim-chart-card {
+  margin: 0;
+  overflow: hidden;
+  padding: 13px 12px 9px;
+  background: var(--mwj-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  box-shadow: var(--shadow-raised);
+}
+.mwj-layout .sim-chart-title { font-size: 21px; }
+.mwj-layout .sim-chart-card .sim-chart-svg { max-width: 100%; height: 204px; }
+.mwj-layout .sim-results { margin: 0; }
+.mwj-layout .sim-results .summary-strip { gap: 7px; }
+.mwj-layout .sim-results .summary-strip > div {
+  padding: 10px 6px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--primary-050) 43%, var(--surface-raised));
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+.mwj-layout .sim-results .summary-strip dt { font-size: 11px; line-height: 1.2; }
+.mwj-layout .sim-results .summary-strip strong { font-size: clamp(12px, 3.5vw, 18px); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* Emergency dossier: a clear document cover above the existing, unchanged
+   editable checklist. The print stylesheet still suppresses this screen hero. */
+.mwj-layout .mwj-emergency-head {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  margin: 0 0 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
+  overflow: hidden;
+}
+.mwj-dossier-hero {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 66px minmax(0,1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 22px 16px;
+  isolation: isolate;
+  color: #fff;
+  background: linear-gradient(116deg, #142544 10%, #314b75 64%, #6787a4);
+}
+.mwj-dossier-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle at 92% 4%, rgb(255 225 175 / .46), transparent 48%);
+}
+.mwj-dossier-symbol {
+  width: 64px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgb(255 255 255 / .13);
+  border: 1px solid rgb(255 255 255 / .24);
+}
+.mwj-dossier-hero-copy { min-width: 0; display: grid; gap: 6px; }
+.mwj-dossier-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: #ffdda6; font-weight: 850; }
+.mwj-layout .mwj-dossier-hero-copy h1 {
+  color: #fff !important;
+  font: 600 clamp(25px, 6vw, 37px)/1.07 var(--mwj-display) !important;
+  letter-spacing: -.03em;
+}
+.mwj-dossier-hero-copy p { margin: 0; color: rgba(255,255,255,.85); font-size: 12px; line-height: 1.4; }
+.mwj-layout .mwj-emergency-readiness {
+  margin: 0;
+  padding: 14px 15px;
+  border: 0;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--primary-050) 38%, var(--surface-raised));
+}
+.mwj-layout .mwj-emergency-readiness .nfm-print-button { min-height: 44px; border-radius: 12px; }
+:root[data-theme="premium"] .mwj-dossier-hero {
+  background: linear-gradient(115deg, #17152e, #43315b 67%, #77628e);
+}
+@media (max-width: 390px) {
+  .mwj-layout .tx-ledger-head { gap: 6px; }
+  .mwj-layout .mwj-ledger-summary .mwj-ledger-stats dd { font-size: clamp(14px, 4vw, 17px); }
+  .mwj-layout .tx-ledger-month-group .txv2-date { font-size: 11px; }
+  .mwj-layout .ct-head.mwj-journey-hero { min-height: 188px; padding: 16px; }
+  .mwj-layout .sim-wrap .sim-assumptions { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .mwj-layout .sim-wrap .sim-headline .sh-note { font-size: 11px; }
+  .mwj-dossier-hero { grid-template-columns: 55px minmax(0,1fr); padding: 17px 13px; }
+  .mwj-dossier-symbol { width: 54px; height: 65px; }
+  .mwj-layout .mwj-emergency-readiness { grid-template-columns: 1fr; gap: 12px; }
+  .mwj-layout .mwj-emergency-readiness .nfm-actions { width: 100%; }
+  .mwj-layout .mwj-emergency-readiness .nfm-print-button { width: 100%; }
+}
+@media print {
+  .mwj-layout .mwj-emergency-head, .mwj-dossier-hero { display: none !important; }
+}
