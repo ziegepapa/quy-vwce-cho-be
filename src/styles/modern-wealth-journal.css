@@ -682,7 +682,7 @@
 .mwj-layout .tx-ledger-redesign .tx-wrap{gap:10px}
 .mwj-layout .mwj-ledger-cover{padding:14px 11px 12px;border-radius:23px;background:#142544;box-shadow:0 12px 26px #1023442b}
 .mwj-layout .mwj-ledger-cover .tx-ledger-head{border:0;margin:0;padding:0 5px 13px;background:none;box-shadow:none}
-.mwj-layout .mwj-ledger-cover .tx-ledger-head h1{color:#fff;font:750 clamp(25px,7vw,32px)/1.1 system-ui!important;letter-spacing:-.045em}
+.mwj-layout .mwj-ledger-cover .tx-ledger-head h1{color:#fff!important;font:750 clamp(25px,7vw,32px)/1.1 system-ui!important;letter-spacing:-.045em}
 .mwj-layout .mwj-ledger-cover .tx-ledger-actions{gap:5px}
 .mwj-layout .mwj-ledger-cover .tx-import-tools>summary{color:#e7eaff;border-color:#ffffff55}
 .mwj-layout .mwj-ledger-cover .mwj-ledger-summary{margin:0;padding:9px 7px;border:0;border-radius:15px;background:var(--surface-raised);box-shadow:0 3px 12px #08183324}
@@ -713,7 +713,7 @@
 .mwj-journey-highlights>div{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;gap:5px;text-align:center}
 .mwj-journey-highlights>div+div{border-left:1px solid #ffffff3b}
 .mwj-journey-highlights dt{font-size:10px;color:#fffdef;line-height:1.16}
-.mwj-journey-highlights dd{margin:0;color:#fff;font-size:clamp(13px,3.8vw,19px);font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mwj-journey-highlights dd{margin:0;color:#fff;font-size:clamp(13px,3.8vw,19px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15;overflow-wrap:anywhere}
 .mwj-layout .ct-trades{border-radius:20px;border:1px solid var(--border-subtle);background:var(--mwj-card);box-shadow:var(--shadow-raised)}
 .mwj-layout .ct-trade-rail{border-inline-start:2px solid var(--primary-600)}
 .mwj-layout .ct-trade-day{margin-block:3px 9px;border-radius:13px}
@@ -725,9 +725,9 @@
 .mwj-layout .sim-wrap .mwj-page-head h1{font-size:clamp(25px,7vw,32px)!important}
 .mwj-layout .sim-wrap .mwj-sim-example{max-width:130px;padding:5px 9px;font-size:11px}
 .mwj-layout .sim-wrap .mode-tabs{gap:3px;padding:4px;margin:0}
-.mwj-layout .sim-wrap .mode-tabs .mtab{min-height:39px;padding:5px 2px;font-size:11px;border-radius:10px}
+.mwj-layout .sim-wrap .mode-tabs .mtab{min-height:36px;padding:4px 2px;font-size:11px;border-radius:10px}
 .mwj-layout .sim-wrap .mode-tabs .mtab small{font-size:9px}
-.mwj-layout .sim-wrap .sim-headline{gap:5px;padding:12px 12px 9px;border-radius:18px;background:linear-gradient(135deg,var(--surface-raised),var(--primary-050))}
+.mwj-layout .sim-wrap .sim-headline{gap:4px;padding:9px 11px 7px;border-radius:18px;background:linear-gradient(135deg,var(--surface-raised),var(--primary-050))}
 .mwj-layout .sim-wrap .sim-headline .sim-mode-badge{margin:0;font-weight:800}
 .mwj-layout .sim-headline.mwj-sim-projection-first .sim-hero-amount{display:none}
 .mwj-layout .sim-wrap .sim-headline .sh-sub{margin:0;font-size:13px;font-weight:780;color:var(--text-primary)}
@@ -737,9 +737,11 @@
 .mwj-layout .sim-assumptions dt{font-size:9px;line-height:1.12}
 .mwj-layout .sim-assumptions dd{font-size:clamp(10px,2.8vw,13px);line-height:1.2;font-weight:800}
 .mwj-layout .sim-wrap .sim-parameters-trigger{min-height:35px}
-.mwj-layout .sim-wrap .sim-chart-card{margin:0;padding:11px 10px 7px;border-radius:18px;background:var(--mwj-card);border:1px solid var(--border-subtle);box-shadow:var(--shadow-raised)}
-.mwj-layout .sim-chart-card .sim-chart-svg{height:177px;max-width:100%}
+.mwj-layout .sim-wrap .sim-chart-card{margin:0;padding:8px 10px 5px;border-radius:18px;background:var(--mwj-card);border:1px solid var(--border-subtle);box-shadow:var(--shadow-raised)}
+.mwj-layout .sim-chart-card .sim-chart-svg{height:152px;max-width:100%}
 .mwj-layout .sim-chart-title{font-size:19px}
+.mwj-layout .sim-headline.mwj-sim-projection-first .sim-mode-badge{display:none}
+.mwj-layout .sim-results>h2{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
 .mwj-layout .sim-results{margin:0}
 .mwj-layout .sim-results .summary-strip{gap:6px}
 .mwj-layout .sim-results .summary-strip>div{padding:8px 5px;border-radius:12px;background:color-mix(in srgb,var(--primary-050) 48%,var(--surface-raised))}
@@ -762,6 +764,8 @@
 .mwj-print-guidance[open]>summary::after{content:"−"}
 .mwj-print-guidance p{margin:9px 0 0}
 @media(max-width:430px){
+ .mwj-layout .sim-wrap .mode-tabs .mtab small{display:none}
+
  .mwj-layout .tx-ledger-redesign .tx-wrap{gap:7px}
  .mwj-layout .mwj-ledger-cover{padding:11px 9px 9px}
  .mwj-layout .mwj-ledger-cover .tx-ledger-head{padding-bottom:9px}
