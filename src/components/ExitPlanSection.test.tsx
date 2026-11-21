@@ -63,8 +63,8 @@ describe("Exit Plan plain-language presentation", () => {
     fireEvent.change(screen.getByLabelText("Welchen Beispielbetrag möchten Sie aufteilen?"), { target: { value: "123,01" } });
     expect(screen.getByRole("table")).toBeTruthy();
     expect(screen.getAllByRole("row")).toHaveLength(7);
-    expect(screen.getByRole("columnheader", { name: "In diesem Schritt verkaufen" })).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Noch nicht verkauft" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Jetzt verkaufen" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Noch übrig" })).toBeTruthy();
     expect(screen.getByText("0,00 €")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Welches Ziel soll hier stehen?"), { target: { value: "" } });
     expect(screen.queryByRole("table")).toBeNull();
