@@ -54,7 +54,7 @@ describe("Exit Plan plain-language presentation", () => {
     expect(document.body.textContent).toContain("Heute müssen Sie nichts verkaufen");
     expect(document.body.textContent).not.toContain("Teilfreistellung");
     expect(document.body.textContent).not.toContain("Szenariovergleich");
-    expect(screen.getByRole("link", { name: "Simulation ansehen" })).toHaveAttribute("href", "#/simulation");
+    expect(screen.getByRole("link", { name: "Simulation ansehen" }).getAttribute("href")).toBe("#/simulation");
   });
   it("only shows a sample table when the owner enters the sample, right below its input", () => {
     renderPlan();
@@ -80,10 +80,10 @@ describe("Exit Plan plain-language presentation", () => {
     expect(screen.getByRole("link", { name: "Xem mô phỏng" })).toBeTruthy();
     expect(JSON.stringify(GOAL)).toBe(original);
   });
-  it("does not silently compare purchasing-power goals to a nominal saved-money forecast", () => {
+  it("labels the purchasing-power goal comparison as ignoring future inflation", () => {
     const inflated: Goal = { ...GOAL, mode: "purchasing_power" };
     renderPlan([inflated]);
     fireEvent.change(screen.getByLabelText("Welches Ziel soll hier stehen?"), { target: { value: GOAL.id } });
-    expect(document.body.textContent).toContain("Ein ungefähres Jahr ist");
+    expect(document.body.textContent).toContain("nicht um künftige Inflation erhöht");
   });
 });
