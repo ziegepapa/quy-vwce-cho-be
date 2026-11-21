@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getSettings, listQuotes, listTransactions } from "../lib/db";
 import type { SyncStatus } from "../lib/sync/types";
@@ -17,7 +17,9 @@ import "../styles/confidence-timeline.css";
 function timelineCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     heading: "Zeitleiste",
-    journey: "Wertpapiertransaktionen",
+    journey: "Deine Anlagechronik",
+    firstTrade: "Erste Wertpapierbuchung",
+    toTrades: "Transaktionen öffnen",
     noTrades: "Noch keine Wertpapiertransaktionen.",
     buy: "Kauf",
     sell: "Verkauf",
@@ -71,6 +73,8 @@ function timelineCopy(locale: "vi" | "de") {
   } : {
     heading: "Dòng thời gian",
     journey: "Hành trình đầu tư",
+    firstTrade: "Giao dịch chứng khoán đầu tiên",
+    toTrades: "Mở nhật ký giao dịch",
     noTrades: "Chưa có giao dịch chứng khoán.",
     buy: "Mua",
     sell: "Bán",
@@ -204,6 +208,14 @@ function formatSessionDate(value: string, locale: "vi" | "de") {
   }).format(date);
 }
 
+function formatTradeMonth(value: string, locale: "vi" | "de") {
+  return new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(value));
+}
+
 function formatMoney(value: number, currency: string, locale: "vi" | "de") {
   try {
     return new Intl.NumberFormat(locale === "de" ? "de-DE" : "vi-VN", {
@@ -324,6 +336,7 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
   if (!timeline && !failed) return <section className="ct-shell" role="status" aria-live="polite"><p>{text.loading}</p></section>;
   if (!timeline || failed) return <section className="ct-shell" role="alert"><h1>{text.title}</h1><p>{text.error}</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>{text.retry}</button></section>;
 
+  const firstTradeDate = tradeDays.at(-1)?.[0];
   const syncLabel = timeline.sync.status === "synced" ? text.synced : timeline.sync.status === "syncing" ? text.syncing : timeline.sync.status === "conflict" ? text.conflict : text.offline;
   const sourceLabel = (source: ConfidenceTimelineSource) => source === "quote" ? text.quoteSource : source === "ledger" ? text.ledgerSource : source === "contacts" ? text.contactSource : text.importSource;
   const lenses: Array<{ key: ConfidenceTimelineLens; label: string }> = [{ key: "all", label: text.all }, { key: "30d", label: text.last30 }, { key: "90d", label: text.last90 }, { key: "thisYear", label: text.thisYear }];
@@ -338,26 +351,37 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
 
       <section className="ct-card ct-trades" aria-labelledby="ct-trades-title">
         <h2 id="ct-trades-title">{text.journey}</h2>
-        {tradeDays.length === 0 ? <p className="ct-empty">{text.noTrades}</p> : (
-          <div className="ct-days">
-            {tradeDays.slice(0, tradeDayLimit).map(([date, trades]) => (
-              <section className="ct-day ct-trade-day" key={date}>
-                <h3 className="ct-day-title"><time dateTime={date}>{formatSessionDate(date, locale)}</time></h3>
-                <ul className="ct-events">
-                  {trades.map((tx) => {
-                    const isin = resolveInstrumentIsin(tx);
-                    const action = isSecuritySell(tx.type) ? text.sell : text.buy;
-                    const name = isin ? `${action} ${instrumentLabel(isin)}` : transactionTypeLabel(tx.type, locale);
-                    return (
-                      <li key={tx.id}>
-                        <span className={`ct-source ${isin === VALL_ISIN ? "is-quote" : "is-ledger"}`} aria-hidden="true"><IconTx /></span>
-                        <strong>{name}</strong>
-                        <span className="ct-event-value">{formatMoney(tx.amount, "EUR", locale)}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
+        {tradeDays.length === 0 ? (
+          <div className="ct-trade-empty">
+            <p className="ct-empty">{text.noTrades}</p>
+            <Link className="ct-back" to="/transactions">{text.toTrades} ›</Link>
+          </div>
+        ) : (
+          <div className="ct-days ct-trade-rail">
+            {tradeDays.slice(0, tradeDayLimit).map(([date, trades], index) => (
+              <Fragment key={date}>
+                {date.slice(0, 7) !== tradeDays[index - 1]?.[0].slice(0, 7) ? (
+                  <h3 className="ct-trade-month">{formatTradeMonth(date, locale)}</h3>
+                ) : null}
+                <section className="ct-day ct-trade-day">
+                  <h4 className="ct-day-title"><time dateTime={date}>{formatSessionDate(date, locale)}</time></h4>
+                  {date === firstTradeDate ? <p className="ct-first-trade">{text.firstTrade}</p> : null}
+                  <ul className="ct-events">
+                    {trades.map((tx) => {
+                      const isin = resolveInstrumentIsin(tx);
+                      const action = isSecuritySell(tx.type) ? text.sell : text.buy;
+                      const name = isin ? `${action} ${instrumentLabel(isin)}` : transactionTypeLabel(tx.type, locale);
+                      return (
+                        <li key={tx.id}>
+                          <span className={`ct-source ${isin === VALL_ISIN ? "is-quote" : "is-ledger"}`} aria-hidden="true"><IconTx /></span>
+                          <strong>{name}</strong>
+                          <span className="ct-event-value">{formatMoney(tx.amount, "EUR", locale)}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              </Fragment>
             ))}
           </div>
         )}
