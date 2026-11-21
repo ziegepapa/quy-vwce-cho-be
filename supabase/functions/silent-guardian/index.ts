@@ -158,6 +158,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return Response.json({ error: "not_configured" }, { status: 503 });
   }
   try {
+    const status = await adminJson<{ active: boolean }[]>(
+      "/rest/v1/guardian_service_status?select=active&id=eq.true",
+    );
+    if (status.length !== 1 || status[0].active !== true) {
+      return Response.json({ checked: 0, sent: 0, failed: 0, active: false });
+    }
     const subscriptions = await adminJson<Subscription[]>(
       "/rest/v1/guardian_subscriptions?select=user_id,enrolled_at&enabled=eq.true&limit=1000",
     );
