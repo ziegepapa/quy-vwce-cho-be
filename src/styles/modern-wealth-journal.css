@@ -694,6 +694,7 @@
 }
 .mwj-ledger-summary-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .mwj-ledger-summary-kicker {
+  margin: 0;
   color: var(--text-primary);
   font: 600 18px/1.15 var(--mwj-display);
 }
