@@ -168,6 +168,9 @@ for (const theme of themes) {
         const november = page.locator('[data-month-key="2026-11"] .tx-ledger-row');
         await expect(november).toHaveCount(2);
         await expect(november.filter({ hasText: "VALL" })).toHaveCount(2);
+        await expect(november.locator('[data-fund="vall"]')).toHaveCount(2);
+        await expect(november.locator(".txv2-date")).toHaveText([/16\/11\/2026.*SL: 30/, /02\/11\/2026.*SL: 30/]);
+        await expect(page.locator('.tx-ledger-row [data-fund="vwce"]')).toHaveCount(3);
         for (const month of ["08", "09", "10"]) {
           await expect(page.locator(`[data-month-key="2026-${month}"] .tx-ledger-row`)).toHaveText(/VWCE/);
         }

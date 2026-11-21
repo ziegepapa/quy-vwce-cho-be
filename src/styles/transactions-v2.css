@@ -1396,3 +1396,19 @@ html.tx-filter-open .app-shell::after {
   .tx-ledger-workspace-head { align-items: center; }
   .tx-ledger-workspace .tx-ledger-total { flex: 0 1 auto; max-width: 48%; }
 }
+
+.tx-ledger-redesign .tx-ledger-row .tx-ledger-kind[data-fund="vwce"] {
+  background: color-mix(in srgb, var(--primary-600) 13%, var(--surface-raised));
+  color: var(--primary-600);
+}
+.tx-ledger-redesign .tx-ledger-row .tx-ledger-kind[data-fund="vall"] {
+  background: color-mix(in srgb, var(--success-600) 13%, var(--surface-raised));
+  color: var(--success-600);
+}
+.tx-ledger-redesign .tx-ledger-row .txv2-date {
+  color: var(--text-secondary);
+  white-space: normal;
+  font-size: 12px;
+}
+.tx-ledger-redesign .tx-ledger-row time { white-space: nowrap; }
+.tx-ledger-redesign .tx-ledger-row .tx-ledger-kind svg { width: 16px; height: 16px; }

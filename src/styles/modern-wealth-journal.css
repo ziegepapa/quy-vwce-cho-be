@@ -430,7 +430,7 @@
 }
 .mwj-ledger-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 12px 0 0; }
 .mwj-ledger-stats > div { padding-inline: 9px; border-inline-start: 1px solid var(--mwj-rule); }
-.mwj-ledger-stats dd { margin: 5px 0 0; font: 500 29px/1 var(--mwj-display); }
+.mwj-ledger-stats dd { margin: 5px 0 0; font: 600 clamp(16px, 4.4vw, 24px)/1.15 var(--mwj-display); overflow-wrap: anywhere; }
 .mwj-layout .tx-ledger-workspace { background: transparent; border: 0; padding-inline: 0; box-shadow: none; }
 .mwj-layout .tx-ledger-month-group { border-radius: 16px; }
 .mwj-layout .tx-ledger-month-heading { border-bottom: 1px solid var(--mwj-rule); }

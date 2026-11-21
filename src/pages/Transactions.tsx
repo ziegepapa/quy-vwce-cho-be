@@ -30,6 +30,7 @@ import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
 import { analyzeTransactions } from "../lib/transactionAnalytics";
 import ActionMenu from "../components/ActionMenu";
+import { IconTx } from "../components/Icons";
 import {
   findTransactionQualityIssues,
   type TransactionQualityCode,
@@ -858,7 +859,7 @@ export default function Transactions() {
               <p>{txs.length === 0 ? text.noTransactions : text.noMatches}</p>
               {txs.length === 0 && !readOnly ? (
                 <button type="button" className="txv2-add-first" onClick={() => openCreate()}>
-                  + {text.quickBuy}
+                  + {text.addFirst}
                 </button>
               ) : null}
             </section>
@@ -888,18 +889,20 @@ export default function Transactions() {
                               ? text.quickSellVall
                               : meta?.label ?? tx.type;
                           const sign = meta?.sign ?? "~";
+                          const fund = transactionIsin === VWCE_ISIN ? "vwce" : transactionIsin === VALL_ISIN ? "vall" : undefined;
+                          const quantity = tx.quantity == null ? null : `${text.quantity}: ${formatDisplayQuantity(tx.quantity, locale)}`;
                           return (
                             <li key={tx.id}>
                               <button
                                 type="button"
                                 className="txv2-row tx-ledger-row"
                                 onClick={() => setDetailId(tx.id)}
-                                aria-label={`${label}, ${formatDisplayDate(tx.date, locale)}, ${formatDisplayMoney(tx.amount, locale)}`}
+                                aria-label={[label, formatDisplayDate(tx.date, locale), formatDisplayMoney(tx.amount, locale), quantity].filter(Boolean).join(", ")}
                               >
-                                <span className={`txv2-ico tx-ledger-kind ${iconClass(tx.type)}`} aria-hidden="true">{iconGlyph(tx.type)}</span>
+                                <span className={`txv2-ico tx-ledger-kind ${iconClass(tx.type)}`} data-fund={fund} aria-hidden="true">{fund ? <IconTx /> : iconGlyph(tx.type)}</span>
                                 <span className="txv2-main">
                                   <span className="txv2-name">{label}</span>
-                                  <span className="txv2-date">{formatDisplayDate(tx.date, locale)}</span>
+                                  <span className="txv2-date"><time dateTime={tx.date}>{formatDisplayDate(tx.date, locale)}</time>{quantity ? <> <span aria-hidden="true">·</span> {quantity}</> : null}</span>
                                 </span>
                                 <span className="tx-ledger-amount-cell">
                                   <span className={"txv2-amt" + (sign === "+" ? " pos" : sign === "-" ? " neg" : "")}>
@@ -936,7 +939,7 @@ export default function Transactions() {
         <section className="tx-ledger-pulse" aria-label={text.journal}>
           <h2 className="mwj-section-title">{locale === "de" ? "Aktivität" : "Hoạt động"}</h2>
           <dl className="mwj-ledger-stats">
-            <div><dt>{locale === "de" ? "Buchungen" : "Giao dịch"}</dt><dd>{txs.length}</dd></div>
+            <div><dt>{text.contributed}</dt><dd>{formatDisplayMoney(analysis.contributed, locale)}</dd></div>
             <div><dt>{locale === "de" ? "Käufe und Verkäufe" : "Lệnh mua/bán"}</dt><dd>{securityTransactionCount}</dd></div>
             <div><dt>{locale === "de" ? "Geldbewegungen" : "Dòng tiền"}</dt><dd>{incomingCount + outgoingCount}</dd></div>
           </dl>
