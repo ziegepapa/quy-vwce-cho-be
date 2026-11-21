@@ -50,7 +50,7 @@ const copy = {
     empty: "Die Tabelle erscheint, sobald Sie selbst einen Beispielbetrag eingeben und ein Ziel wählen.",
     invalid: "Bitte einen positiven Eurobetrag mit höchstens zwei Nachkommastellen eingeben.",
     past: "Der gewählte Zeitraum beginnt schon in der Vergangenheit. Prüfen Sie Ziel und Zeitraum.",
-    step: "Schritt", saleNow: "In diesem Schritt verkaufen", remaining: "Noch nicht verkauft",
+    step: "Schritt", tableDate: "Datum", saleNow: "Jetzt verkaufen", remaining: "Noch übrig",
     remainExplain: "„Noch nicht verkauft“ meint nur den Rest Ihres Beispielbetrags, nicht Ihr Depotguthaben. Die Kurse beim späteren Verkauf kennen wir nicht.",
     look: "Simulation ansehen",
     disclaimer: "Nur zur Orientierung. Keine automatische Order, keine persönliche Steuerrechnung und keine Garantie. Vor echten Entscheidungen die eigene Lage prüfen.",
@@ -91,7 +91,7 @@ const copy = {
     empty: "Chọn Goal rồi nhập số mẫu để xem bảng. Chưa nhập thì không có bảng.",
     invalid: "Hãy nhập số euro dương, tối đa hai số lẻ.",
     past: "Khoảng chia bán đã bắt đầu trong quá khứ. Hãy chọn mốc hoặc khoảng phù hợp.",
-    step: "Đợt", saleNow: "Bán đợt này", remaining: "Còn lại chưa bán",
+    step: "Đợt", tableDate: "Ngày", saleNow: "Bán đợt này", remaining: "Còn lại chưa bán",
     remainExplain: "“Còn lại chưa bán” chỉ là phần tiền mẫu còn lại, không phải số dư danh mục. Giá bán thật sau này chưa biết.",
     look: "Xem mô phỏng",
     disclaimer: "Chỉ để hình dung. App không bán tự động, không tính thuế cá nhân hay hứa lợi nhuận. Hãy tự kiểm tra trước khi bán thật.",
@@ -212,7 +212,7 @@ export default function ExitPlanSection({ goals, locale, actualBalance, actualMo
       {past && <p className="exit-plan-warning" role="status">{t.past}</p>}
       {validRows.length > 0 ? <div className="exit-plan-table-wrap">
         <table className="exit-plan-table"><thead><tr>
-          <th scope="col">{t.step}</th><th scope="col">{t.date}</th>
+          <th scope="col">{t.step}</th><th scope="col">{t.tableDate}</th>
           <th scope="col">{t.saleNow}</th><th scope="col">{t.remaining}</th>
         </tr></thead><tbody>{validRows.map((r) => <tr key={r.date}>
           <td>{r.ordinal}/{validRows.length}</td><td>{dateLabel(r.date, locale)}</td>
