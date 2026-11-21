@@ -54,12 +54,15 @@ export default function GuardianPanel({ locale, userId, emailVerified }: {
     }
     void (async () => {
       try {
-        const { data, error } = await supabase.from("guardian_subscriptions")
-          .select("enabled").eq("user_id", userId).maybeSingle();
+        const [service, optIn] = await Promise.all([
+          supabase.from("guardian_service_status").select("active").eq("id", true).single(),
+          supabase.from("guardian_subscriptions").select("enabled").eq("user_id", userId).maybeSingle(),
+        ]);
         if (!active) return;
-        if (error) setStatus("unavailable");
-        else {
-          setEnabled(data?.enabled === true);
+        if (service.error || service.data?.active !== true || optIn.error) {
+          setStatus("unavailable");
+        } else {
+          setEnabled(optIn.data?.enabled === true);
           setStatus("ready");
         }
       } catch {
