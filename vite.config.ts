@@ -57,7 +57,10 @@ export default defineConfig({
         // exactly the "app cập nhật chậm" symptom. The app already falls
         // back to local IndexedDB data when offline, so no data file needs
         // to be precached.
-        globIgnores: ["**/data/**"],
+        // Guardian is cloud-only. Its lazy control cannot work offline and
+        // must not displace finance-critical offline screens from the budget.
+        // Settings renders a safe offline fallback without importing it.
+        globIgnores: ["**/data/**", "**/assets/GuardianPanel-*.js"],
         navigateFallback: "/quy-vwce-cho-be/index.html",
         cleanupOutdatedCaches: true,
         clientsClaim: true,
