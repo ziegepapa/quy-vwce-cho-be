@@ -27,7 +27,7 @@ const copy = {
     reaches: "Nur mit dieser Sparrate wäre die genannte Summe rechnerisch ungefähr im Jahr",
     reachesEnd: "erreicht. Ihr Ziel ist ein Wegweiser, kein Zeitpunkt zum vollständigen Verkauf.",
     noEstimate: "Ein ungefähres Jahr ist mit den verfügbaren Angaben nicht sinnvoll berechenbar.",
-    estimateNote: "Nur eine einfache Rechnung mit unveränderten Monatsbeiträgen und ohne künftige Kursgewinne, Verluste, Inflation oder Steuern.",
+    estimateNote: "Nur eine einfache Rechnung mit unveränderten Beiträgen, ohne Kursschwankungen oder Steuern. Ein Ziel in heutiger Kaufkraft wird hier nicht um künftige Inflation erhöht.",
     choose: "Welches Ziel soll hier stehen?", noGoal: "Noch kein Ziel gewählt",
     noFutureGoal: "Noch kein zukünftiges Ziel vorhanden. Sie können es unter „Ziele“ selbst anlegen.",
     goalTitle: "Ihr selbst gesetztes Ziel", date: "Wann Sie das Geld brauchen", target: "Wie viel Sie sich vorgenommen haben",
@@ -67,7 +67,7 @@ const copy = {
     reaches: "Nếu chỉ góp đều như vậy, số tiền mốc có thể đạt khoảng năm",
     reachesEnd: ". Mốc này để đánh dấu đường đi, không phải ngày phải bán hết.",
     noEstimate: "Chưa đủ dữ liệu để tính năm dự kiến một cách có ý nghĩa.",
-    estimateNote: "Tính đơn giản theo mức góp hiện tại, giả sử giá không đổi; chưa tính lãi/lỗ tương lai, lạm phát hay thuế.",
+    estimateNote: "Chỉ tính tiền góp đều theo con số Goal, giả sử giá không đổi. Chưa tăng số mốc theo lạm phát (nếu Goal tính theo sức mua), chưa tính thuế.",
     choose: "Bạn muốn xem mốc nào?", noGoal: "Chưa chọn Goal",
     noFutureGoal: "Chưa có Goal tương lai. Bạn có thể đặt mốc riêng trong Goals.",
     goalTitle: "Mốc bạn tự đặt", date: "Ngày cần dùng tiền", target: "Số tiền bạn đặt mốc",
@@ -121,8 +121,8 @@ export default function ExitPlanSection({ goals, locale, actualBalance, actualMo
 
   // Reuse the existing Simulation engine with zero returns/costs for a simple
   // saved-contributions-only reference year. Not the editable scenario settings.
-  // A purchasing-power Goal cannot be compared directly to nominal EUR.
-  const yearEstimate = goal && goal.mode === "nominal" && Number.isFinite(goal.amount)
+  // Purchasing-power goals use their recorded number as a nominal comparison\n  // ONLY for an explicitly labeled, inflation-unadjusted contribution example.
+  const yearEstimate = goal && Number.isFinite(goal.amount)
     && goal.amount > 0 && balanceValid && monthlyValid
     ? findYearsForTarget(goal.amount, {
         initialBalance: balance ?? 0, monthlyContribution: contribution ?? 0,
