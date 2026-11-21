@@ -972,3 +972,49 @@
 @media print {
   .mwj-layout .mwj-emergency-head, .mwj-dossier-hero { display: none !important; }
 }
+
+
+/* 390px ledger acceptance: one financial summary strip, then usable filters
+   and the FIRST trade above the fold. Headings/status remain in the DOM and
+   accessibility tree; only redundant visual lines are visually concealed. */
+@media (max-width: 480px) {
+  .mwj-layout .tx-ledger-redesign .mwj-ledger-summary {
+    padding: 9px 8px;
+    gap: 0;
+    border-radius: 17px;
+  }
+  .mwj-layout .tx-ledger-redesign .mwj-ledger-stats { margin: 0; gap: 5px; }
+  .mwj-layout .tx-ledger-redesign .mwj-ledger-stats > div {
+    padding: 7px 6px;
+    border-radius: 11px;
+  }
+  .mwj-layout .mwj-ledger-summary .mwj-ledger-stats dt { font-size: 10px; }
+  .mwj-layout .mwj-ledger-summary .mwj-ledger-stats dd { margin-top: 3px; font-size: 16px; }
+  .mwj-layout .mwj-ledger-summary-note { display: none; }
+  .mwj-layout .tx-ledger-workspace { position: relative; gap: 7px; }
+  .mwj-layout .tx-ledger-workspace-head {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    margin: -1px;
+    padding: 0;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+  .mwj-layout .tx-ledger-year-controls { gap: 2px; }
+  .mwj-layout .tx-ledger-years-head:not(:has(#tx-year-scroll-hint)) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    margin: -1px;
+    padding: 0;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .mwj-layout .tx-ledger-months { gap: 10px; }
+  .mwj-layout .tx-ledger-month-heading { margin-block: 0 5px; }
+  .mwj-layout .tx-ledger-redesign .tx-ledger-row { min-height: 57px; padding-block: 8px; }
+}
