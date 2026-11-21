@@ -102,7 +102,6 @@ const euros = (amount: number, locale: DisplayLocale) =>
   new Intl.NumberFormat(locale === "de" ? "de-DE" : "vi-VN", { style: "currency", currency: "EUR" }).format(amount);
 const dateLabel = (date: string, locale: DisplayLocale) =>
   new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(date + "T12:00:00Z"));
-const yearOf = (date: string | null) => date?.slice(0, 4) ?? "—";
 
 export default function ExitPlanSection({ goals, locale, actualBalance, actualMonthly }: Props) {
   const t = copy[locale];
@@ -115,8 +114,10 @@ export default function ExitPlanSection({ goals, locale, actualBalance, actualMo
   const today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
   const eligible = goals.filter((g) => !g.deletedAt && validExitDate(g.dueDate) && g.dueDate >= today);
   const goal = eligible.find((g) => g.id === goalId);
-  const balanceValid = actualBalance !== null && Number.isFinite(actualBalance) && actualBalance >= 0;
-  const monthlyValid = actualMonthly !== null && Number.isFinite(actualMonthly) && actualMonthly >= 0;
+  const balance = typeof actualBalance === "number" && Number.isFinite(actualBalance) && actualBalance >= 0 ? actualBalance : null;
+  const contribution = typeof actualMonthly === "number" && Number.isFinite(actualMonthly) && actualMonthly >= 0 ? actualMonthly : null;
+  const balanceValid = balance !== null;
+  const monthlyValid = contribution !== null;
 
   // Reuse the existing Simulation engine with zero returns/costs for a simple
   // saved-contributions-only reference year. Not the editable scenario settings.
@@ -124,7 +125,7 @@ export default function ExitPlanSection({ goals, locale, actualBalance, actualMo
   const yearEstimate = goal && goal.mode === "nominal" && Number.isFinite(goal.amount)
     && goal.amount > 0 && balanceValid && monthlyValid
     ? findYearsForTarget(goal.amount, {
-        initialBalance: actualBalance, monthlyContribution: actualMonthly,
+        initialBalance: balance ?? 0, monthlyContribution: contribution ?? 0,
         lumpSum: 0, annualReturn: 0, annualContributionGrowth: 0, ter: 0,
       })
     : null;
@@ -143,10 +144,10 @@ export default function ExitPlanSection({ goals, locale, actualBalance, actualMo
       <h2 id="exit-plan-heading">{t.heading}</h2>
       <div className="exit-plan-story">
         <p>{t.piggy} {balanceValid
-          ? <>{t.balance} <strong>{euros(actualBalance, locale)}</strong> {t.inPiggy}</>
+          ? <>{t.balance} <strong>{euros(balance!, locale)}</strong> {t.inPiggy}</>
           : t.balanceUnknown}</p>
         <p>{monthlyValid
-          ? <>{t.pay} <strong>{euros(actualMonthly, locale)}</strong> {t.payEnd}</>
+          ? <>{t.pay} <strong>{euros(contribution!, locale)}</strong> {t.payEnd}</>
           : t.payUnknown}</p>
         <p>{goal ? <>{t.goalLine} <strong>{goalMoney(goal.amount)}</strong> · <strong>{dateLabel(goal.dueDate, locale)}</strong>.</> : t.goalMissing}</p>
         <p>{estimatedYear !== null ? <>{t.reaches} <strong>{estimatedYear}</strong>{t.reachesEnd}</> : t.noEstimate}</p>
@@ -188,7 +189,7 @@ export default function ExitPlanSection({ goals, locale, actualBalance, actualMo
         <li><strong>{t.afterWhen}</strong><p>{t.after}</p></li>
       </ol>
       <p className="exit-plan-today">{monthlyValid
-        ? <>{t.today} <strong>{euros(actualMonthly, locale)}</strong>{t.perMonth}</>
+        ? <>{t.today} <strong>{euros(contribution!, locale)}</strong>{t.perMonth}</>
         : t.todayUnknown}</p>
     </div>
 
