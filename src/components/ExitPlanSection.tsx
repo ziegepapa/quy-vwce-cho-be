@@ -74,6 +74,7 @@ export default function ExitPlanSection({ goals, locale }: Props) {
   const rows = goal && amount !== null ? buildExitInstallments(goal.dueDate, budget, months) : [];
   const past = rows.some(r => r.date < today);
   const yearsInRows = [...new Set((past ? [] : rows).map(r => r.date.slice(0,4)))];
+  const goalMoney = (n: number) => Number.isFinite(n) && n >= 0 ? money(Math.round(n*100), locale) : "—";
   return (
     <section className="gl exit-plan" data-testid="simulation-exit-plan" aria-labelledby="exit-plan-heading">
       <header className="exit-plan-head"><div><small>{t.tag}</small><h2 id="exit-plan-heading">{t.heading}</h2><p>{t.intro}</p></div></header>
@@ -86,8 +87,8 @@ export default function ExitPlanSection({ goals, locale }: Props) {
         {!eligible.length && <p className="exit-plan-note">{t.noGoals}</p>}
         {goal && <div className="exit-plan-facts">
           <div><span>{t.date}</span><strong>{dateLabel(goal.dueDate, locale)}</strong></div>
-          <div><span>{t.target}</span><strong>{money(Math.round(goal.amount*100), locale)}</strong></div>
-          <div><span>{t.protected}</span><strong>{money(Math.round(goal.protectedAmount*100), locale)}</strong></div>
+          <div><span>{t.target}</span><strong>{goalMoney(goal.amount)}</strong></div>
+          <div><span>{t.protected}</span><strong>{goalMoney(goal.protectedAmount)}</strong></div>
           {goal.mode === "purchasing_power" && <small>{t.purchasing} {goal.baseYear} {t.notSale}</small>}
         </div>}
       </div>
