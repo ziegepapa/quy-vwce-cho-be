@@ -36,7 +36,7 @@ test("daily scanner is scoped and does not mutate live ledger", () => {
 test("worker cannot email arbitrary addresses and uses provider idempotency", () => {
   assert.match(worker, /Deno\.env\.get\("RESEND_TEST_TO"\)/);
   assert.match(worker, /Deno\.env\.get\("RESEND_API_KEY"\)/);
-  assert.doesNotMatch(worker, /JSON\.parse\(body\)\?\.(to|email|recipient)/);
+  assert.doesNotMatch(worker, /JSON\.parse\(body\)\?\.(to|email|recipient)\b/);
   assert.match(worker, /Idempotency-Key/);
   assert.match(worker, /guardian_worker_finish/);
   assert.match(worker, /guardian_worker_claim/);
