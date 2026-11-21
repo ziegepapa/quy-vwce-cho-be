@@ -164,7 +164,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         ))}
       </div>
 
-      <section key={mode} className="sim-headline">
+      <section key={mode} className={mode === "A" ? "sim-headline mwj-sim-projection-first" : "sim-headline"}>
         <h2 className="sim-mode-badge">{mode === "A" ? text.end : mode === "B" ? text.badgeB : text.badgeC}</h2>
         {planUnreachable ? (
           <>
