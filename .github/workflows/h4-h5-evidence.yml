@@ -190,6 +190,9 @@ jobs:
           pg_dump "$DB_URL" --data-only --no-owner --no-privileges \
             --table=auth.users --table=public.goals \
             > "$RUNNER_TEMP/h5-pre002-backup.sql"
+          # pg_dump from the runner may be PG17 while disposable local DB is PG15.
+          # Drop only this PG17 session setting from the synthetic snapshot.
+          sed -i '/^SET transaction_timeout = 0;$/d' "$RUNNER_TEMP/h5-pre002-backup.sql"
           test -s "$RUNNER_TEMP/h5-pre002-backup.sql"
           grep -q "COPY auth.users" "$RUNNER_TEMP/h5-pre002-backup.sql"
           grep -q "COPY public.goals" "$RUNNER_TEMP/h5-pre002-backup.sql"
