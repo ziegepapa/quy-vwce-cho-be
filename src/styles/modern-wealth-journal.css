@@ -693,14 +693,11 @@
 .mwj-layout .mwj-ledger-summary-note{display:none}
 .mwj-layout .tx-ledger-workspace{position:relative;gap:7px;padding:0;border:0;background:none;box-shadow:none}
 .mwj-layout .tx-ledger-workspace-head{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
-.mwj-layout .tx-ledger-tools{margin:0}
 .mwj-layout .tx-ledger-activity-tabs{display:flex;gap:4px;padding:4px;border-radius:14px;border:1px solid var(--border-subtle);background:var(--surface-raised)}
 .mwj-layout .tx-ledger-activity-tabs button{min-height:38px;flex:1;border-radius:10px;font-size:12px;font-weight:750}
 .mwj-layout .tx-ledger-years-head:not(:has(#tx-year-scroll-hint)){position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
 .mwj-layout .tx-ledger-month-title h3{font:700 17px var(--mwj-display)}
 .mwj-layout .tx-ledger-month-group .tx-ledger-row{min-height:57px;padding-block:8px;border-radius:13px;border:1px solid var(--border-subtle);background:var(--surface-raised);box-shadow:0 3px 9px #0f20410c}
-.mwj-layout .tx-ledger-month-group .txv2-name{font-size:13px;font-weight:800}
-.mwj-layout .tx-ledger-month-group .txv2-amt{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
 
 /* Journey: landscape header and three measured milestones, rather than a
    decorative heading followed by a data list. Values come from the ledger. */
@@ -739,11 +736,8 @@
 .mwj-layout .sim-wrap .sim-parameters-trigger{min-height:35px}
 .mwj-layout .sim-wrap .sim-chart-card{margin:0;padding:8px 10px 5px;border-radius:18px;background:var(--mwj-card);border:1px solid var(--border-subtle);box-shadow:var(--shadow-raised)}
 .mwj-layout .sim-chart-card .sim-chart-svg{height:154px;min-height:0;max-width:100%}
-.mwj-layout .sim-chart-title{font-size:19px}
-.mwj-layout .sim-headline.mwj-sim-projection-first{position:relative}
 .mwj-layout .sim-headline.mwj-sim-projection-first .sim-hero-actions{position:absolute;top:10px;right:10px;margin:0}
-.mwj-layout .sim-headline .mwj-sim-float-button{display:grid;place-items:center;width:38px;min-width:38px;min-height:38px;padding:4px;border-radius:12px}
-.mwj-layout .sim-headline .mwj-sim-float-button .sim-trigger-chevron{display:none}
+.mwj-layout .mwj-sim-float-button{width:38px;min-width:38px;min-height:38px;padding:4px}
 .mwj-layout .sim-headline.mwj-sim-projection-first .sim-mode-badge{display:none}
 .mwj-layout .sim-results>h2{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
 .mwj-layout .sim-results{margin:0}
