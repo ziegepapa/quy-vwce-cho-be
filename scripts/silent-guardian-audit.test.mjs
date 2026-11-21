@@ -40,7 +40,7 @@ test("detects malformed active server rows without exposing IDs", () => {
   assert.deepEqual(result.checks.transactions.issues, {
     mismatchedIds: 1, invalidAmount: 1, invalidType: 1, invalidDate: 1,
   });
-  assert.ok(!JSON.stringify(result).includes("mismatch"));
+  assert.ok(!JSON.stringify(result).includes('"mismatch"'));
 });
 
 test("February leap day is valid; impossible and unpadded dates are rejected", () => {
