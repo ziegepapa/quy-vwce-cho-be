@@ -369,3 +369,12 @@
   .set2-row:active,
   .set2-profile:active { transform: none !important; }
 }
+
+.set2-theme-current { display: inline-flex; align-items: center; justify-content: end; flex-wrap: wrap; gap: 4px 8px; }
+.mwj-layout .mwj-settings-group.set2-danger { border-color: color-mix(in srgb, var(--danger-600) 38%, var(--border-subtle)); }
+.set2-danger .set2-legacy .local-delete-trigger {
+  border: 1px solid color-mix(in srgb, var(--danger-600) 58%, var(--border-subtle));
+  color: var(--text-primary);
+}
+.set2-danger .set2-legacy .local-delete-submit:not(:disabled) { background: #aa243d; color: #fff; border-color: #aa243d; }
+.set2-danger .local-delete-actions > button { min-height: 44px; }

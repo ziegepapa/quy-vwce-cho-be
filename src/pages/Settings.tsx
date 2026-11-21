@@ -172,7 +172,7 @@ function settingsStrings(locale: AppLocale): SettingsText {
     savedLocal: "Auf diesem Gerät gespeichert",
     savingLocal: "Wird auf diesem Gerät gespeichert…",
     changesPending: "Änderungen warten auf Speicherung",
-    accountSubtitle: "Anmeldung und Schutz dieses Familien-Vaults.",
+    accountSubtitle: "Anmeldung und Schutz Ihres Vaults.",
     syncSubtitle: "Status und bewusste Synchronisierung zwischen Ihren Geräten.",
     dataSubtitle: "Sicherung und Wiederherstellung bleiben owner-gesteuert.",
     preferences: "Darstellung & Sprache",
@@ -244,7 +244,7 @@ function settingsStrings(locale: AppLocale): SettingsText {
     savedLocal: "Đã lưu trên thiết bị này",
     savingLocal: "Đang lưu trên thiết bị này…",
     changesPending: "Thay đổi đang chờ lưu",
-    accountSubtitle: "Đăng nhập và bảo vệ kho gia đình này.",
+    accountSubtitle: "Đăng nhập và bảo vệ Vault của bạn.",
     syncSubtitle: "Trạng thái và đồng bộ có chủ đích giữa các thiết bị.",
     dataSubtitle: "Sao lưu và khôi phục luôn do owner chủ động kiểm soát.",
     preferences: "Giao diện & ngôn ngữ",
@@ -1031,7 +1031,7 @@ export default function SettingsPage({
       {clarityMode ? null : horizonMode ? (
         <section className="settings-horizon-console" aria-label={text.account}>
           <div className="settings-horizon-console-orbit" aria-hidden><i /><i /><i /></div>
-          <div className="settings-horizon-console-copy"><span>{locale === "de" ? "Familien-Vault" : "Family Vault"}</span><strong>{text.vaultName}</strong><small>{auth.user?.email ?? t("syncNeedsSignIn")}</small></div>
+          <div className="settings-horizon-console-copy"><span>VWCE Vault</span><strong>{text.vaultName}</strong><small>{auth.user?.email ?? t("syncNeedsSignIn")}</small></div>
           <div className="settings-horizon-sync-state" aria-live="polite"><span className={`settings-horizon-sync-dot ${syncHealth?.tone ?? "info"}`} aria-hidden /><strong>{syncingNow ? t("syncing") : syncLabel}</strong><small>{lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : auth.user?.id ? text.syncSubtitle : t("syncNeedsSignIn")}</small></div>
           <button type="button" className="settings-horizon-sync" disabled={syncingNow} onClick={() => void runVisibleSync()}><IconSync /><span>{syncingNow ? t("syncing") : t("syncNow")}</span></button>
         </section>

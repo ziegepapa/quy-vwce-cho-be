@@ -254,6 +254,17 @@ for (const theme of themes) {
         await expect(page.getByRole("meter")).toHaveAttribute("value", "25");
       }
       if (name === "settings") {
+        const themeNames = { light: "Sáng", dark: "Tối", premium: "Aurora" };
+        const otherTheme = theme === "dark" ? "light" : "dark";
+        const themeRow = page.getByRole("button", { name: /^Giao diện/ });
+        await themeRow.click();
+        const themeDialog = page.getByRole("dialog", { name: "Giao diện" });
+        await expect(themeDialog.getByRole("button", { name: themeNames[theme] })).toHaveAttribute("aria-pressed", "true");
+        await themeDialog.getByRole("button", { name: themeNames[otherTheme] }).click();
+        await expect(page.locator("html")).toHaveAttribute("data-theme", otherTheme);
+        await themeRow.click();
+        await themeDialog.getByRole("button", { name: themeNames[theme] }).click();
+        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         const trigger = page.getByRole("button", { name: /Xóa toàn bộ dữ liệu trên thiết bị/ });
         await trigger.click();
         const token = page.getByLabel(/Gõ XOA để xác nhận/);
