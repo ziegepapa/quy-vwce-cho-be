@@ -52,6 +52,8 @@ export type SimulationDemoShellProps = {
   bandPctLabel: string;
   readOnly: boolean;
   goals: Goal[];
+  exitPlanActualBalance: number | null;
+  exitPlanActualMonthly: number | null;
   applyYearsFromGoal: (g: Goal) => void;
   advSummary: string;
   bandInput: string;
@@ -112,7 +114,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
     locale, mode, setMode, planUnreachable, targetUnreachable, headlineValue, yearsForProject, monthlyForProject,
     headlineNote, startingBalanceWarning, primary, initialBalance, shownInterest, results, goalMarkers, band, baseRate,
     monthly, setMonthly, years, setYears, targetAmount, setTargetAmount, targetYear, setTargetYear,
-    yearsB, requiredMonthlyBase, yearsC, rateInput, setRateInput, bandPctLabel, readOnly, goals,
+    yearsB, requiredMonthlyBase, yearsC, rateInput, setRateInput, bandPctLabel, readOnly, goals, exitPlanActualBalance, exitPlanActualMonthly,
     applyYearsFromGoal, advSummary, bandInput, setBandInput, growthOn, setGrowthOn, growthPct,
     setGrowthPct, lumpSum, setLumpSum, balanceOverride, setBalanceOverride, realBalance,
     inflationOn, setInflationOn, inflationPct, setInflationPct, showPP, setShowPP, yearRows, baseMap, goalYearSet, goalNameByYear,
@@ -221,7 +223,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
       {targetUnreachable ? <p className="sh-note sim-valuation-warning" role="status">{text.targetUnreachable}</p> : null}
       {startingBalanceWarning ? <p className="sh-note sim-valuation-warning" role="status">{startingBalanceWarning}</p> : null}
 
-      <section className="gl sim-chart-card" data-testid="simulation-growth-chart">
+      <section id="simulation-growth-chart" className="gl sim-chart-card" data-testid="simulation-growth-chart">
         <div className="sim-chart-heading">
           <h2 className="sim-chart-title">{text.chart}</h2>
           <span className="sim-live-tag">{text.baseScenario}</span>
@@ -249,7 +251,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         </dl>
       </section>
 
-      <ExitPlanSection goals={goals} locale={locale} />
+      <ExitPlanSection goals={goals} locale={locale} actualBalance={exitPlanActualBalance} actualMonthly={exitPlanActualMonthly} />
 
       <section className="scenario-comparison" aria-labelledby="scenario-comparison-title">
         <div className="scenario-heading">
