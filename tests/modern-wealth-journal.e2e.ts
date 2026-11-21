@@ -438,6 +438,9 @@ test("German reference screenshots · 390x844 · light", async ({ page }, testIn
   }));
   await page.goto("./");
   const start = page.getByRole("button", { name: "Starten", exact: true });
+  const signIn = page.getByRole("heading", { name: "Anmelden", exact: true });
+  const noConfig = page.getByRole("heading", { name: /Anmeldung.*konfiguriert|nicht konfiguriert/i });
+  await expect(start.or(signIn).or(noConfig)).toBeVisible();
   test.skip(!(await start.isVisible()), "requires a local-only preview build");
   await assertFits(page);
   await expect(start).toBeInViewport({ ratio: 1 });
