@@ -71,6 +71,8 @@ jobs:
           deno check supabase/functions/silent-guardian/index.ts
       - name: Silent Guardian isolated rule tests (no cloud or emails)
         run: deno test supabase/functions/silent-guardian/rules.test.ts
+      - name: Silent Guardian self-heal retry tests
+        run: deno test supabase/functions/silent-guardian/retry.test.ts
       - name: Run isolated Edge Function smoke environment
         run: npm run test:edge-smoke
   preview-smoke:
