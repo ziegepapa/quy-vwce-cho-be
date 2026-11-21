@@ -697,7 +697,7 @@
 .mwj-layout .tx-ledger-activity-tabs button{min-height:38px;flex:1;border-radius:10px;font-size:12px;font-weight:750}
 .mwj-layout .tx-ledger-years-head:not(:has(#tx-year-scroll-hint)){position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
 .mwj-layout .tx-ledger-month-title h3{font:700 17px var(--mwj-display)}
-.mwj-layout .tx-ledger-month-group .tx-ledger-row{min-height:57px;padding-block:8px;border-radius:13px;border:1px solid var(--border-subtle);background:var(--surface-raised);box-shadow:0 3px 9px #0f20410c}
+.mwj-layout .tx-ledger-month-group .tx-ledger-row{min-height:57px;padding-block:8px;border-radius:13px;border:1px solid var(--border-subtle);background:var(--surface-raised);}
 
 /* Journey: landscape header and three measured milestones, rather than a
    decorative heading followed by a data list. Values come from the ledger. */
@@ -713,14 +713,12 @@
 .mwj-journey-highlights dd{margin:0;color:#fff;font-size:clamp(13px,3.8vw,19px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15;overflow-wrap:anywhere}
 .mwj-layout .ct-trades{border-radius:20px;border:1px solid var(--border-subtle);background:var(--mwj-card);box-shadow:var(--shadow-raised)}
 .mwj-layout .ct-trade-rail{border-inline-start:2px solid var(--primary-600)}
-.mwj-layout .ct-trade-day{margin-block:3px 9px;border-radius:13px}
 
 /* Projection studio: primary assumptions then the curve then the 3 results.
    Keep three distinct calculation modes and untouched underlying formulas. */
 .mwj-layout .sim-wrap{gap:9px}
 .mwj-layout .sim-wrap .mwj-page-head{margin:0 0 3px;padding-bottom:4px}
 .mwj-layout .sim-wrap .mwj-page-head h1{font-size:clamp(25px,7vw,32px)!important}
-.mwj-layout .sim-wrap .mwj-sim-example{max-width:130px;padding:5px 9px;font-size:11px}
 .mwj-layout .sim-wrap .mode-tabs{gap:3px;padding:4px;margin:0}
 .mwj-layout .sim-wrap .mode-tabs .mtab{min-height:36px;padding:4px 2px;font-size:11px;border-radius:10px}
 .mwj-layout .sim-wrap .mode-tabs .mtab small{font-size:9px}
