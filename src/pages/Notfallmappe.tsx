@@ -1,4 +1,4 @@
-import { VWCE_ISIN } from "../lib/types";
+import { VALL_ISIN, VWCE_ISIN } from "../lib/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getSettings, listGoals, listQuotes, listTransactions, saveSettings } from "../lib/db";
 import type {
@@ -15,6 +15,7 @@ import { printNotfallmappe } from "../lib/printNotfallmappe";
 import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
 import { formatDisplayDate, formatDisplayMoney, formatDisplayQuantity } from "../ui/localeFormatting";
+import { IconDownload } from "../components/Icons";
 import "../styles/notfallmappe.css";
 import "../styles/notfallmappe-save-state.css";
 
@@ -125,6 +126,7 @@ export default function NotfallmappePage() {
       qty: snapshot.portfolio.positions[VWCE_ISIN]?.qty ?? 0,
       price: snapshot.vwcePrice > 0 ? snapshot.vwcePrice : null,
       valueComplete: snapshot.valueComplete,
+      otherHoldings: Object.entries(snapshot.market.byIsin).filter(([isin, holding]) => isin !== VWCE_ISIN && holding.qty > 0),
     };
   }, [txs, settings, quotes]);
 
@@ -323,8 +325,6 @@ export default function NotfallmappePage() {
     if (latest) void enqueueSave(latest);
   }
 
-  const childLabel = settings?.childName?.trim() || copy("bé", "dem Kind");
-
   const statusText = saveState === "saving"
     ? copy("Đang lưu…", "Wird gespeichert…")
     : saveState === "error"
@@ -349,7 +349,7 @@ export default function NotfallmappePage() {
             <progress id="nfm-readiness" value={filledCount} max={5} />
           </div>
           <div className="nfm-actions">
-            <button type="button" className="secondary" onClick={handlePrint}>{copy("In / Lưu PDF", "Drucken / PDF speichern")}</button>
+            <button type="button" className="nfm-print-button" onClick={handlePrint}><IconDownload />{copy("In / Lưu PDF", "Drucken / PDF speichern")}</button>
           </div>
         </div>
       </header>
@@ -394,7 +394,7 @@ export default function NotfallmappePage() {
             <textarea
               value={data.purpose}
               onChange={(e) => patch({ purpose: e.target.value })}
-              placeholder={locale === "de" ? `Schreiben Sie für jemanden ohne Kenntnisse über den Fonds. Beispiel: Dieses Geld ist für ${childLabel} und soll ab 06/2038 verwendet werden.` : `Viết cho người không biết gì về quỹ. Ví dụ: đây là tiền dành cho ${childLabel}, dự kiến dùng từ 06/2038.`}
+              placeholder={copy("Ví dụ: đây là khoản đầu tư dài hạn. Ghi rõ mục đích và người có quyền sử dụng.", "Beispiel: Dies ist eine langfristige Anlage. Notieren Sie Zweck und berechtigte Personen.")}
             />
           </label>
           <label className="nfm-field">
@@ -402,7 +402,7 @@ export default function NotfallmappePage() {
             <textarea
               value={data.custodyNote}
               onChange={(e) => patch({ custodyNote: e.target.value })}
-              placeholder={copy("Ví dụ: tài khoản đứng tên cha/mẹ nhưng toàn bộ số tiền là của bé.", "Beispiel: Das Konto läuft auf ein Elternteil, aber das gesamte Geld gehört dem Kind.")}
+              placeholder={copy("Ghi tên chủ tài khoản và người có quyền với tài sản.", "Notieren Sie den Kontoinhaber und wer über das Vermögen verfügen darf.")}
             />
           </label>
         </div>
@@ -461,7 +461,7 @@ export default function NotfallmappePage() {
                 <input value={c.name} onChange={(e) => patchContact(c.id, { name: e.target.value })} placeholder={copy("Họ và tên", "Vollständiger Name")} />
                 <button type="button" className="nfm-del" aria-label={locale === "de" ? `Kontakt ${c.name || "löschen"} entfernen` : `Xóa ${c.name || "liên hệ"}`} onClick={() => removeContact(c.id)}>✕</button>
               </div>
-              <input value={c.relation} onChange={(e) => patchContact(c.id, { relation: e.target.value })} placeholder={copy("Quan hệ — ví dụ: mẹ của bé, người giám hộ", "Beziehung — z. B. Mutter des Kindes, Vormund")} />
+              <input value={c.relation} onChange={(e) => patchContact(c.id, { relation: e.target.value })} placeholder={copy("Mối quan hệ, ví dụ: người được ủy quyền", "Beziehung, z. B. bevollmächtigte Person")} />
               <input value={c.phone} onChange={(e) => patchContact(c.id, { phone: e.target.value })} placeholder={copy("Điện thoại", "Telefon")} inputMode="tel" />
               <input value={c.email} onChange={(e) => patchContact(c.id, { email: e.target.value })} placeholder="Email" inputMode="email" />
             </div>
@@ -535,7 +535,26 @@ export default function NotfallmappePage() {
             <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Giá VWCE dùng để tính", "Verwendeter VWCE-Preis")}</span><span className="nfm-snap-v">{snap.price === null ? "—" : formatDisplayMoney(snap.price, locale)}</span></div>
             <div className="nfm-snap-cell"><span className="nfm-snap-k">{copy("Số giao dịch đã ghi", "Erfasste Transaktionen")}</span><span className="nfm-snap-v">{txs.length}</span></div>
           </div>
-          {!snap.valueComplete ? <p>{copy("Một số vị thế thiếu dữ liệu giá.", "Für einige Positionen fehlen Kurse.")}</p> : null}
+          {!snap.valueComplete ? (
+            <p className="nfm-valuation-warning" role="note">{copy("Giá trị chưa đầy đủ vì một số vị thế thiếu giá.", "Der Wert ist unvollständig, weil für einige Positionen Kurse fehlen.")}</p>
+          ) : null}
+          {snap.otherHoldings.length > 0 ? (
+            <table className="nfm-holdings">
+              <caption>{copy("Chứng khoán khác", "Weitere Wertpapiere")}</caption>
+              <thead><tr>
+                <th scope="col">{copy("Mã", "Kennung")}</th>
+                <th scope="col">{copy("Số lượng", "Anteile")}</th>
+                <th scope="col">{copy("Giá mỗi đơn vị", "Kurs je Anteil")}</th>
+              </tr></thead>
+              <tbody>{snap.otherHoldings.map(([isin, holding]) => (
+                <tr key={isin}>
+                  <th scope="row">{isin === VALL_ISIN ? "VALL" : isin}</th>
+                  <td>{formatDisplayQuantity(holding.qty, locale, 4)}</td>
+                  <td>{holding.price == null ? "—" : formatDisplayMoney(holding.price, locale)}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          ) : null}
           <ul className="nfm-goals">
             {goals.map((g) => (
               <li key={g.id}>{g.name}<span>{formatDisplayDate(g.dueDate, locale)} · {formatDisplayMoney(g.amount, locale)}</span></li>

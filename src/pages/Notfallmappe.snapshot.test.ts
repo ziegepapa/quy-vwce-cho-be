@@ -96,5 +96,16 @@ describe("Notfallmappe snapshot total", () => {
     // Intl dùng non-breaking space trước € — chuẩn hóa trước khi so.
     const cells = [...document.querySelectorAll(".nfm-snap-v")].map((el) => (el.textContent ?? "").replace(/\u00A0/g, " "));
     expect(cells).toEqual(["591,97 €", "3", "118,69 €", "5"]);
+    expect(screen.getByRole("row", { name: /VALL.*60/ })).toBeTruthy();
   });
+
+  it("marks the subtotal as incomplete when VALL has no quote", async () => {
+    dbMocks.listQuotes.mockResolvedValue([quote(VWCE_ISIN, 118.69)]);
+    render(createElement(NotfallmappePage));
+
+    expect((await screen.findByRole("note")).textContent).toMatch(/Giá trị chưa đầy đủ/);
+    expect(screen.getByText("356,07 €")).toBeTruthy();
+    expect(screen.getByRole("row", { name: /VALL.*60.*—/ })).toBeTruthy();
+  });
+
 });

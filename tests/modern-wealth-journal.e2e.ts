@@ -291,6 +291,8 @@ for (const theme of themes) {
         const printed = page.frameLocator('iframe[data-print-called="true"]');
         await expect(printed.locator(".nfm-snap-v")).toHaveText([/591,95\s*€/, "3", /118,69\s*€/, "5"]);
         await expect(printed.locator("input, textarea, details")).toHaveCount(0);
+        await expect(printed.locator("h1")).toHaveText("Hồ sơ khẩn cấp");
+        await expect(printed.locator(".nfm-holdings tbody tr").filter({ hasText: /VALL.*60/ })).toHaveCount(1);
         const printHtml = await printed.locator("html").evaluate((html) => html.outerHTML);
         const printPage = await page.context().newPage();
         await printPage.setContent(`<!doctype html>${printHtml}`);

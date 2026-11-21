@@ -229,6 +229,13 @@ const PRINT_CSS = `
     font-variant-numeric: tabular-nums;
   }
 
+  h1 { margin: 0 0 12pt; font-size: 20pt; }
+  .nfm-valuation-warning { margin: 6pt 0; font-weight: 650; }
+  .nfm-holdings { width: 100%; margin: 8pt 0; border-collapse: collapse; }
+  .nfm-holdings caption { text-align: left; font-weight: 650; }
+  .nfm-holdings th, .nfm-holdings td { padding: 4pt; border-bottom: 1px solid #ddd; text-align: right; }
+  .nfm-holdings th:first-child { text-align: left; }
+
   .nfm-goals {
     list-style: none;
     margin: 8pt 0 0;
@@ -420,13 +427,17 @@ export function printNotfallmappe(sourceRoot: HTMLElement): void {
     return;
   }
 
+  const language = sourceRoot.ownerDocument.documentElement.lang === "de" ? "de" : "vi";
+  const title = language === "de" ? "Notfallmappe" : "Hồ sơ khẩn cấp";
   idoc.open();
   idoc.write(
-    `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"/><title>Hồ sơ khẩn cấp</title><style>${PRINT_CSS}</style></head><body></body></html>`,
+    `<!DOCTYPE html><html lang="${language}"><head><meta charset="utf-8"/><title>${title}</title><style>${PRINT_CSS}</style></head><body></body></html>`,
   );
   idoc.close();
 
-  idoc.body.appendChild(idoc.importNode(clone, true));
+  const heading = idoc.createElement("h1");
+  heading.textContent = title;
+  idoc.body.append(heading, idoc.importNode(clone, true));
 
   const cleanup = () => {
     iwin.removeEventListener("afterprint", onAfterPrint);

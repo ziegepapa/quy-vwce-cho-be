@@ -420,3 +420,20 @@ details.nfm-sec[open] .nfm-chev { transform: rotate(90deg); }
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.nfm-actions .nfm-print-button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-600);
+  color: var(--color-text-inverse);
+  font-weight: 750;
+  line-height: 1.2;
+}
+.nfm-print-button svg { width: 17px; height: 17px; flex-shrink: 0; }
+.nfm-valuation-warning { padding: 10px; color: var(--text-primary); background: var(--primary-050); border-radius: 8px; }
+.nfm-holdings { width: 100%; margin-block: 14px; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+.nfm-holdings caption { margin-bottom: 6px; text-align: start; font-weight: 750; }
+.nfm-holdings th, .nfm-holdings td { padding: 7px 4px; border-bottom: 1px solid var(--border-subtle); text-align: end; overflow-wrap: anywhere; }
+.nfm-holdings th:first-child { text-align: start; width: 35%; }
