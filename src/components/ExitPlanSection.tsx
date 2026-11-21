@@ -22,7 +22,7 @@ const copy = {
     balance: "Im Moment sind", inPiggy: "darin.",
     balanceUnknown: "Der aktuelle Wert ist noch nicht sicher bekannt.",
     pay: "Jeden Monat kommen", payEnd: "dazu.",
-    payUnknown: "Die monatliche Sparrate ist noch nicht hinterlegt.",
+    payUnknown: "Aktuell ist kein laufender Monatsbeitrag hinterlegt.",
     goalLine: "Ihr gesetztes Ziel:", goalMissing: "Wählen Sie unten erst ein Ziel und einen Termin.",
     reaches: "Nur mit dieser Sparrate wäre die genannte Summe rechnerisch ungefähr im Jahr",
     reachesEnd: "erreicht. Ihr Ziel ist ein Wegweiser, kein Zeitpunkt zum vollständigen Verkauf.",
@@ -62,7 +62,7 @@ const copy = {
     balance: "Hiện có", inPiggy: "trong đó.",
     balanceUnknown: "Chưa có giá trị danh mục đủ tin cậy để hiển thị.",
     pay: "Mỗi tháng bạn bỏ thêm", payEnd: ".",
-    payUnknown: "Chưa có mức góp hằng tháng đã lưu.",
+    payUnknown: "Hiện chưa có khoản góp hằng tháng đang chạy.",
     goalLine: "Mốc bạn đặt:", goalMissing: "Hãy chọn một Goal và ngày cần dùng bên dưới.",
     reaches: "Nếu chỉ góp đều như vậy, số tiền mốc có thể đạt khoảng năm",
     reachesEnd: ". Mốc này để đánh dấu đường đi, không phải ngày phải bán hết.",
@@ -115,7 +115,7 @@ export default function ExitPlanSection({ goals, locale, actualBalance, actualMo
   const eligible = goals.filter((g) => !g.deletedAt && validExitDate(g.dueDate) && g.dueDate >= today);
   const goal = eligible.find((g) => g.id === goalId);
   const balance = typeof actualBalance === "number" && Number.isFinite(actualBalance) && actualBalance >= 0 ? actualBalance : null;
-  const contribution = typeof actualMonthly === "number" && Number.isFinite(actualMonthly) && actualMonthly >= 0 ? actualMonthly : null;
+  const contribution = typeof actualMonthly === "number" && Number.isFinite(actualMonthly) && actualMonthly > 0 ? actualMonthly : null;
   const balanceValid = balance !== null;
   const monthlyValid = contribution !== null;
 
