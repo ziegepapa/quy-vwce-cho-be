@@ -1041,27 +1041,22 @@
 .mwj-layout .sim-headline.mwj-sim-projection-first .sim-hero-actions { margin: 0; }
 
 
-/* Editorial refinements; screenshots still use real rendered DOM. */
-.mwj-welcome-story{display:flex;flex-direction:column;justify-content:space-between}
-.mwj-welcome-benefits{position:relative;z-index:3;display:grid;list-style:none;gap:2px;margin:auto 10px 10px;padding:7px;border-radius:20px;background:#fbf9fff0;box-shadow:0 13px 30px #09193638}
-.mwj-welcome-benefit{display:grid;grid-template-columns:32px 1fr;align-items:center;gap:9px;padding:7px;min-width:0}
-.mwj-welcome-benefit-number{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#eeebff;color:#4c46ae;font:800 12px system-ui}
-.mwj-welcome-benefit:nth-child(2) .mwj-welcome-benefit-number{background:#e5f7f0;color:#137e6f}
-.mwj-welcome-benefit:nth-child(3) .mwj-welcome-benefit-number{background:#fff0db;color:#996323}
-.mwj-welcome-benefit-copy{display:grid;gap:2px;min-width:0}
+/* Journal: useful welcome, real-value progress cover, premium settings. */
+.mwj-welcome-story{display:flex;flex-direction:column}
+.mwj-welcome-benefits{z-index:3;position:relative;display:grid;list-style:none;margin:auto 10px 10px;padding:6px;border-radius:18px;background:#fbf9fff0;box-shadow:0 12px 26px #09193638}
+.mwj-welcome-benefit{display:flex;align-items:center;gap:9px;padding:6px}
+.mwj-welcome-benefit-number{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:10px;background:#eeebff;color:#4c46ae;font:800 12px system-ui}
+.mwj-welcome-benefit-copy{display:grid;gap:2px}
 .mwj-welcome-benefit-copy strong{color:#192347;font-size:12px}
 .mwj-welcome-benefit-copy small{color:#58627a;font-size:10px}
-.mwj-layout .mwj-goals .goals-hero{min-height:180px;color:#fff;background:linear-gradient(105deg,#101d3fe8,#1c214ba9),url("../assets/overview-mountain.webp") 66% 55%/cover;box-shadow:0 12px 26px #0e1a3729}
+.mwj-layout .mwj-goals .goals-hero{min-height:180px;color:#fff;background:linear-gradient(105deg,#101d3fe8,#1c214ba9),url("../assets/overview-mountain.webp") 66% 55%/cover}
 .mwj-layout .mwj-goals .goals-hero .ring-bg{stroke:#fff5}
 .mwj-layout .mwj-goals .goals-hero .ring-text{fill:#fff}
 .mwj-layout .mwj-goals .goals-hero .hero-money{color:#fff!important;font:750 clamp(25px,7.5vw,40px)/1.06 system-ui!important}
-.mwj-layout .mwj-goals .goals-hero .metric-label,.mwj-layout .mwj-goals .goals-hero .story-caption{color:#fffe}
-.mwj-goals-hero-kicker{color:#f6d8a7;font-size:10px;font-weight:850;letter-spacing:.08em}
-.mwj-goals-hero-count{color:#fff;font-size:13px;font-weight:750}
-.mwj-layout .vault-atelier .set-atelier-topbar{display:flex;gap:10px;padding:18px;border-radius:22px;color:#fff;background:linear-gradient(105deg,#0e1e3cf0,#1f254ab9),url("../assets/overview-mountain.webp") 75% 55%/cover}
-.mwj-layout .vault-atelier .set-atelier-topbar h1{color:#fff}
-.mwj-layout .vault-atelier .set-atelier-topbar p,.mwj-layout .vault-atelier .set-atelier-head-actions{color:#fffe}
+.mwj-layout .mwj-goals .goals-hero :is(.metric-label,.story-caption){color:#fffe}
+.mwj-goals-hero-kicker{color:#f6d8a7;font-size:10px;font-weight:800}
+.mwj-goals-hero-count{color:#fff;font-size:13px}
+.mwj-layout .vault-atelier .set-atelier-topbar{padding:18px;border-radius:22px;color:#fff;background:linear-gradient(105deg,#0e1e3cf0,#1f254ab9),url("../assets/overview-mountain.webp") 75% 55%/cover}
+.mwj-layout .vault-atelier .set-atelier-topbar h1,.mwj-layout .vault-atelier .set-atelier-topbar p{color:#fff}
 .mwj-layout .vault-atelier .set-atelier-eyebrow,.mwj-layout .vault-atelier .set-atelier-eyebrow *{color:#ffe3b2}
-.mwj-layout .vault-atelier .set-atelier-head-actions{max-width:115px;display:grid;justify-items:end;gap:7px}
-.mwj-layout .vault-atelier .set-atelier-head-actions :is(.set-save-state,.set-settings-scope){color:#fff;background:#07122e77;border:1px solid #fff5;border-radius:999px;padding:5px 8px;white-space:normal}
-@media(max-width:390px){.mwj-welcome-copy{padding-bottom:22px}.mwj-welcome-benefit{padding:6px}.mwj-layout .vault-atelier .set-atelier-head-actions{max-width:100px}}
+.mwj-layout .vault-atelier .set-atelier-head-actions :is(.set-save-state,.set-settings-scope){color:#fff;background:#07122e99;border-radius:999px}
