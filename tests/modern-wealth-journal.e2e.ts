@@ -20,14 +20,17 @@ test.use({ serviceWorkers: "block" });
 const vwce = "IE00BK5BQT80";
 const vall = "IE000VAHT5T0";
 const stamp = "2026-11-19T10:00:00.000Z";
+// Illustrative, internally consistent VALL units at roughly €4.33 per unit.
+// This fixture is never used to initialize production portfolios.
+const sampleVallUnits = 120 / 4.33;
 const transactions = ["2026-08-02", "2026-09-02", "2026-10-02", "2026-11-02", "2026-11-16"].map((date, index): Transaction => ({
   id: `test-buy-${index}`,
   date,
   type: index < 3 ? "buy_vwce" : "buy_security",
   instrumentIsin: index < 3 ? vwce : vall,
   amount: 120,
-  quantity: index < 3 ? 1 : 30,
-  unitPrice: index < 3 ? 120 : 4,
+  quantity: index < 3 ? 1 : sampleVallUnits,
+  unitPrice: index < 3 ? 120 : 4.33,
   fee: 0,
   notes: "",
   tax: 0,
@@ -37,7 +40,7 @@ const transactions = ["2026-08-02", "2026-09-02", "2026-10-02", "2026-11-02", "2
 }));
 const quotes = [
   { instrumentIsin: vwce, price: 118.69 },
-  { instrumentIsin: vall, price: 235.88 / 60 },
+  { instrumentIsin: vall, price: 235.88 / (2 * sampleVallUnits) },
 ].map(({ instrumentIsin, price }): Quote => ({
   id: `quote_${instrumentIsin}_EUR`,
   instrumentIsin,
@@ -184,7 +187,7 @@ for (const theme of themes) {
         await expect(november).toHaveCount(2);
         await expect(november.filter({ hasText: "VALL" })).toHaveCount(2);
         await expect(november.locator('[data-fund="vall"]')).toHaveCount(2);
-        await expect(november.locator(".txv2-date")).toHaveText([/16\/11\/2026.*SL: 30/, /02\/11\/2026.*SL: 30/]);
+        await expect(november.locator(".txv2-date")).toHaveText([/16\/11\/2026.*SL: 27,7/, /02\/11\/2026.*SL: 27,7/]);
         await expect(page.locator('.tx-ledger-row [data-fund="vwce"]')).toHaveCount(3);
         for (const month of ["08", "09", "10"]) {
           await expect(page.locator(`[data-month-key="2026-${month}"] .tx-ledger-row`)).toHaveText(/VWCE/);
@@ -322,7 +325,7 @@ for (const theme of themes) {
         await expect(printed.locator(".nfm-snap-v")).toHaveText([/591,95\s*€/, "3", /118,69\s*€/, "5"]);
         await expect(printed.locator("input, textarea, details")).toHaveCount(0);
         await expect(printed.locator("h1")).toHaveText("Hồ sơ khẩn cấp");
-        await expect(printed.locator(".nfm-holdings tbody tr").filter({ hasText: /VALL.*60/ })).toHaveCount(1);
+        await expect(printed.locator(".nfm-holdings tbody tr").filter({ hasText: /VALL.*55/ })).toHaveCount(1);
         if (browserName === "chromium") {
           const printHtml = await printed.locator("html").evaluate((html) => html.outerHTML);
           const printPage = await page.context().newPage();
