@@ -242,6 +242,15 @@ for (const theme of themes) {
         })).toBe(true);
       }
       await page.screenshot({ path: testInfo.outputPath(`${name}.png`), animations: "disabled" });
+      if (name === "settings") {
+        const guardian = page.getByRole("region", { name: "Silent Guardian" });
+        await guardian.scrollIntoViewIfNeeded();
+        await expect(guardian).toBeVisible();
+        await expect(guardian.getByRole("button", { name: "Bật cảnh báo email" })).toBeDisabled();
+        await expect(guardian).toContainText("Cần đăng nhập cloud");
+        await page.screenshot({ path: testInfo.outputPath("guardian-settings.png"), animations: "disabled" });
+        await page.locator(".mwj-settings-head").scrollIntoViewIfNeeded();
+      }
       if (name === "overview") {
         await page.locator(".ovb2-chart-card").scrollIntoViewIfNeeded();
         await page.screenshot({ path: testInfo.outputPath("overview-chart.png"), animations: "disabled" });
