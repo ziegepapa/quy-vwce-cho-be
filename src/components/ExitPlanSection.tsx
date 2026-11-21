@@ -78,7 +78,7 @@ export default function ExitPlanSection({ goals, locale }: Props) {
           {eligible.map((g) => <option key={g.id} value={g.id}>{g.name} · {isoLabel(g.dueDate, locale)}</option>)}
         </select>
         {eligible.length === 0 ? (
-          <p className="exit-plan-note" role="status">{isDe
+          <p className="exit-plan-note">{isDe
             ? "Kein geeignetes zukünftiges Ziel gefunden. Legen Sie unter „Ziele“ selbst einen Termin fest; die App übernimmt kein Beispieldatum."
             : "Chưa tìm thấy Goal tương lai hợp lệ. Bạn tự đặt ngày trong Goals; app không điền ngày mẫu."}</p>
         ) : null}
@@ -176,7 +176,7 @@ export default function ExitPlanSection({ goals, locale }: Props) {
               ? `Die Beispieldaten liegen in den Kalenderjahren ${years.join(" und ")}; daraus folgt keine zugesicherte Steuerersparnis.`
               : `Lịch mẫu trải qua các năm ${years.join(" và ")}; không bảo đảm tiết kiệm thuế.`}</p> : null}
           </div>
-        ) : <p className="exit-plan-empty" role="status">{isDe
+        ) : <p className="exit-plan-empty">{isDe
           ? "Noch keine Verkaufsetappen. Wählen Sie ein Ziel und geben Sie selbst einen Modellbetrag ein."
           : "Chưa có đợt minh họa. Hãy chọn Goal và tự nhập ngân sách."}</p>}
       </div>
