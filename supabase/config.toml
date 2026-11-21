@@ -38,3 +38,10 @@ enable_confirmations = false
 
 [analytics]
 enabled = false
+
+
+# Server-to-server only. Supabase's gateway accepts requests without a user JWT,
+# but index.ts rejects everything except POST with GUARDIAN_CRON_SECRET.
+# The function itself must NOT be activated before the secret is configured.
+[functions.silent-guardian]
+verify_jwt = false
