@@ -131,6 +131,7 @@ jobs:
             test-results/**/goals.png
             test-results/**/notfallmappe.png
             test-results/**/settings.png
+            test-results/**/guardian-settings.png
             test-results/**/onboarding.png
             test-results/**/overview-chart.png
             test-results/**/transactions-empty.png
