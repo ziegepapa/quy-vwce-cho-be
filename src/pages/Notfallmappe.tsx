@@ -342,7 +342,21 @@ export default function NotfallmappePage() {
   return (
     <div className="nfm" ref={rootRef}>
       <header className="mwj-page-head mwj-emergency-head">
-        <h1>{copy("Hồ sơ khẩn cấp", "Notfallmappe")}</h1>
+        <div className="mwj-dossier-hero">
+          <span className="mwj-dossier-symbol" aria-hidden="true">
+            <svg viewBox="0 0 64 64" width="48" height="48" fill="none">
+              <path d="M9 18a5 5 0 0 1 5-5h14l6 7h16a5 5 0 0 1 5 5v25a5 5 0 0 1-5 5H14a5 5 0 0 1-5-5V18Z" fill="#FFCC88" stroke="#E7A963" strokeWidth="2"/>
+              <path d="M9 28h46v22a5 5 0 0 1-5 5H14a5 5 0 0 1-5-5V28Z" fill="#FFE6C0" stroke="#E7A963" strokeWidth="2"/>
+              <path d="M32 34 40 37v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10v-6l8-3Z" fill="#24385D"/>
+              <path d="m28 43 3 3 6-6" stroke="#FFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+          <div className="mwj-dossier-hero-copy">
+            <span className="mwj-dossier-eyebrow">{copy("Thông tin thiết yếu", "Wichtige Informationen")}</span>
+            <h1>{copy("Hồ sơ khẩn cấp", "Notfallmappe")}</h1>
+            <p>{copy("Mọi thông tin quan trọng ở một nơi, sẵn sàng khi cần.", "Alles Wichtige an einem Ort. Bereit, wenn es darauf ankommt.")}</p>
+          </div>
+        </div>
         <div className="mwj-emergency-readiness">
           <div className="mwj-emergency-meter">
             <label htmlFor="nfm-readiness">{locale === "de" ? `${filledCount}/5 Abschnitte ausgefüllt` : `${filledCount}/5 mục đã điền`}</label>
