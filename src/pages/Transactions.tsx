@@ -776,10 +776,7 @@ export default function Transactions() {
         </header>
 
         <section className="tx-ledger-pulse mwj-ledger-summary" aria-label={text.journal}>
-          <div className="mwj-ledger-summary-top">
-            <h2 className="mwj-ledger-summary-kicker">{locale === "de" ? "Aktivität" : "Hoạt động"}</h2>
-            <span className="mwj-ledger-summary-period">{yearFilter === "all" ? text.all : yearFilter}</span>
-          </div>
+          <h2 className="sr-only">{locale === "de" ? "Aktivität" : "Hoạt động"}</h2>
           <dl className="mwj-ledger-stats">
             <div><dt>{text.contributed}</dt><dd>{formatDisplayMoney(analysis.contributed, locale)}</dd></div>
             <div><dt>{text.transactionCount}</dt><dd>{txs.length}</dd></div>
