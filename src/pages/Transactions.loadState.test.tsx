@@ -21,7 +21,6 @@ vi.mock("../lib/recoveryReadOnly", () => ({
   useRecoveryReadOnly: () => ({ readOnly: false, showBlocked: vi.fn() }),
 }));
 vi.mock("../components/ActionMenu", () => ({ default: () => null }));
-vi.mock("../components/Icons", () => ({ IconPlus: () => null }));
 vi.mock("../components/TradeRepublicPdfImport", () => ({ default: () => "pdf-import-loaded" }));
 
 vi.mock("react-router-dom", async () => {

@@ -83,8 +83,7 @@ async function assertFits(page: Page) {
 }
 
 for (const theme of themes) {
-  test(`Modern Wealth Journal mobile routes and ledger · ${theme}`, async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "chromium", "mobile journal evidence is captured in Chromium");
+  test(`Modern Wealth Journal mobile routes and ledger · ${theme}`, async ({ page, browserName }, testInfo) => {
     test.setTimeout(90_000);
     await page.setViewportSize(viewport);
     await page.clock.setFixedTime(new Date("2026-11-20T12:00:00Z"));
@@ -110,15 +109,22 @@ for (const theme of themes) {
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await expect(page.locator(".bottom-dock")).toHaveCount(0);
     await assertFits(page);
+    await expect(page.getByRole("heading", { name: "Tài sản của bạn. Luôn rõ ràng." })).toBeVisible();
+    await expect(start).toBeInViewport({ ratio: 1 });
     await page.screenshot({ path: testInfo.outputPath("onboarding.png"), animations: "disabled" });
 
     await start.click();
     await expect(page.locator(".ovb2")).toBeVisible();
     await expect(page.locator(".ovb2-chart")).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath("overview-empty.png"), animations: "disabled" });
     await page.goto("./#/transactions");
     await expect(page.locator(".txv2-empty")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Thêm giao dịch đầu tiên/ })).toBeInViewport({ ratio: 1 });
+    await page.screenshot({ path: testInfo.outputPath("transactions-empty.png"), animations: "disabled" });
     await page.goto("./#/goals");
     await expect(page.getByText("Chưa có mục tiêu.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Thêm mục tiêu đầu tiên" })).toBeInViewport({ ratio: 1 });
+    await page.screenshot({ path: testInfo.outputPath("goals-empty.png"), animations: "disabled" });
 
     await seedLedger(page);
     await page.reload();
@@ -131,6 +137,12 @@ for (const theme of themes) {
       await expect(page.locator(".bottom-dock")).toContainText("Dòng thời gian");
       await expect(page.locator(".bottom-dock")).toContainText("Thêm");
       await assertFits(page);
+      const shell = page.locator(".mwj-layout > .app-shell");
+      const dock = page.locator(".bottom-dock");
+      await expect.poll(async () => {
+        const [shellRect, dockRect] = await Promise.all([shell.boundingBox(), dock.boundingBox()]);
+        return Math.abs(shellRect!.y + shellRect!.height - dockRect!.y);
+      }).toBeLessThan(1);
       if (name === "overview") {
         await expect(page.locator(".ovb2-big")).toHaveText(/591,95\s*€/);
         await expect(page.locator(".mwj-hero-pill")).toHaveText(/−8,05\s*€\s*−1,34%/);
@@ -182,6 +194,8 @@ for (const theme of themes) {
       if (name === "timeline") {
         const journey = page.getByRole("region", { name: "Hành trình đầu tư" });
         await expect(journey.getByText("Mua VALL")).toHaveCount(2);
+        await expect(journey.locator(".ct-trade-month")).toHaveCount(4);
+        await expect(journey.getByText("Giao dịch chứng khoán đầu tiên")).toBeVisible();
         await expect(journey.getByText("Mua VWCE")).toHaveCount(3);
         await expect(journey.locator(".ct-trade-day time")).toHaveText([
           "16/11/2026", "02/11/2026", "02/10/2026", "02/09/2026", "02/08/2026",
@@ -240,6 +254,8 @@ for (const theme of themes) {
         await confidence.locator("summary").first().click();
         await expect(confidence.getByText("Snapshot giá · VWCE")).toBeVisible();
         await expect(confidence.locator(".ct-day").first()).toHaveAttribute("open", "");
+        await confidence.locator("summary").first().evaluate((summary) => summary.scrollIntoView({ block: "start" }));
+        await page.screenshot({ path: testInfo.outputPath("timeline-confidence.png"), animations: "disabled" });
       }
       if (name === "goals") {
         await page.locator(".mwj-goal-entry button").first().click();
@@ -304,11 +320,13 @@ for (const theme of themes) {
         await expect(printed.locator("input, textarea, details")).toHaveCount(0);
         await expect(printed.locator("h1")).toHaveText("Hồ sơ khẩn cấp");
         await expect(printed.locator(".nfm-holdings tbody tr").filter({ hasText: /VALL.*60/ })).toHaveCount(1);
-        const printHtml = await printed.locator("html").evaluate((html) => html.outerHTML);
-        const printPage = await page.context().newPage();
-        await printPage.setContent(`<!doctype html>${printHtml}`);
-        await printPage.pdf({ path: testInfo.outputPath("notfallmappe.pdf"), preferCSSPageSize: true });
-        await printPage.close();
+        if (browserName === "chromium") {
+          const printHtml = await printed.locator("html").evaluate((html) => html.outerHTML);
+          const printPage = await page.context().newPage();
+          await printPage.setContent(`<!doctype html>${printHtml}`);
+          await printPage.pdf({ path: testInfo.outputPath("notfallmappe.pdf"), preferCSSPageSize: true });
+          await printPage.close();
+        }
       }
       if (name === "simulation") {
         await page.getByTestId("simulation-growth-chart").evaluate((chart) => chart.scrollIntoView({ block: "center" }));
@@ -320,6 +338,52 @@ for (const theme of themes) {
         await page.getByRole("button", { name: "Đóng", exact: true }).click();
         await expect(page.locator(".bottom-dock")).toBeVisible();
       }
+      if (await shell.evaluate((element) => element.scrollHeight > element.clientHeight + 4)) {
+        await shell.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+        await expect.poll(() => shell.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThanOrEqual(1);
+        expect(await page.evaluate(() => window.scrollY)).toBe(0);
+        await expect(dock).toBeVisible();
+        await page.screenshot({ path: testInfo.outputPath(`${name}-bottom.png`), animations: "disabled" });
+      }
+    }
+
+    if (theme === "light") {
+      await page.goto("./#/transactions");
+      const ledger = page.locator(".tx-ledger-row");
+      await expect(ledger).toHaveCount(5);
+      await page.getByRole("button", { name: "Thêm giao dịch", exact: true }).click();
+      const form = page.getByRole("dialog").filter({ has: page.locator("#f-date") });
+      await form.locator("#f-date").fill("2026-11-20");
+      await form.locator("#f-amt").fill("45");
+      await form.locator("#f-price").fill("150");
+      await form.getByRole("button", { name: "Lưu", exact: true }).click();
+      await expect(ledger).toHaveCount(6);
+      const created = ledger.filter({ hasText: "20/11/2026" });
+      await expect(created).toContainText(/45,00\s*€/);
+
+      await created.click();
+      const detail = page.getByRole("dialog", { name: /20\/11\/2026/ });
+      await detail.getByRole("button", { name: "Sửa", exact: true }).click();
+      await expect(form.locator("#f-amt")).toHaveValue("45");
+      await form.locator("#f-amt").fill("999");
+      await form.getByRole("button", { name: "Hủy", exact: true }).click();
+      await expect(created).toContainText(/45,00\s*€/);
+
+      await created.click();
+      await detail.getByRole("button", { name: "Sửa", exact: true }).click();
+      const note = "Kiểm thử giao dịch";
+      await form.locator("#f-notes").fill(note);
+      await form.getByRole("button", { name: "Lưu", exact: true }).click();
+      await created.click();
+      await expect(detail.getByText(note)).toBeVisible();
+      const remove = detail.getByRole("button", { name: "Xóa", exact: true });
+      page.once("dialog", (dialog) => dialog.dismiss());
+      await remove.click();
+      await expect(created).toHaveCount(1);
+      page.once("dialog", (dialog) => dialog.accept());
+      await remove.click();
+      await expect(created).toHaveCount(0);
+      await expect(ledger).toHaveCount(5);
     }
 
     const olderTrades = Array.from({ length: 8 }, (_, index): Transaction => ({
@@ -329,6 +393,7 @@ for (const theme of themes) {
     }));
     await seedLedger(page, [...olderTrades, { ...transactions[4], id: "test-same-day" }]);
     await page.goto("./#/transactions");
+    await page.reload();
     const years = page.getByRole("tablist", { name: "Chọn năm xem" });
     await expect(page.getByText("↔ Cuộn ngang để xem thêm")).toBeVisible();
     await assertFits(page);

@@ -117,38 +117,11 @@
 .mwj-welcome-copy h1 { font-family: var(--mwj-display); font-weight: 500; }
 .mwj-welcome-copy p { margin-block: 0; }
 
-.mwj-layout .pill.bottom-dock {
-  width: min(calc(100vw - 28px), 420px);
-  padding: 5px;
-  gap: 4px;
-  flex-wrap: nowrap;
-  background: var(--color-surface-overlay);
-  border: 1px solid var(--mwj-rule);
-  border-radius: 22px;
-  box-shadow: var(--shadow-dock);
-}
-.mwj-layout .pill.bottom-dock .pb {
-  min-width: 0;
-  flex: 1 1 0;
-  flex-direction: column;
-  min-height: 53px;
-  gap: 4px;
-  padding: 6px 2px;
-  border-radius: 16px;
-  font-size: 11px;
-  letter-spacing: 0;
-  color: var(--text-secondary);
-}
-.mwj-layout .pill.bottom-dock .pb.on {
-  color: var(--primary-600);
-  background: var(--primary-050);
-  box-shadow: inset 0 -2px var(--primary-600);
-}
 .mwj-layout:has(.sim-sheet-backdrop) .pill.bottom-dock {
   visibility: hidden;
 }
 .mwj-dock-icon { display: grid; place-items: center; }
-.mwj-dock-icon svg { width: 19px; height: 19px; }
+.mwj-dock-icon svg { width: 23px; height: 23px; }
 .mwj-dock-label { max-width: 100%; white-space: normal; text-align: center; }
 
 .mwj-layout .mwj-page-head {
@@ -519,26 +492,35 @@
     grid-template-areas: "hero" "chart" "donut" "table" "attention" "foot" "mile" "journey" "updates";
   }
 }
-@media (max-width: 899px) {
-  .mwj-overview-layout.app-layout {
-    /* Reserve a separate row for the dock, including the device safe area. */
+@media screen and (max-width: 899px) {
+  .mwj-layout.app-layout {
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
     height: 100dvh;
     overflow: hidden;
+  }
+  .mwj-layout.app-layout:has(.bar) > .app-shell {
+    min-height: 0;
+    padding-bottom: 16px !important;
+    overflow: auto;
+    overscroll-behavior-y: contain;
+    scroll-padding-block-start: calc(var(--safe-top) + 48px);
+    scroll-padding-block-end: 12px;
+    scrollbar-width: none;
+  }
+  .mwj-layout .pill.bottom-dock {
+    position: relative;
+    inset: auto;
+  }
+  .mwj-overview-layout.app-layout {
     --mwj-overview-left: max(12px, var(--safe-left));
     --mwj-overview-right: max(12px, var(--safe-right));
   }
   .mwj-overview-layout.app-layout:has(.bar) > .app-shell {
-    min-height: 0;
     max-width: none;
     margin: 0;
     padding: 0 var(--mwj-overview-right) 16px var(--mwj-overview-left) !important;
-    overflow: auto;
-    overscroll-behavior-y: contain;
     scroll-padding-block-start: calc(var(--safe-top) + var(--mwj-overview-header-height) + 8px);
-    scroll-padding-block-end: 12px;
-    scrollbar-width: none;
     background: linear-gradient(var(--mwj-navy) 0, var(--mwj-navy) calc(var(--safe-top) + var(--mwj-overview-header-height) + 92px), transparent 345px) local;
     background-size: 100% max(345px, calc(345px + var(--safe-top)));
     background-repeat: no-repeat;
@@ -548,10 +530,6 @@
     top: 0;
     margin-inline: calc(-1 * var(--mwj-overview-left)) calc(-1 * var(--mwj-overview-right));
     padding-inline: max(20px, var(--safe-left)) max(13px, var(--safe-right));
-  }
-  .mwj-overview-layout .pill.bottom-dock {
-    position: relative;
-    inset: auto;
   }
 }
 @media (max-width: 450px) {
@@ -583,9 +561,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.mwj-overview-layout .pill.bottom-dock {
+.mwj-layout .pill.bottom-dock {
   --mwj-dock-height: 81px;
-  inset: auto 0 0;
   width: 100%;
   max-width: none;
   min-height: calc(var(--mwj-dock-height) + var(--safe-bottom));
@@ -600,8 +577,8 @@
   border-radius: 0;
   box-shadow: 0 -4px 18px rgb(12 22 47 / .06);
 }
-.mwj-overview-layout .pill.bottom-dock .pb,
-.mwj-overview-layout .pill.bottom-dock button.pb {
+.mwj-layout .pill.bottom-dock .pb,
+.mwj-layout .pill.bottom-dock button.pb {
   min-width: 0;
   flex: 0 1 116px;
   flex-direction: column;
@@ -617,25 +594,24 @@
   box-shadow: none;
   color: var(--text-secondary);
 }
-.mwj-overview-layout .pill.bottom-dock .pb.on {
+.mwj-layout .pill.bottom-dock .pb.on {
   color: var(--primary-600);
   background: transparent;
   box-shadow: none;
   font-weight: 800;
 }
-:root[data-theme="light"] .mwj-overview-layout .pill.bottom-dock {
+:root[data-theme="light"] .mwj-layout .pill.bottom-dock {
   background: #fafbff;
 }
-:root[data-theme="light"] .mwj-overview-layout .pill.bottom-dock .pb.on {
+:root[data-theme="light"] .mwj-layout .pill.bottom-dock .pb.on {
   color: #152b63;
 }
-.mwj-overview-layout .bottom-dock a.pb:first-child.on .mwj-dock-icon svg path:nth-child(-n+2) {
+.mwj-layout .bottom-dock a.pb:first-child.on .mwj-dock-icon svg path:nth-child(-n+2) {
   fill: currentColor;
 }
-.mwj-overview-layout .bottom-dock a.pb:first-child.on .mwj-dock-icon svg path:last-child {
+.mwj-layout .bottom-dock a.pb:first-child.on .mwj-dock-icon svg path:last-child {
   stroke: var(--surface-raised);
 }
-.mwj-overview-layout .mwj-dock-icon svg { width: 23px; height: 23px; }
 
 /* "Mehr" bottom sheet above the dock. */
 .mwj-more-scrim {

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { signOutBeforeLocalClear, useAuth } from "./lib/auth";
 import { clearUserBusinessData, countLocalData, ensureInitialized, getSettings, ingestQuotesFeed, runPendingMigrations } from "./lib/db";
@@ -169,6 +169,10 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const { pathname } = location;
+  const appShell = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (appShell.current) appShell.current.scrollTop = 0;
+  }, [pathname]);
   const { locale, t } = useLocale();
   const text = useMemo(() => appStrings(locale), [locale]);
   const primaryNav = useMemo(() => [
@@ -450,7 +454,7 @@ export default function App() {
   const focusConflictRequest = readSyncConflictFocusToken(location.state);
   return <div className={`app-layout mwj-layout${screenName === "overview" ? " mwj-overview-layout" : ""}`}>
     <aside className="sidebar" aria-label={text.navigation}><div className="sidebar-brand">VWCE Vault</div><nav className="sidebar-nav">{primaryNav.map(({ to, label, icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{icon}{label}</NavLink>)}</nav></aside>
-    <div className="app-shell">
+    <div className="app-shell" ref={appShell}>
       <CollapsingNavBar
         isOverview={screenName === "overview"}
         syncStatus={syncStatus}
