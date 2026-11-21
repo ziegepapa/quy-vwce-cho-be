@@ -240,8 +240,6 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         </div>
       </section>
 
-      <ExitPlanSection goals={goals} locale={locale} />
-
       <section className="sim-results" role="group" aria-labelledby="sim-results-title">
         <h2 id="sim-results-title">{text.summary}</h2>
         <dl className="summary-strip">
@@ -250,6 +248,8 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <div><dt>{text.gain}</dt><dd><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong></dd></div>
         </dl>
       </section>
+
+      <ExitPlanSection goals={goals} locale={locale} />
 
       <section className="scenario-comparison" aria-labelledby="scenario-comparison-title">
         <div className="scenario-heading">
