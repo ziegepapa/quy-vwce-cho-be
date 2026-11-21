@@ -28,6 +28,20 @@ const contracts = [
     ],
   },
   {
+    // Narrow, owner-approved exception ADR-simulation-exit-plan-owner-illustration:
+    // arithmetic-only schedule, no tax calculations or broker/ledger operations.
+    path: "src/components/ExitPlanSection.tsx",
+    forbidden: [
+      /estimateGermanExitTax/,
+      /\\bafterTax\\b/,
+      /\\bgetPlanPhase\\b/,
+      /\\bequityPct\\b/,
+      /\\bcreateClient\\b/,
+      /\\b(upsertGoal|saveSettings|upsertTransaction|deleteTransaction|insertTransaction)\\b/,
+      /\\b(VWCE_ISIN|VALL_ISIN)\\b/,
+    ],
+  },
+  {
     path: "src/components/PlanRoadmapSection.tsx",
     forbidden: [
       /getPlanPhase/,
