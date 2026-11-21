@@ -1052,7 +1052,6 @@
 .mwj-layout .mwj-goals .goals-hero .ring-text{fill:#fff}
 .mwj-layout .mwj-goals .goals-hero .hero-money{color:#fff!important;font:750 clamp(25px,7.5vw,40px)/1.06 system-ui!important}
 .mwj-layout .mwj-goals .goals-hero :is(.metric-label,.story-caption){color:#fffe}
-.mwj-goals-hero-count{color:#fff;font-size:13px}
 .mwj-layout .vault-atelier .set-atelier-topbar{padding:18px;border-radius:22px;color:#fff;background:linear-gradient(105deg,#0e1e3cf0,#1f254ab9),url("../assets/overview-mountain.webp") 75% 55%/cover}
 .mwj-layout .vault-atelier .set-atelier-topbar h1,.mwj-layout .vault-atelier .set-atelier-topbar p{color:#fff}
 .mwj-layout .vault-atelier .set-atelier-eyebrow,.mwj-layout .vault-atelier .set-atelier-eyebrow *{color:#ffe3b2}
