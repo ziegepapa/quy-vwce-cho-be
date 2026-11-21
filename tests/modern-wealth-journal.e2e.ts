@@ -416,3 +416,39 @@ for (const theme of themes) {
     await expect(sameDay.getByText("Mua VALL")).toHaveCount(2);
   });
 }
+
+
+// The approved visual reference uses German. Capture the same isolated
+// portfolio with the German locale; do not compare German mockups with
+// Vietnamese-only screenshots.
+test("German reference screenshots · 390x844 · light", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize(viewport);
+  await page.clock.setFixedTime(new Date("2026-11-20T12:00:00Z"));
+  await page.addInitScript(() => {
+    localStorage.setItem("vwce-theme", "light");
+    localStorage.setItem("vwce-locale", "de");
+  });
+  await page.route("**/data/quotes.json", (route) => route.abort());
+  await page.route("**/data/price-history/*.json", (route) => route.fulfill({
+    json: { points: route.request().url().endsWith(`${vwce}.json`) ? [
+      { date: "2026-08-31", price: 118 },
+      { date: "2026-10-30", price: 119 },
+    ] : [] },
+  }));
+  await page.goto("./");
+  const start = page.getByRole("button", { name: "Starten", exact: true });
+  test.skip(!(await start.isVisible()), "requires a local-only preview build");
+  await assertFits(page);
+  await expect(start).toBeInViewport({ ratio: 1 });
+  await page.screenshot({ path: testInfo.outputPath("onboarding-de.png"), animations: "disabled" });
+  await start.click();
+  await seedLedger(page);
+  await page.reload();
+  for (const [name, [route, ready]] of Object.entries(routes)) {
+    await page.goto(`./#${route}`);
+    await expect(page.locator(ready)).toBeVisible();
+    await assertFits(page);
+    await page.screenshot({ path: testInfo.outputPath(`${name}-de.png`), animations: "disabled" });
+  }
+});
