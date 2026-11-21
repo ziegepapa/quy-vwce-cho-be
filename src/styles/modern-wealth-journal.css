@@ -145,17 +145,6 @@
   overflow-wrap: anywhere;
 }
 .mwj-page-head > button { min-height: 44px; }
-.mwj-page-links { display: flex; flex-wrap: wrap; gap: 6px 16px; }
-.mwj-page-links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  gap: 5px;
-  color: var(--primary-600);
-  text-underline-offset: 4px;
-  font-weight: 650;
-}
-.mwj-layout .mwj-section-title { margin: 0; font: 500 24px/1.1 var(--mwj-display); }
 
 /* Overview */
 .mwj-overview-layout {
