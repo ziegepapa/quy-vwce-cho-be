@@ -13,5 +13,5 @@ test("application version contract guard passes for package-driven release metad
     ["scripts/check-app-version-contract.mjs"],
     { cwd: root },
   );
-  assert.match(stdout, /App-version contract OK: app \d+\.\d+\.\d+; Dexie 4; backup 4; Supabase 2\./);
+  assert.match(stdout, /App-version contract OK: app \d+\.\d+\.\d+; Dexie 4; backup 4; Supabase 3\./);
 });
