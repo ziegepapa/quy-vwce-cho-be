@@ -19,7 +19,8 @@ function timelineCopy(locale: "vi" | "de") {
     heading: "Zeitleiste",
     journey: "Deine Anlagechronik",
     heroIntro: "Jeder Kauf ein Kapitel. Dein Weg im Überblick.",
-    tradesLabel: "Wertpapierbuchungen",
+    tradesLabel: "Investments",
+    volumeLabel: "Kaufvolumen",
     sinceLabel: "Erster Kauf",
     firstTrade: "Erste Wertpapierbuchung",
     toTrades: "Transaktionen öffnen",
@@ -77,7 +78,8 @@ function timelineCopy(locale: "vi" | "de") {
     heading: "Dòng thời gian",
     journey: "Hành trình đầu tư",
     heroIntro: "Mỗi lần đầu tư là một dấu mốc trên hành trình.",
-    tradesLabel: "Giao dịch chứng khoán",
+    tradesLabel: "Lượt đầu tư",
+    volumeLabel: "Tổng giá trị mua",
     sinceLabel: "Lần mua đầu",
     firstTrade: "Giao dịch chứng khoán đầu tiên",
     toTrades: "Mở nhật ký giao dịch",
@@ -344,6 +346,7 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
 
   const firstTradeDate = tradeDays.at(-1)?.[0];
   const totalTrades = tradeDays.reduce((count, [, trades]) => count + trades.length, 0);
+  const boughtVolume = tradeDays.reduce((sum, [, trades]) => sum + trades.reduce((daySum, tx) => daySum + (isSecuritySell(tx.type) ? 0 : tx.amount), 0), 0);
   const syncLabel = timeline.sync.status === "synced" ? text.synced : timeline.sync.status === "syncing" ? text.syncing : timeline.sync.status === "conflict" ? text.conflict : text.offline;
   const sourceLabel = (source: ConfidenceTimelineSource) => source === "quote" ? text.quoteSource : source === "ledger" ? text.ledgerSource : source === "contacts" ? text.contactSource : text.importSource;
   const lenses: Array<{ key: ConfidenceTimelineLens; label: string }> = [{ key: "all", label: text.all }, { key: "30d", label: text.last30 }, { key: "90d", label: text.last90 }, { key: "thisYear", label: text.thisYear }];
@@ -358,8 +361,9 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
           <h1>{text.heading}</h1>
           <p>{text.heroIntro}</p>
           <dl className="mwj-journey-highlights">
-            <div><dt>{text.tradesLabel}</dt><dd>{totalTrades}</dd></div>
-            <div><dt>{text.sinceLabel}</dt><dd>{firstTradeDate ? formatSessionDate(firstTradeDate, locale) : "—"}</dd></div>
+            <div><dd>{totalTrades}</dd><dt>{text.tradesLabel}</dt></div>
+            <div><dd>{formatMoney(boughtVolume, "EUR", locale)}</dd><dt>{text.volumeLabel}</dt></div>
+            <div><dd>{firstTradeDate ? formatTradeMonth(firstTradeDate, locale) : "—"}</dd><dt>{text.sinceLabel}</dt></div>
           </dl>
         </div>
       </header>
