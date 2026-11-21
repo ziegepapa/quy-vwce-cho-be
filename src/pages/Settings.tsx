@@ -30,7 +30,7 @@ import SettingsPlanStudio from "../components/SettingsPlanStudio";
 import AnnualPlanStudio from "../components/AnnualPlanStudio";
 import SettingsClarityWorkspace from "../components/SettingsClarityWorkspace";
 import SettingsCboWorkspace from "../components/SettingsCboWorkspace";
-const GuardianPanel = lazy(() => import("../components/GuardianPanel").catch(() => ({ default: () => null })));
+const GuardianPanel = lazy(() => import("../components/GuardianPanel"));
 import LocalDiagnosticsPanel from "../components/LocalDiagnosticsPanel";
 import LocalDataInventoryPanel from "../components/LocalDataInventoryPanel";
 import {
