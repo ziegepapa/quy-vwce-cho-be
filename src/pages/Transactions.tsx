@@ -783,7 +783,7 @@ export default function Transactions() {
           <dl className="mwj-ledger-stats">
             <div><dt>{text.contributed}</dt><dd>{formatDisplayMoney(analysis.contributed, locale)}</dd></div>
             <div><dt>{text.transactionCount}</dt><dd>{txs.length}</dd></div>
-            <div><dt>{text.year}</dt><dd>{yearFilter !== "all" ? yearFilter : years[0] ?? "—"}</dd></div>
+            <div><dt>{text.year}</dt><dd>{yearFilter !== "all" ? yearFilter : years.length === 1 ? years[0] : text.all}</dd></div>
           </dl>
           <p className="mwj-ledger-summary-note">{locale === "de"
             ? `${securityTransactionCount} Wertpapierbuchungen · ${incomingCount + outgoingCount} Geldbewegungen`
