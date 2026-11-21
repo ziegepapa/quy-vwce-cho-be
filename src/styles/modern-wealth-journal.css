@@ -1039,3 +1039,18 @@
   padding-block: 5px;
 }
 .mwj-layout .sim-headline.mwj-sim-projection-first .sim-hero-actions { margin: 0; }
+
+
+/* Journal: useful welcome, real-value progress cover, premium settings. */
+.mwj-welcome-story{display:flex;flex-direction:column}
+.mwj-welcome-benefits{z-index:3;position:relative;display:grid;list-style:none;margin:auto 10px 10px;padding:6px;border-radius:18px;background:#fbf9fff0;box-shadow:0 12px 26px #09193638}
+.mwj-welcome-benefit{display:flex;align-items:center;gap:9px;padding:6px}
+.mwj-welcome-benefit-number{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:10px;background:#eeebff;color:#4c46ae;font:800 12px system-ui}
+.mwj-welcome-benefit-copy strong{color:#192347;font-size:12px}
+.mwj-layout .mwj-goals .goals-hero{min-height:180px;color:#fff;background:linear-gradient(105deg,#101d3fe8,#1c214ba9),url("../assets/overview-mountain.webp") 66% 55%/cover}
+.mwj-layout .mwj-goals .goals-hero .ring-bg{stroke:#fff5}
+.mwj-layout .mwj-goals .goals-hero .ring-text{fill:#fff}
+.mwj-layout .mwj-goals .goals-hero .hero-money{color:#fff!important;font:750 clamp(25px,7.5vw,40px)/1.06 system-ui!important}
+.mwj-layout .mwj-goals .goals-hero :is(.metric-label,.story-caption){color:#fffe}
+.mwj-layout .mwj-settings-head{padding:18px;margin:0 0 16px;border:1px solid #fff3;border-radius:23px;background:linear-gradient(105deg,#0e1e3cf0,#1f254ab9),url("../assets/overview-mountain.webp") 75% 55%/cover;box-shadow:0 10px 25px #09193626}
+.mwj-layout .mwj-settings-head h1{color:#fff!important}
