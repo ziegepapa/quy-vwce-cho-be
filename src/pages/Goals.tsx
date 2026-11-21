@@ -14,6 +14,7 @@ import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
 import { formatDisplayDate, formatDisplayMoney } from "../ui/localeFormatting";
 import ActionMenu from "../components/ActionMenu";
+import { IconGoal } from "../components/Icons";
 
 function blankForm(locale: "vi" | "de") {
   return {
@@ -39,21 +40,23 @@ function goalCopy(locale: "vi" | "de") {
 }
 
 function Ring({ pct, status }: { pct: number; status: string }) {
-  const shown = pct <= 0 ? 2 : Math.min(100, pct);
+  const shown = Math.max(0, Math.min(100, pct));
   return (
-    <div className="progress-ring" aria-label={`${Math.round(pct)}%`}>
-      <svg viewBox="0 0 36 36">
+    <div className="progress-ring" role="img" aria-label={`${Math.round(shown)}%`}>
+      <svg viewBox="0 0 36 36" aria-hidden="true">
         <path
           className="ring-bg"
           d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31"
         />
         <path
           className={`ring-fg ${status}`}
+          pathLength={100}
           strokeDasharray={`${shown}, 100`}
+          visibility={shown === 0 ? "hidden" : undefined}
           d="M18 2.5a15.5 15.5 0 1 1 0 31 15.5 15.5 0 1 1 0-31"
         />
         <text x="18" y="20.5" textAnchor="middle" className="ring-text">
-          {Math.round(pct)}%
+          {Math.round(shown)}%
         </text>
       </svg>
     </div>
@@ -224,7 +227,8 @@ export default function Goals() {
       )}
 
       {!goals.length && (
-        <div className="empty card surface-raised">
+        <div className="empty card surface-raised mwj-goal-empty">
+          <span aria-hidden="true"><IconGoal /></span>
           <p>{text.noGoals}</p>
           <button type="button" onClick={openCreate}>
             {text.addFirst}
@@ -281,17 +285,14 @@ export default function Goals() {
                   />
                 </div>
 
-                <div style={{ marginTop: 12 }}>
-                  <span className="muted" style={{ fontSize: 15 }}>
-                    {formatDisplayMoney(g.amount, locale)}
-                  </span>
-                  {g.mode === "purchasing_power" && g.amount > 0 && (
-                    <>
-                      <span className="muted"> → </span>
-                      <span className="metric-value money-md">{formatDisplayMoney(adj, locale)}</span>
-                    </>
-                  )}
-                </div>
+                <dl className="mwj-goal-amounts">
+                  <div>
+                    <dt>{locale === "de" ? "Zielbetrag" : "Số tiền mục tiêu"}</dt>
+                    <dd>{formatDisplayMoney(adj, locale)}</dd>
+                    {g.mode === "purchasing_power" && g.amount > 0 ? <small>{text.amount} · {formatDisplayMoney(g.amount, locale)}</small> : null}
+                  </div>
+                  <div><dt>{text.gap}</dt><dd>{formatDisplayMoney(gap, locale)}</dd></div>
+                </dl>
 
                 <div className="mwj-goal-progress">
                   <span>{text.protected}</span>
@@ -299,8 +300,9 @@ export default function Goals() {
                   <meter min={0} max={100} value={Math.max(0, pct)} aria-label={text.protected} />
                 </div>
 
-                <div className="row-between" style={{ marginTop: 4 }}>
+                <div className="mwj-goal-status row-between">
                   <span className={`status-chip ${status}`}>{text.status[status]}</span>
+                  <span>{Math.round(Math.max(0, pct))}%</span>
                 </div>
 
                 {gap > 0 && months > 0 && (

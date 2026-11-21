@@ -41,3 +41,27 @@
 .goal-card:active {
   transform: scale(0.985);
 }
+
+.mwj-goal-amounts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 0;
+}
+.mwj-goal-amounts > div { padding: 10px; border-radius: 10px; background: var(--primary-050); }
+.mwj-goal-amounts dt, .mwj-goal-amounts small { color: var(--text-secondary); font-size: 12px; }
+.mwj-goal-amounts dd { margin: 3px 0; font-weight: 750; overflow-wrap: anywhere; }
+.mwj-goal-amounts small { display: block; overflow-wrap: anywhere; }
+.mwj-goal-status { gap: 8px; color: var(--text-secondary); font-size: 13px; }
+.mwj-goal-empty { text-align: center; }
+.mwj-goal-empty > span {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  color: var(--primary-600);
+  background: var(--primary-050);
+}
+.mwj-goal-empty svg { width: 22px; height: 22px; }
+.mwj-goal-empty button { min-height: 44px; }
