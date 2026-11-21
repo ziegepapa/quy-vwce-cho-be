@@ -18,6 +18,9 @@ function timelineCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     heading: "Zeitleiste",
     journey: "Deine Anlagechronik",
+    heroIntro: "Jeder Kauf ein Kapitel. Dein Weg im Überblick.",
+    tradesLabel: "Wertpapierbuchungen",
+    sinceLabel: "Erster Kauf",
     firstTrade: "Erste Wertpapierbuchung",
     toTrades: "Transaktionen öffnen",
     noTrades: "Noch keine Wertpapiertransaktionen.",
@@ -73,6 +76,9 @@ function timelineCopy(locale: "vi" | "de") {
   } : {
     heading: "Dòng thời gian",
     journey: "Hành trình đầu tư",
+    heroIntro: "Mỗi lần đầu tư là một dấu mốc trên hành trình.",
+    tradesLabel: "Giao dịch chứng khoán",
+    sinceLabel: "Lần mua đầu",
     firstTrade: "Giao dịch chứng khoán đầu tiên",
     toTrades: "Mở nhật ký giao dịch",
     noTrades: "Chưa có giao dịch chứng khoán.",
@@ -337,6 +343,7 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
   if (!timeline || failed) return <section className="ct-shell" role="alert"><h1>{text.title}</h1><p>{text.error}</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>{text.retry}</button></section>;
 
   const firstTradeDate = tradeDays.at(-1)?.[0];
+  const totalTrades = tradeDays.reduce((count, [, trades]) => count + trades.length, 0);
   const syncLabel = timeline.sync.status === "synced" ? text.synced : timeline.sync.status === "syncing" ? text.syncing : timeline.sync.status === "conflict" ? text.conflict : text.offline;
   const sourceLabel = (source: ConfidenceTimelineSource) => source === "quote" ? text.quoteSource : source === "ledger" ? text.ledgerSource : source === "contacts" ? text.contactSource : text.importSource;
   const lenses: Array<{ key: ConfidenceTimelineLens; label: string }> = [{ key: "all", label: text.all }, { key: "30d", label: text.last30 }, { key: "90d", label: text.last90 }, { key: "thisYear", label: text.thisYear }];
@@ -345,8 +352,16 @@ export default function ConfidenceTimeline({ syncStatus, pending }: { syncStatus
 
   return (
     <main className="ct-shell" aria-label={text.heading}>
-      <header className="ct-head mwj-page-head">
-        <h1>{text.heading}</h1>
+      <header className="ct-head mwj-page-head mwj-journey-hero">
+        <div className="mwj-journey-hero-content">
+          <span className="mwj-journey-eyebrow">{text.journey}</span>
+          <h1>{text.heading}</h1>
+          <p>{text.heroIntro}</p>
+          <dl className="mwj-journey-highlights">
+            <div><dt>{text.tradesLabel}</dt><dd>{totalTrades}</dd></div>
+            <div><dt>{text.sinceLabel}</dt><dd>{firstTradeDate ? formatSessionDate(firstTradeDate, locale) : "—"}</dd></div>
+          </dl>
+        </div>
       </header>
 
       <section className="ct-card ct-trades" aria-labelledby="ct-trades-title">
