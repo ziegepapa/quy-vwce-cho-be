@@ -65,8 +65,9 @@ in this feature. A missing synced VALL trade **does not prove** a missed Sparpla
    `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to deployed functions.
 3. Deploy the function via the normal authorized Supabase workflow with
    `verify_jwt = false` only for `silent-guardian`: its **custom secret
-   authentication** is mandatory. Ensure requests without the header return
-   403 and all requests without POST return 405. Test with synthetic
+   authentication** is mandatory. Ensure an unauthorized POST returns 403, an unauthorized GET
+   watchdog probe returns 403, a valid watchdog GET returns only sanitized
+   heartbeat fields, and other HTTP methods return 405. Test with synthetic
    subscriptions before production.
 4. Enable `pg_cron` and `pg_net` in Supabase. In **Vault**, create secrets
    `guardian_project_url` (e.g. https://<project>.supabase.co) and
