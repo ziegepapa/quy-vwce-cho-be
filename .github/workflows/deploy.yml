@@ -65,8 +65,12 @@ jobs:
         with:
           deno-version: v2.x
       - run: npm ci
-      - name: Check Edge Function in Deno
-        run: deno check supabase/functions/explain-trace/index.ts
+      - name: Check Edge Functions in Deno
+        run: |
+          deno check supabase/functions/explain-trace/index.ts
+          deno check supabase/functions/silent-guardian/index.ts
+      - name: Silent Guardian isolated rule tests (no cloud or emails)
+        run: deno test supabase/functions/silent-guardian/rules.test.ts
       - name: Run isolated Edge Function smoke environment
         run: npm run test:edge-smoke
   preview-smoke:
