@@ -30,7 +30,7 @@ describe("Exit Plan plain-language presentation", () => {
     fireEvent.change(screen.getByLabelText("Welches Ziel soll hier stehen?"), { target: { value: GOAL.id } });
     const expected = new Date().getFullYear() + Math.ceil((GOAL.amount - 2200) / (300 * 12));
     expect(document.body.textContent).toContain(String(expected));
-    expect(document.body.textContent).toContain("ohne künftige Kursgewinne");
+    expect(document.body.textContent).toContain("ohne Kursschwankungen");
     expect(screen.getAllByText(/27.200,00/).length).toBeGreaterThan(0);
     expect(screen.getByText(/230,00/)).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
