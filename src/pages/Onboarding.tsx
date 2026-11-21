@@ -2,7 +2,7 @@ import { useLocale } from "../lib/locale";
 
 function onboardingCopy(locale: "vi" | "de") {
   return locale === "de" ? {
-    subtitle: "Verfolge dein Portfolio, plane deine Ziele und erkunde langfristige Anlageszenarien.",
+    subtitle: "Verfolge dein Portfolio, plane Ziele und entdecke langfristige Szenarien.",
     disclaimer: "Diese App dient ausschließlich der Planung und Simulation. Sie ist keine Anlage- oder Steuerberatung und gibt keine Renditegarantie. Rendite, Inflation und Steuern sind Annahmen.",
     start: "Starten",
     features: [
@@ -11,7 +11,7 @@ function onboardingCopy(locale: "vi" | "de") {
       { title: "Gut vorbereitet" },
     ],
   } : {
-    subtitle: "Theo dõi danh mục, đặt mục tiêu và khám phá các kịch bản đầu tư dài hạn.",
+    subtitle: "Theo dõi danh mục, đặt mục tiêu và khám phá kịch bản dài hạn.",
     disclaimer: "Ứng dụng này chỉ hỗ trợ theo dõi và mô phỏng kế hoạch. Đây không phải tư vấn đầu tư, tư vấn thuế hoặc cam kết lợi nhuận. Lợi suất, lạm phát và thuế là giả định.",
     start: "Bắt đầu",
     features: [
