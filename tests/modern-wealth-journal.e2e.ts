@@ -450,7 +450,7 @@ test(`German reference screenshots · 390x844 · ${germanTheme}`, async ({ page 
   test.setTimeout(90_000);
   await page.setViewportSize(viewport);
   await page.clock.setFixedTime(new Date("2026-11-20T12:00:00Z"));
-  await page.addInitScript(() => {
+  await page.addInitScript((theme) => {
     localStorage.setItem("vwce-theme", theme);
     localStorage.setItem("vwce-locale", "de");
   }, germanTheme);
