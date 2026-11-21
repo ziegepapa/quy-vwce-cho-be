@@ -63,7 +63,16 @@ const dexieSchemaVersion = latestDexieSchemaVersion(dexieSource);
 assert.equal(declaredDexieSchemaVersion, dexieSchemaVersion, "DEXIE_DB_VERSION must describe the latest declared Dexie schema");
 assert.equal(backupSchemaVersion, 4, "H1 must not change backup schema compatibility");
 assert.equal(dexieSchemaVersion, 4, "H1 must not change Dexie schema");
-assert.equal(supabaseSchemaVersion, 2, "H1 must not change Supabase migration state");
+// Guardian deliberately adds an isolated, owner-approved-by-PR server-only
+// migration. Guard the RLS boundary and ensure it never alters financial tables.
+assert.equal(supabaseSchemaVersion, 3, "Only the isolated Guardian migration is allowed after baseline 002");
+const guardianMigration = await readProjectFile("supabase/migrations/003_guardian.sql");
+assert.match(guardianMigration, /alter table public\.guardian_subscriptions enable row level security/i);
+assert.match(guardianMigration, /alter table public\.guardian_alert_deliveries enable row level security/i);
+assert.match(guardianMigration, /guardian_own_select/);
+assert.match(guardianMigration, /guardian_own_update/);
+assert.match(guardianMigration, /revoke all on public\.guardian_alert_deliveries from anon, authenticated/i);
+assert.doesNotMatch(guardianMigration, /(?:alter|drop|truncate)\s+table\s+public\.(?:transactions|goals|app_settings|monthly_snapshots|annual_checklists)\b/i);
 assert.notEqual(appReleaseVersion, String(backupSchemaVersion), "App release and backup schema are separate namespaces");
 
 console.log(`App-version contract OK: app ${appReleaseVersion}; Dexie ${dexieSchemaVersion}; backup ${backupSchemaVersion}; Supabase ${supabaseSchemaVersion}.`);
