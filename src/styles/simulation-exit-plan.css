@@ -1,52 +1,33 @@
-/* Owner-driven, read-only Exit Plan inside the existing Simulation surface.
-   Uses established app theme tokens; no new dependencies. */
-.sim-wrap .exit-plan {
-  padding: 19px 16px 16px;
-  display: grid;
-  gap: 19px;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.exit-plan-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.exit-plan-head h2 { font-size: 19px; letter-spacing: -.025em; line-height: 1.2; margin: 4px 0 8px; color: var(--text-primary); }
-.exit-plan-head p, .exit-plan-step p { font-size: 12px; line-height: 1.55; margin: 5px 0 10px; color: var(--text-secondary); }
-.exit-plan-kicker { font-size: 10px; font-weight: 800; letter-spacing: .085em; color: var(--primary-600); }
-.exit-plan-pill { flex: 0 0 auto; border-radius: 999px; background: var(--surface-sunken); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 6px 9px; font-size: 10px; font-weight: 700; }
-.exit-plan-step { padding-top: 16px; border-top: 1px solid var(--border-subtle); min-width: 0; }
-.exit-plan-step-title { display: flex; align-items: center; gap: 9px; }
-.exit-plan-step-title span { border-radius: 9px; background: var(--surface-sunken); border: 1px solid var(--border-subtle); padding: 6px 7px; font-size: 11px; font-weight: 800; color: var(--primary-600); }
-.exit-plan-step-title h3 { font-size: 14px; color: var(--text-primary); line-height: 1.35; margin: 0; }
-.exit-plan-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-primary); margin: 11px 0 5px; }
-.sim-wrap .exit-plan input, .sim-wrap .exit-plan select { display: block; width: 100%; max-width: 100%; min-height: 42px; padding: 9px 11px; color: var(--text-primary); background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: 12px; font: inherit; font-size: 13px; }
-.sim-wrap .exit-plan input:disabled { opacity: .65; cursor: not-allowed; }
-.sim-wrap .exit-plan :is(input,select,button):focus-visible { outline: 2px solid var(--primary-600); outline-offset: 3px; }
-.sim-wrap .exit-plan .exit-plan-note { color: var(--text-tertiary); font-size: 11px; line-height: 1.5; margin: 9px 0 0; }
-.sim-wrap .exit-plan .exit-plan-warning { color: var(--danger-600); font-size: 12px; font-weight: 650; }
-.exit-plan-facts { margin-top: 11px; display: grid; gap: 7px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--surface-sunken); }
-.exit-plan-facts div { display: flex; gap: 8px; justify-content: space-between; align-items: baseline; }
-.exit-plan-facts span { min-width: 0; max-width: 60%; font-size: 11px; color: var(--text-secondary); }
-.exit-plan-facts strong { text-align: right; font-size: 12px; color: var(--text-primary); }
-.exit-plan-facts small { font-size: 10px; color: var(--text-tertiary); line-height: 1.5; }
-.exit-plan-choice { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; margin: 12px 0; }
-.sim-wrap .exit-plan-choice button { min-width: 0; min-height: 40px; border: 1px solid var(--border-subtle); border-radius: 11px; background: var(--surface-sunken); color: var(--text-primary); font-size: 12px; font-weight: 700; cursor: pointer; padding: 6px 5px; }
-.sim-wrap .exit-plan-choice button[aria-pressed="true"] { background: var(--primary-600); border-color: var(--primary-600); color: white; }
-.exit-plan-timeline { border-top: 3px solid var(--primary-600); display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin-top: 17px; padding-top: 9px; }
-.exit-plan-timeline span { font-size: 10px; color: var(--text-secondary); line-height: 1.4; }
-.exit-plan-timeline span:last-child { text-align: right; }
-.exit-plan-table-wrap { margin-top: 10px; width: 100%; overflow-x: auto; }
-.exit-plan-table { width: 100%; border-collapse: collapse; font-size: 11px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.exit-plan-table th, .exit-plan-table td { text-align: right; padding: 9px 5px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
-.exit-plan-table th { font-weight: 700; color: var(--text-secondary); font-size: 10px; }
-.exit-plan-table th:first-child, .exit-plan-table td:first-child { text-align: left; padding-left: 1px; }
-.exit-plan-table th:last-child, .exit-plan-table td:last-child { padding-right: 1px; }
-.exit-plan-empty { padding: 13px; border-radius: 12px; background: var(--surface-sunken); border: 1px dashed var(--border-subtle); }
-.exit-plan-sources { display: flex; gap: 11px; flex-wrap: wrap; padding-top: 4px; }
-.exit-plan-sources a { font-size: 11px; color: var(--primary-600); text-decoration: underline; }
-.sim-wrap .exit-plan .exit-plan-disclaimer { margin: 0; padding: 11px; border-radius: 12px; background: var(--surface-sunken); color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
-@media(max-width: 390px) {
-  .sim-wrap .exit-plan { padding: 16px 12px; }
-  .exit-plan-head { flex-wrap: wrap; }
-  .exit-plan-pill { margin-top: 0; }
-  .exit-plan-table { font-size: 10px; }
-  .exit-plan-table th, .exit-plan-table td { padding-left: 3px; padding-right: 3px; }
-}
+/* Exit Plan: local to Simulation; honors theme tokens and offline-first PWA. */
+.sim-wrap .exit-plan{display:grid;gap:17px;padding:17px 14px;min-width:0;overflow-wrap:anywhere}
+.exit-plan h2,.exit-plan h3{margin:0;color:var(--text-primary);line-height:1.3}
+.exit-plan h2{font-size:19px;letter-spacing:-.02em;margin:4px 0 7px}
+.exit-plan h3{font-size:14px}
+.exit-plan h3 b{display:inline-block;padding:5px 7px;margin-right:5px;border:1px solid var(--border-subtle);border-radius:9px;color:var(--primary-600);background:var(--surface-sunken);font-size:11px}
+.exit-plan-head small{font-size:10px;font-weight:750;color:var(--primary-600)}
+.exit-plan p{font-size:12px;line-height:1.55;color:var(--text-secondary);margin:8px 0}
+.exit-plan-step{padding-top:15px;border-top:1px solid var(--border-subtle);min-width:0}
+.exit-plan label{display:block;font-size:12px;font-weight:700;margin:12px 0 5px;color:var(--text-primary)}
+.sim-wrap .exit-plan :is(input,select){display:block;width:100%;min-height:42px;padding:9px;border:1px solid var(--border-subtle);border-radius:11px;background:var(--surface-raised);color:var(--text-primary);font:inherit;font-size:13px}
+.sim-wrap .exit-plan input:disabled{opacity:.65}
+.sim-wrap .exit-plan :is(input,select,button):focus-visible{outline:2px solid var(--primary-600);outline-offset:2px}
+.exit-plan-facts{display:grid;gap:8px;margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--border-subtle);background:var(--surface-sunken)}
+.exit-plan-facts div{display:flex;justify-content:space-between;align-items:baseline;gap:7px}
+.exit-plan-facts span{font-size:11px;color:var(--text-secondary)}
+.exit-plan-facts strong{font-size:12px;text-align:right;color:var(--text-primary)}
+.exit-plan-facts small,.sim-wrap .exit-plan .exit-plan-note{font-size:11px;line-height:1.5;color:var(--text-tertiary)}
+.exit-plan-choice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0}
+.sim-wrap .exit-plan-choice button{min-height:40px;min-width:0;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-sunken);color:var(--text-primary);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.sim-wrap .exit-plan-choice button[aria-pressed=true]{background:var(--primary-600);color:#fff}
+.exit-plan-timeline{border-top:3px solid var(--primary-600);padding-top:9px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.exit-plan-timeline span{font-size:10px;line-height:1.4;color:var(--text-secondary)}
+.exit-plan-table-wrap{width:100%;overflow-x:auto}
+.exit-plan-table{border-collapse:collapse;width:100%;font-size:11px;font-variant-numeric:tabular-nums}
+.exit-plan-table th,.exit-plan-table td{padding:9px 4px;white-space:nowrap;text-align:right;border-bottom:1px solid var(--border-subtle);color:var(--text-primary)}
+.exit-plan-table th{font-size:10px;color:var(--text-secondary)}
+.exit-plan-table :is(th,td):first-child{text-align:left}
+.sim-wrap .exit-plan .exit-plan-warning{color:var(--danger-600)}
+.exit-plan-empty,.exit-plan-disclaimer{background:var(--surface-sunken);border:1px solid var(--border-subtle);padding:11px;border-radius:12px}
+.exit-plan-sources{display:flex;gap:12px;flex-wrap:wrap}
+.exit-plan-sources a{font-size:11px;color:var(--primary-600);text-decoration:underline}
+@media(max-width:390px){.sim-wrap .exit-plan{padding:14px 11px}.exit-plan-table{font-size:10px}.exit-plan-table th,.exit-plan-table td{padding:8px 3px}}
