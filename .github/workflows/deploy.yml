@@ -70,6 +70,7 @@ jobs:
           deno check --node-modules-dir=auto supabase/functions/explain-trace/index.ts
           deno check --node-modules-dir=auto supabase/functions/silent-guardian-health-check/index.ts
           deno check --node-modules-dir=auto supabase/functions/silent-guardian-email-test/index.ts
+          deno check --node-modules-dir=auto supabase/functions/silent-guardian-worker/index.ts
       - name: Run isolated Edge Function smoke environment
         run: npm run test:edge-smoke
   preview-smoke:
