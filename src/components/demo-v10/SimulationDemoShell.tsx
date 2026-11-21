@@ -212,7 +212,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         </dl>
         <div className="sim-hero-actions">
           <button type="button" className={mode === "A" ? "sim-parameters-trigger mwj-sim-float-button" : "sim-parameters-trigger"} aria-label={text.adjust} aria-haspopup="dialog" onClick={() => setParamsOpen(true)}>
-            <span aria-hidden="true">☷</span><span className={mode === "A" ? "sr-only" : undefined}>{text.adjust}</span><span className="sim-trigger-chevron" aria-hidden="true">›</span>
+            <span aria-hidden="true">☷</span><span className={mode === "A" ? "sr-only" : undefined}>{text.adjust}</span>{mode !== "A" && <span className="sim-trigger-chevron" aria-hidden="true">›</span>}
           </button>
         </div>
       </section>
