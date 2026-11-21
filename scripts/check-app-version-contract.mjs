@@ -72,6 +72,9 @@ assert.match(guardianMigration, /alter table public\.guardian_alert_deliveries e
 assert.match(guardianMigration, /guardian_own_select/);
 assert.match(guardianMigration, /guardian_own_update/);
 assert.match(guardianMigration, /revoke all on public\.guardian_alert_deliveries from anon, authenticated/i);
+assert.match(guardianMigration, /guardian_service_status/);
+assert.match(guardianMigration, /active boolean not null default false/i);
+assert.match(guardianMigration, /revoke all on public\.guardian_service_status from anon, authenticated/i);
 assert.doesNotMatch(guardianMigration, /(?:alter|drop|truncate)\s+table\s+public\.(?:transactions|goals|app_settings|monthly_snapshots|annual_checklists)\b/i);
 assert.notEqual(appReleaseVersion, String(backupSchemaVersion), "App release and backup schema are separate namespaces");
 
