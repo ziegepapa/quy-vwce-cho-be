@@ -28,6 +28,10 @@ in this feature. A missing synced VALL trade **does not prove** a missed Sparpla
 
 - Subscription is **OFF until a signed-in user with a confirmed email enables
   it** in Settings. Postgres RLS restricts the subscription to that user.
+- **Server readiness is OFF by default**, independently of user opt-in. Only a
+  privileged operator can set `guardian_service_status.active=true` after a
+  verified deployment. The UI disallows enrollment when inactive and the Edge
+  function will not send even if older opt-in rows exist.
 - No Dexie/IndexedDB access from Cron. Unsynced local data cannot be monitored.
 - Alert receipts are server-only with a unique `(user_id,event_key)` key.
   At most **one summary email per user per scan**; the function deduplicates
@@ -88,10 +92,19 @@ in this feature. A missing synced VALL trade **does not prove** a missed Sparpla
    runtime responses and **counts only**. Never log secrets or ledger rows.
    To stop: `select cron.unschedule('vwce-guardian-v1');`.
 5. Only after staging success, authorize production migration/Edge deployment,
-   create the production Cron job, and let the **owner** opt in inside
-   Settings. Verify OFF state first, then synthetic positive/negative tests
-   and exactly one email on the test account. An owner who has never opted in
-   receives nothing.
+   create the production Cron job, and verify the default **inactive** status.
+   After confirming an authorized staging test email and readiness on production,
+   a privileged owner can activate the server gate with:
+   ```sql
+   update public.guardian_service_status
+      set active = true, updated_at = now()
+    where id = true;
+   ```
+   This must never run from CI or a PWA session. Only then can a confirmed
+   user opt in in Settings. To suspend all mail independently of consent:
+   `update public.guardian_service_status set active=false where id=true;`
+   and `select cron.unschedule('vwce-guardian-v1');`.
+   An owner who has never opted in receives nothing.
 
 ## CI contract
 
