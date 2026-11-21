@@ -122,3 +122,102 @@ evidence, not an absent synced row. TER/AUM/tracking-difference alarms need
 time-stamped official issuer/index source verification. Push notifications
 would need a separate opt-in subscription and delivery design. None of these
 are implied by this V1 implementation.
+
+## Reliability / self-heal — Draft PR only, NOT activated
+
+Before touching this PR we reviewed `docs/OPERATIONS_RUNBOOK.md` §14.5, the
+existing `production-health.yml`, the device-local diagnostics allowlist, and
+the event-key delivery ledger. We did **not** locate the claimed server-side
+"3 retries + ntfy diagnostic reporter" implementation in this branch. This
+section describes new, explicit V1 hardening, not an already operating service.
+
+### Bounded retries and failure handling
+
+- Supabase **read-only GET requests only**: first call + **up to 3 retries**
+  after 600ms, 1800ms, and 5400ms for transport faults, HTTP 408/425/429
+  and 500/502/503/504. 400/401/403/404 and other nontransient errors stop
+  immediately. Each attempt uses a 9-second timeout.
+- Writes to alert receipts and Resend email POSTs do **not** get implicit
+  retries. Resend may have accepted a timed-out POST; reissuing it blindly can
+  duplicate a private alert. The existing unique (user,event_key) ledger and
+  per-event idempotency key stay authoritative. Manual investigation is needed
+  for ambiguous provider outcomes.
+- Fatal or partial runs record an **allowlisted server diagnostic**
+  (`guardian_run_health`) with `last_started_at`, `last_succeeded_at`,
+  `last_failed_at`, `last_outcome`, `last_error_code`, and
+  `failure_streak`. No transaction IDs, account IDs, emails, balances,
+  secrets, exception traces or raw ledger payloads enter the heartbeat.
+- A run with partial errors is `degraded` and does **not** advance
+  `last_succeeded_at`. A crashed/disconnected worker that cannot write
+  diagnostics leaves that last-success timestamp stale, which the independent
+  watchdog can detect. Running while the readiness gate is OFF records
+  `disabled` and never sends email.
+
+### Who watches the watcher?
+
+Reuse the existing `Production Health` GitHub workflow (not a second ledger
+monitor). Its independent `guardian-watchdog` job is **unarmed** by default,
+has no service-role key, and performs only an authenticated aggregate GET to
+`/functions/v1/silent-guardian`. It marks unhealthy when:
+
+- the active service cannot be reached or its status endpoint rejects a request;
+- the service was expected active but reports inactive;
+- there has been no successful completed scan for **more than 36 hours**;
+- two consecutive scheduled runs were degraded/failed.
+
+It POSTs one privacy-safe operational warning per scheduled GitHub workflow run
+to **ntfy**, independently of Resend. The current Production Health schedule is
+once daily at 05:17 UTC; the 36-hour threshold is evaluated at each run, **not
+continuously**. A missing Guardian run may therefore be detected only on a
+later daily check. GitHub itself can miss a scheduled run: this is not a
+guaranteed dead-man switch. Owner must evaluate an additional external uptime
+service if a GitHub outage must also be covered. No recovery notification or
+provider failover is claimed as implemented here.
+
+After Merge and **individual owner approvals**, the operator provisions:
+
+| Setting | Place | Purpose |
+| --- | --- | --- |
+| `GUARDIAN_WATCHDOG_SECRET` | Supabase Edge Secrets **and** GitHub Actions Secret | Separate random 32+ character read-only health token; never reuse `GUARDIAN_CRON_SECRET` |
+| `GUARDIAN_WATCHDOG_URL` | GitHub Actions repository variable | `https://<project>.supabase.co/functions/v1/silent-guardian` |
+| `GUARDIAN_NTFY_URL` | GitHub Actions Secret | Private authenticated ntfy topic endpoint; do not expose topic in client app |
+| `GUARDIAN_NTFY_TOKEN` | GitHub Actions Secret | ntfy topic publish token |
+| `GUARDIAN_WATCHDOG_ENABLED` | GitHub Actions repository variable | `true` **only after** complete authorized deployment and first successful Guardian run |
+
+The GitHub watchdog does not touch the financial ledger, cannot send Resend
+email, and cannot invoke the Cron POST (its secret differs). On a failed check
+it sends ntfy and marks the GitHub Action red; no automated redeploy, mutation,
+secret rotation, or cron manipulation follows. For manual `workflow_dispatch`
+runs, it **does not** send ntfy by default, preventing accidental notification
+loops. Before owner activates the variable, it reports
+`guardian_watchdog_not_armed` and does not make HTTP requests.
+
+### Operator diagnostic and incident runbook
+
+1. Observe `Production Health` → `guardian-watchdog` job; note only the
+   generic error code and UTC run time. No finance data needed.
+2. Compare protected heartbeat `public.guardian_run_health` (server/admin
+   only), `cron.job_run_details`, and Supabase Edge Function invocation logs.
+3. If only Resend fails: inspect Resend domain/sender/quota and the reservation
+   receipt counts; **do not rerun ambiguous sends**.
+4. If Cron stopped: review schedule + `pg_net` response; owner must separately
+   approve any restart/replacement.
+5. For mobile-only missing sync: open Sync Health and local diagnostics on the
+   iPhone, then resolve conflict explicitly. Guardian cannot inspect offline
+   Dexie and must not create or correct a financial transaction.
+6. On suspected data danger, fail closed; do not clear IndexedDB, edit
+   financial tables, replay a production import or claim recovery without
+   proof. See `OPERATIONS_RUNBOOK.md` §13.
+
+### Verification before Merge and deployment
+
+- Deno check + rules/retry unit tests; Node watchdog tests; existing
+  type-check, locale audit, `npm test`, production build, release/bundle
+  checks, benchmark, Chromium/WebKit review, H4/H5 synthetic RLS and restore.
+- UI review: real PR preview URL + artifact showing a 390×844 screenshot.
+- Staging-only E2E with synthetic confirmed account, consent, verified sale,
+  duplicate PDF reference, transient GET failure, authorization failures,
+  ntfy watchdog alert, Resend ambiguous response, and cleanup afterward.
+- **No GitHub workflow or PR test may send real notifications or create a
+  production schedule.** Production migration, Edge deploy, credentials,
+  cron enablement and real opt-in are separate owner approval gates.
