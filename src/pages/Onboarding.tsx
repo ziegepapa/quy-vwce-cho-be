@@ -7,9 +7,9 @@ function onboardingCopy(locale: "vi" | "de") {
     start: "Starten",
     highlights: "Wofür VWCE Vault da ist",
     features: [
-      { title: "Portfolio auf einen Blick", detail: "Wert und Einzahlungen klar getrennt" },
-      { title: "Ziele mit Perspektive", detail: "Fortschritt langfristig begleiten" },
-      { title: "Wichtige Daten griffbereit", detail: "Notfallmappe für den Ernstfall" },
+      { title: "Portfolio auf einen Blick" },
+      { title: "Ziele mit Perspektive" },
+      { title: "Wichtige Daten griffbereit" },
     ],
   } : {
     subtitle: "Theo dõi danh mục, đặt mục tiêu và khám phá các kịch bản đầu tư dài hạn.",
@@ -17,9 +17,9 @@ function onboardingCopy(locale: "vi" | "de") {
     start: "Bắt đầu",
     highlights: "VWCE Vault giúp bạn",
     features: [
-      { title: "Danh mục trong tầm mắt", detail: "Phân biệt giá trị và vốn góp" },
-      { title: "Mục tiêu có định hướng", detail: "Theo dõi tiến độ dài hạn" },
-      { title: "Thông tin luôn sẵn sàng", detail: "Hồ sơ khẩn cấp khi cần" },
+      { title: "Danh mục trong tầm mắt" },
+      { title: "Mục tiêu có định hướng" },
+      { title: "Thông tin luôn sẵn sàng" },
     ],
   };
 }
@@ -41,7 +41,6 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
               <span className="mwj-welcome-benefit-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
               <span className="mwj-welcome-benefit-copy">
                 <strong>{feature.title}</strong>
-                <small>{feature.detail}</small>
               </span>
             </li>
           ))}
