@@ -128,6 +128,7 @@ jobs:
             test-results/**/transactions.png
             test-results/**/timeline.png
             test-results/**/simulation.png
+            test-results/**/simulation-exit-plan-*.png
             test-results/**/goals.png
             test-results/**/notfallmappe.png
             test-results/**/settings.png

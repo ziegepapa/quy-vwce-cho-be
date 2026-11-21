@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ExitPlanSection from "../ExitPlanSection";
 import type { Mode, ProjectOutput, Scenario } from "../../lib/simulation/engine";
 import type { Goal } from "../../lib/types";
 import { DEFAULT_TER, MAX_YEARS } from "../../lib/simulation/engine";
@@ -247,6 +248,8 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <div><dt>{text.gain}</dt><dd><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong></dd></div>
         </dl>
       </section>
+
+      <ExitPlanSection goals={goals} locale={locale} />
 
       <section className="scenario-comparison" aria-labelledby="scenario-comparison-title">
         <div className="scenario-heading">
