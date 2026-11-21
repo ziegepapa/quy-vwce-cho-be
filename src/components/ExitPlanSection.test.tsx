@@ -41,7 +41,7 @@ describe("Exit Plan plain-language presentation", () => {
     );
     fireEvent.change(screen.getByLabelText("Welches Ziel soll hier stehen?"), { target: { value: GOAL.id } });
     expect(document.body.textContent).toContain("Der aktuelle Wert ist noch nicht sicher bekannt.");
-    expect(document.body.textContent).toContain("Die monatliche Sparrate ist noch nicht hinterlegt.");
+    expect(document.body.textContent).toContain("Aktuell ist kein laufender Monatsbeitrag hinterlegt.");
     expect(document.body.textContent).toContain("Ein ungefähres Jahr ist");
     rerender(<ExitPlanSection goals={[GOAL]} locale="de" actualBalance={Infinity} actualMonthly={0}/>);
     expect(document.body.textContent).not.toContain("Infinity");
