@@ -131,6 +131,7 @@ jobs:
             test-results/**/overview-chart.png
             test-results/**/transactions-empty.png
             test-results/**/goals-empty.png
+            test-results/**/*-de.png
           if-no-files-found: error
           retention-days: 14
       - uses: actions/upload-artifact@v7

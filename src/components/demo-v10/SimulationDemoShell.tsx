@@ -211,8 +211,8 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <div><dt>{locale === "de" ? "TER / Jahr" : "TER / năm"}</dt><dd>{percent.format(DEFAULT_TER)}</dd></div>
         </dl>
         <div className="sim-hero-actions">
-          <button type="button" className="sim-parameters-trigger" aria-haspopup="dialog" onClick={() => setParamsOpen(true)}>
-            <span aria-hidden="true">☷</span><span>{text.adjust}</span><span className="sim-trigger-chevron" aria-hidden="true">›</span>
+          <button type="button" className={mode === "A" ? "sim-parameters-trigger mwj-sim-float-button" : "sim-parameters-trigger"} aria-label={text.adjust} aria-haspopup="dialog" onClick={() => setParamsOpen(true)}>
+            <span aria-hidden="true">☷</span><span className={mode === "A" ? "sr-only" : undefined}>{text.adjust}</span>{mode !== "A" && <span className="sim-trigger-chevron" aria-hidden="true">›</span>}
           </button>
         </div>
       </section>

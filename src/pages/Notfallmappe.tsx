@@ -382,16 +382,15 @@ export default function NotfallmappePage() {
         </ul>
       )}
 
-      <div className="nfm-print-note">
-        <p>
-          <strong>{copy("Bản in giấy mới là bản dùng được.", "Nur ein Ausdruck auf Papier ist im Ernstfall nutzbar.")}</strong> {copy("Trang này nằm sau màn hình đăng nhập của riêng bạn, nên nếu có chuyện xảy ra, người thân sẽ không mở được. Hãy in ra và cất cùng chỗ với giấy tờ gốc.", "Diese Seite liegt hinter Ihrer persönlichen Anmeldung. Angehörige können sie im Notfall nicht öffnen. Drucken Sie sie aus und bewahren Sie sie bei den Originaldokumenten auf.")}
-        </p>
+      <details className="nfm-print-note mwj-print-guidance">
+        <summary>{copy("Bản in giấy mới là bản dùng được", "Nur der Papierausdruck ist im Ernstfall nutzbar")}</summary>
+        <p>{copy("Trang này nằm sau màn hình đăng nhập của riêng bạn, nên nếu có chuyện xảy ra, người thân sẽ không mở được. Hãy in ra và cất cùng chỗ với giấy tờ gốc.", "Diese Seite liegt hinter Ihrer persönlichen Anmeldung. Angehörige können sie im Notfall nicht öffnen. Drucken Sie sie aus und bewahren Sie sie bei den Originaldokumenten auf.")}</p>
         <p className="nfm-print-when">
           {data.lastPrintedAt
             ? `${copy("In gần nhất", "Zuletzt gedruckt")} ${formatDisplayDate(data.lastPrintedAt.slice(0, 10), locale)}`
             : copy("Chưa in lần nào", "Noch nie gedruckt")}
         </p>
-      </div>
+      </details>
 
       <details className="nfm-sec">
         <summary>
