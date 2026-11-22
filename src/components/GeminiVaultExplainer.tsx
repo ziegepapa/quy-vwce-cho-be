@@ -178,6 +178,16 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const contextRef = useRef(answerContext);
   contextRef.current = answerContext;
   useEffect(() => { setAnswer(""); setCached(false); }, [answerContext]);
+  useEffect(() => {
+    const listener = supabase?.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT" || event === "SIGNED_IN") {
+        setAnswer(""); setCached(false); setConsent(false);
+        setDiagnostic(""); setRemaining(null); setStatus("unchecked");
+      }
+    });
+    return () => listener?.data.subscription.unsubscribe();
+  }, []);
+
   const local = fallback(localTopic, selectedFacts, locale);
   const busy = status === "loading" || status === "checking";
   const showStatus = ({
