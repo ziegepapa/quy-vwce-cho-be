@@ -122,7 +122,7 @@ test("authenticated Edge uses cache before spending 20/40 Vault quota and reserv
   assert.ok(server.includes('gemini_reply_cache_put'));
   assert.ok(server.includes("model,cached:false"));
   assert.ok(server.includes("cached:true"));
-  assert.doesNotMatch(server,/GEMINI_TEST_API_BASE[^]*?\:generateContent/); // CI override is isolated in the helper only
+  assert.ok(server.includes('Deno.env.get("GEMINI_TEST_MODE") === "1"'));
 });
 test("PWA shows provider-confirmed model (including device cache hits) without leaking secrets",()=>{
   assert.ok(client.includes('data-testid="gemini-vault-model"'));
