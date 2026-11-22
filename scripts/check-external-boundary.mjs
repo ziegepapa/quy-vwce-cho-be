@@ -44,12 +44,12 @@ for (const file of await listFiles(sourceRoot)) {
   if (path === ownerApprovedGeminiUi) {
     // Narrow owner-approved exception: exactly one explicitly clicked, authenticated
     // Supabase Edge Function. Legacy Trace/OpenAI and dynamic functions remain banned.
-    const approvedCalls = [...source.matchAll(/supabase\\.functions\\.invoke\\s*\\(\\s*["']([^"']+)["']/g)]
-      .map((match) => match[1]);
-    const totalInvokes = (source.match(/supabase\\.functions\\.invoke\\s*\\(/g) || []).length;
-    if (approvedCalls.length !== totalInvokes ||
-        !approvedCalls.length ||
-        approvedCalls.some((name) => name !== "gemini-vault-explain") ||
+    const invokePattern = /supabase[.]functions[.]invoke\\s*[(]/g;
+    const approvedPattern = /supabase[.]functions[.]invoke\\s*[(]\\s*["']gemini-vault-explain["']/g;
+    const totalInvokes = [...source.matchAll(invokePattern)].length;
+    const approvedInvokes = [...source.matchAll(approvedPattern)].length;
+    if (approvedInvokes !== totalInvokes ||
+        approvedInvokes !== 2 ||
         forbiddenRuntimePatterns.some((pattern, i) => i !== 2 && pattern.test(source))) {
       offenders.push(path);
     }
