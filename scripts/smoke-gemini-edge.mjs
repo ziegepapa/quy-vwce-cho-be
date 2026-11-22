@@ -11,6 +11,7 @@ let paused = false;
 let providerMode = "normal";
 let calls = [];
 let pauseCalls = 0;
+let modelChecks = 0;
 
 function reply(res,status,body){
   res.writeHead(status,{"Content-Type":"application/json"});
@@ -45,12 +46,21 @@ const stub = http.createServer(async(req,res)=>{
       return reply(res,200,{paused:true});
     }
     if(req.url?.startsWith("/v1beta/models/")){
+      if(req.method==="GET"){
+        modelChecks++;
+        assert.equal(req.headers["x-goog-api-key"],"only-ci-not-real");
+        assert.equal(req.headers.authorization,undefined);
+        if(providerMode==="key") return reply(res,403,{error:"forbidden"});
+        return reply(res,200,{name:req.url,supportedGenerationMethods:["generateContent"]});
+      }
       assert.equal(req.method,"POST");
       assert.equal(req.headers["x-goog-api-key"],"only-ci-not-real");
       assert.equal(req.headers.authorization,undefined);
       const msg=await body(req);
       calls.push({url:req.url,msg});
       if(providerMode==="rate") return reply(res,429,{error:"quota"});
+      if(providerMode==="overloaded") return reply(res,503,{error:"unavailable"});
+      if(providerMode==="empty") return reply(res,200,{candidates:[{content:{parts:[]},finishReason:"MAX_TOKENS"}]});
       if(providerMode==="fallback" && req.url.includes("gemini-3.5")) return reply(res,503,{error:"unavailable"});
       const txt=providerMode==="unsafe" ? "Sie sollten im Jahr 2042 verkaufen.":
         "Nach den eingetragenen Zahlen wurde bisher ein Teil des Plans erreicht. Es ist keine Anlageberatung.";
@@ -90,8 +100,19 @@ try{
   await wait();
   assert.equal((await fetch(edge,{method:"GET"})).status,401);
   assert.equal((await fetch(edge,{method:"GET",headers:{Origin:"https://untrusted.example"}})).status,403);
-  const check=await fetch(edge,{method:"GET",headers:{Authorization:"Bearer mock-user-jwt"}});
-  assert.equal(check.status,200);assert.equal((await check.json()).ready,true);
+  const check=await fetch(edge,{method:"GET",headers:{Authorization:"Bearer mock-user-jwt","x-gemini-check":"1"}});
+  assert.equal(check.status,200);
+  const checkData=await check.json();
+  assert.equal(checkData.ready,true);
+  assert.equal(checkData.modelChecks.length,2);
+  assert.equal(modelChecks,2);
+  assert.equal(requests,0);
+  providerMode="key";
+  const blocked=await fetch(edge,{method:"GET",headers:{Authorization:"Bearer mock-user-jwt","x-gemini-check":"1"}});
+  assert.equal(blocked.status,200);
+  assert.equal((await blocked.json()).ready,false);
+  assert.equal(requests,0);
+  providerMode="normal";
   assert.equal((await call({...safe,childName:"PRIVATE"})).status,400);
   assert.equal((await call({...safe,facts:{...facts,accountId:"SECRET ACCOUNT"}})).status,400);
   assert.equal(requests,0);
@@ -115,9 +136,19 @@ try{
   assert.ok(calls[1].url.includes("gemini-3.8-flash"));
   providerMode="unsafe";
   response=await call();
-  assert.equal(response.status,503); // never display model-invented numbers or trading guidance
+  assert.equal(response.status,422); // unsafe output must never be displayed
+  assert.equal((await response.json()).code,"AI_RESPONSE_REJECTED");
+  providerMode="empty";
+  response=await call();
+  assert.equal(response.status,502);
+  assert.equal((await response.json()).code,"AI_EMPTY_OUTPUT");
+  providerMode="overloaded";
+  calls=[];response=await call();
+  assert.equal(response.status,503);
+  assert.equal((await response.json()).code,"GOOGLE_OVERLOADED");
+  assert.equal(calls.length,2);
   providerMode="normal";
-  for(let i=0;i<7;i++) assert.equal((await call()).status,200);
+  for(let i=0;i<5;i++) assert.equal((await call()).status,200);
   assert.equal(requests,10);
   assert.equal((await call()).status,429);
   assert.equal(requests,10);
@@ -132,7 +163,7 @@ try{
   response=await call();
   assert.equal(response.status,429);
   assert.equal(calls.length,1);
-  console.log("Gemini isolated smoke OK: auth, origin, readiness, zero-PII payload, fallback, unsafe answer, atomic quota stub and 429 circuit.");
+  console.log("Gemini isolated smoke OK: key/model metadata GET without quota, auth, no-PII, exact errors, fallback and rate circuit.");
 }finally{
   deno.kill("SIGTERM");
   await new Promise(resolve=>stub.close(resolve));
