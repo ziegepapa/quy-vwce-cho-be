@@ -18,13 +18,11 @@ const copy = {
     topicValue: "Depotwert", topicDifference: "Differenz", topicMonthly: "Monatsrate", topicGoalProgress: "Zielstand",
     goal: "Welches Ziel möchtest du besprechen?", noGoal: "Kein Ziel ausgewählt",
     localTitle: "Aus dem Vault · ohne KI-Limit", missing: "Dazu fehlen noch Zahlen im Vault.",
-    valueSummary: "Aktueller Depotwert: {value}. Der Wert kann schwanken.",
-    differenceSummary: "Depotwert {value}; eingetragen {paid}: {direction} {difference}. Keine Jahresrendite.",
-    differenceUp: "mehr", differenceDown: "weniger",
-    differenceEven: "Wert und Beiträge: jeweils {value}. Keine Renditeprognose.",
-    monthlySummary: "Geplante Monatsrate: {monthly}. Kein Beleg einer Brokerzahlung.",
-    goalProgressUnder: "Depotwert {value}; gewähltes Ziel {goal}: Abstand {remaining}. Keine Garantie.",
-    goalProgressReached: "Depotwert {value} erreicht den Zielbetrag {goal} derzeit. Keine Garantie oder Verkaufsanweisung.",
+    valueSummary: "Depotwert: {value} (schwankend).",
+    differenceSummary: "Depot {value}; Beiträge {paid}; Differenz {difference}. Keine Jahresrendite.",
+    monthlySummary: "Sparplan: {monthly}/Monat, keine bestätigte Zahlung.",
+    goalProgressSummary: "Depot {value}, Ziel {goal}: {progress}. Keine Garantie.",
+    goalBelow: "Abstand {remaining}", goalReached: "Betrag derzeit erreicht",
     personal: "Im Vault sind bisher {paid} eingetragen. Der aktuelle Wert ist {value}. Der monatliche Sparplan beträgt {monthly}.",
     yearSummary: "Dieses Jahr sind {recorded} erfasst. Bis heute waren {planned} laut Plan vorgesehen. Das ist keine Bestätigung durch den Broker.",
     yearAhead: "Die eingetragenen Beiträge erreichen den Planstand bis heute.", yearBehind: "Die eingetragenen Beiträge liegen unter dem Planstand bis heute.",
@@ -68,13 +66,11 @@ const copy = {
     topicValue: "Giá trị quỹ", topicDifference: "Chênh lệch", topicMonthly: "Góp tháng", topicGoalProgress: "Tiến độ Goal",
     goal: "Bạn muốn hỏi về Goal nào?", noGoal: "Chưa chọn Goal",
     localTitle: "Giải thích từ sổ · không trừ lượt", missing: "Hiện chưa đủ dữ liệu trong sổ để giải thích chi tiết.",
-    valueSummary: "Giá trị quỹ hiện tại: {value}. Giá có thể biến động.",
-    differenceSummary: "Giá trị quỹ {value}; đã góp {paid}: {direction} {difference}. Không phải lợi suất năm.",
-    differenceUp: "cao hơn", differenceDown: "thấp hơn",
-    differenceEven: "Giá trị quỹ và số đã góp đều là {value}. Không dự báo lợi nhuận.",
-    monthlySummary: "Kế hoạch góp {monthly}/tháng; chưa phải xác nhận tiền đã vào broker.",
-    goalProgressUnder: "Giá trị quỹ {value}; Goal đã chọn {goal}: còn cách {remaining}. Không bảo đảm đạt đích.",
-    goalProgressReached: "Giá trị quỹ {value} hiện bằng hoặc cao hơn Goal {goal}. Không bảo đảm hay bắt buộc bán.",
+    valueSummary: "Giá trị quỹ: {value} (có thể biến động).",
+    differenceSummary: "Quỹ {value}; đã góp {paid}; chênh lệch {difference}. Không phải lợi suất năm.",
+    monthlySummary: "Dự kiến {monthly}/tháng, không xác nhận lệnh mua.",
+    goalProgressSummary: "Quỹ {value} so với Goal {goal}: {progress}. Không bảo đảm.",
+    goalBelow: "còn thiếu {remaining}", goalReached: "đang bằng hoặc vượt mốc",
     personal: "Sổ đã ghi nhận {paid} góp vào quỹ. Giá trị hiện tại {value}. Mức góp theo kế hoạch là {monthly}.",
     yearSummary: "Năm nay đã ghi {recorded}; kế hoạch tới hôm nay là {planned}. Đây không phải xác nhận từ broker.",
     yearAhead: "Theo giao dịch đã nhập, số góp đạt mức dự kiến tới hôm nay.", yearBehind: "Số góp ghi trong sổ còn thấp hơn kế hoạch tới hôm nay.",
@@ -133,20 +129,19 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
   if (topic === "difference") {
     if (f.portfolioValue === null || f.contributed === null) return t.missing;
     const cents = Math.round(f.portfolioValue * 100) - Math.round(f.contributed * 100);
-    if (cents === 0) return fill(t.differenceEven, { value:euro(f.portfolioValue) });
     return fill(t.differenceSummary, {
       value:euro(f.portfolioValue), paid:euro(f.contributed),
-      difference:euro(Math.abs(cents) / 100),
-      direction:cents > 0 ? t.differenceUp : t.differenceDown,
+      difference:(cents > 0 ? "+" : "") + euro(cents / 100),
     });
   }
   if (topic === "goalProgress") {
     if (!f.goalYear || f.goalAmount === null || f.goalAmount <= 0) return t.goalUnknown;
     if (f.portfolioValue === null) return t.missing;
     const gapCents = Math.round(f.goalAmount * 100) - Math.round(f.portfolioValue * 100);
-    return fill(gapCents > 0 ? t.goalProgressUnder : t.goalProgressReached, {
+    return fill(t.goalProgressSummary, {
       value:euro(f.portfolioValue), goal:euro(f.goalAmount),
-      remaining:euro(Math.max(0, gapCents) / 100),
+      progress:gapCents > 0
+        ? fill(t.goalBelow,{remaining:euro(gapCents / 100)}) : t.goalReached,
     });
   }
   if (topic === "goal") return f.goalYear && f.goalAmount !== null
