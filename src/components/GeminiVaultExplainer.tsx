@@ -15,8 +15,16 @@ const copy = {
     description: "Die Zahlen aus deinem Vault werden nur erklärt. Es wird nichts gekauft, verkauft oder gespeichert.",
     question: "Kurze Frage", input: "Zum Beispiel: Habe ich dieses Jahr genug eingezahlt?",
     topicPlan: "Mein Plan", topicYear: "Dieses Jahr", topicGoal: "Mein Ziel", topicSim: "Simulation",
+    topicValue: "Depotwert", topicDifference: "Differenz", topicMonthly: "Monatsrate", topicGoalProgress: "Zielstand",
     goal: "Welches Ziel möchtest du besprechen?", noGoal: "Kein Ziel ausgewählt",
-    localTitle: "Auch ohne KI verständlich", missing: "Dazu fehlen noch Zahlen im Vault.",
+    localTitle: "Aus dem Vault · ohne KI-Limit", missing: "Dazu fehlen noch Zahlen im Vault.",
+    valueSummary: "Der aktuell angezeigte Depotwert beträgt {value}. Er kann sich mit dem Markt ändern.",
+    differenceUp: "Aktueller Wert {value}, eingetragene Beiträge {paid}: {difference} mehr. Das ist ein Vergleich, keine berechnete Jahresrendite.",
+    differenceDown: "Aktueller Wert {value}, eingetragene Beiträge {paid}: {difference} weniger. Das ist ein Vergleich, keine berechnete Jahresrendite.",
+    differenceEven: "Aktueller Wert und erfasste Beiträge sind beide {value}. Das ist keine Renditeprognose.",
+    monthlySummary: "Die eingestellte monatliche Sparrate beträgt {monthly}. Der Plan allein bestätigt noch keine ausgeführten Zahlungen.",
+    goalProgressUnder: "Aktueller Wert {value}, gewählter Zielbetrag {goal}: noch {remaining} Abstand. Marktbewegungen können diesen Wert ändern.",
+    goalProgressReached: "Aktueller Wert {value} liegt auf oder über dem gewählten Zielbetrag {goal}. Das ist keine garantierte Auszahlung und kein automatischer Verkaufszeitpunkt.",
     personal: "Im Vault sind bisher {paid} eingetragen. Der aktuelle Wert ist {value}. Der monatliche Sparplan beträgt {monthly}.",
     yearSummary: "Dieses Jahr sind {recorded} erfasst. Bis heute waren {planned} laut Plan vorgesehen. Das ist keine Bestätigung durch den Broker.",
     yearAhead: "Die eingetragenen Beiträge erreichen den Planstand bis heute.", yearBehind: "Die eingetragenen Beiträge liegen unter dem Planstand bis heute.",
@@ -57,8 +65,16 @@ const copy = {
     description: "AI chỉ giúp hiểu các con số đã ghi trong Vault, không tạo giao dịch hay lưu câu hỏi.",
     question: "Hỏi ngắn", input: "Ví dụ: Năm nay tôi góp đủ chưa?",
     topicPlan: "Kế hoạch", topicYear: "Năm nay", topicGoal: "Mục tiêu", topicSim: "Mô phỏng",
+    topicValue: "Giá trị quỹ", topicDifference: "Chênh lệch", topicMonthly: "Góp tháng", topicGoalProgress: "Tiến độ Goal",
     goal: "Bạn muốn hỏi về Goal nào?", noGoal: "Chưa chọn Goal",
-    localTitle: "Không có AI vẫn hiểu được", missing: "Hiện chưa đủ dữ liệu trong sổ để giải thích chi tiết.",
+    localTitle: "Giải thích từ sổ · không trừ lượt", missing: "Hiện chưa đủ dữ liệu trong sổ để giải thích chi tiết.",
+    valueSummary: "Giá trị quỹ đang hiển thị trong Vault là {value}. Giá trị này có thể biến động theo thị trường.",
+    differenceUp: "Giá trị hiện tại {value}, số đã góp ghi trong sổ {paid}: cao hơn {difference}. Đây là chênh lệch tại thời điểm xem, không phải lợi nhuận năm.",
+    differenceDown: "Giá trị hiện tại {value}, số đã góp ghi trong sổ {paid}: thấp hơn {difference}. Đây là chênh lệch tại thời điểm xem, không phải lợi nhuận năm.",
+    differenceEven: "Giá trị hiện tại bằng số đã góp ghi trong sổ, đều là {value}. Điều này không dự báo lợi nhuận tương lai.",
+    monthlySummary: "Theo cài đặt, bạn dự kiến góp {monthly} mỗi tháng. Mức kế hoạch không tự chứng minh đã mua hoặc chuyển tiền vào broker.",
+    goalProgressUnder: "Giá trị quỹ hiện tại {value}, mục tiêu tiền đã chọn {goal}: còn cách {remaining}. Thị trường biến động nên khoảng cách có thể thay đổi.",
+    goalProgressReached: "Giá trị quỹ hiện tại {value} đã bằng hoặc cao hơn số tiền mục tiêu {goal}. Đây không phải cam kết rút được số tiền đó hay ngày bán bắt buộc.",
     personal: "Sổ đã ghi nhận {paid} góp vào quỹ. Giá trị hiện tại {value}. Mức góp theo kế hoạch là {monthly}.",
     yearSummary: "Năm nay đã ghi {recorded}; kế hoạch tới hôm nay là {planned}. Đây không phải xác nhận từ broker.",
     yearAhead: "Theo giao dịch đã nhập, số góp đạt mức dự kiến tới hôm nay.", yearBehind: "Số góp ghi trong sổ còn thấp hơn kế hoạch tới hôm nay.",
@@ -109,6 +125,28 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
     if (f.yearRecorded === null || f.yearPlanned === null) return t.missing;
     return t.yearSummary.replace("{recorded}", euro(f.yearRecorded)).replace("{planned}", euro(f.yearPlanned))
       + " " + (f.yearRecorded >= f.yearPlanned ? t.yearAhead : t.yearBehind);
+  }
+  if (topic === "monthly") return f.monthly !== null
+    ? fill(t.monthlySummary, { monthly:euro(f.monthly) }) : t.missing;
+  if (topic === "value") return f.portfolioValue !== null
+    ? fill(t.valueSummary, { value:euro(f.portfolioValue) }) : t.missing;
+  if (topic === "difference") {
+    if (f.portfolioValue === null || f.contributed === null) return t.missing;
+    const cents = Math.round(f.portfolioValue * 100) - Math.round(f.contributed * 100);
+    const template = cents > 0 ? t.differenceUp : cents < 0 ? t.differenceDown : t.differenceEven;
+    return fill(template, {
+      value:euro(f.portfolioValue), paid:euro(f.contributed),
+      difference:euro(Math.abs(cents) / 100),
+    });
+  }
+  if (topic === "goalProgress") {
+    if (!f.goalYear || f.goalAmount === null || f.goalAmount <= 0) return t.goalUnknown;
+    if (f.portfolioValue === null) return t.missing;
+    const gapCents = Math.round(f.goalAmount * 100) - Math.round(f.portfolioValue * 100);
+    return fill(gapCents > 0 ? t.goalProgressUnder : t.goalProgressReached, {
+      value:euro(f.portfolioValue), goal:euro(f.goalAmount),
+      remaining:euro(Math.max(0, gapCents) / 100),
+    });
   }
   if (topic === "goal") return f.goalYear && f.goalAmount !== null
     ? fill(t.goalSummary, { year: String(f.goalYear), goal: euro(f.goalAmount) }) : t.goalUnknown;
@@ -222,9 +260,10 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       {goals.filter(g=>!g.deletedAt&&validExitDate(g.dueDate)).map(g=><option key={g.id} value={g.id}>{g.name} · {g.dueDate}</option>)}
     </select>
     <div className="gemini-vault-suggestions" role="group" aria-label={t.question}>
-      {(["plan","year","goal","simulation"] as const).map(v=><button key={v} type="button"
+      {(["plan","year","goal","simulation","value","difference","monthly","goalProgress"] as const).map(v=><button key={v} type="button"
         aria-pressed={topic===v} onClick={()=>{setTopic(v);setQuestion("");setAnswer("");}}>
-        {({plan:t.topicPlan,year:t.topicYear,goal:t.topicGoal,simulation:t.topicSim})[v]}
+        {({plan:t.topicPlan,year:t.topicYear,goal:t.topicGoal,simulation:t.topicSim,
+          value:t.topicValue,difference:t.topicDifference,monthly:t.topicMonthly,goalProgress:t.topicGoalProgress})[v]}
       </button>)}
     </div>
     <label htmlFor="gemini-vault-question">{t.question}</label>
@@ -254,6 +293,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       ? `Heute wurden ${10 - remaining}/10 Sendeversuche im Vault verbraucht.`
       : `Đã dùng ${10 - remaining}/10 lượt thử hôm nay trong Vault.`}</p>}
     {answer && <div className="gemini-vault-answer"><strong>{t.aiAnswer}</strong><p>{answer}</p>
+      <p className="gemini-vault-grounded"><strong>{t.localTitle}: </strong>{local}</p>
 
     </div>}
     <p className="gemini-vault-disclaimer">{t.disclaimer} {t.quota}</p>
