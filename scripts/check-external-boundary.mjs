@@ -5,6 +5,8 @@ import { resolve, relative } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const sourceRoot = resolve(root, "src");
 const legacyAiModule = "src/lib/aiTraceExplanation.ts";
+const ownerApprovedGeminiUi = "src/components/GeminiVaultExplainer.tsx";
+
 const allowedLegacyCallers = new Set([
   legacyAiModule,
   "src/lib/aiTraceExplanation.test.ts",
@@ -39,12 +41,26 @@ for (const file of await listFiles(sourceRoot)) {
   const path = relative(root, file);
   if (!isProductionRuntime(path) || allowedLegacyCallers.has(path)) continue;
   const source = await readFile(file, "utf8");
+  if (path === ownerApprovedGeminiUi) {
+    // Narrow owner-approved exception: exactly one explicitly clicked, authenticated
+    // Supabase Edge Function. Legacy Trace/OpenAI and dynamic functions remain banned.
+    const approvedCalls = [...source.matchAll(/supabase\\.functions\\.invoke\\s*\\(\\s*["']([^"']+)["']/g)]
+      .map((match) => match[1]);
+    const totalInvokes = (source.match(/supabase\\.functions\\.invoke\\s*\\(/g) || []).length;
+    if (approvedCalls.length !== totalInvokes ||
+        !approvedCalls.length ||
+        approvedCalls.some((name) => name !== "gemini-vault-explain") ||
+        forbiddenRuntimePatterns.some((pattern, i) => i !== 2 && pattern.test(source))) {
+      offenders.push(path);
+    }
+    continue;
+  }
   if (forbiddenRuntimePatterns.some((pattern) => pattern.test(source))) offenders.push(path);
 }
 assert.deepEqual(
   offenders,
   [],
-  `Production runtime must not call legacy AI/Edge infrastructure or add an AI client: ${offenders.join(", ")}`,
+  `Production runtime may call only the owner-approved manual Gemini Edge Function; all legacy AI remains banned: ${offenders.join(", ")}`,
 );
 
 const workflow = await readFile(resolve(root, ".github/workflows/deploy.yml"), "utf8");
@@ -56,4 +72,4 @@ const isolatedSmoke = await readFile(resolve(root, "scripts/smoke-ai-edge.mjs"),
 assert.match(isolatedSmoke, /AI_API_URL:\s*`http:\/\/127\.0\.0\.1:\$\{mockPort\}\/v1\/chat\/completions`/);
 assert.doesNotMatch(isolatedSmoke, /https:\/\/api\./);
 
-console.log("External-boundary OK: no production UI caller for legacy AI/Edge infrastructure; isolated smoke uses loopback mock only.");
+console.log("External-boundary OK: only explicit Gemini Edge caller is allowed; no legacy AI access; isolated smoke uses loopback mock only.");
