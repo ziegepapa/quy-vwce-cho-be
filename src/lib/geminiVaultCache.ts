@@ -1,6 +1,6 @@
 // Explanations only; requests and account IDs exist solely in hashed keys.
-const STORAGE = "vwce:gemini-cache:v1";
-const PREFIX = "vwce:gemini-answer:v1:";
+const STORAGE = "vwce:gemini-cache:v2";
+const PREFIX = "vwce:gemini-answer:v2:";
 const TTL = 24 * 60 * 60 * 1000;
 type Entry = { k:string; a:string; e:number };
 function entries(): Entry[] {
@@ -34,5 +34,5 @@ export function saveGeminiAnswer(key: string, answer: string): void {
   } catch { /* Storage disabled or full: regular AI still works. */ }
 }
 export function clearGeminiAnswers(): void {
-  try { localStorage.removeItem(STORAGE); } catch { /* Restricted storage. */ }
+  try { localStorage.removeItem(STORAGE); localStorage.removeItem("vwce:gemini-cache:v1"); } catch { /* Restricted storage. */ }
 }
