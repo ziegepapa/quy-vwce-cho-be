@@ -45,6 +45,23 @@ tests are synthetic and must never be copied into the real ledger.
   SQL RPC installation, auth service or quota backend is missing. Existing
   local explanation remains visible on any failure.
 
+## Exact numeric comparisons: never decided by Gemini
+
+- The current owner-confirmed contribution amount is **560 €** (the live Vault
+  source of truth). For the reported year view, recorded **560 €** against
+  planned **600 €** means **40 € below plan**. This is not a broker statement.
+- `year`, `difference` and `goalProgress` are now **ledger-only** questions:
+  the app calculates and explains the result immediately; no Gemini request,
+  no new Google data transfer, and no SQL quota claim. The Edge Function also
+  refuses these topic requests before quota allocation to protect older clients.
+- A Gemini answer must never be shown as ground truth when it contradicts a
+  deterministic result. Numeric words such as "năm trăm sáu mươi" or
+  "fünfhundert" are rejected at the server as well as numerical digits.
+- Legacy answer cache v1 is no longer read; v2 uses a new key namespace so
+  incorrect Gemini prose cannot be replayed on a new client build.
+- Other five qualitative topics remain Gemini opt-in. The exact amount is
+  still shown separately from the Vault's ledger, never invented by the model.
+
 ## Optional Gemini answer cache (device-only)
 
 - A successful, server-validated Gemini explanation can be reused for **24 hours**
