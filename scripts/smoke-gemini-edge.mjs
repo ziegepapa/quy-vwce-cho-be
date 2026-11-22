@@ -30,15 +30,15 @@ const stub = http.createServer(async(req,res)=>{
     }
     if(req.url==="/rest/v1/rpc/gemini_explain_status"){
       assert.equal(req.headers.authorization,"Bearer mock-private-role");
-      return reply(res,200,{ready:true,remaining:Math.max(0,10-requests)});
+      return reply(res,200,{ready:true,remaining:Math.max(0,20-requests)});
     }
     if(req.url==="/rest/v1/rpc/gemini_explain_claim"){
       assert.equal(req.headers.authorization,"Bearer mock-private-role");
       const params=await body(req);
       assert.equal(params.p_user_id,userId);
-      if(paused || requests>=10) return reply(res,200,{allowed:false,reason:"user_limit"});
+      if(paused || requests>=20) return reply(res,200,{allowed:false,reason:"user_limit"});
       requests++;
-      return reply(res,200,{allowed:true,remaining:10-requests});
+      return reply(res,200,{allowed:true,remaining:20-requests});
     }
     if(req.url==="/rest/v1/rpc/gemini_explain_pause"){
       assert.equal(req.headers.authorization,"Bearer mock-private-role");
@@ -106,6 +106,7 @@ try{
   assert.equal(check.status,200);
   const checkData=await check.json();
   assert.equal(checkData.ready,true);
+  assert.equal(checkData.limitPerDay,20);
   assert.equal(checkData.modelChecks.length,2);
   assert.equal(modelChecks,2);
   assert.equal(requests,0);
@@ -132,7 +133,7 @@ try{
   let response=await call();
   assert.equal(response.status,200);
   const good=await response.json();
-  assert.equal(good.remaining,9);
+  assert.equal(good.remaining,19);
   assert.equal(calls.length,1);
   const serialized=JSON.stringify(calls[0].msg);
   for(const value of [userId,"mock-user-jwt","mock-private-role","PRIVATE","accountId","childName","localUserId"]){
@@ -165,10 +166,10 @@ try{
   assert.equal((await response.json()).code,"GOOGLE_OVERLOADED");
   assert.equal(calls.length,2);
   providerMode="normal";
-  for(let i=0;i<4;i++) assert.equal((await call()).status,200);
-  assert.equal(requests,10);
+  for(let i=0;i<14;i++) assert.equal((await call()).status,200);
+  assert.equal(requests,20);
   assert.equal((await call()).status,429);
-  assert.equal(requests,10);
+  assert.equal(requests,20);
   // Next mocked UTC day: exact comparisons are handled by Vault, never Gemini.
   requests=0;paused=false;calls=[];providerMode="normal";
   for (const topic of ["plan","goal","simulation","value","monthly"]) {

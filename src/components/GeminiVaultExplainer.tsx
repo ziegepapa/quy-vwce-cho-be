@@ -44,7 +44,7 @@ const copy = {
     privacy: "Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen. Keine Namen oder Einzelbuchungen. Antworten bleiben bis zu 24 h auf diesem Gerät.",
     data: "Diese Angaben würden gesendet", values: "Aktueller Depotwert", paid: "Erfasste Beiträge", monthly: "Monatsbeitrag", milestone: "Gewähltes Ziel",
     noData: "nicht verfügbar", disclaimer: "Nur allgemeine Erläuterung — keine Anlage- oder Steuerberatung. Keine Renditegarantie.",
-    quota: "Maximal zehn Sendeversuche je Person und UTC-Tag, auch bei Fehlern. Der Modellcheck verbraucht keinen Vault-Versuch.",
+    quota: "Maximal 20 Sendeversuche je Person und UTC-Tag, auch bei Fehlern. Der Modellcheck verbraucht keinen Vault-Versuch.",
     checkOk: "Schlüssel und Modell erreichbar; Antwort noch ungetestet.",
     checkKey: "Google verweigert Schlüssel/Zugriff (401/403).",
     checkModel: "Beide Modelle nicht gefunden (404).",
@@ -95,7 +95,7 @@ const copy = {
     privacy: "Google có thể dùng dữ liệu Free Tier để cải thiện sản phẩm. Không gửi tên hay giao dịch lẻ. Câu trả lời lưu trên máy tối đa 24 giờ.",
     data: "Các con số sẽ gửi", values: "Giá trị quỹ", paid: "Tổng đã góp", monthly: "Góp mỗi tháng", milestone: "Goal đã chọn",
     noData: "chưa có", disclaimer: "Chỉ là thông tin chung, không tư vấn đầu tư/thuế và không hứa lợi nhuận.",
-    quota: "Tối đa 10 lượt gửi/người/ngày UTC, kể cả lượt lỗi. Kiểm tra key/model không trừ lượt trong Vault.",
+    quota: "Tối đa 20 lượt gửi/người/ngày UTC, kể cả lượt lỗi. Kiểm tra key/model không trừ lượt trong Vault.",
     checkOk: "Key và model truy cập được; chưa kiểm thử trả lời.",
     checkKey: "Google từ chối key/quyền (401/403).",
     checkModel: "Cả hai model không khả dụng (404).",
@@ -172,6 +172,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const asking = useRef(false);
   const [diagnostic, setDiagnostic] = useState("");
   const [remaining, setRemaining] = useState<number | null>(null);
+  const [limitPerDay, setLimitPerDay] = useState(20);
   const chosenGoal = goals.find(g => !g.deletedAt && g.id === goalId && validExitDate(g.dueDate)) ?? null;
   const selectedFacts = useMemo(() => withSelectedGoal(facts, chosenGoal), [facts, chosenGoal]);
   const query = question.trim() ? classifyGeminiQuestion(question) : { topic, queryYear: null };
@@ -212,6 +213,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
         method:"GET", headers: { "x-gemini-check": "1" },
       });
       if (error || !data) { setStatus("not_ready"); return false; }
+      if (Number.isInteger(data.limitPerDay) && data.limitPerDay > 0 && data.limitPerDay <= 40) setLimitPerDay(data.limitPerDay);
       if (Number.isInteger(data.remaining)) setRemaining(data.remaining);
       const checks: Array<{status?: number | null}> = Array.isArray(data.modelChecks) ? data.modelChecks : [];
       const codes = checks.map(item => item?.status);
@@ -332,8 +334,8 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     <p className="gemini-vault-status" role={status === "unchecked" || status === "not_ready" ? undefined : "status"}>{showStatus}</p>
     {diagnostic && <p className="gemini-vault-status" role="status">{diagnostic}</p>}
     {remaining !== null && <p className="gemini-vault-status">{locale === "de"
-      ? `Heute wurden ${10 - remaining}/10 Sendeversuche im Vault verbraucht.`
-      : `Đã dùng ${10 - remaining}/10 lượt thử hôm nay trong Vault.`}</p>}
+      ? `Heute wurden ${Math.max(0,limitPerDay - remaining)}/${limitPerDay} Sendeversuche im Vault verbraucht.`
+      : `Đã dùng ${Math.max(0,limitPerDay - remaining)}/${limitPerDay} lượt thử hôm nay trong Vault.`}</p>}
     {answer && <div className="gemini-vault-answer"><strong>{t.aiAnswer}</strong><p>{answer}</p>
       {cached && <button type="button" onClick={clearCache}>{t.cacheClear}</button>}
       <p className="gemini-vault-grounded"><strong>{t.localTitle}: </strong>{local}</p>

@@ -35,7 +35,7 @@ tests are synthetic and must never be copied into the real ledger.
   No AI key in the browser; use existing Supabase project secret mechanism.
 - Owner must actively click **Verfügbarkeit prüfen** and affirm the Google
   free-tier data-use notice before **KI fragen**. No background calls or polling.
-- A private SQL counter with a transactional advisory lock enforces **10
+- A private SQL counter with a transactional advisory lock enforces **20
   attempts per authenticated user per UTC day** and a conservative **40
   attempts per project per UTC day**. A Google 429 pauses new attempts until
   the next UTC day; never silently switches models on 429. On model 404/503,
@@ -82,9 +82,27 @@ tests are synthetic and must never be copied into the real ledger.
 - Storage may be unavailable (private browsing or permission restrictions).
   In that case the app gracefully uses normal server calls. Cached responses
   do not increase the provider's Free Tier quota; they only avoid repeated
-  calls. Daily server limits remain **10/user and 40/project**, unchanged.
+  calls. Daily server limits remain **20/user and 40/project**, unchanged.
 - Device storage is not a cross-device encrypted vault. Avoid caching responses
   on shared or untrusted devices; clear the entries via the in-app control.
+
+## November 2026 Free Tier limit review
+
+The owner shared the live Google AI Studio **Gemini aiProject / Free tier**
+rate-limit screenshot on 22 Nov 2026. It showed model RPD utilization
+**2 / 500** and **0 / 100**, both above the app's new conservative 20-user /
+40-project UTC day caps. The image did not show the row-to-model mapping; do
+not promise Google will accept all 20 requests on a future day, and do not
+enable Billing or claim the app is entitled to 500 calls for every model.
+Google can enforce independent requests-per-minute/tokens-per-minute limits
+or change Free Tier rules. A provider HTTP 429 still pauses server attempts.
+
+Production upgrade sequence: merge CI-verified code, apply the narrowly
+scoped `supabase/ops/gemini-explain-upgrade-20.sql` against the approved
+Supabase project, verify the 20-attempt CHECK, read-only quota RPC and
+service-role permissions, deploy just `gemini-vault-explain` with JWT enabled,
+then verify the PWA displays 20. The SQL preserves existing usage counts,
+keeps the 40-project ceiling and leaves all finance and auth data alone.
 
 ## Financial and privacy caveats
 
@@ -151,7 +169,7 @@ Official references:
    **Verfügbarkeit prüfen**. Only if readiness succeeds and you consent,
    click **KI fragen**. The card remains readable offline/without a key.
 7. Verify a single test response with your own non-sensitive, explicitly
-   approved aggregates. Verify that 10 attempts per user/day are enforced.
+   approved aggregates. Verify that 20 attempts per user/day are enforced.
    Check Supabase Edge Function logs for **error codes**, never raw financial
    payloads. To stop usage, set `GEMINI_ASSISTANT_ENABLED=false` or remove
    the key in **Edge Functions → Secrets**. Do not touch the Silent Guardian.
