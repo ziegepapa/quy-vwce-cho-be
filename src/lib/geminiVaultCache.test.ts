@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { webcrypto } from "node:crypto";
 import { clearGeminiAnswers, geminiAnswerCacheKey, readGeminiAnswer, saveGeminiAnswer } from "./geminiVaultCache";
 
 class FakeStorage {
@@ -16,7 +15,6 @@ let store: FakeStorage;
 beforeEach(() => {
   store = new FakeStorage();
   vi.stubGlobal("localStorage", store);
-  vi.stubGlobal("crypto", webcrypto);
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
