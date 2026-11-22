@@ -55,6 +55,8 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     bandPctLabel: "",
     readOnly: false,
     goals: [],
+    exitPlanActualBalance: null,
+    exitPlanActualMonthly: null,
     applyYearsFromGoal: noop,
     advSummary: locale === "de" ? "Erweiterte Optionen" : "Tùy chọn nâng cao",
     bandInput: "0",
