@@ -69,7 +69,7 @@ function parsePayload(v: unknown): SafeRequest | null {
     queryYear: (year ?? null) as number | null, facts };
 }
 function active(): boolean {
-  return Deno.env.get("GEMINI_ASSISTANT_ENABLED") === "true" && !!Deno.env.get("GEMINI_API_KEY");
+  return Deno.env.get("GEMINI_ASSISTANT_ENABLED") === "true" && !!Deno.env.get("GEMINI_API_KEY")?.trim();
 }
 function serviceKey(): string | null {
   // Supabase-provided server-only key; never returned to client or sent to Google.
@@ -138,7 +138,7 @@ async function checkModel(model: string, key: string): Promise<{model: string; s
   const keyWhitespace = key.trim() !== key;
   try {
     const response = await fetch(apiBase + "/v1beta/models/" + encodeURIComponent(model), {
-      method: "GET", headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(6000),
+      method: "GET", headers: { "x-goog-api-key": key.trim() }, signal: AbortSignal.timeout(6000),
     });
     // Never log the response body: Google messages can contain sensitive detail.
     const diagnostic = response.ok ? {googleStatus:"OK", reason:"NONE"}
@@ -230,7 +230,7 @@ Deno.serve(async (req: Request) => {
   catch { return json(req,503,{code:"QUOTA_BACKEND_NOT_READY"}); }
   if (claim.allowed !== true) return json(req,429,{code:"FREE_LIMIT",reason:"server_quota"});
 
-  const key = Deno.env.get("GEMINI_API_KEY")!;
+  const key = Deno.env.get("GEMINI_API_KEY")!.trim();
   try {
     for (const [i, model] of MODELS.entries()) {
       const result = await askGoogle(model, payload, key);
