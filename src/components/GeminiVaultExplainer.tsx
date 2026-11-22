@@ -7,7 +7,7 @@ import { validExitDate } from "../lib/simulation/exitPlan";
 import "../styles/gemini-vault-explainer.css";
 
 type Props = { locale: DisplayLocale; goals: readonly Goal[]; facts: GeminiFacts };
-type Status = "unchecked" | "checking" | "ready" | "not_ready" | "sign_in" | "offline" | "loading" | "limit" | "error" | "answered";
+type Status = "unchecked" | "checking" | "ready" | "not_ready" | "sign_in" | "offline" | "loading" | "limit" | "error" | "answered" | "key_problem" | "model_problem" | "provider_problem" | "empty_response" | "request_problem";
 
 const copy = {
   de: {
@@ -31,6 +31,11 @@ const copy = {
     offline: "Keine Verbindung. Die Erklärung aus dem Vault bleibt sichtbar.",
     ready: "KI ist bereit. Du kannst bewusst eine Frage senden.",
     limited: "Heute sind die kostenlosen KI-Anfragen aufgebraucht. Bitte morgen erneut versuchen.",
+    key_problem: "Google lehnt den Gemini-Schlüssel ab. Bitte GEMINI_API_KEY in Supabase prüfen. Den Schlüssel niemals hier eingeben.",
+    model_problem: "Dieses Gemini-Modell ist für das gewählte Google-Projekt nicht verfügbar. Bitte den Modellzugang in AI Studio prüfen.",
+    provider_problem: "Google Gemini ist gerade nicht erreichbar. Dies liegt nicht an deinen Vault-Buchungen. Bitte später erneut versuchen.",
+    empty_response: "Gemini hat keinen sicheren, lesbaren Antworttext geliefert. Die Erklärung aus dem Vault bleibt sichtbar.",
+    request_problem: "Google hat die Modellanfrage abgewiesen. Die App muss überprüft werden; bitte vorerst nicht erneut senden.",
     error: "Die KI ist gerade nicht erreichbar. Nutze die Erklärung aus deinem Vault.",
     unsupported: "Diese Frage kann die KI hier nicht sicher beantworten. Bitte eine der kurzen Beispielfragen wählen.",
     aiAnswer: "Antwort von Gemini", consent: "Ich bin einverstanden, dass die unten gezeigten Zahlen zur Erklärung an Google Gemini geschickt werden.",
@@ -61,6 +66,11 @@ const copy = {
     offline: "Mất mạng. Phần giải thích từ sổ vẫn hiển thị.",
     ready: "AI đã sẵn sàng. Bạn có thể chủ động gửi câu hỏi.",
     limited: "Hôm nay đã hết lượt AI miễn phí. Hãy thử lại ngày mai.",
+    key_problem: "Google từ chối Gemini API key. Hãy kiểm tra GEMINI_API_KEY trong Supabase, không dán khóa vào chat.",
+    model_problem: "Google chưa cho dự án AI Studio này dùng model đã chọn. Hãy kiểm tra quyền truy cập model.",
+    provider_problem: "Google Gemini hiện không phản hồi. Đây không phải lỗi số liệu trong sổ; hãy thử lại sau.",
+    empty_response: "Gemini chưa tạo được câu trả lời an toàn, dễ đọc. Phần giải thích từ sổ vẫn hiển thị.",
+    request_problem: "Google từ chối định dạng yêu cầu. Cần kiểm tra app trước khi thử lại.",
     error: "AI chưa dùng được lúc này. Hãy xem phần giải thích từ sổ.",
     unsupported: "Câu hỏi này chưa được hỗ trợ an toàn. Hãy chọn một câu hỏi mẫu.",
     aiAnswer: "Gemini giải thích", consent: "Tôi đồng ý gửi các con số tổng hợp dưới đây tới Google Gemini để giải thích.",
@@ -114,6 +124,9 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     unchecked:t.unchecked,checking:t.checking,ready:t.ready,not_ready:t.notReady,
     sign_in:t.signIn,offline:t.offline,loading:t.loading,limit:t.limited,
     error:t.error,answered:t.ready,
+    key_problem:t.key_problem,model_problem:t.model_problem,
+    provider_problem:t.provider_problem,empty_response:t.empty_response,
+    request_problem:t.request_problem,
   })[status];
 
   async function connectionCheck(): Promise<boolean> {
@@ -125,7 +138,16 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setStatus("sign_in"); return false; }
       const { data, error } = await supabase.functions.invoke("gemini-vault-explain", { method:"GET" });
-      if (error || !data || data.ready !== true) { setStatus("not_ready"); return false; }
+      if (error || !data) { setStatus("not_ready"); return false; }
+      if (data.ready !== true) {
+        const reason = data.providerStatus;
+        setStatus(reason === "invalid_key" ? "key_problem"
+          : reason === "model_unavailable" ? "model_problem"
+          : reason === "provider_unavailable" ? "provider_problem"
+          : reason === "provider_limited" || reason === "daily_limit" ? "limit"
+          : "not_ready");
+        return false;
+      }
       setStatus("ready"); return true;
     } catch { setStatus("not_ready"); return false; }
   }
@@ -143,8 +165,20 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
         body: { schemaVersion:1, locale, topic:query.topic, queryYear:query.queryYear, facts:selectedFacts },
       });
       if (error) {
-        const ctx = (error as unknown as { context?: { status?: number } }).context;
-        setStatus(ctx?.status === 429 ? "limit" : "error");
+        // Supabase FunctionsHttpError.context is an HTTP Response. Parse only
+        // the server-generated, fixed error code; never show Google raw output.
+        const ctx = (error as unknown as { context?: Response }).context;
+        const code = ctx && typeof ctx.json === "function"
+          ? await ctx.json().then((body: unknown) =>
+            body && typeof body === "object" && "code" in body ? (body as {code:unknown}).code : null
+          ).catch(() => null) : null;
+        setStatus(ctx?.status === 429 ? "limit"
+          : code === "GEMINI_KEY_REJECTED" ? "key_problem"
+          : code === "GEMINI_MODEL_UNAVAILABLE" ? "model_problem"
+          : code === "GEMINI_EMPTY_ANSWER" || code === "GEMINI_UNSAFE_ANSWER" ? "empty_response"
+          : code === "GEMINI_REQUEST_REJECTED" ? "request_problem"
+          : code === "GEMINI_NETWORK_ERROR" || code === "GEMINI_PROVIDER_UNAVAILABLE" ? "provider_problem"
+          : "error");
         return;
       }
       if (!data || typeof data.explanation !== "string" || !data.explanation.trim()) {
