@@ -205,6 +205,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
         setStatus("error"); return;
       }
       setAnswer(data.explanation.trim().slice(0,800));
+      setDiagnostic("");
       setRemaining(Number.isInteger(data.remaining) ? data.remaining : null);
       setStatus("answered");
     } catch { setStatus("error"); }
