@@ -188,8 +188,8 @@ async function askGoogle(model: string, payload: SafeRequest, key: string): Prom
     headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: payload.locale === "de"
-        ? SYSTEM_DE + "\\n" + TOPIC_GUIDE_DE[payload.topic]
-        : SYSTEM_VI + "\\n" + TOPIC_GUIDE_VI[payload.topic] }] },
+        ? SYSTEM_DE + "\n" + TOPIC_GUIDE_DE[payload.topic]
+        : SYSTEM_VI + "\n" + TOPIC_GUIDE_VI[payload.topic] }] },
       contents: [{ role: "user", parts: [{ text: JSON.stringify({
         topic: payload.topic, requestedYear: payload.queryYear, facts: payload.facts,
       }) }] }],
