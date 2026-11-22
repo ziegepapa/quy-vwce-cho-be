@@ -23,6 +23,7 @@
 .gemini-vault-consent input{flex:none;width:17px;height:17px;margin-top:1px;accent-color:var(--primary-600)}
 .gemini-vault-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .sim-wrap .gemini-vault-actions button:last-child{background:var(--primary-600);border-color:var(--primary-600);color:white}
+.gemini-vault-model{display:inline-block;margin-left:8px;font-size:11px;opacity:.75;font-weight:500}
 .gemini-vault-answer{padding:12px;border-radius:12px;border:1px solid var(--border-subtle)}
 .gemini-vault-answer strong{font-size:12px;color:var(--text-primary)}
 .gemini-vault-answer p{margin:6px 0}
