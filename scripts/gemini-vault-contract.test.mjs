@@ -48,5 +48,5 @@ test("no Google requests on mount, no raw question sent, consent required",()=>{
   assert.ok(client.includes("facts:selectedFacts"));
   assert.doesNotMatch(client,/body:\s*\{[^}]*question\s*[,}]/);
   assert.ok(client.includes("gemini-vault-explain"));
-  assert.ok(client.includes("Google-Produkte zu verbessern"));
+  assert.ok(client.includes("Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen."));
 });
