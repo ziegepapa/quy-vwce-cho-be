@@ -78,6 +78,8 @@ for(const locale of ["de","vi"] as const){
         await badge.scrollIntoViewIfNeeded();
         await page.screenshot({path:testInfo.outputPath(`visual-evidence-gemini-${locale}-${theme}-${topic}-${target}.png`),animations:"disabled"});
       }
+      // Separate synthetic device session: avoid replaying the previous goal cache.
+      await page.evaluate(() => localStorage.clear());
       // Model credit actually switches to Lite when Flash's global budget is exhausted.
       await page.goto(`${url}?locale=${locale}&theme=${theme}&exhausted=1`);
       const fallback=page.getByTestId("gemini-vault-explainer");
