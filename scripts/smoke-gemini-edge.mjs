@@ -12,6 +12,10 @@ let providerMode = "normal";
 let calls = [];
 let pauseCalls = 0;
 let modelChecks = 0;
+let flashAttempts = 0;
+let cacheEnabled = false;
+const serverCache = new Map();
+let cacheGetCalls = 0;
 
 function reply(res,status,body){
   res.writeHead(status,{"Content-Type":"application/json"});
@@ -40,6 +44,29 @@ const stub = http.createServer(async(req,res)=>{
       requests++;
       return reply(res,200,{allowed:true,remaining:20-requests});
     }
+    if(req.url==="/rest/v1/rpc/gemini_flash_claim"){
+      assert.equal(req.headers.authorization,"Bearer mock-private-role");
+      if(flashAttempts>=5) return reply(res,200,{allowed:false,remaining:0});
+      flashAttempts++;
+      return reply(res,200,{allowed:true,remaining:5-flashAttempts});
+    }
+    if(req.url==="/rest/v1/rpc/gemini_reply_cache_get"){
+      assert.equal(req.headers.authorization,"Bearer mock-private-role");
+      const p=await body(req);cacheGetCalls++;
+      assert.equal(p.p_user_id,userId);
+      assert.match(p.p_cache_key,/^[a-f0-9]{64}$/);
+      const item=cacheEnabled?serverCache.get(p.p_user_id+":"+p.p_cache_key):null;
+      return reply(res,200,item?{hit:true,...item}:{hit:false});
+    }
+    if(req.url==="/rest/v1/rpc/gemini_reply_cache_put"){
+      assert.equal(req.headers.authorization,"Bearer mock-private-role");
+      const p=await body(req);
+      assert.equal(p.p_user_id,userId);
+      if(cacheEnabled) serverCache.set(p.p_user_id+":"+p.p_cache_key,{
+        explanation:p.p_explanation,model:p.p_model,
+      });
+      return reply(res,200,{stored:true});
+    }
     if(req.url==="/rest/v1/rpc/gemini_explain_pause"){
       assert.equal(req.headers.authorization,"Bearer mock-private-role");
       pauseCalls++;paused=true;
@@ -64,6 +91,9 @@ const stub = http.createServer(async(req,res)=>{
       if(providerMode==="empty") return reply(res,200,{candidates:[{content:{parts:[]},finishReason:"MAX_TOKENS"}]});
       if(providerMode==="spoken-numbers") return reply(res,200,{candidates:[{content:{parts:[{text:"Số đã ghi năm trăm sáu mươi, đạt mức sáu trăm."}]}}]});
       if(providerMode==="fallback" && req.url.includes("gemini-3.5")) return reply(res,503,{error:"unavailable"});
+      if(providerMode==="lite404" && req.url.includes("gemini-3.5")) return reply(res,404,{error:"missing"});
+      if(providerMode==="flash503" && req.url.includes("gemini-3.8")) return reply(res,503,{error:"unavailable"});
+      if(providerMode==="flash404" && req.url.includes("gemini-3.8")) return reply(res,404,{error:"missing"});
       const txt=providerMode==="unsafe" ? "Sie sollten im Jahr 2042 verkaufen.":
         "Nach den eingetragenen Zahlen wurde bisher ein Teil des Plans erreicht. Es ist keine Anlageberatung.";
       return reply(res,200,{candidates:[{content:{parts:[{text:txt}]}}]});
@@ -110,6 +140,7 @@ try{
   assert.equal(checkData.modelChecks.length,2);
   assert.equal(modelChecks,2);
   assert.equal(requests,0);
+  assert.equal(flashAttempts,0);
   providerMode="key";
   const blocked=await fetch(edge,{method:"GET",headers:{Authorization:"Bearer mock-user-jwt","x-gemini-check":"1"}});
   assert.equal(blocked.status,200);
@@ -143,11 +174,12 @@ try{
   assert.ok(serialized.includes("600"));
   assert.ok(serialized.includes("Sie erklärst")===false); // no raw user question
   providerMode="fallback";calls=[];
-  response=await call({...safe,topic:"simulation"});
+  response=await call({...safe,topic:"plan"});
   assert.equal(response.status,200);
   assert.equal(calls.length,2);
   assert.ok(calls[0].url.includes("gemini-3.5-flash-lite"));
   assert.ok(calls[1].url.includes("gemini-3.8-flash"));
+  assert.equal(flashAttempts,1);
   providerMode="unsafe";
   response=await call();
   assert.equal(response.status,422); // unsafe output must never be displayed
@@ -202,6 +234,113 @@ try{
   response=await call();
   assert.equal(response.status,429);
   assert.equal(calls.length,1);
+  // Model-choice: the 3 exact arithmetic intents remain Vault-only.
+  requests=0;paused=false;calls=[];flashAttempts=0;providerMode="normal";
+  for (const [topic,model] of [
+    ["goal","gemini-3.8-flash"],["simulation","gemini-3.8-flash"],
+    ["plan","gemini-3.5-flash-lite"],["value","gemini-3.5-flash-lite"],
+    ["monthly","gemini-3.5-flash-lite"],
+  ]) {
+    const before=calls.length;
+    response=await call({...safe,topic});
+    assert.equal(response.status,200);
+    const data=await response.json();
+    assert.equal(data.model,model);
+    assert.equal(calls.length,before+1);
+    assert.ok(calls.at(-1).url.includes(model));
+  }
+  assert.equal(flashAttempts,2);
+  assert.equal(requests,5);
+
+  // Exhaust Flash budget without touching Google again after the fifth attempt.
+  requests=0;paused=false;calls=[];flashAttempts=0;providerMode="normal";
+  for(let i=0;i<6;i++){
+    const data=await (await call({...safe,topic:"goal",facts:{...facts,contributed:600+i}})).json();
+    assert.equal(data.model,i<5?"gemini-3.8-flash":"gemini-3.5-flash-lite");
+  }
+  assert.equal(flashAttempts,5);
+  assert.equal(calls.filter(x=>x.url.includes("gemini-3.8-flash")).length,5);
+  assert.equal(requests,6);
+
+  // Lite 404 and 503 each use exactly one Flash attempt (if capacity remains).
+  for(const mode of ["lite404","fallback"]){
+    requests=0;paused=false;calls=[];flashAttempts=0;providerMode=mode;
+    response=await call({...safe,topic:"plan"});
+    assert.equal(response.status,200);
+    assert.equal((await response.json()).model,"gemini-3.8-flash");
+    assert.equal(calls.length,2);
+    assert.ok(calls[0].url.includes("gemini-3.5-flash-lite"));
+    assert.ok(calls[1].url.includes("gemini-3.8-flash"));
+    assert.equal(flashAttempts,1);
+  }
+  // Flash 404/503: one Lite fallback, no additional Flash reserve.
+  for(const mode of ["flash404","flash503"]){
+    requests=0;paused=false;calls=[];flashAttempts=0;providerMode=mode;
+    response=await call({...safe,topic:"simulation"});
+    assert.equal(response.status,200);
+    assert.equal((await response.json()).model,"gemini-3.5-flash-lite");
+    assert.equal(calls.length,2);
+    assert.ok(calls[0].url.includes("gemini-3.8-flash"));
+    assert.ok(calls[1].url.includes("gemini-3.5-flash-lite"));
+    assert.equal(flashAttempts,1);
+  }
+  // Budget already exhausted: Lite 503 cannot try Flash without a reservation.
+  requests=0;paused=false;calls=[];flashAttempts=5;providerMode="fallback";
+  response=await call({...safe,topic:"plan"});
+  assert.equal(response.status,503);
+  assert.equal(calls.length,1);
+  assert.equal(flashAttempts,5);
+
+  // Cache only 200: exact payload hit must bypass both daily counters and Google.
+  requests=0;paused=false;calls=[];flashAttempts=0;providerMode="normal";
+  cacheEnabled=true;serverCache.clear();
+  response=await call({...safe,topic:"goal"});
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).model,"gemini-3.8-flash");
+  assert.equal(requests,1);assert.equal(flashAttempts,1);
+  response=await call({...safe,topic:"goal"});
+  assert.equal(response.status,200);
+  const cached=await response.json();
+  assert.equal(cached.cached,true);
+  assert.equal(cached.model,"gemini-3.8-flash");
+  assert.equal(requests,1);assert.equal(flashAttempts,1);assert.equal(calls.length,1);
+  response=await call({...safe,topic:"goal",facts:{...facts,contributed:601}});
+  assert.equal(response.status,200);assert.equal((await response.json()).cached,false);
+  assert.equal(requests,2);assert.equal(flashAttempts,2);
+  response=await call({...safe,topic:"goal",queryYear:2038});
+  assert.equal(response.status,200);
+  assert.equal(requests,3);assert.equal(flashAttempts,3);
+
+  // No failed response may be served from cache on the next request.
+  serverCache.clear();requests=0;paused=false;calls=[];flashAttempts=0;
+  providerMode="spoken-numbers";
+  assert.equal((await call({...safe,topic:"plan"})).status,422);
+  assert.equal(serverCache.size,0);
+  providerMode="normal";
+  assert.equal((await call({...safe,topic:"plan"})).status,200);
+  assert.equal(requests,2);
+
+  // A provider 429 on primary Flash pauses the whole service, no Lite fallback.
+  cacheEnabled=false;serverCache.clear();
+  requests=0;paused=false;calls=[];flashAttempts=0;providerMode="rate";
+  const pauseBefore=pauseCalls;
+  response=await call({...safe,topic:"goal"});
+  assert.equal(response.status,429);
+  assert.equal((await response.json()).code,"FREE_LIMIT");
+  assert.equal(calls.length,1);
+  assert.ok(calls[0].url.includes("gemini-3.8-flash"));
+  assert.equal(flashAttempts,1);
+  assert.equal(pauseCalls,pauseBefore+1);
+  response=await call({...safe,topic:"plan"});
+  assert.equal(response.status,429);
+  assert.equal(calls.length,1);
+  // Lite 429 has identical fail-closed behavior, without any Flash reservation.
+  requests=0;paused=false;calls=[];flashAttempts=0;providerMode="rate";
+  response=await call({...safe,topic:"plan"});
+  assert.equal(response.status,429);
+  assert.equal(calls.length,1);
+  assert.equal(flashAttempts,0);
+  // Nothing in this isolated test calls the real project or Google API.
   console.log("Gemini isolated smoke OK: key/model metadata GET without quota, auth, no-PII, exact errors, fallback and rate circuit.");
 }finally{
   deno.kill("SIGTERM");
