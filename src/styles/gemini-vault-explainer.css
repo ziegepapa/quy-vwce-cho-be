@@ -1,0 +1,32 @@
+/* Gemini explanations: no modal, no background request, no global layout changes. */
+.sim-wrap .gemini-vault{display:grid;gap:11px;padding:17px 13px;min-width:0;overflow-wrap:anywhere}
+.gemini-vault header small{color:var(--primary-600);font-size:10px;font-weight:750;letter-spacing:.035em}
+.gemini-vault h2,.gemini-vault h3,.gemini-vault p{margin:0}
+.gemini-vault h2{margin:5px 0 6px;font-size:19px;color:var(--text-primary);line-height:1.25}
+.gemini-vault h3{font-size:12px;color:var(--text-primary)}
+.gemini-vault p{font-size:12px;color:var(--text-secondary);line-height:1.5}
+.gemini-vault-local,.gemini-vault-payload{padding:12px;border-radius:13px;background:var(--surface-sunken);border:1px solid var(--border-subtle)}
+.gemini-vault-local p{margin-top:6px}
+.gemini-vault>label{font-size:12px;font-weight:700;color:var(--text-primary)}
+.sim-wrap .gemini-vault :is(select,input:not([type=checkbox])){width:100%;min-width:0;min-height:42px;font:inherit;font-size:13px;padding:9px 10px;border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-primary);background:var(--surface-raised)}
+.gemini-vault-suggestions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.sim-wrap .gemini-vault button{min-width:0;min-height:39px;padding:6px;border:1px solid var(--border-subtle);border-radius:10px;font:inherit;font-weight:650;font-size:11px;color:var(--text-primary);background:var(--surface-sunken);cursor:pointer}
+.sim-wrap .gemini-vault button[aria-pressed=true]{background:var(--primary-600);border-color:var(--primary-600);color:white}
+.sim-wrap .gemini-vault button:disabled{opacity:.5;cursor:not-allowed}
+.sim-wrap .gemini-vault :is(button,input,select):focus-visible{outline:2px solid var(--primary-600);outline-offset:3px}
+.gemini-vault-payload dl{display:grid;gap:6px;margin:7px 0 0}
+.gemini-vault-payload dl div{display:flex;justify-content:space-between;gap:12px}
+.gemini-vault-payload dt{font-size:11px;color:var(--text-secondary)}
+.gemini-vault-payload dd{margin:0;font-size:12px;font-weight:750;text-align:right;color:var(--text-primary)}
+.gemini-vault-consent{display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:600;line-height:1.5;color:var(--text-primary)}
+.gemini-vault-consent input{flex:none;width:17px;height:17px;margin-top:1px;accent-color:var(--primary-600)}
+.gemini-vault-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.sim-wrap .gemini-vault-actions button:last-child{background:var(--primary-600);border-color:var(--primary-600);color:white}
+.gemini-vault-answer{padding:12px;border-radius:12px;border:1px solid var(--border-subtle)}
+.gemini-vault-answer strong{font-size:12px;color:var(--text-primary)}
+.gemini-vault-answer p{margin:6px 0}
+.gemini-vault-answer small{font-size:10px;color:var(--text-tertiary)}
+.sim-wrap .gemini-vault .gemini-vault-status{font-size:11px}
+.sim-wrap .gemini-vault .gemini-vault-privacy{font-size:11px;font-weight:600}
+.sim-wrap .gemini-vault .gemini-vault-hint,.sim-wrap .gemini-vault .gemini-vault-disclaimer{font-size:10px;color:var(--text-tertiary)}
+@media(max-width:390px){.sim-wrap .gemini-vault{padding:14px 11px}.gemini-vault-suggestions{grid-template-columns:repeat(2,minmax(0,1fr))}}
