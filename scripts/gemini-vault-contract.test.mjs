@@ -21,7 +21,7 @@ test("provider receives only numeric facts and fixed enum topics, never raw ques
   assert.ok(server.includes("Object.keys(v.facts).some"));
   assert.ok(server.includes("MAX_BODY = 1800"));
   assert.ok(server.includes("if (!payload) return json(req,400"));
-  assert.ok(facts.includes("Only a tiny set of"));
+  assert.ok(facts.includes("only a tiny set of"));
 });
 test("server checks actual auth and spends quota only after key/enable gate",()=>{
   assert.ok(server.includes('"/auth/v1/user"'));
