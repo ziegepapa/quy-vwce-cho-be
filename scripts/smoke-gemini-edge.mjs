@@ -51,6 +51,7 @@ const stub = http.createServer(async(req,res)=>{
         assert.equal(req.headers["x-goog-api-key"],"only-ci-not-real");
         assert.equal(req.headers.authorization,undefined);
         if(providerMode==="key") return reply(res,403,{error:"forbidden"});
+        if(providerMode==="aq-rejected") return reply(res,401,{error:{status:"UNAUTHENTICATED",message:"must-not-log-provider-message",details:[{reason:"ACCESS_TOKEN_TYPE_UNSUPPORTED"}]}});
         return reply(res,200,{name:req.url,supportedGenerationMethods:["generateContent"]});
       }
       assert.equal(req.method,"POST");
@@ -112,6 +113,16 @@ try{
   assert.equal(blocked.status,200);
   assert.equal((await blocked.json()).ready,false);
   assert.equal(requests,0);
+  providerMode="aq-rejected";
+  const authDenied=await fetch(edge,{method:"GET",headers:{Authorization:"Bearer mock-user-jwt","x-gemini-check":"1"}});
+  assert.equal(authDenied.status,200);
+  assert.deepEqual((await authDenied.json()).modelChecks.map(x=>x.status),[401,401]);
+  assert.equal(requests,0);
+  await sleep(20);
+  assert.ok(logs.includes("ACCESS_TOKEN_TYPE_UNSUPPORTED"),"log should explain an auth-key rejection");
+  for(const secret of ["only-ci-not-real","must-not-log-provider-message","mock-user-jwt"]){
+    assert.ok(!logs.includes(secret),"provider probe must not log "+secret);
+  }
   providerMode="normal";
   assert.equal((await call({...safe,childName:"PRIVATE"})).status,400);
   assert.equal((await call({...safe,facts:{...facts,accountId:"SECRET ACCOUNT"}})).status,400);
