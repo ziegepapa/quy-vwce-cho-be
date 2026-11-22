@@ -68,6 +68,26 @@ begin
 end
 $body$;
 
+-- Read-only check for the on-demand UI readiness button. This does not spend quota.
+create or replace function public.gemini_explain_status(p_user_id uuid)
+returns jsonb
+language sql
+security definer
+set search_path = ''
+as $body$
+  select jsonb_build_object(
+    'ready',p_user_id is not null,
+    'remaining',greatest(0,10-coalesce((
+      select attempts from ai_internal.user_daily
+      where user_id=p_user_id and day_utc=(now() at time zone 'UTC')::date
+    ),0)),
+    'providerPaused',coalesce((
+      select pause_until>now() from ai_internal.global_daily
+      where day_utc=(now() at time zone 'UTC')::date
+    ),false)
+  )
+$body$;
+
 -- Called ONLY after Google returned 429. Avoid retry storms until UTC midnight.
 create or replace function public.gemini_explain_pause()
 returns jsonb
@@ -87,8 +107,10 @@ end
 $body$;
 
 revoke all on function public.gemini_explain_claim(uuid) from public, anon, authenticated;
+revoke all on function public.gemini_explain_status(uuid) from public, anon, authenticated;
 revoke all on function public.gemini_explain_pause() from public, anon, authenticated;
 grant execute on function public.gemini_explain_claim(uuid) to service_role;
+grant execute on function public.gemini_explain_status(uuid) to service_role;
 grant execute on function public.gemini_explain_pause() to service_role;
 commit;
 
