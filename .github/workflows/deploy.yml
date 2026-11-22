@@ -71,8 +71,11 @@ jobs:
           deno check --node-modules-dir=auto supabase/functions/silent-guardian-health-check/index.ts
           deno check --node-modules-dir=auto supabase/functions/silent-guardian-email-test/index.ts
           deno check --node-modules-dir=auto supabase/functions/silent-guardian-worker/index.ts
+          deno check --node-modules-dir=auto supabase/functions/gemini-vault-explain/index.ts
       - name: Run isolated Edge Function smoke environment
         run: npm run test:edge-smoke
+      - name: Run isolated Gemini/Supabase quota smoke (no Google key)
+        run: npm run test:gemini-edge
   preview-smoke:
     needs: test-build
     runs-on: ubuntu-latest
@@ -129,6 +132,7 @@ jobs:
             test-results/**/timeline.png
             test-results/**/simulation.png
             test-results/**/simulation-exit-plan-*.png
+            test-results/**/gemini-vault-*.png
             test-results/**/goals.png
             test-results/**/notfallmappe.png
             test-results/**/settings.png

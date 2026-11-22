@@ -265,6 +265,18 @@ for (const theme of themes) {
         await assertFits(page);
         await page.locator(".exit-plan-table").evaluate((element) => element.scrollIntoView({ block: "center" }));
         await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-schedule.png"), animations: "disabled" });
+        const ai = page.getByTestId("gemini-vault-explainer");
+        await expect(ai).toBeVisible();
+        await expect(ai).toContainText("Không có AI vẫn hiểu được");
+        await expect(ai).toContainText("600,00");
+        await expect(ai).toContainText("591,95");
+        await expect(ai).toContainText("AI chưa sẵn sàng");
+        await expect(ai.getByRole("button", { name: "Hỏi Gemini" })).toBeDisabled();
+        await ai.evaluate(el => el.scrollIntoView({ block: "start" }));
+        await page.screenshot({ path: testInfo.outputPath(`gemini-vault-vi-${theme}-top.png`), animations: "disabled" });
+        await ai.locator(".gemini-vault-consent").scrollIntoViewIfNeeded();
+        await page.screenshot({ path: testInfo.outputPath(`gemini-vault-vi-${theme}-consent.png`), animations: "disabled" });
+        await assertFits(page);
       }
 
       if (name === "overview") {
@@ -495,6 +507,18 @@ test(`German reference screenshots · 390x844 · ${germanTheme}`, async ({ page 
       await assertFits(page);
       await plan.locator(".exit-plan-table").scrollIntoViewIfNeeded();
       await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-de-schedule.png"), animations: "disabled" });
+      const ai = page.getByTestId("gemini-vault-explainer");
+      await expect(ai).toBeVisible();
+      await expect(ai).toContainText("Auch ohne KI verständlich");
+      await expect(ai).toContainText("600,00");
+      await expect(ai).toContainText("591,95");
+      await expect(ai).toContainText("KI noch nicht bereit");
+      await expect(ai.getByRole("button", { name: "KI fragen" })).toBeDisabled();
+      await ai.evaluate(el => el.scrollIntoView({ block: "start" }));
+      await page.screenshot({ path: testInfo.outputPath(`gemini-vault-de-${germanTheme}-top.png`), animations: "disabled" });
+      await ai.locator(".gemini-vault-consent").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath(`gemini-vault-de-${germanTheme}-consent.png`), animations: "disabled" });
+      await assertFits(page);
     }
     await assertFits(page);
     await page.screenshot({ path: testInfo.outputPath(`${name}-de.png`), animations: "disabled" });
