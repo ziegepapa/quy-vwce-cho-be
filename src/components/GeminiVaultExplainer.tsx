@@ -60,6 +60,7 @@ const copy = {
     limitNotice: "Nur Fragetyp und Summen werden gesendet, nie dein Fragetext.",
     cached: "Gespeicherte Antwort auf diesem Gerät · kein neuer KI-Versuch.",
     cacheClear: "Gespeicherte KI-Antworten löschen", cacheCleared: "KI-Cache auf diesem Gerät gelöscht.",
+    sourceChecked: "Jahresplan, Differenz und Zielabstand berechnet der Vault direkt – ohne Google oder KI-Limit.",
   },
   vi: {
     tag: "AI miễn phí · tự chọn", title: "Giải thích kế hoạch bằng lời thường",
@@ -110,6 +111,7 @@ const copy = {
     limitNotice: "Chỉ gửi loại câu hỏi và số liệu tổng hợp, không gửi câu bạn gõ.",
     cached: "Câu trả lời lưu trên thiết bị · không trừ thêm lượt AI.",
     cacheClear: "Xóa các câu trả lời đã lưu", cacheCleared: "Đã xóa cache AI trên thiết bị.",
+    sourceChecked: "Năm nay, chênh lệch và tiến độ Goal được Vault tính trực tiếp – không gửi Google, không trừ lượt AI.",
   },
 };
 function formatEuro(n: number | null, locale: DisplayLocale, empty: string): string {
@@ -174,6 +176,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const selectedFacts = useMemo(() => withSelectedGoal(facts, chosenGoal), [facts, chosenGoal]);
   const query = question.trim() ? classifyGeminiQuestion(question) : { topic, queryYear: null };
   const localTopic: GeminiTopic = query?.topic ?? topic;
+  const ledgerOnly = localTopic === "year" || localTopic === "difference" || localTopic === "goalProgress";
   const answerContext = JSON.stringify([locale, query?.topic, query?.queryYear, selectedFacts]);
   const contextRef = useRef(answerContext);
   contextRef.current = answerContext;
@@ -222,7 +225,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     } catch { setStatus("not_ready"); return false; }
   }
   async function ask(): Promise<void> {
-    if (asking.current || busy || !consent) return;
+    if (asking.current || busy || ledgerOnly || !consent) return;
     asking.current = true; // A double-tap must not spend two Vault quota claims.
     const context = answerContext;
     try {
@@ -291,6 +294,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     <header><small>{t.tag}</small><h2 id="gemini-vault-title">{t.title}</h2><p>{t.description}</p></header>
     <div className="gemini-vault-local">
       <h3>{t.localTitle}</h3><p>{local}</p>
+      {ledgerOnly && <small>{t.sourceChecked}</small>}
     </div>
     <label htmlFor="gemini-vault-goal">{t.goal}</label>
     <select id="gemini-vault-goal" value={goalId} onChange={e=>{setGoalId(e.target.value);setAnswer("");}}>
@@ -322,8 +326,8 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       onChange={e=>setConsent(e.target.checked)} /> <span>{t.consent}</span></label>
     <div className="gemini-vault-actions">
       <button type="button" disabled={busy || !supabase} onClick={()=>void connectionCheck()}>{busy ? t.checking : t.check}</button>
-      <button type="button" disabled={busy || !consent || !query || !supabase}
-        onClick={()=>void ask()}>{status==="loading"?t.loading:t.ask}</button>
+      {!ledgerOnly && <button type="button" disabled={busy || !consent || !query || !supabase}
+        onClick={()=>void ask()}>{status==="loading"?t.loading:t.ask}</button>}
     </div>
     <p className="gemini-vault-status" role={status === "unchecked" || status === "not_ready" ? undefined : "status"}>{showStatus}</p>
     {diagnostic && <p className="gemini-vault-status" role="status">{diagnostic}</p>}
