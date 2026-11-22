@@ -44,10 +44,10 @@ for (const file of await listFiles(sourceRoot)) {
   if (path === ownerApprovedGeminiUi) {
     // Narrow owner-approved exception: exactly one explicitly clicked, authenticated
     // Supabase Edge Function. Legacy Trace/OpenAI and dynamic functions remain banned.
-    const invokePattern = /supabase[.]functions[.]invoke\\s*[(]/g;
-    const approvedPattern = /supabase[.]functions[.]invoke\\s*[(]\\s*["']gemini-vault-explain["']/g;
-    const totalInvokes = [...source.matchAll(invokePattern)].length;
-    const approvedInvokes = [...source.matchAll(approvedPattern)].length;
+    // Only the two literal invocations in this component are allowed.
+    // No dynamic endpoint names, no 3rd invoke call, no legacy provider clients.
+    const totalInvokes = source.split("supabase.functions.invoke(").length - 1;
+    const approvedInvokes = source.split('supabase.functions.invoke("gemini-vault-explain"').length - 1;
     if (approvedInvokes !== totalInvokes ||
         approvedInvokes !== 2 ||
         forbiddenRuntimePatterns.some((pattern, i) => i !== 2 && pattern.test(source))) {
