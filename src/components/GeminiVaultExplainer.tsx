@@ -251,7 +251,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     {diagnostic && <p className="gemini-vault-status" role="status">{diagnostic}</p>}
     {remaining !== null && <p className="gemini-vault-status">{locale === "de"
       ? `Heute wurden ${10 - remaining}/10 Sendeversuche im Vault verbraucht.`
-      : `Đã dùng ${10 - remaining}/10 lượt thử hôm nay trong Vault.`}</p>
+      : `Đã dùng ${10 - remaining}/10 lượt thử hôm nay trong Vault.`}</p>}
     {answer && <div className="gemini-vault-answer"><strong>{t.aiAnswer}</strong><p>{answer}</p>
 
     </div>}
