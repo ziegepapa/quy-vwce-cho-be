@@ -67,7 +67,7 @@ for(const locale of ["de","vi"] as const){
           await expect(card.getByTestId("gemini-vault-model")).toHaveCount(0);
           await expect(card.getByText(locale==="vi"?/Vault tính trực tiếp/:/berechnet der Vault direkt/)).toBeVisible();
           await card.locator(".gemini-vault-local").scrollIntoViewIfNeeded();
-          await page.screenshot({path:testInfo.outputPath(`gemini-${locale}-${theme}-year-VAULT.png`),animations:"disabled"});
+          await page.screenshot({path:testInfo.outputPath(`visual-evidence-gemini-${locale}-${theme}-year-VAULT.png`),animations:"disabled"});
           continue;
         }
         if(topic==="goal") await card.locator("#gemini-vault-goal").selectOption("fixture-goal");
@@ -76,7 +76,7 @@ for(const locale of ["de","vi"] as const){
         const target=topic==="goal" || topic==="simulation"?"Flash":"Flash-Lite";
         await expect(badge).toHaveText(`${locale==="vi"?"Mô hình":"Modell"}: ${target}`);
         await badge.scrollIntoViewIfNeeded();
-        await page.screenshot({path:testInfo.outputPath(`gemini-${locale}-${theme}-${topic}-${target}.png`),animations:"disabled"});
+        await page.screenshot({path:testInfo.outputPath(`visual-evidence-gemini-${locale}-${theme}-${topic}-${target}.png`),animations:"disabled"});
       }
       // Model credit actually switches to Lite when Flash's global budget is exhausted.
       await page.goto(`${url}?locale=${locale}&theme=${theme}&exhausted=1`);
@@ -87,7 +87,7 @@ for(const locale of ["de","vi"] as const){
       await fallback.getByRole("button",{name:labels[locale].ask}).click();
       await expect(fallback.getByTestId("gemini-vault-model")).toHaveText(`${locale==="vi"?"Mô hình":"Modell"}: Flash-Lite`);
       await fallback.getByTestId("gemini-vault-model").scrollIntoViewIfNeeded();
-      await page.screenshot({path:testInfo.outputPath(`gemini-${locale}-${theme}-goal-Flash-exhausted.png`),animations:"disabled"});
+      await page.screenshot({path:testInfo.outputPath(`visual-evidence-gemini-${locale}-${theme}-goal-Flash-exhausted.png`),animations:"disabled"});
     });
   }
 }
