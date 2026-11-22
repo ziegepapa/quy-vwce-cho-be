@@ -22,7 +22,7 @@ const build = () => {
     scenarioTotals:{cautious:23000,base:31000,optimistic:42000}});
 };
 describe("Gemini redacted aggregate data",()=>{
-  it("uses heroLifetime + planVsReality (not cash_in zero) for the user's five buys",()=>{
+  it("uses heroLifetime + planVsReality (not cash_in zero) for synthetic five-buy fixtures",()=>{
     const facts=build();
     expect(facts.portfolioValue).toBe(591.95);
     expect(facts.contributed).toBe(600);
@@ -69,5 +69,22 @@ describe("Gemini redacted aggregate data",()=>{
     expect(classifyGeminiQuestion("Konto DE02100100109307118603")).toBeNull();
     expect(classifyGeminiQuestion("Mein Passwort lautet geheim")).toBeNull();
     expect(classifyGeminiQuestion("Hallo, wie heißt mein Kind?")).toBeNull();
+    const cases = [
+      ["Tổng đã góp bao nhiêu?", "plan"],
+      ["Giá trị quỹ hiện tại là bao nhiêu?", "value"],
+      ["Wie hoch ist mein Depotwert?", "value"],
+      ["Quỹ của tôi đang lãi hay lỗ?", "difference"],
+      ["Was ist die Differenz zum eingezahlten Betrag?", "difference"],
+      ["Mỗi tháng tôi góp bao nhiêu?", "monthly"],
+      ["Wie hoch ist meine Sparrate monatlich?", "monthly"],
+      ["Tiến độ mục tiêu thế nào?", "goalProgress"],
+      ["Wie weit bin ich bis zum Ziel?", "goalProgress"],
+    ] as const;
+    for (const [question, topic] of cases) {
+      expect(classifyGeminiQuestion(question)).toEqual({ topic, queryYear:null });
+    }
+    expect(classifyGeminiQuestion("Mục tiêu 2038 và 2040")).toBeNull();
+    expect(classifyGeminiQuestion("Tôi có nên bán ETF không?")).toBeNull();
+    expect(classifyGeminiQuestion("alice@example.org hỏi về kế hoạch")).toBeNull();
   });
 });

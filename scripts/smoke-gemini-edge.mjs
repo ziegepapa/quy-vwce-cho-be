@@ -164,6 +164,20 @@ try{
   assert.equal(requests,10);
   assert.equal((await call()).status,429);
   assert.equal(requests,10);
+  // Next mocked UTC day: all eight fixed intents must be accepted with no raw questions.
+  requests=0;paused=false;calls=[];providerMode="normal";
+  for (const topic of ["plan","year","goal","simulation","value","difference","monthly","goalProgress"]) {
+    response=await call({...safe,topic});
+    assert.equal(response.status,200);
+    const posted=JSON.parse(calls[calls.length-1].msg.contents[0].parts[0].text);
+    assert.equal(posted.topic,topic);
+    assert.equal(Object.keys(posted).sort().join(","),"facts,requestedYear,topic");
+    assert.ok(calls[calls.length-1].msg.systemInstruction.parts[0].text.length>100);
+  }
+  assert.equal(requests,8);
+  // Invalid new topics do not consume quota.
+  assert.equal((await call({...safe,topic:"unsafe_free_text"})).status,400);
+  assert.equal(requests,8);
   // Mock the next UTC day: verify an upstream 429 trips the shared circuit
   // breaker, and no fallback is sent to a 2nd paid/limited model.
   requests=0;paused=false;calls=[];providerMode="rate";

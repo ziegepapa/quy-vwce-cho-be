@@ -21,7 +21,10 @@ test("provider receives only numeric facts and fixed enum topics, never raw ques
   assert.ok(server.includes("Object.keys(v.facts).some"));
   assert.ok(server.includes("MAX_BODY = 1800"));
   assert.ok(server.includes("if (!payload) return json(req,400"));
-  assert.ok(facts.includes("only a tiny set of"));
+  assert.ok(facts.includes("fixed, finance-safe intents"));
+  assert.ok(server.includes("TOPIC_GUIDE_VI"));
+  assert.ok(server.includes('"goalProgress"'));
+  assert.ok(client.includes("gemini-vault-grounded"));
 });
 test("server checks actual auth and spends quota only after key/enable gate",()=>{
   assert.ok(server.includes('"/auth/v1/user"'));
@@ -45,5 +48,5 @@ test("no Google requests on mount, no raw question sent, consent required",()=>{
   assert.ok(client.includes("facts:selectedFacts"));
   assert.doesNotMatch(client,/body:\s*\{[^}]*question\s*[,}]/);
   assert.ok(client.includes("gemini-vault-explain"));
-  assert.ok(client.includes("Google-Produkte zu verbessern"));
+  assert.ok(client.includes("Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen."));
 });
