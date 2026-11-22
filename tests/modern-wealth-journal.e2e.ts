@@ -267,7 +267,7 @@ for (const theme of themes) {
         await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-schedule.png"), animations: "disabled" });
         const ai = page.getByTestId("gemini-vault-explainer");
         await expect(ai).toBeVisible();
-        await expect(ai).toContainText("Không có AI vẫn hiểu được");
+        await expect(ai).toContainText("Giải thích từ sổ · không trừ lượt");
         await expect(ai).toContainText("600,00");
         await expect(ai).toContainText("591,95");
         await expect(ai).toContainText("AI chưa sẵn sàng");
@@ -509,10 +509,10 @@ test(`German reference screenshots · 390x844 · ${germanTheme}`, async ({ page 
       await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-de-schedule.png"), animations: "disabled" });
       const ai = page.getByTestId("gemini-vault-explainer");
       await expect(ai).toBeVisible();
-      await expect(ai).toContainText("Auch ohne KI verständlich");
+      await expect(ai).toContainText("Aus dem Vault · ohne KI-Limit");
       await expect(ai).toContainText("600,00");
       await expect(ai).toContainText("591,95");
-      await expect(ai).toContainText("KI noch nicht bereit");
+      await expect(ai).toContainText("KI nicht bereit");
       await expect(ai.getByRole("button", { name: "KI fragen" })).toBeDisabled();
       await ai.evaluate(el => el.scrollIntoView({ block: "start" }));
       await page.screenshot({ path: testInfo.outputPath(`gemini-vault-de-${germanTheme}-top.png`), animations: "disabled" });
