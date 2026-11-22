@@ -282,7 +282,7 @@ Deno.serve(async (req: Request) => {
     if (saved.hit === true && typeof saved.explanation === "string" &&
       saved.explanation.length > 0 && saved.explanation.length <= 800 &&
       (saved.model === MODELS[0] || saved.model === MODELS[1])) {
-      const status = await rpc(base,role,"gemini_explain_status",{p_user_id:userId}).catch(()=>({}));
+      const status: Record<string, unknown> = await rpc(base,role,"gemini_explain_status",{p_user_id:userId}).catch(()=>({}));
       return json(req,200,{explanation:saved.explanation,model:saved.model,
         remaining:status.remaining,cached:true});
     }
