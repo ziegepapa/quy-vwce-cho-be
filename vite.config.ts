@@ -90,6 +90,7 @@ export default defineConfig({
       "src/pages/Overview.loadState.test.tsx",
       "src/pages/continuitySnapshot.test.ts",
       "src/pages/Settings.pendingSyncImport.test.tsx",
+      "src/components/GeminiVaultExplainer.test.tsx",
       "src/components/AppFailureBoundary.test.tsx",
       "src/components/ModalAccessibilityManager.test.tsx",
       "src/components/LocalDiagnosticsPanel.test.tsx",
