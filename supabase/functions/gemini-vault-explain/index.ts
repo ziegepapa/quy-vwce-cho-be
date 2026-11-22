@@ -116,11 +116,39 @@ goalYear do người dùng chọn, không mặc định là ngày bán. Số mô
 KHÔNG khuyên mua, bán, chuyển tỷ trọng, tính thuế hay hứa lợi nhuận.
 KHÔNG viết số, năm, euro, phần trăm hoặc dữ liệu cá nhân trong câu trả lời; app hiện các số đã xác minh riêng.
 Chỉ trả đoạn giải thích ngắn, không Markdown.`;
-async function askGoogle(model: string, payload: SafeRequest, key: string): Promise<{status: number; output: string | null}> {
-  // The override is only for isolated local CI; production always reaches Google.
-  const apiBase = Deno.env.get("GEMINI_TEST_MODE") === "1"
+
+/**
+ * Read-only model metadata probe. Invoked ONLY after the signed-in owner
+ * presses "Check AI". Sends no financial facts, names, user IDs or question,
+ * and does NOT claim the daily generation quota.
+ * Model metadata access is a prerequisite, not proof of generation access.
+ */
+function googleBase(): string {
+  return Deno.env.get("GEMINI_TEST_MODE") === "1"
     ? Deno.env.get("GEMINI_TEST_API_BASE") || "https://generativelanguage.googleapis.com"
     : "https://generativelanguage.googleapis.com";
+}
+type ProviderStatus = "ok" | "invalid_key" | "model_unavailable" | "provider_limited" | "provider_unavailable";
+async function probeGemini(key: string): Promise<ProviderStatus> {
+  try {
+    const res = await fetch(
+      googleBase() + "/v1beta/models/" + encodeURIComponent(MODELS[0]),
+      { headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(5000) },
+    );
+    if (res.ok) return "ok";
+    if (res.status === 401 || res.status === 403) return "invalid_key";
+    if (res.status === 404) return "model_unavailable";
+    if (res.status === 429) return "provider_limited";
+    return "provider_unavailable";
+  } catch {
+    return "provider_unavailable";
+  }
+}
+type GoogleResponse = { status: number; output: string | null; diagnostic: "http" | "empty" | "unsafe" | "ok" };
+
+async function askGoogle(model: string, payload: SafeRequest, key: string): Promise<GoogleResponse> {
+  // Only the test harness may override the real Google endpoint.
+  const apiBase = googleBase();
   const url = apiBase + "/v1beta/models/" + encodeURIComponent(model) + ":generateContent";
   const response = await fetch(url, {
     method: "POST",
@@ -130,11 +158,16 @@ async function askGoogle(model: string, payload: SafeRequest, key: string): Prom
       contents: [{ role: "user", parts: [{ text: JSON.stringify({
         topic: payload.topic, requestedYear: payload.queryYear, facts: payload.facts,
       }) }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 200 },
+      // Gemini reasoning consumes output tokens too. 200 could yield no text.
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 1024,
+        thinkingConfig: { thinkingLevel: model === MODELS[0] ? "MINIMAL" : "LOW" },
+      },
     }),
     signal: AbortSignal.timeout(12000),
   });
-  if (!response.ok) return { status: response.status, output: null };
+  if (!response.ok) return { status: response.status, output: null, diagnostic: "http" };
   const data: unknown = await response.json().catch(() => null);
   const candidates = isObject(data) ? data.candidates : null;
   const first = Array.isArray(candidates) ? candidates[0] : null;
@@ -143,9 +176,9 @@ async function askGoogle(model: string, payload: SafeRequest, key: string): Prom
   const clean = text.replace(/<[^>]*>/g,"").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,800);
   // Fail closed instead of displaying a hallucinated EUR figure or personal advice.
   if (!clean || /[0-9€$%]|\b(?:IBAN|ISIN|kaufen Sie|verkaufen Sie|ich empfehle|sollten Sie kaufen)\b/i.test(clean)) {
-    return { status: 422, output: null };
+    return { status: 422, output: null, diagnostic: clean ? "unsafe" : "empty" };
   }
-  return { status: 200, output: clean };
+  return { status: 200, output: clean, diagnostic: "ok" };
 }
 
 Deno.serve(async (req: Request) => {
@@ -162,7 +195,19 @@ Deno.serve(async (req: Request) => {
     if (!active() || !serviceKey()) return json(req,200,{ready:false,limitPerDay:10});
     try {
       const state = await rpc(base,serviceKey()!,"gemini_explain_status",{p_user_id:userId});
-      return json(req,200,{ready:state.ready === true,limitPerDay:10,remaining:state.remaining});
+      // A successful quota RPC and a present secret do not prove the key
+      // can access Google's selected model. Check metadata with *no user data*.
+      const canTry = state.ready === true && Number(state.remaining) > 0
+        && state.providerPaused !== true;
+      if (!canTry) {
+        return json(req,200,{ready:false,limitPerDay:10,remaining:state.remaining,
+          providerStatus:state.providerPaused === true ? "provider_limited" : "daily_limit"});
+      }
+      const providerStatus = await probeGemini(Deno.env.get("GEMINI_API_KEY")!);
+      return json(req,200,{
+        ready:providerStatus === "ok", limitPerDay:10, remaining:state.remaining,
+        providerStatus,
+      });
     } catch {
       return json(req,200,{ready:false,limitPerDay:10});
     }
@@ -195,9 +240,21 @@ Deno.serve(async (req: Request) => {
       }
       // Backup only when primary is unavailable (not when content is unsafe or
       // Google's tier/rate limit is exceeded); at most two provider requests.
+      // Log ONLY the model identifier, upstream HTTP status and a bounded
+      // diagnostic enum; never log a user ID, prompt, key or financial amount.
+      console.info("[gemini-vault] provider",model,result.status,result.diagnostic);
       if (i === 0 && (result.status === 404 || result.status === 503)) continue;
-      return json(req,503,{code:"AI_UNAVAILABLE"});
+      if (result.status === 401 || result.status === 403) return json(req,503,{code:"GEMINI_KEY_REJECTED"});
+      if (result.status === 400) return json(req,503,{code:"GEMINI_REQUEST_REJECTED"});
+      if (result.status === 404) return json(req,503,{code:"GEMINI_MODEL_UNAVAILABLE"});
+      if (result.status === 422) return json(req,503,{code:result.diagnostic === "empty"
+        ? "GEMINI_EMPTY_ANSWER" : "GEMINI_UNSAFE_ANSWER"});
+      return json(req,503,{code:"GEMINI_PROVIDER_UNAVAILABLE"});
     }
-  } catch { return json(req,503,{code:"AI_UNAVAILABLE"}); }
-  return json(req,503,{code:"AI_UNAVAILABLE"});
+  } catch {
+    // No raw exception message: it might contain a hostname or user content.
+    console.info("[gemini-vault] provider network_or_parse_failure");
+    return json(req,503,{code:"GEMINI_NETWORK_ERROR"});
+  }
+  return json(req,503,{code:"GEMINI_PROVIDER_UNAVAILABLE"});
 });
