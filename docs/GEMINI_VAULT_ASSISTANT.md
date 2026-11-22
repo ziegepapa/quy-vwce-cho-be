@@ -1,7 +1,8 @@
 # Gemini Free Tier explainer — owner-operated activation guide
 
-**Status: Draft code only. No deployment, new secret, cron schedule, production
-data change or Google request was made by this pull request.**
+**Status:** PR #404 has been merged and its Edge Function deployed separately after owner approval.
+This follow-up diagnostic fix is a **Draft PR** only; it must not be merged or
+deployed to production without owner approval and CI verification.
 
 ## What is implemented
 
@@ -106,6 +107,36 @@ Official references:
    Check Supabase Edge Function logs for **error codes**, never raw financial
    payloads. To stop usage, set `GEMINI_ASSISTANT_ENABLED=false` or remove
    the key in **Edge Functions → Secrets**. Do not touch the Silent Guardian.
+
+## Diagnostic follow-up (not deployed by this document)
+
+- The existing **Verfügbarkeit prüfen / Kiểm tra kết nối AI** button sends
+  an authenticated GET plus the fixed `x-gemini-check: 1` header to the Edge
+  Function. The server requests only Google model **metadata** (GET two fixed
+  model paths) using its own secret. **No financial facts, raw question, name or
+  user token are sent to Google; no SQL claim is made.** This does not
+  consume a Vault daily question attempt. The metadata check is not a
+  generation test and Google may enforce its own API operation quotas.
+- Model-check returns only numeric HTTP statuses. A successful 200 proves
+  that model metadata and the API credential are reachable, **not** that
+  the key is allowed to generate on Free Tier or that capacity is available.
+- If generation fails, the Edge response contains an approved fixed code
+  such as `GOOGLE_KEY_INVALID`, `GOOGLE_ACCESS_DENIED`,
+  `GOOGLE_BAD_REQUEST`, `GOOGLE_MODEL_NOT_FOUND`,
+  `GOOGLE_OVERLOADED`, `AI_EMPTY_OUTPUT`,
+  `AI_RESPONSE_REJECTED`, or `GOOGLE_NETWORK_ERROR`.
+  It never includes Google's raw error message or the portfolio input.
+- The output allowance was raised from 200 to 512 tokens to reduce the
+  likelihood of empty text when thinking consumes the allowance. The
+  now-deprecated custom temperature setting was removed. These changes
+  **do not** guarantee Google will return a valid answer.
+- The UI now labels the server's counter **attempts** instead of successful
+  answers; previously recorded 6 attempts on Nov 22 are **not reset or
+  reimbursed**. No quota schema, RLS, Guardian or finance data are changed.
+- Before activating: run GitHub tests, review the Draft PR, merge only with
+  approval, then deploy the matching updated Edge Function with JWT
+  verification still enabled. Test one voluntary response in the phone app.
+  Do not repeat real Gemini calls to diagnose a 503.
 
 ## Tests and known validation boundary
 
