@@ -35,7 +35,12 @@ test("server checks actual auth and spends quota only after key/enable gate",()=
   assert.ok(server.includes("if (!active() || !serviceKey())"));
   assert.ok(server.includes("if (result.status === 429)"));
   assert.ok(sql.includes("pg_advisory_xact_lock"));
-  assert.ok(sql.includes("attempts between 0 and 10"));
+  assert.ok(sql.includes("attempts between 0 and 20"));
+  assert.ok(sql.includes("if coalesce(v_user,0)>=20"));
+  assert.ok(sql.includes("if coalesce(v_global,0)>=40"));
+  assert.ok(server.includes("limitPerDay:20"));
+  assert.ok(client.includes("Tối đa 20 lượt gửi/người/ngày UTC"));
+  assert.ok(client.includes("limitPerDay - remaining"));
   assert.ok(sql.includes("attempts between 0 and 40"));
   assert.ok(sql.includes("grant execute on function public.gemini_explain_claim(uuid) to service_role"));
   assert.ok(sql.includes("revoke all on function public.gemini_explain_claim(uuid) from public, anon, authenticated"));
@@ -73,4 +78,16 @@ test("only local ledger may conclude progress or difference, and old wrong AI ca
   assert.ok(server.includes("trăm|mươi|nghìn|ngàn|triệu"));
   assert.ok(cache.includes("vwce:gemini-cache:v2"));
   assert.ok(cache.includes("vwce:gemini-answer:v2:"));
+});
+
+test("standalone production SQL quota upgrade preserves data, row isolation, and shared cap",()=>{
+  const upgrade=readFileSync("supabase/ops/gemini-explain-upgrade-20.sql","utf8");
+  assert.ok(upgrade.includes("user_daily_attempts_check"));
+  assert.ok(upgrade.includes("attempts between 0 and 20"));
+  assert.ok(upgrade.includes("if coalesce(v_global,0)>=40"));
+  assert.ok(upgrade.includes("pg_advisory_xact_lock"));
+  assert.ok(upgrade.includes("remaining',19-coalesce"));
+  assert.ok(upgrade.includes("greatest(0,20-coalesce"));
+  assert.ok(upgrade.includes("revoke all on function public.gemini_explain_claim(uuid) from public, anon, authenticated"));
+  assert.doesNotMatch(upgrade,/\b(?:truncate|delete from|drop table|update)\s+(?:public\.)?(?:transactions|goals|app_settings|user_daily)\b/i);
 });
