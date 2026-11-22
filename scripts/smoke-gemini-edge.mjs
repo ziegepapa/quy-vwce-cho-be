@@ -75,7 +75,7 @@ const deno=spawn("deno",["run","--allow-env","--allow-net","supabase/functions/g
   env:{...process.env,
     SUPABASE_URL:api,SUPABASE_ANON_KEY:"mock-public",
     SUPABASE_SERVICE_ROLE_KEY:"mock-private-role",
-    GEMINI_ASSISTANT_ENABLED:"true",GEMINI_API_KEY:"only-ci-not-real",
+    GEMINI_ASSISTANT_ENABLED:"true",GEMINI_API_KEY:"only-ci-not-real \n",
     GEMINI_TEST_MODE:"1",GEMINI_TEST_API_BASE:api},
   stdio:["ignore","pipe","pipe"],
 });
@@ -120,6 +120,7 @@ try{
   assert.equal(requests,0);
   await sleep(20);
   assert.ok(logs.includes("ACCESS_TOKEN_TYPE_UNSUPPORTED"),"log should explain an auth-key rejection");
+  assert.ok(logs.includes('"keyWhitespace":true'),"secret whitespace must be detected safely");
   for(const secret of ["only-ci-not-real","must-not-log-provider-message","mock-user-jwt"]){
     assert.ok(!logs.includes(secret),"provider probe must not log "+secret);
   }
