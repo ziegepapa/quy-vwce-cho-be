@@ -17,8 +17,8 @@ afterEach(cleanup);
 describe("Gemini AI screen — safe without any API key",()=>{
   it("always shows deterministic contributions without any network or Supabase setup",()=>{
     render(<GeminiVaultExplainer locale="de" goals={[goal]} facts={facts}/>);
-    expect(screen.getByText(/600,00/)).toBeTruthy();
-    expect(screen.getByText(/591,95/)).toBeTruthy();
+    expect(document.body.textContent).toContain("600,00");
+    expect(document.body.textContent).toContain("591,95");
     expect(screen.getByText("KI nicht bereit: Schlüssel oder Freigabe prüfen.")).toBeTruthy();
     expect(screen.getByRole("button",{name:"KI fragen"}).hasAttribute("disabled")).toBe(true);
     expect(document.body.textContent).toContain("Free-Tier-Inhalte zur Produktverbesserung nutzen");
@@ -26,7 +26,7 @@ describe("Gemini AI screen — safe without any API key",()=>{
   it("answers year and simulation using existing fact snapshot without a provider call",()=>{
     render(<GeminiVaultExplainer locale="de" goals={[goal]} facts={facts}/>);
     fireEvent.click(screen.getByRole("button",{name:"Dieses Jahr"}));
-    expect(screen.getByText(/600,00/)).toBeTruthy();
+    expect(document.body.textContent).toContain("600,00");
     expect(document.body.textContent).toContain("Kein Brokerbeleg");
     fireEvent.click(screen.getByRole("button",{name:"Simulation"}));
     expect(document.body.textContent).toContain("Szenarien");
@@ -47,7 +47,7 @@ describe("Gemini AI screen — safe without any API key",()=>{
     render(<GeminiVaultExplainer locale="vi" goals={[goal]}
       facts={{...facts,contributed:560,yearRecorded:560,yearPlanned:600}}/>);
     fireEvent.click(screen.getByRole("button",{name:"Năm nay"}));
-    expect(document.body.textContent).toContain("Năm nay ghi 560,00 €, dự kiến 600,00 €");
+    expect(document.body.textContent?.replaceAll("\u00a0"," ")).toContain("Năm nay ghi 560,00 €, dự kiến 600,00 €");
     expect(document.body.textContent).toContain("Số góp ghi trong sổ còn thấp hơn kế hoạch");
     expect(document.body.textContent).toContain("không gửi Google, không trừ lượt AI");
     expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
