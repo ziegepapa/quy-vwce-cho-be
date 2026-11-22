@@ -1,37 +1,38 @@
-// Cache only validated text. The key hashes the signed-in user and complete
-// normalized request; no question, portfolio amount or secret is stored directly.
+// Explanations only; requests and account IDs exist solely in hashed keys.
+const STORAGE = "vwce:gemini-cache:v1";
 const PREFIX = "vwce:gemini-answer:v1:";
 const TTL = 24 * 60 * 60 * 1000;
-const MAX = 16;
-const keys = (): string[] => Array.from({length:localStorage.length},
-  (_,i) => localStorage.key(i)).filter((x):x is string => !!x?.startsWith(PREFIX));
-
+type Entry = { k:string; a:string; e:number };
+function entries(): Entry[] {
+  try {
+    const x: unknown = JSON.parse(localStorage.getItem(STORAGE) || "[]");
+    return Array.isArray(x) ? x.filter(v => v && typeof v.k === "string"
+      && typeof v.a === "string" && v.a.length <= 800 && typeof v.e === "number") : [];
+  } catch { return []; }
+}
 export async function geminiAnswerCacheKey(userId: string, request: unknown): Promise<string | null> {
   try {
     const bytes = new TextEncoder().encode(JSON.stringify([userId,request]));
-    const digest = await crypto.subtle.digest("SHA-256",bytes);
-    return PREFIX + Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2,"0")).join("");
-  } catch { return null; } // Unavailable crypto => no cache.
+    const hash = await crypto.subtle.digest("SHA-256",bytes);
+    return PREFIX + Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2,"0")).join("");
+  } catch { return null; }
 }
 export function readGeminiAnswer(key: string): string | null {
   if (!key.startsWith(PREFIX)) return null;
   try {
-    const entry = JSON.parse(localStorage.getItem(key) || "null");
-    if (typeof entry?.a === "string" && entry.a.length > 0 && entry.a.length <= 800
-      && typeof entry.e === "number" && entry.e > Date.now()) return entry.a;
-    localStorage.removeItem(key);
-  } catch { /* Storage unavailable. */ }
-  return null;
+    const all = entries(), active = all.filter(x => x.e > Date.now());
+    if (active.length !== all.length) localStorage.setItem(STORAGE,JSON.stringify(active));
+    return active.find(x => x.k === key)?.a || null;
+  } catch { return null; }
 }
 export function saveGeminiAnswer(key: string, answer: string): void {
   if (!key.startsWith(PREFIX) || !answer.trim() || answer.length > 800) return;
   try {
-    localStorage.setItem(key,JSON.stringify({a:answer.trim(),e:Date.now()+TTL}));
-    keys().forEach(readGeminiAnswer); // Remove expired entries.
-    const active = keys();
-    active.slice(0,Math.max(0,active.length-MAX)).forEach(k=>localStorage.removeItem(k));
-  } catch { /* Browser quota/private mode => skip cache. */ }
+    const active = entries().filter(x => x.e > Date.now() && x.k !== key);
+    active.push({ k:key, a:answer.trim(), e:Date.now()+TTL });
+    localStorage.setItem(STORAGE,JSON.stringify(active.slice(-16)));
+  } catch { /* Storage disabled or full: regular AI still works. */ }
 }
 export function clearGeminiAnswers(): void {
-  try { keys().forEach(k=>localStorage.removeItem(k)); } catch { /* No storage. */ }
+  try { localStorage.removeItem(STORAGE); } catch { /* Restricted storage. */ }
 }
