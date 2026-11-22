@@ -64,3 +64,13 @@ test("AI answer cache stays on-device and prevents a second quota claim for iden
   assert.ok(cache.includes("localStorage"));
   assert.doesNotMatch(cache,/GEMINI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|x-goog-api-key|localStorage\.setItem\([^,]+,\s*JSON\.stringify\(request/);
 });
+
+test("only local ledger may conclude progress or difference, and old wrong AI cache is invalidated",()=>{
+  assert.ok(client.includes('localTopic === "year" || localTopic === "difference" || localTopic === "goalProgress"'));
+  assert.ok(client.includes("{!ledgerOnly && <button"));
+  assert.ok(server.includes('code:"VAULT_ONLY"'));
+  assert.ok(server.indexOf('code:"VAULT_ONLY"') < server.indexOf('gemini_explain_claim",{p_user_id:userId}'));
+  assert.ok(server.includes("trăm|mươi|nghìn|ngàn|triệu"));
+  assert.ok(cache.includes("vwce:gemini-cache:v2"));
+  assert.ok(cache.includes("vwce:gemini-answer:v2:"));
+});
