@@ -1,5 +1,7 @@
 import { useState } from "react";
 import ExitPlanSection from "../ExitPlanSection";
+import GeminiVaultExplainer from "../GeminiVaultExplainer";
+import type { GeminiFacts } from "../../lib/geminiVaultFacts";
 import type { Mode, ProjectOutput, Scenario } from "../../lib/simulation/engine";
 import type { Goal } from "../../lib/types";
 import { DEFAULT_TER, MAX_YEARS } from "../../lib/simulation/engine";
@@ -52,6 +54,7 @@ export type SimulationDemoShellProps = {
   bandPctLabel: string;
   readOnly: boolean;
   goals: Goal[];
+  geminiFacts: GeminiFacts;
   exitPlanActualBalance: number | null;
   exitPlanActualMonthly: number | null;
   applyYearsFromGoal: (g: Goal) => void;
@@ -114,7 +117,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
     locale, mode, setMode, planUnreachable, targetUnreachable, headlineValue, yearsForProject, monthlyForProject,
     headlineNote, startingBalanceWarning, primary, initialBalance, shownInterest, results, goalMarkers, band, baseRate,
     monthly, setMonthly, years, setYears, targetAmount, setTargetAmount, targetYear, setTargetYear,
-    yearsB, requiredMonthlyBase, yearsC, rateInput, setRateInput, bandPctLabel, readOnly, goals, exitPlanActualBalance, exitPlanActualMonthly,
+    yearsB, requiredMonthlyBase, yearsC, rateInput, setRateInput, bandPctLabel, readOnly, goals, geminiFacts, exitPlanActualBalance, exitPlanActualMonthly,
     applyYearsFromGoal, advSummary, bandInput, setBandInput, growthOn, setGrowthOn, growthPct,
     setGrowthPct, lumpSum, setLumpSum, balanceOverride, setBalanceOverride, realBalance,
     inflationOn, setInflationOn, inflationPct, setInflationPct, showPP, setShowPP, yearRows, baseMap, goalYearSet, goalNameByYear,
@@ -252,6 +255,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
       </section>
 
       <ExitPlanSection goals={goals} locale={locale} actualBalance={exitPlanActualBalance} actualMonthly={exitPlanActualMonthly} />
+      <GeminiVaultExplainer locale={locale} goals={goals} facts={geminiFacts} />
 
       <section className="scenario-comparison" aria-labelledby="scenario-comparison-title">
         <div className="scenario-heading">
