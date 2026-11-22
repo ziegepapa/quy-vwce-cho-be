@@ -26,7 +26,7 @@ export const supabase = {
       const exhausted=new URLSearchParams(location.search).get("exhausted")==="1";
       const model=hard && !exhausted ? "gemini-3.8-flash" : "gemini-3.5-flash-lite";
       return {error:null,data:{model,remaining:19,cached:false,
-        explanation:"${false ? "excluded" : "Eine einfache hypothetische Erläuterung ohne Renditeversprechen."}"}};
+        explanation: new URLSearchParams(location.search).get("locale")==="vi" ? "Chỉ là diễn giải giả định, không cam kết lợi nhuận." : "Eine hypothetische Erläuterung ohne Renditeversprechen."}};
     },
   },
 };`;
