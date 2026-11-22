@@ -193,7 +193,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       <button type="button" disabled={busy || !consent || !query || !supabase}
         onClick={()=>void ask()}>{status==="loading"?t.loading:t.ask}</button>
     </div>
-    <p className="gemini-vault-status" role="status">{showStatus}</p>
+    <p className="gemini-vault-status" role={status === "unchecked" || status === "not_ready" ? undefined : "status"}>{showStatus}</p>
     {answer && <div className="gemini-vault-answer"><strong>{t.aiAnswer}</strong><p>{answer}</p>
       {remaining!==null && <small>{locale==="de"?`Noch ${remaining} von 10 Fragen heute.`:`Hôm nay còn ${remaining}/10 câu.`}</small>}
     </div>}
