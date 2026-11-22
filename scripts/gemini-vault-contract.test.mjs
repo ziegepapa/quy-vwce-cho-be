@@ -5,6 +5,7 @@ const server = readFileSync("supabase/functions/gemini-vault-explain/index.ts","
 const sql = readFileSync("supabase/ops/gemini-explain-install.sql","utf8");
 const client = readFileSync("src/components/GeminiVaultExplainer.tsx","utf8");
 const facts = readFileSync("src/lib/geminiVaultFacts.ts","utf8");
+const cache = readFileSync("src/lib/geminiVaultCache.ts","utf8");
 
 test("Gemini key and service role cannot enter PWA or GitHub source literals",()=>{
   assert.ok(server.includes('Deno.env.get("GEMINI_API_KEY")'));
@@ -49,4 +50,17 @@ test("no Google requests on mount, no raw question sent, consent required",()=>{
   assert.doesNotMatch(client,/body:\s*\{[^}]*question\s*[,}]/);
   assert.ok(client.includes("gemini-vault-explain"));
   assert.ok(client.includes("Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen."));
+});
+
+test("AI answer cache stays on-device and prevents a second quota claim for identical facts",()=>{
+  assert.ok(client.includes("geminiAnswerCacheKey(session.user.id, body)"));
+  assert.ok(client.includes("readGeminiAnswer(key)"));
+  assert.ok(client.includes("saveGeminiAnswer(key, clean)"));
+  assert.ok(client.includes("if (saved)"));
+  assert.ok(client.includes("No readiness probe, server quota claim or Google request"));
+  assert.ok(client.includes("useEffect(() => { setAnswer(\"\"); setCached(false); }, [answerContext])"));
+  assert.ok(cache.includes('crypto.subtle.digest("SHA-256"'));
+  assert.ok(cache.includes("24 * 60 * 60 * 1000"));
+  assert.ok(cache.includes("localStorage"));
+  assert.doesNotMatch(cache,/GEMINI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|x-goog-api-key|localStorage\.setItem\([^,]+,\s*JSON\.stringify\(request/);
 });
