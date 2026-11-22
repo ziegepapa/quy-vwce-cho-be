@@ -62,6 +62,7 @@ const stub = http.createServer(async(req,res)=>{
       if(providerMode==="rate") return reply(res,429,{error:"quota"});
       if(providerMode==="overloaded") return reply(res,503,{error:"unavailable"});
       if(providerMode==="empty") return reply(res,200,{candidates:[{content:{parts:[]},finishReason:"MAX_TOKENS"}]});
+      if(providerMode==="spoken-numbers") return reply(res,200,{candidates:[{content:{parts:[{text:"Số đã ghi năm trăm sáu mươi, đạt mức sáu trăm."}]}}]});
       if(providerMode==="fallback" && req.url.includes("gemini-3.5")) return reply(res,503,{error:"unavailable"});
       const txt=providerMode==="unsafe" ? "Sie sollten im Jahr 2042 verkaufen.":
         "Nach den eingetragenen Zahlen wurde bisher ein Teil des Plans erreicht. Es ist keine Anlageberatung.";
@@ -91,7 +92,7 @@ const facts={
   portfolioValue:591.95,contributed:600,monthly:120,yearRecorded:600,yearPlanned:480,year:2026,
   goalAmount:null,goalYear:null,goalMode:null,simulationYear:2045,cautious:17000,base:24000,optimistic:32000,
 };
-const safe={schemaVersion:1,locale:"de",topic:"year",queryYear:null,facts};
+const safe={schemaVersion:1,locale:"de",topic:"plan",queryYear:null,facts};
 async function call(input=safe, opts={}){
   return fetch(edge,{method:"POST",headers:{"Content-Type":"application/json",
     Origin:"http://localhost:5173",Authorization:"Bearer mock-user-jwt",...(opts.headers||{})},
@@ -150,6 +151,10 @@ try{
   response=await call();
   assert.equal(response.status,422); // unsafe output must never be displayed
   assert.equal((await response.json()).code,"AI_RESPONSE_REJECTED");
+  providerMode="spoken-numbers";
+  response=await call({...safe,locale:"vi"});
+  assert.equal(response.status,422);
+  assert.equal((await response.json()).code,"AI_RESPONSE_REJECTED");
   providerMode="empty";
   response=await call();
   assert.equal(response.status,502);
@@ -160,13 +165,13 @@ try{
   assert.equal((await response.json()).code,"GOOGLE_OVERLOADED");
   assert.equal(calls.length,2);
   providerMode="normal";
-  for(let i=0;i<5;i++) assert.equal((await call()).status,200);
+  for(let i=0;i<4;i++) assert.equal((await call()).status,200);
   assert.equal(requests,10);
   assert.equal((await call()).status,429);
   assert.equal(requests,10);
-  // Next mocked UTC day: all eight fixed intents must be accepted with no raw questions.
+  // Next mocked UTC day: exact comparisons are handled by Vault, never Gemini.
   requests=0;paused=false;calls=[];providerMode="normal";
-  for (const topic of ["plan","year","goal","simulation","value","difference","monthly","goalProgress"]) {
+  for (const topic of ["plan","goal","simulation","value","monthly"]) {
     response=await call({...safe,topic});
     assert.equal(response.status,200);
     const posted=JSON.parse(calls[calls.length-1].msg.contents[0].parts[0].text);
@@ -174,10 +179,17 @@ try{
     assert.equal(Object.keys(posted).sort().join(","),"facts,requestedYear,topic");
     assert.ok(calls[calls.length-1].msg.systemInstruction.parts[0].text.length>100);
   }
-  assert.equal(requests,8);
+  assert.equal(requests,5);
+  // Factual comparisons cannot reach the model or spend quota, even on old clients.
+  for (const topic of ["year","difference","goalProgress"]) {
+    response=await call({...safe,topic});
+    assert.equal(response.status,400);
+    assert.equal((await response.json()).code,"VAULT_ONLY");
+  }
+  assert.equal(requests,5);
   // Invalid new topics do not consume quota.
   assert.equal((await call({...safe,topic:"unsafe_free_text"})).status,400);
-  assert.equal(requests,8);
+  assert.equal(requests,5);
   // Mock the next UTC day: verify an upstream 429 trips the shared circuit
   // breaker, and no fallback is sent to a 2nd paid/limited model.
   requests=0;paused=false;calls=[];providerMode="rate";

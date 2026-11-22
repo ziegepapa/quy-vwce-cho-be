@@ -9,7 +9,7 @@ class FakeStorage {
   setItem(key: string, value: string) { this.values.set(key, value); }
   removeItem(key: string) { this.values.delete(key); }
 }
-const prefix = "vwce:gemini-answer:v1:";
+const prefix = "vwce:gemini-answer:v2:";
 let store: FakeStorage;
 
 beforeEach(() => {
@@ -29,7 +29,7 @@ describe("Gemini answer cache privacy and quota avoidance", () => {
     });
     const userB = await geminiAnswerCacheKey("user-B", req);
     expect(a).toBe(same);
-    expect(a).toMatch(/^vwce:gemini-answer:v1:[a-f0-9]{64}$/);
+    expect(a).toMatch(/^vwce:gemini-answer:v2:[a-f0-9]{64}$/);
     expect(a).not.toContain("560");
     expect(a).not.toContain("user-A");
     expect(changed).not.toBe(a);
@@ -61,8 +61,10 @@ describe("Gemini answer cache privacy and quota avoidance", () => {
     store.setItem("vault:unrelated", "keep");
     for (let i=0;i<24;i++) saveGeminiAnswer(prefix + i, "Safe explanation");
     expect(store.length).toBe(2);
-    expect(JSON.parse(store.getItem("vwce:gemini-cache:v1") || "[]")).toHaveLength(16);
+    expect(JSON.parse(store.getItem("vwce:gemini-cache:v2") || "[]")).toHaveLength(16);
+    store.setItem("vwce:gemini-cache:v1", JSON.stringify([{k:"old",a:"Số 560 đã đạt 600",e:Date.now()+90000}]));
     clearGeminiAnswers();
+    expect(store.getItem("vwce:gemini-cache:v1")).toBeNull();
     expect(store.length).toBe(1);
     expect(store.getItem("vault:unrelated")).toBe("keep");
   });
