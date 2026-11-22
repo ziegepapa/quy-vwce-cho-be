@@ -60,7 +60,8 @@ describe("Gemini answer cache privacy and quota avoidance", () => {
   it("limits entries and clears only Gemini responses", () => {
     store.setItem("vault:unrelated", "keep");
     for (let i=0;i<24;i++) saveGeminiAnswer(prefix + i, "Safe explanation");
-    expect(store.length).toBe(17);
+    expect(store.length).toBe(2);
+    expect(JSON.parse(store.getItem("vwce:gemini-cache:v1") || "[]")).toHaveLength(16);
     clearGeminiAnswers();
     expect(store.length).toBe(1);
     expect(store.getItem("vault:unrelated")).toBe("keep");
