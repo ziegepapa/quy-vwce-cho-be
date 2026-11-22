@@ -38,12 +38,72 @@ tests are synthetic and must never be copied into the real ledger.
 - A private SQL counter with a transactional advisory lock enforces **20
   attempts per authenticated user per UTC day** and a conservative **40
   attempts per project per UTC day**. A Google 429 pauses new attempts until
-  the next UTC day; never silently switches models on 429. On model 404/503,
-  at most one fallback call uses `gemini-3.8-flash`. No automatic retries.
+  the next UTC day; never switches models on 429. **Current production** uses
+  Flash-Lite as primary with one Flash fallback on 404/503. The **Draft PR**
+  described below adds topic-based Flash routing, subject to separate approval.
 - The Edge Function is **OFF by default** until the explicit server-side
   `GEMINI_ASSISTANT_ENABLED=true` is set. It fails closed if either the key,
   SQL RPC installation, auth service or quota backend is missing. Existing
   local explanation remains visible on any failure.
+
+## DRAFT only — topic-based Flash routing and private 24h server cache
+
+**No database SQL has been executed and no Edge Function or PWA from this
+Draft PR has been deployed.** Merging, SQL installation, Edge deployment and
+any secret changes each require separate explicit owner approval. This PR
+does not change any provider keys, Billing, cron, background processing,
+financial tables, auth/Guardian/Resend code, or the 20-user/40-project UTC limit.
+
+Main currently supports **eight** bounded topics, not the four listed in the
+original #404 specification. Retain all eight to avoid regression:
+- `goal`, `simulation`: reserve one of **five shared Flash
+  generateContent attempts per UTC day** and use Gemini 3.8 Flash. After
+  the fifth Flash reservation, use Gemini 3.5 Flash-Lite instead, returning
+  success normally (the response reports which model actually replied).
+- `plan`, `value`, `monthly`: use Flash-Lite. On **404/503 only**,
+  reserve one Flash attempt before a single fallback to Gemini 3.8 Flash.
+- `year`, `difference`, `goalProgress`: **Vault-only**, unchanged.
+  No Google call, model designation or AI quota for deterministic numeric
+  comparisons. The existing safeguards introduced after Gemini incorrectly
+  interpreted 560 € versus 600 € must not be removed.
+- Primary Flash 404/503 falls back to Lite at most once. Any 429 from either
+  provider triggers the unchanged global UTC-day pause, with no fallback.
+  Every Flash generation attempt reserves a Flash slot **before the request**,
+  even if Google responds with an error. Metadata GET never reserves a slot.
+- An isolated app-wide Flash budget uses the private, service-role-only
+  `ai_internal.gemini_flash_daily` table and an advisory-locked RPC.
+  **5/day is an internal conservative cap, not a guarantee from Google.**
+
+A second 24-hour **server-side cache** is separate from the existing device
+cache. For an authenticated, explicitly user-initiated POST the server
+normalizes the fixed topic, locale, aggregate facts and optional year,
+computes SHA-256 of that JSON, and checks a private cache partitioned by
+authenticated user ID. A valid **200** hit returns the validated answer and
+provider model before the SQL 20/40 claim and without contacting Google.
+The optional year is included in the digest to avoid stale results for a
+different year. Provider errors, unsafe text, and responses lacking a
+validated model are never cached. Cache stores only its digest, short safe
+answer, model, expiry and private user partition. Expired records are removed
+opportunistically during cache writes, without cron or background jobs.
+The existing browser-local 24-hour cache continues to skip even Edge requests
+on an exact match, now with model metadata for the displayed subtle
+German/Vietnamese label. Cache display requires the same user action and
+opt-in as before; signed-out users cannot read the private server cache.
+
+**Manual SQL, not automatic:** review and run
+`supabase/ops/gemini-flash-routing-install.sql` in the correct production
+project **only after owner approval**. It creates only the two dedicated
+internal tables and three restricted RPCs. On absence/failure of the new
+Flash-budget RPC the Edge Function MUST NOT make any Flash generateContent
+request. Do not use the production project for isolated CI smoke tests.
+
+**RPD source:** the owner's 22 Nov 2026 Google AI Studio Free Tier project
+screenshot shows Flash-Lite 15 RPM/250K TPM/500 RPD and Flash 3.8
+5 RPM/250K TPM/20 RPD; those limits are project/model-specific, may change,
+and do not guarantee any particular successful request count. The app
+restricts shared Flash generation to five attempted calls per UTC day,
+but Google's quota reset window may differ. No Billing activation is part
+of this PR.
 
 ## Exact numeric comparisons: never decided by Gemini
 
