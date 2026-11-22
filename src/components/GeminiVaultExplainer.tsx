@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Goal } from "../lib/types";
 import type { DisplayLocale } from "../ui/localeFormatting";
 import { supabase } from "../lib/supabase";
 import { classifyGeminiQuestion, withSelectedGoal, type GeminiFacts, type GeminiTopic } from "../lib/geminiVaultFacts";
 import { validExitDate } from "../lib/simulation/exitPlan";
+import { clearGeminiAnswers, geminiAnswerCacheKey, readGeminiAnswer, saveGeminiAnswer } from "../lib/geminiVaultCache";
 import "../styles/gemini-vault-explainer.css";
 
 type Props = { locale: DisplayLocale; goals: readonly Goal[]; facts: GeminiFacts };
@@ -39,8 +40,8 @@ const copy = {
     limited: "KI-Limit erreicht. Bitte morgen erneut versuchen.",
     error: "KI nicht erreichbar. Nutze die Vault-Erklärung.",
     unsupported: "Frage nicht unterstützt. Wähle ein Thema.",
-    aiAnswer: "Antwort von Gemini", consent: "Ich erlaube, die angezeigten Summen an Gemini zu senden.",
-    privacy: "Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen. Keine Namen, Konten oder Einzelbuchungen.",
+    aiAnswer: "Antwort von Gemini", consent: "Ich erlaube, Summen bei neuen Fragen an Gemini zu senden.",
+    privacy: "Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen. Keine Namen oder Einzelbuchungen. Antworten bleiben bis zu 24 h auf diesem Gerät.",
     data: "Diese Angaben würden gesendet", values: "Aktueller Depotwert", paid: "Erfasste Beiträge", monthly: "Monatsbeitrag", milestone: "Gewähltes Ziel",
     noData: "nicht verfügbar", disclaimer: "Nur allgemeine Erläuterung — keine Anlage- oder Steuerberatung. Keine Renditegarantie.",
     quota: "Maximal zehn Sendeversuche je Person und UTC-Tag, auch bei Fehlern. Der Modellcheck verbraucht keinen Vault-Versuch.",
@@ -57,6 +58,8 @@ const copy = {
     errRejected: "Antwort wegen Sicherheitsprüfung verworfen.",
     errNetwork: "Google: Netzwerkfehler oder Timeout.",
     limitNotice: "Nur Fragetyp und Summen werden gesendet, nie dein Fragetext.",
+    cached: "Gespeicherte Antwort auf diesem Gerät · kein neuer KI-Versuch.",
+    cacheClear: "Gespeicherte KI-Antworten löschen", cacheCleared: "KI-Cache auf diesem Gerät gelöscht.",
   },
   vi: {
     tag: "AI miễn phí · tự chọn", title: "Giải thích kế hoạch bằng lời thường",
@@ -87,8 +90,8 @@ const copy = {
     limited: "Hết lượt AI hôm nay; thử lại ngày mai.",
     error: "AI đang lỗi; vẫn xem được câu trả lời từ sổ.",
     unsupported: "Chưa hỗ trợ câu hỏi; chọn một chủ đề.",
-    aiAnswer: "Gemini giải thích", consent: "Tôi đồng ý gửi số liệu tổng hợp tới Gemini.",
-    privacy: "Google có thể dùng dữ liệu Free Tier để cải thiện sản phẩm. Không gửi tên, tài khoản hay giao dịch lẻ.",
+    aiAnswer: "Gemini giải thích", consent: "Tôi đồng ý gửi số liệu tổng hợp tới Gemini khi cần hỏi mới.",
+    privacy: "Google có thể dùng dữ liệu Free Tier để cải thiện sản phẩm. Không gửi tên hay giao dịch lẻ. Câu trả lời lưu trên máy tối đa 24 giờ.",
     data: "Các con số sẽ gửi", values: "Giá trị quỹ", paid: "Tổng đã góp", monthly: "Góp mỗi tháng", milestone: "Goal đã chọn",
     noData: "chưa có", disclaimer: "Chỉ là thông tin chung, không tư vấn đầu tư/thuế và không hứa lợi nhuận.",
     quota: "Tối đa 10 lượt gửi/người/ngày UTC, kể cả lượt lỗi. Kiểm tra key/model không trừ lượt trong Vault.",
@@ -105,6 +108,8 @@ const copy = {
     errRejected: "Câu trả lời không đạt kiểm tra an toàn.",
     errNetwork: "Google lỗi kết nối hoặc hết thời gian.",
     limitNotice: "Chỉ gửi loại câu hỏi và số liệu tổng hợp, không gửi câu bạn gõ.",
+    cached: "Câu trả lời lưu trên thiết bị · không trừ thêm lượt AI.",
+    cacheClear: "Xóa các câu trả lời đã lưu", cacheCleared: "Đã xóa cache AI trên thiết bị.",
   },
 };
 function formatEuro(n: number | null, locale: DisplayLocale, empty: string): string {
@@ -161,12 +166,28 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<Status>(supabase ? "unchecked" : "not_ready");
   const [answer, setAnswer] = useState("");
+  const [cached, setCached] = useState(false);
+  const asking = useRef(false);
   const [diagnostic, setDiagnostic] = useState("");
   const [remaining, setRemaining] = useState<number | null>(null);
   const chosenGoal = goals.find(g => !g.deletedAt && g.id === goalId && validExitDate(g.dueDate)) ?? null;
   const selectedFacts = useMemo(() => withSelectedGoal(facts, chosenGoal), [facts, chosenGoal]);
   const query = question.trim() ? classifyGeminiQuestion(question) : { topic, queryYear: null };
   const localTopic: GeminiTopic = query?.topic ?? topic;
+  const answerContext = JSON.stringify([locale, query?.topic, query?.queryYear, selectedFacts]);
+  const contextRef = useRef(answerContext);
+  contextRef.current = answerContext;
+  useEffect(() => { setAnswer(""); setCached(false); }, [answerContext]);
+  useEffect(() => {
+    const listener = supabase?.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT" || event === "SIGNED_IN") {
+        setAnswer(""); setCached(false); setConsent(false);
+        setDiagnostic(""); setRemaining(null); setStatus("unchecked");
+      }
+    });
+    return () => listener?.data.subscription.unsubscribe();
+  }, []);
+
   const local = fallback(localTopic, selectedFacts, locale);
   const busy = status === "loading" || status === "checking";
   const showStatus = ({
@@ -176,7 +197,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   })[status];
 
   async function connectionCheck(): Promise<boolean> {
-    setAnswer("");
+    setAnswer(""); setCached(false);
     setDiagnostic("");
     if (!supabase) { setStatus("not_ready"); return false; }
     if (typeof navigator !== "undefined" && !navigator.onLine) { setStatus("offline"); return false; }
@@ -201,48 +222,69 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     } catch { setStatus("not_ready"); return false; }
   }
   async function ask(): Promise<void> {
-    if (busy || !consent) return;
-    if (!query) { setStatus("error"); setAnswer(t.unsupported); return; }
-    if (!supabase) { setStatus("not_ready"); return; }
-    if (typeof navigator !== "undefined" && !navigator.onLine) { setStatus("offline"); return; }
-    const ready = status === "ready" || status === "answered";
-    if (!ready && !(await connectionCheck())) return;
-    setAnswer(""); setStatus("loading");
+    if (asking.current || busy || !consent) return;
+    asking.current = true; // A double-tap must not spend two Vault quota claims.
+    const context = answerContext;
     try {
-      const { data, error } = await supabase.functions.invoke("gemini-vault-explain", {
-        method: "POST",
-        body: { schemaVersion:1, locale, topic:query.topic, queryYear:query.queryYear, facts:selectedFacts },
-      });
-      if (error) {
-        // Supabase returns a Response in FunctionsHttpError.context; parse only
-        // our fixed, non-sensitive error code. Never display Google's raw body.
-        const ctx = (error as unknown as { context?: Response }).context;
-        let result: { code?: string; remaining?: number } = {};
-        try {
-          if (ctx && typeof ctx.clone === "function") {
-            const parsed: unknown = await ctx.clone().json();
-            if (parsed && typeof parsed === "object") result = parsed as typeof result;
-          }
-        } catch { /* network or legacy response */ }
-        if (Number.isInteger(result.remaining)) setRemaining(result.remaining!);
-        const message = ({
-          GOOGLE_KEY_INVALID:t.errKey, GOOGLE_ACCESS_DENIED:t.errKey,
-          GOOGLE_MODEL_NOT_FOUND:t.errModel, GOOGLE_BAD_REQUEST:t.errBadRequest,
-          GOOGLE_OVERLOADED:t.errBusy, AI_EMPTY_OUTPUT:t.errEmpty,
-          AI_RESPONSE_REJECTED:t.errRejected, GOOGLE_NETWORK_ERROR:t.errNetwork,
-        } as Record<string,string>)[result.code ?? ""];
-        setDiagnostic(message || (ctx?.status === 429 ? t.limited : t.error));
-        setStatus(ctx?.status === 429 ? "limit" : "error");
-        return;
+      if (!query) { setStatus("error"); setAnswer(t.unsupported); return; }
+      if (!supabase) { setStatus("not_ready"); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) { setStatus("sign_in"); return; }
+      const body = { schemaVersion:1, locale, topic:query.topic, queryYear:query.queryYear, facts:selectedFacts };
+      const key = await geminiAnswerCacheKey(session.user.id, body);
+      const saved = key && readGeminiAnswer(key);
+      if (context !== contextRef.current) return;
+      if (saved) {
+        setAnswer(saved); setCached(true); setDiagnostic(t.cached); setStatus("answered");
+        return; // No readiness probe, server quota claim or Google request.
       }
-      if (!data || typeof data.explanation !== "string" || !data.explanation.trim()) {
-        setStatus("error"); return;
-      }
-      setAnswer(data.explanation.trim().slice(0,800));
-      setDiagnostic("");
-      setRemaining(Number.isInteger(data.remaining) ? data.remaining : null);
-      setStatus("answered");
-    } catch { setStatus("error"); }
+      if (typeof navigator !== "undefined" && !navigator.onLine) { setStatus("offline"); return; }
+      const ready = status === "ready" || status === "answered";
+      if (!ready && !(await connectionCheck())) return;
+      if (context !== contextRef.current) return;
+      setAnswer(""); setCached(false); setStatus("loading");
+      try {
+        const { data, error } = await supabase.functions.invoke("gemini-vault-explain", {
+          method: "POST", body,
+        });
+        if (context !== contextRef.current) return;
+        if (error) {
+          // Read only our fixed response code, never Google's raw error body.
+          const ctx = (error as unknown as { context?: Response }).context;
+          let result: { code?: string; remaining?: number } = {};
+          try {
+            if (ctx && typeof ctx.clone === "function") {
+              const parsed: unknown = await ctx.clone().json();
+              if (parsed && typeof parsed === "object") result = parsed as typeof result;
+            }
+          } catch { /* network or legacy response */ }
+          if (Number.isInteger(result.remaining)) setRemaining(result.remaining!);
+          const message = ({
+            GOOGLE_KEY_INVALID:t.errKey, GOOGLE_ACCESS_DENIED:t.errKey,
+            GOOGLE_MODEL_NOT_FOUND:t.errModel, GOOGLE_BAD_REQUEST:t.errBadRequest,
+            GOOGLE_OVERLOADED:t.errBusy, AI_EMPTY_OUTPUT:t.errEmpty,
+            AI_RESPONSE_REJECTED:t.errRejected, GOOGLE_NETWORK_ERROR:t.errNetwork,
+          } as Record<string,string>)[result.code ?? ""];
+          setDiagnostic(message || (ctx?.status === 429 ? t.limited : t.error));
+          setStatus(ctx?.status === 429 ? "limit" : "error");
+          return;
+        }
+        if (!data || typeof data.explanation !== "string" || !data.explanation.trim()) {
+          setStatus("error"); return;
+        }
+        const clean = data.explanation.trim().slice(0,800);
+        setAnswer(clean);
+        setDiagnostic("");
+        setRemaining(Number.isInteger(data.remaining) ? data.remaining : null);
+        setStatus("answered");
+        if (key) saveGeminiAnswer(key, clean); // Cache successful explanations only.
+      } catch { if (context === contextRef.current) setStatus("error"); }
+    } catch { if (context === contextRef.current) setStatus("error"); }
+    finally { asking.current = false; }
+  }
+  function clearCache(): void {
+    clearGeminiAnswers(); setAnswer(""); setCached(false);
+    setDiagnostic(t.cacheCleared); setStatus("unchecked");
   }
 
   return <section className="gl gemini-vault" data-testid="gemini-vault-explainer" aria-labelledby="gemini-vault-title">
@@ -289,6 +331,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       ? `Heute wurden ${10 - remaining}/10 Sendeversuche im Vault verbraucht.`
       : `Đã dùng ${10 - remaining}/10 lượt thử hôm nay trong Vault.`}</p>}
     {answer && <div className="gemini-vault-answer"><strong>{t.aiAnswer}</strong><p>{answer}</p>
+      {cached && <button type="button" onClick={clearCache}>{t.cacheClear}</button>}
       <p className="gemini-vault-grounded"><strong>{t.localTitle}: </strong>{local}</p>
 
     </div>}
