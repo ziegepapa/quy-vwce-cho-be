@@ -224,20 +224,20 @@ Deno.serve(async (req: Request) => {
   if (!userId) return json(req,401,{code:"AUTH_REQUIRED"});
 
   if (req.method === "GET") {
-    if (!active() || !serviceKey()) return json(req,200,{ready:false,limitPerDay:10});
+    if (!active() || !serviceKey()) return json(req,200,{ready:false,limitPerDay:20});
     try {
       const state = await rpc(base,serviceKey()!,"gemini_explain_status",{p_user_id:userId});
       // Header only comes from a user-clicked availability check. Metadata GET
-      // never sends portfolio data and does not consume our 10/day SQL quota.
+      // never sends portfolio data and does not consume our 20/day SQL quota.
       const checks = req.headers.get("x-gemini-check") === "1"
         ? await Promise.all(MODELS.map(model => checkModel(model, Deno.env.get("GEMINI_API_KEY")!)))
         : null;
       return json(req,200,{
         ready: state.ready === true && (!checks || checks.some(check => check.status === 200)),
-        limitPerDay:10, remaining:state.remaining, modelChecks:checks,
+        limitPerDay:20, remaining:state.remaining, modelChecks:checks,
       });
     } catch {
-      return json(req,200,{ready:false,limitPerDay:10});
+      return json(req,200,{ready:false,limitPerDay:20});
     }
   }
   if (!active() || !serviceKey()) return json(req,503,{code:"NOT_READY"});
