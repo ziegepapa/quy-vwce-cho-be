@@ -3,7 +3,7 @@ import { validExitDate } from "./simulation/exitPlan";
 import { buildPlanVsReality } from "../pages/planVsReality";
 import type { AppSettings, Goal, Transaction } from "./types";
 
-export type GeminiTopic = "plan" | "year" | "goal" | "simulation";
+export type GeminiTopic = "plan" | "year" | "goal" | "simulation" | "value" | "difference" | "monthly" | "goalProgress";
 export type GeminiFacts = {
   portfolioValue: number | null;
   contributed: number | null;
@@ -76,8 +76,9 @@ export function withSelectedGoal(facts: GeminiFacts, goal: Goal | null): GeminiF
   };
 }
 /**
- * The input question never leaves the device. Interpret only a tiny set of
- * fixed intents, plus an optional year; do not forward names or raw text.
+ * Raw question text stays on the device. Route supported Vietnamese/German
+ * wording into fixed, finance-safe intents; unrecognized questions are rejected.
+ * Optional year is context only: the server must never invent a year forecast.
  */
 export function classifyGeminiQuestion(raw: string): { topic: GeminiTopic; queryYear: number | null } | null {
   const text = raw.normalize("NFKC").trim().toLocaleLowerCase();
@@ -87,14 +88,26 @@ export function classifyGeminiQuestion(raw: string): { topic: GeminiTopic; query
   const years = text.match(/\b20\d{2}\b/g) || [];
   if (years.length > 1) return null;
   const year = years.length ? Number(years[0]) : null;
+  if (/(lãi|lỗ|chênh lệch|tăng giảm|lời hay lỗ|so với (số )?(tiền )?đã góp|gewinn|verlust|differenz|rendite|im plus|im minus)/i.test(text)) {
+    return { topic: "difference", queryYear: null };
+  }
+  if (/(còn thiếu|còn bao xa|đã đạt.*mục tiêu|tiến độ mục tiêu|ziel.*erreicht|bis zum ziel|wie weit.*ziel|zielstand|zielbetrag)/i.test(text)) {
+    return { topic: "goalProgress", queryYear: null };
+  }
   if (/(simulation|szenari|mô phỏng|kịch bản)/i.test(text)) return { topic: "simulation", queryYear: year };
-  if (/(dieses jahr|diesem jahr|eingezahlt|einzahlung|góp đủ|năm nay|đã góp|sparjahr)/i.test(text)) {
+  if (/(mỗi tháng|hàng tháng|định kỳ|góp tháng|số tiền góp tháng|sparrate|monatlich|pro monat|monatsbeitrag)/i.test(text)) {
+    return { topic: "monthly", queryYear: null };
+  }
+  if (/(giá trị quỹ|giá trị hiện tại|quỹ bây giờ|quỹ đang có|depotwert|aktueller wert|wert des depots)/i.test(text)) {
+    return { topic: "value", queryYear: null };
+  }
+  if (/(dieses jahr|diesem jahr|eingezahlt|einzahlung|góp đủ|năm nay|đã góp trong năm|sparjahr)/i.test(text)) {
     return { topic: "year", queryYear: year };
   }
-  if (year || /(ziel|2042|mốc|đích|wann brauche|wenn ich geld brauche|sử dụng tiền)/i.test(text)) {
+  if (year || /(ziel|goal|mục tiêu|mốc|đích|wann brauche|wenn ich geld brauche|sử dụng tiền)/i.test(text)) {
     return { topic: "goal", queryYear: year };
   }
-  if (/(plan|sparen|sparm|überblick|erklären|giải thích|kế hoạch|quỹ của)/i.test(text)) {
+  if (/(plan|sparen|sparm|überblick|erklären|giải thích|kế hoạch|quỹ của|tổng đã góp|đã góp)/i.test(text)) {
     return { topic: "plan", queryYear: null };
   }
   return null;
