@@ -117,16 +117,40 @@ KHÔNG khuyên mua, bán, chuyển tỷ trọng, tính thuế hay hứa lợi nh
 KHÔNG viết số, năm, euro, phần trăm hoặc dữ liệu cá nhân trong câu trả lời; app hiện các số đã xác minh riêng.
 Chỉ trả đoạn giải thích ngắn, không Markdown.`;
 // An explicit model-metadata probe: no generation, quota claim, or financial facts.
+// Only whitelisted machine-readable diagnostics are logged, never key bytes,
+// bearer tokens, Google messages, user IDs, or portfolio data.
+function safeProbeError(body: unknown): { googleStatus: string; reason: string } {
+  const error = isObject(body) && isObject(body.error) ? body.error : null;
+  const candidateStatus = error && typeof error.status === "string" ? error.status : "";
+  const statuses = new Set(["UNAUTHENTICATED", "PERMISSION_DENIED", "NOT_FOUND", "INVALID_ARGUMENT",
+    "FAILED_PRECONDITION", "RESOURCE_EXHAUSTED", "UNAVAILABLE"]);
+  const googleStatus = statuses.has(candidateStatus) ? candidateStatus : "OTHER";
+  const details = error && Array.isArray(error.details) ? error.details : [];
+  const candidateReason = details.filter(isObject).map(item => item.reason)
+    .find(value => typeof value === "string" && /^[A-Z][A-Z0-9_]{2,60}$/.test(value));
+  return { googleStatus, reason: typeof candidateReason === "string" ? candidateReason : "OTHER" };
+}
 async function checkModel(model: string, key: string): Promise<{model: string; status: number | null}> {
   const apiBase = Deno.env.get("GEMINI_TEST_MODE") === "1"
     ? Deno.env.get("GEMINI_TEST_API_BASE") || "https://generativelanguage.googleapis.com"
     : "https://generativelanguage.googleapis.com";
+  const keyKind = key.startsWith("AQ.") ? "authorization" : key.startsWith("AIza") ? "standard" : "other";
+  const keyWhitespace = key.trim() !== key;
   try {
     const response = await fetch(apiBase + "/v1beta/models/" + encodeURIComponent(model), {
       method: "GET", headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(6000),
     });
+    // Never log the response body: Google messages can contain sensitive detail.
+    const diagnostic = response.ok ? {googleStatus:"OK", reason:"NONE"}
+      : safeProbeError(await response.json().catch(() => null));
+    console.info("[gemini-model-probe]", JSON.stringify({
+      model, httpStatus:response.status, ...diagnostic, keyKind, keyWhitespace,
+    }));
     return { model, status: response.status };
   } catch {
+    console.info("[gemini-model-probe]", JSON.stringify({
+      model, httpStatus:null, googleStatus:"NETWORK_ERROR", reason:"OTHER", keyKind, keyWhitespace,
+    }));
     return { model, status: null };
   }
 }
