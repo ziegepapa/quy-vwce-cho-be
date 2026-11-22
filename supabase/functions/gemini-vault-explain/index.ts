@@ -158,7 +158,7 @@ async function askGoogle(model: string, payload: SafeRequest, key: string): Prom
   const clean = text.replace(/<[^>]*>/g,"").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,800);
   // Separate an empty/over-budget response from a safety-policy rejection.
   if (!clean) return { status: 502, output: null, reason: "empty" };
-  if (/[0-9€$%]|\\b(?:IBAN|ISIN|kaufen Sie|verkaufen Sie|ich empfehle|sollten Sie kaufen)\\b/i.test(clean)) {
+  if (/[0-9€$%]|\b(?:IBAN|ISIN|kaufen Sie|verkaufen Sie|ich empfehle|sollten Sie kaufen)\b/i.test(clean)) {
     return { status: 422, output: null, reason: "rejected" };
   }
   return { status: 200, output: clean };
