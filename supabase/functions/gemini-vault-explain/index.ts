@@ -26,7 +26,7 @@ function headers(req: Request): HeadersInit {
     "Cache-Control": "no-store",
     "Vary": "Origin",
     "Access-Control-Allow-Origin": origin && ORIGINS.has(origin) ? origin : "null",
-    "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type",
+    "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type, x-gemini-check",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
 }
@@ -116,7 +116,22 @@ goalYear do người dùng chọn, không mặc định là ngày bán. Số mô
 KHÔNG khuyên mua, bán, chuyển tỷ trọng, tính thuế hay hứa lợi nhuận.
 KHÔNG viết số, năm, euro, phần trăm hoặc dữ liệu cá nhân trong câu trả lời; app hiện các số đã xác minh riêng.
 Chỉ trả đoạn giải thích ngắn, không Markdown.`;
-async function askGoogle(model: string, payload: SafeRequest, key: string): Promise<{status: number; output: string | null}> {
+// An explicit model-metadata probe: no generation, quota claim, or financial facts.
+async function checkModel(model: string, key: string): Promise<{model: string; status: number | null}> {
+  const apiBase = Deno.env.get("GEMINI_TEST_MODE") === "1"
+    ? Deno.env.get("GEMINI_TEST_API_BASE") || "https://generativelanguage.googleapis.com"
+    : "https://generativelanguage.googleapis.com";
+  try {
+    const response = await fetch(apiBase + "/v1beta/models/" + encodeURIComponent(model), {
+      method: "GET", headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(6000),
+    });
+    return { model, status: response.status };
+  } catch {
+    return { model, status: null };
+  }
+}
+type GoogleResult = { status: number; output: string | null; reason?: "empty" | "rejected" };
+async function askGoogle(model: string, payload: SafeRequest, key: string): Promise<GoogleResult> {
   // The override is only for isolated local CI; production always reaches Google.
   const apiBase = Deno.env.get("GEMINI_TEST_MODE") === "1"
     ? Deno.env.get("GEMINI_TEST_API_BASE") || "https://generativelanguage.googleapis.com"
@@ -130,7 +145,7 @@ async function askGoogle(model: string, payload: SafeRequest, key: string): Prom
       contents: [{ role: "user", parts: [{ text: JSON.stringify({
         topic: payload.topic, requestedYear: payload.queryYear, facts: payload.facts,
       }) }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 200 },
+      generationConfig: { maxOutputTokens: 512 },
     }),
     signal: AbortSignal.timeout(12000),
   });
@@ -141,9 +156,10 @@ async function askGoogle(model: string, payload: SafeRequest, key: string): Prom
   const parts = isObject(first) && isObject(first.content) ? first.content.parts : null;
   const text = Array.isArray(parts) ? parts.map(p => isObject(p) && typeof p.text === "string" ? p.text : "").join(" ") : "";
   const clean = text.replace(/<[^>]*>/g,"").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,800);
-  // Fail closed instead of displaying a hallucinated EUR figure or personal advice.
-  if (!clean || /[0-9€$%]|\b(?:IBAN|ISIN|kaufen Sie|verkaufen Sie|ich empfehle|sollten Sie kaufen)\b/i.test(clean)) {
-    return { status: 422, output: null };
+  // Separate an empty/over-budget response from a safety-policy rejection.
+  if (!clean) return { status: 502, output: null, reason: "empty" };
+  if (/[0-9€$%]|\\b(?:IBAN|ISIN|kaufen Sie|verkaufen Sie|ich empfehle|sollten Sie kaufen)\\b/i.test(clean)) {
+    return { status: 422, output: null, reason: "rejected" };
   }
   return { status: 200, output: clean };
 }
@@ -162,7 +178,15 @@ Deno.serve(async (req: Request) => {
     if (!active() || !serviceKey()) return json(req,200,{ready:false,limitPerDay:10});
     try {
       const state = await rpc(base,serviceKey()!,"gemini_explain_status",{p_user_id:userId});
-      return json(req,200,{ready:state.ready === true,limitPerDay:10,remaining:state.remaining});
+      // Header only comes from a user-clicked availability check. Metadata GET
+      // never sends portfolio data and does not consume our 10/day SQL quota.
+      const checks = req.headers.get("x-gemini-check") === "1"
+        ? await Promise.all(MODELS.map(model => checkModel(model, Deno.env.get("GEMINI_API_KEY")!)))
+        : null;
+      return json(req,200,{
+        ready: state.ready === true && (!checks || checks.some(check => check.status === 200)),
+        limitPerDay:10, remaining:state.remaining, modelChecks:checks,
+      });
     } catch {
       return json(req,200,{ready:false,limitPerDay:10});
     }
@@ -184,20 +208,32 @@ Deno.serve(async (req: Request) => {
 
   const key = Deno.env.get("GEMINI_API_KEY")!;
   try {
-    for (const [i,model] of MODELS.entries()) {
-      const result = await askGoogle(model,payload,key);
+    for (const [i, model] of MODELS.entries()) {
+      const result = await askGoogle(model, payload, key);
       if (result.status === 200 && result.output) {
         return json(req,200,{explanation:result.output,remaining:claim.remaining,model});
       }
       if (result.status === 429) {
         await rpc(base,serviceKey()!,"gemini_explain_pause",{}).catch(()=>undefined);
-        return json(req,429,{code:"FREE_LIMIT",reason:"google_limit"});
+        return json(req,429,{code:"FREE_LIMIT",reason:"google_limit",remaining:claim.remaining});
       }
-      // Backup only when primary is unavailable (not when content is unsafe or
-      // Google's tier/rate limit is exceeded); at most two provider requests.
+      // One backup at most; never retry on 400/401/403, unsafe output or 429.
       if (i === 0 && (result.status === 404 || result.status === 503)) continue;
-      return json(req,503,{code:"AI_UNAVAILABLE"});
+      const upstream = result.status;
+      const code = result.reason === "empty" ? "AI_EMPTY_OUTPUT"
+        : result.reason === "rejected" ? "AI_RESPONSE_REJECTED"
+        : upstream === 400 ? "GOOGLE_BAD_REQUEST"
+        : upstream === 401 ? "GOOGLE_KEY_INVALID"
+        : upstream === 403 ? "GOOGLE_ACCESS_DENIED"
+        : upstream === 404 ? "GOOGLE_MODEL_NOT_FOUND"
+        : upstream === 503 || upstream === 502 || upstream === 504 ? "GOOGLE_OVERLOADED"
+        : "AI_UNAVAILABLE";
+      const status = upstream === 422 ? 422 : upstream === 503 ? 503 : 502;
+      return json(req,status,{code,providerStatus:upstream,remaining:claim.remaining});
     }
-  } catch { return json(req,503,{code:"AI_UNAVAILABLE"}); }
-  return json(req,503,{code:"AI_UNAVAILABLE"});
+  } catch {
+    // Do not expose Google response bodies, credentials or the submitted facts.
+    return json(req,503,{code:"GOOGLE_NETWORK_ERROR",remaining:claim.remaining});
+  }
+  return json(req,503,{code:"AI_UNAVAILABLE",remaining:claim.remaining});
 });
