@@ -60,10 +60,10 @@ test("no Google requests on mount, no raw question sent, consent required",()=>{
 test("AI answer cache stays on-device and prevents a second quota claim for identical facts",()=>{
   assert.ok(client.includes("geminiAnswerCacheKey(session.user.id, body)"));
   assert.ok(client.includes("readGeminiAnswer(key)"));
-  assert.ok(client.includes("saveGeminiAnswer(key, clean)"));
+  assert.ok(client.includes("saveGeminiAnswer(key, clean, model)"));
   assert.ok(client.includes("if (saved)"));
   assert.ok(client.includes("No readiness probe, server quota claim or Google request"));
-  assert.ok(client.includes("useEffect(() => { setAnswer(\"\"); setCached(false); }, [answerContext])"));
+  assert.ok(client.includes("useEffect(() => { setAnswer(\"\"); setCached(false); setAnswerModel(null); }, [answerContext])"));
   assert.ok(cache.includes('crypto.subtle.digest("SHA-256"'));
   assert.ok(cache.includes("24 * 60 * 60 * 1000"));
   assert.ok(cache.includes("localStorage"));
@@ -76,8 +76,8 @@ test("only local ledger may conclude progress or difference, and old wrong AI ca
   assert.ok(server.includes('code:"VAULT_ONLY"'));
   assert.ok(server.indexOf('code:"VAULT_ONLY"') < server.indexOf('gemini_explain_claim",{p_user_id:userId}'));
   assert.ok(server.includes("trăm|mươi|nghìn|ngàn|triệu"));
-  assert.ok(cache.includes("vwce:gemini-cache:v2"));
-  assert.ok(cache.includes("vwce:gemini-answer:v2:"));
+  assert.ok(cache.includes("vwce:gemini-cache:v3"));
+  assert.ok(cache.includes("vwce:gemini-answer:v3:"));
 });
 
 test("standalone production SQL quota upgrade preserves data, row isolation, and shared cap",()=>{
@@ -90,4 +90,49 @@ test("standalone production SQL quota upgrade preserves data, row isolation, and
   assert.ok(upgrade.includes("greatest(0,20-coalesce"));
   assert.ok(upgrade.includes("revoke all on function public.gemini_explain_claim(uuid) from public, anon, authenticated"));
   assert.doesNotMatch(upgrade,/\b(?:truncate|delete from|drop table|update)\s+(?:public\.)?(?:transactions|goals|app_settings|user_daily)\b/i);
+});
+
+test("Flash shared budget is manual-only, atomic, RLS-protected, and server-only",()=>{
+  const routing = readFileSync("supabase/ops/gemini-flash-routing-install.sql","utf8");
+  assert.ok(routing.includes("MANUAL ONLY"));
+  assert.ok(routing.includes("gemini_flash_daily"));
+  assert.ok(routing.includes("check (attempts between 0 and 5)"));
+  assert.ok(routing.includes("pg_advisory_xact_lock(911022,114)"));
+  assert.ok(routing.includes("enable row level security"));
+  assert.ok(routing.includes("revoke all on function public.gemini_flash_claim() from public, anon, authenticated"));
+  assert.ok(routing.includes("grant execute on function public.gemini_flash_claim() to service_role"));
+  assert.ok(routing.includes("gemini_reply_cache_get"));
+  assert.ok(routing.includes("gemini_reply_cache_put"));
+  assert.ok(routing.includes("interval '24 hours'"));
+  assert.ok(routing.includes("primary key (user_id, cache_key)"));
+  assert.ok(routing.includes("'^[0-9a-f]{64}$'"));
+  assert.doesNotMatch(routing,/\b(?:create trigger|create extension|create policy|pg_cron|cron\.schedule|alter table public\.|auth\.users|truncate)\b/i);
+});
+test("authenticated Edge uses cache before spending 20/40 Vault quota and reserves Flash per attempt",()=>{
+  const cacheGet=server.indexOf('"gemini_reply_cache_get"');
+  const appClaim=server.indexOf('"gemini_explain_claim"');
+  assert.ok(cacheGet>=0 && appClaim>cacheGet);
+  assert.ok(server.includes('serverCacheHash(payload)'));
+  assert.ok(server.includes("payload.topic,payload.locale,payload.facts,payload.queryYear"));
+  assert.ok(server.includes('payload.topic === "goal" || payload.topic === "simulation"'));
+  assert.ok(server.includes('gemini_flash_claim'));
+  assert.ok(server.includes("if (model === flash && !reservedPrimary && !(await reserveFlash(base,role)))"));
+  assert.ok(server.includes('if (result.status === 429)'));
+  assert.ok(server.includes('"gemini_explain_pause"'));
+  assert.ok(server.includes('gemini_reply_cache_put'));
+  assert.ok(server.includes("model,cached:false"));
+  assert.ok(server.includes("cached:true"));
+  assert.ok(server.includes('Deno.env.get("GEMINI_TEST_MODE") === "1"'));
+});
+test("PWA shows provider-confirmed model (including device cache hits) without leaking secrets",()=>{
+  assert.ok(client.includes('data-testid="gemini-vault-model"'));
+  assert.ok(client.includes('modelLabel: "Modell"'));
+  assert.ok(client.includes('modelLabel: "Mô hình"'));
+  assert.ok(client.includes('readGeminiModel(key)'));
+  assert.ok(client.includes('saveGeminiAnswer(key, clean, model)'));
+  assert.ok(cache.includes('vwce:gemini-cache:v3'));
+  assert.ok(cache.includes("gemini-3.8-flash"));
+  assert.ok(cache.includes("gemini-3.5-flash-lite"));
+  assert.ok(server.includes('"goalProgress"')); // Preserve the existing 8-topic contract.
+  assert.ok(server.includes('code:"VAULT_ONLY"')); // Preserve factual safeguards.
 });

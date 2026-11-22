@@ -4,7 +4,7 @@ import type { DisplayLocale } from "../ui/localeFormatting";
 import { supabase } from "../lib/supabase";
 import { classifyGeminiQuestion, withSelectedGoal, type GeminiFacts, type GeminiTopic } from "../lib/geminiVaultFacts";
 import { validExitDate } from "../lib/simulation/exitPlan";
-import { clearGeminiAnswers, geminiAnswerCacheKey, readGeminiAnswer, saveGeminiAnswer } from "../lib/geminiVaultCache";
+import { clearGeminiAnswers, geminiAnswerCacheKey, readGeminiAnswer, readGeminiModel, saveGeminiAnswer } from "../lib/geminiVaultCache";
 import "../styles/gemini-vault-explainer.css";
 
 type Props = { locale: DisplayLocale; goals: readonly Goal[]; facts: GeminiFacts };
@@ -40,7 +40,7 @@ const copy = {
     limited: "KI-Limit erreicht. Bitte morgen erneut versuchen.",
     error: "KI nicht erreichbar. Nutze die Vault-Erklärung.",
     unsupported: "Frage nicht unterstützt. Wähle ein Thema.",
-    aiAnswer: "Antwort von Gemini", consent: "Ich erlaube, Summen bei neuen Fragen an Gemini zu senden.",
+    aiAnswer: "Antwort von Gemini", modelLabel: "Modell", consent: "Ich erlaube, Summen bei neuen Fragen an Gemini zu senden.",
     privacy: "Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen. Keine Namen oder Einzelbuchungen. Antworten bleiben bis zu 24 h auf diesem Gerät.",
     data: "Diese Angaben würden gesendet", values: "Aktueller Depotwert", paid: "Erfasste Beiträge", monthly: "Monatsbeitrag", milestone: "Gewähltes Ziel",
     noData: "nicht verfügbar", disclaimer: "Nur allgemeine Erläuterung — keine Anlage- oder Steuerberatung. Keine Renditegarantie.",
@@ -91,7 +91,7 @@ const copy = {
     limited: "Hết lượt AI hôm nay; thử lại ngày mai.",
     error: "AI đang lỗi; vẫn xem được câu trả lời từ sổ.",
     unsupported: "Chưa hỗ trợ câu hỏi; chọn một chủ đề.",
-    aiAnswer: "Gemini giải thích", consent: "Tôi đồng ý gửi số liệu tổng hợp tới Gemini khi cần hỏi mới.",
+    aiAnswer: "Gemini giải thích", modelLabel: "Mô hình", consent: "Tôi đồng ý gửi số liệu tổng hợp tới Gemini khi cần hỏi mới.",
     privacy: "Google có thể dùng dữ liệu Free Tier để cải thiện sản phẩm. Không gửi tên hay giao dịch lẻ. Câu trả lời lưu trên máy tối đa 24 giờ.",
     data: "Các con số sẽ gửi", values: "Giá trị quỹ", paid: "Tổng đã góp", monthly: "Góp mỗi tháng", milestone: "Goal đã chọn",
     noData: "chưa có", disclaimer: "Chỉ là thông tin chung, không tư vấn đầu tư/thuế và không hứa lợi nhuận.",
@@ -168,6 +168,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<Status>(supabase ? "unchecked" : "not_ready");
   const [answer, setAnswer] = useState("");
+  const [answerModel, setAnswerModel] = useState<string | null>(null);
   const [cached, setCached] = useState(false);
   const asking = useRef(false);
   const [diagnostic, setDiagnostic] = useState("");
@@ -181,11 +182,11 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const answerContext = JSON.stringify([locale, query?.topic, query?.queryYear, selectedFacts]);
   const contextRef = useRef(answerContext);
   contextRef.current = answerContext;
-  useEffect(() => { setAnswer(""); setCached(false); }, [answerContext]);
+  useEffect(() => { setAnswer(""); setCached(false); setAnswerModel(null); }, [answerContext]);
   useEffect(() => {
     const listener = supabase?.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT" || event === "SIGNED_IN") {
-        setAnswer(""); setCached(false); setConsent(false);
+        setAnswer(""); setCached(false); setAnswerModel(null); setConsent(false);
         setDiagnostic(""); setRemaining(null); setStatus("unchecked");
       }
     });
@@ -201,7 +202,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   })[status];
 
   async function connectionCheck(): Promise<boolean> {
-    setAnswer(""); setCached(false);
+    setAnswer(""); setCached(false); setAnswerModel(null);
     setDiagnostic("");
     if (!supabase) { setStatus("not_ready"); return false; }
     if (typeof navigator !== "undefined" && !navigator.onLine) { setStatus("offline"); return false; }
@@ -240,14 +241,14 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       const saved = key && readGeminiAnswer(key);
       if (context !== contextRef.current) return;
       if (saved) {
-        setAnswer(saved); setCached(true); setDiagnostic(t.cached); setStatus("answered");
+        setAnswer(saved); setAnswerModel(key ? readGeminiModel(key) : null); setCached(true); setDiagnostic(t.cached); setStatus("answered");
         return; // No readiness probe, server quota claim or Google request.
       }
       if (typeof navigator !== "undefined" && !navigator.onLine) { setStatus("offline"); return; }
       const ready = status === "ready" || status === "answered";
       if (!ready && !(await connectionCheck())) return;
       if (context !== contextRef.current) return;
-      setAnswer(""); setCached(false); setStatus("loading");
+      setAnswer(""); setCached(false); setAnswerModel(null); setStatus("loading");
       try {
         const { data, error } = await supabase.functions.invoke("gemini-vault-explain", {
           method: "POST", body,
@@ -279,16 +280,18 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
         }
         const clean = data.explanation.trim().slice(0,800);
         setAnswer(clean);
+        const model = data.model === "gemini-3.8-flash" || data.model === "gemini-3.5-flash-lite" ? data.model : null;
+        setAnswerModel(model);
         setDiagnostic("");
         setRemaining(Number.isInteger(data.remaining) ? data.remaining : null);
         setStatus("answered");
-        if (key) saveGeminiAnswer(key, clean); // Cache successful explanations only.
+        if (key && model) saveGeminiAnswer(key, clean, model); // Cache model label alongside successful explanations.
       } catch { if (context === contextRef.current) setStatus("error"); }
     } catch { if (context === contextRef.current) setStatus("error"); }
     finally { asking.current = false; }
   }
   function clearCache(): void {
-    clearGeminiAnswers(); setAnswer(""); setCached(false);
+    clearGeminiAnswers(); setAnswer(""); setCached(false); setAnswerModel(null);
     setDiagnostic(t.cacheCleared); setStatus("unchecked");
   }
 
@@ -336,7 +339,9 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     {remaining !== null && <p className="gemini-vault-status">{locale === "de"
       ? `Heute wurden ${Math.max(0,limitPerDay - remaining)}/${limitPerDay} Sendeversuche im Vault verbraucht.`
       : `Đã dùng ${Math.max(0,limitPerDay - remaining)}/${limitPerDay} lượt thử hôm nay trong Vault.`}</p>}
-    {answer && <div className="gemini-vault-answer"><strong>{t.aiAnswer}</strong><p>{answer}</p>
+    {answer && <div className="gemini-vault-answer"><strong>{t.aiAnswer}</strong>
+      {answerModel && <small className="gemini-vault-model" data-testid="gemini-vault-model">{t.modelLabel}: {answerModel === "gemini-3.8-flash" ? "Flash" : "Flash-Lite"}</small>}
+      <p>{answer}</p>
       {cached && <button type="button" onClick={clearCache}>{t.cacheClear}</button>}
       <p className="gemini-vault-grounded"><strong>{t.localTitle}: </strong>{local}</p>
 

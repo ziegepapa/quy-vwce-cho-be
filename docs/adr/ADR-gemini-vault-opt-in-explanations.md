@@ -1,8 +1,8 @@
 # ADR: Bounded Gemini explanations — opt-in and never on a financial write path
 
-**Status:** Draft review (PR #404, 2026-11-22). Owner explicitly requested
-Gemini Free Tier integration, but no server activation, secret, database install,
-cron or production deployment has been approved.
+**Status:** Historical ADR for PR #404 (22 Nov 2026). The base Gemini opt-in
+feature and 20/40 quota have since been deployed with owner approval.
+The later topic-routing Draft PR is **not deployed** and needs separate approval.
 
 ## Compatibility with existing financial and legacy-AI decisions
 
@@ -30,8 +30,8 @@ may send to the Edge Function only schema-versioned, bounded numeric fields:
 `portfolioValue`, `contributed`, `monthly`, `yearRecorded`, `yearPlanned`,
 `year`, an explicitly selected Goal's numeric `goalAmount`, `goalYear`,
 `goalMode`, and *labeled hypothetical* simulation-year and three scenario
-totals. Unknown values stay `null`; no defaults. The user question is mapped
-locally to four fixed topics and an optional year. The verbatim question stays
+totals. Unknown values stay `null`; no defaults. The original user question was mapped to four fixed topics; current main has
+eight bounded intents and keeps year/difference/goalProgress local-only. The verbatim question stays
 on device. Auth JWT is checked only by Supabase, not sent to Google.
 
 The local factual explanation is ALWAYS shown, including when the provider
@@ -47,8 +47,9 @@ session-only owner consent is required before sending anything. Never put
 `GEMINI_API_KEY` in browser, public repository, logs or any JSON payload.
 Edge Function uses only Supabase secret management, initially disabled.
 
-A private SQL counter (manual install) enforces 10 authenticated
-attempts/user/UTC day and a separate conservative 40/project/day cap,
+The original private SQL counter used 10/user/day; PR #412 raised the
+current ceiling to **20 authenticated attempts/user/UTC day** while
+retaining the conservative **40/project/day** cap,
 independent of untrusted browser counters. A 429 from Google opens a
 server-side fail-closed circuit until the next UTC day. Backup model is
 attempted at most once only if primary returns 404/503; never on 429.
