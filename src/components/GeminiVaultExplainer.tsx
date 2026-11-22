@@ -18,13 +18,13 @@ const copy = {
     topicValue: "Depotwert", topicDifference: "Differenz", topicMonthly: "Monatsrate", topicGoalProgress: "Zielstand",
     goal: "Welches Ziel möchtest du besprechen?", noGoal: "Kein Ziel ausgewählt",
     localTitle: "Aus dem Vault · ohne KI-Limit", missing: "Dazu fehlen noch Zahlen im Vault.",
-    valueSummary: "Der aktuell angezeigte Depotwert beträgt {value}. Er kann sich mit dem Markt ändern.",
-    differenceUp: "Aktueller Wert {value}, eingetragene Beiträge {paid}: {difference} mehr. Das ist ein Vergleich, keine berechnete Jahresrendite.",
-    differenceDown: "Aktueller Wert {value}, eingetragene Beiträge {paid}: {difference} weniger. Das ist ein Vergleich, keine berechnete Jahresrendite.",
-    differenceEven: "Aktueller Wert und erfasste Beiträge sind beide {value}. Das ist keine Renditeprognose.",
-    monthlySummary: "Die eingestellte monatliche Sparrate beträgt {monthly}. Der Plan allein bestätigt noch keine ausgeführten Zahlungen.",
-    goalProgressUnder: "Aktueller Wert {value}, gewählter Zielbetrag {goal}: noch {remaining} Abstand. Marktbewegungen können diesen Wert ändern.",
-    goalProgressReached: "Aktueller Wert {value} liegt auf oder über dem gewählten Zielbetrag {goal}. Das ist keine garantierte Auszahlung und kein automatischer Verkaufszeitpunkt.",
+    valueSummary: "Aktueller Depotwert: {value}. Der Wert kann schwanken.",
+    differenceSummary: "Depotwert {value}; eingetragen {paid}: {direction} {difference}. Keine Jahresrendite.",
+    differenceUp: "mehr", differenceDown: "weniger",
+    differenceEven: "Wert und Beiträge: jeweils {value}. Keine Renditeprognose.",
+    monthlySummary: "Geplante Monatsrate: {monthly}. Kein Beleg einer Brokerzahlung.",
+    goalProgressUnder: "Depotwert {value}; gewähltes Ziel {goal}: Abstand {remaining}. Keine Garantie.",
+    goalProgressReached: "Depotwert {value} erreicht den Zielbetrag {goal} derzeit. Keine Garantie oder Verkaufsanweisung.",
     personal: "Im Vault sind bisher {paid} eingetragen. Der aktuelle Wert ist {value}. Der monatliche Sparplan beträgt {monthly}.",
     yearSummary: "Dieses Jahr sind {recorded} erfasst. Bis heute waren {planned} laut Plan vorgesehen. Das ist keine Bestätigung durch den Broker.",
     yearAhead: "Die eingetragenen Beiträge erreichen den Planstand bis heute.", yearBehind: "Die eingetragenen Beiträge liegen unter dem Planstand bis heute.",
@@ -68,13 +68,13 @@ const copy = {
     topicValue: "Giá trị quỹ", topicDifference: "Chênh lệch", topicMonthly: "Góp tháng", topicGoalProgress: "Tiến độ Goal",
     goal: "Bạn muốn hỏi về Goal nào?", noGoal: "Chưa chọn Goal",
     localTitle: "Giải thích từ sổ · không trừ lượt", missing: "Hiện chưa đủ dữ liệu trong sổ để giải thích chi tiết.",
-    valueSummary: "Giá trị quỹ đang hiển thị trong Vault là {value}. Giá trị này có thể biến động theo thị trường.",
-    differenceUp: "Giá trị hiện tại {value}, số đã góp ghi trong sổ {paid}: cao hơn {difference}. Đây là chênh lệch tại thời điểm xem, không phải lợi nhuận năm.",
-    differenceDown: "Giá trị hiện tại {value}, số đã góp ghi trong sổ {paid}: thấp hơn {difference}. Đây là chênh lệch tại thời điểm xem, không phải lợi nhuận năm.",
-    differenceEven: "Giá trị hiện tại bằng số đã góp ghi trong sổ, đều là {value}. Điều này không dự báo lợi nhuận tương lai.",
-    monthlySummary: "Theo cài đặt, bạn dự kiến góp {monthly} mỗi tháng. Mức kế hoạch không tự chứng minh đã mua hoặc chuyển tiền vào broker.",
-    goalProgressUnder: "Giá trị quỹ hiện tại {value}, mục tiêu tiền đã chọn {goal}: còn cách {remaining}. Thị trường biến động nên khoảng cách có thể thay đổi.",
-    goalProgressReached: "Giá trị quỹ hiện tại {value} đã bằng hoặc cao hơn số tiền mục tiêu {goal}. Đây không phải cam kết rút được số tiền đó hay ngày bán bắt buộc.",
+    valueSummary: "Giá trị quỹ hiện tại: {value}. Giá có thể biến động.",
+    differenceSummary: "Giá trị quỹ {value}; đã góp {paid}: {direction} {difference}. Không phải lợi suất năm.",
+    differenceUp: "cao hơn", differenceDown: "thấp hơn",
+    differenceEven: "Giá trị quỹ và số đã góp đều là {value}. Không dự báo lợi nhuận.",
+    monthlySummary: "Kế hoạch góp {monthly}/tháng; chưa phải xác nhận tiền đã vào broker.",
+    goalProgressUnder: "Giá trị quỹ {value}; Goal đã chọn {goal}: còn cách {remaining}. Không bảo đảm đạt đích.",
+    goalProgressReached: "Giá trị quỹ {value} hiện bằng hoặc cao hơn Goal {goal}. Không bảo đảm hay bắt buộc bán.",
     personal: "Sổ đã ghi nhận {paid} góp vào quỹ. Giá trị hiện tại {value}. Mức góp theo kế hoạch là {monthly}.",
     yearSummary: "Năm nay đã ghi {recorded}; kế hoạch tới hôm nay là {planned}. Đây không phải xác nhận từ broker.",
     yearAhead: "Theo giao dịch đã nhập, số góp đạt mức dự kiến tới hôm nay.", yearBehind: "Số góp ghi trong sổ còn thấp hơn kế hoạch tới hôm nay.",
@@ -133,10 +133,11 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
   if (topic === "difference") {
     if (f.portfolioValue === null || f.contributed === null) return t.missing;
     const cents = Math.round(f.portfolioValue * 100) - Math.round(f.contributed * 100);
-    const template = cents > 0 ? t.differenceUp : cents < 0 ? t.differenceDown : t.differenceEven;
-    return fill(template, {
+    if (cents === 0) return fill(t.differenceEven, { value:euro(f.portfolioValue) });
+    return fill(t.differenceSummary, {
       value:euro(f.portfolioValue), paid:euro(f.contributed),
       difference:euro(Math.abs(cents) / 100),
+      direction:cents > 0 ? t.differenceUp : t.differenceDown,
     });
   }
   if (topic === "goalProgress") {
