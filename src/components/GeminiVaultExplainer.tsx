@@ -37,7 +37,19 @@ const copy = {
     privacy: "Wichtig: Im kostenlosen Google-Tarif können gesendete Inhalte verwendet werden, um Google-Produkte zu verbessern. Keine Namen, Kontonummern oder einzelnen Buchungen übertragen.",
     data: "Diese Angaben würden gesendet", values: "Aktueller Depotwert", paid: "Erfasste Beiträge", monthly: "Monatsbeitrag", milestone: "Gewähltes Ziel",
     noData: "nicht verfügbar", disclaimer: "Nur allgemeine Erläuterung — keine Anlage- oder Steuerberatung. Keine Renditegarantie.",
-    quota: "Maximal zehn Fragen je Person und UTC-Tag. Bei Engpässen kann Google früher stoppen.",
+    quota: "Maximal zehn Sendeversuche je Person und UTC-Tag, auch bei Fehlern. Der Modellcheck verbraucht keinen Vault-Versuch.",
+    checkOk: "Schlüssel und Modellmetadaten sind erreichbar. Eine Textgenerierung wurde noch nicht getestet.",
+    checkKey: "Google hat den API-Schlüssel zurückgewiesen oder den Zugriff verweigert (401/403).",
+    checkModel: "Keines der beiden Modelle ist mit diesem Schlüssel verfügbar (404).",
+    checkBusy: "Google ist beim Modellcheck gerade nicht erreichbar. Bitte später erneut prüfen.",
+    checkUnknown: "Der Modellcheck ist nicht verfügbar; die Textgenerierung ist noch nicht bestätigt.",
+    errKey: "Google lehnt den Schlüssel oder die Berechtigung ab.",
+    errModel: "Das angeforderte Google-Modell wurde nicht gefunden.",
+    errBadRequest: "Google hat die Anfrage abgelehnt (400); Modellparameter prüfen.",
+    errBusy: "Google meldet Überlastung/temporäre Nichtverfügbarkeit (503).",
+    errEmpty: "Google antwortete ohne nutzbaren Text; das Ausgabelimit könnte die Ursache sein.",
+    errRejected: "Die KI-Antwort wurde aus Sicherheitsgründen nicht angezeigt.",
+    errNetwork: "Zeitüberschreitung oder Netzwerkfehler bei Google.",
     limitNotice: "Zum Antworten werden nur feste Fragetypen und die Zahlen unten gesendet, nie dein freier Fragetext.",
   },
   vi: {
@@ -67,7 +79,19 @@ const copy = {
     privacy: "Lưu ý: Google có thể dùng nội dung gửi qua bản miễn phí để cải thiện sản phẩm. Không gửi tên, mã tài khoản hay từng giao dịch.",
     data: "Các con số sẽ gửi", values: "Giá trị quỹ", paid: "Tổng đã góp", monthly: "Góp mỗi tháng", milestone: "Goal đã chọn",
     noData: "chưa có", disclaimer: "Chỉ là thông tin chung, không tư vấn đầu tư/thuế và không hứa lợi nhuận.",
-    quota: "Tối đa 10 câu/người/ngày UTC; Google có thể hết lượt sớm hơn.",
+    quota: "Tối đa 10 lượt gửi/người/ngày UTC, kể cả lượt lỗi. Kiểm tra key/model không trừ lượt trong Vault.",
+    checkOk: "Key và thông tin model truy cập được. Chưa kiểm thử tạo câu trả lời.",
+    checkKey: "Google từ chối key hoặc quyền truy cập (401/403).",
+    checkModel: "Không tìm thấy hai model với key hiện tại (404).",
+    checkBusy: "Google tạm không phản hồi khi kiểm tra model. Hãy thử lại sau.",
+    checkUnknown: "Chưa kiểm tra được model; không thể xác nhận chức năng trả lời.",
+    errKey: "Google từ chối API key hoặc quyền truy cập.",
+    errModel: "Google không tìm thấy model được yêu cầu.",
+    errBadRequest: "Google từ chối tham số yêu cầu (400).",
+    errBusy: "Máy chủ Google đang quá tải hoặc tạm không khả dụng (503).",
+    errEmpty: "Google trả về nội dung rỗng; có thể do giới hạn token.",
+    errRejected: "Nội dung AI trả về không đạt kiểm tra an toàn nên không hiển thị.",
+    errNetwork: "Kết nối tới Google bị lỗi hoặc hết thời gian.",
     limitNotice: "Chỉ loại câu hỏi và số liệu tổng hợp được gửi; nguyên văn câu hỏi bạn gõ sẽ không gửi đi.",
   },
 };
@@ -103,6 +127,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<Status>(supabase ? "unchecked" : "not_ready");
   const [answer, setAnswer] = useState("");
+  const [diagnostic, setDiagnostic] = useState("");
   const [remaining, setRemaining] = useState<number | null>(null);
   const chosenGoal = goals.find(g => !g.deletedAt && g.id === goalId && validExitDate(g.dueDate)) ?? null;
   const selectedFacts = useMemo(() => withSelectedGoal(facts, chosenGoal), [facts, chosenGoal]);
@@ -118,14 +143,26 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
 
   async function connectionCheck(): Promise<boolean> {
     setAnswer("");
+    setDiagnostic("");
     if (!supabase) { setStatus("not_ready"); return false; }
     if (typeof navigator !== "undefined" && !navigator.onLine) { setStatus("offline"); return false; }
     setStatus("checking");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setStatus("sign_in"); return false; }
-      const { data, error } = await supabase.functions.invoke("gemini-vault-explain", { method:"GET" });
-      if (error || !data || data.ready !== true) { setStatus("not_ready"); return false; }
+      const { data, error } = await supabase.functions.invoke("gemini-vault-explain", {
+        method:"GET", headers: { "x-gemini-check": "1" },
+      });
+      if (error || !data) { setStatus("not_ready"); return false; }
+      if (Number.isInteger(data.remaining)) setRemaining(data.remaining);
+      const checks: Array<{status?: number | null}> = Array.isArray(data.modelChecks) ? data.modelChecks : [];
+      const codes = checks.map(item => item?.status);
+      if (codes.includes(200)) setDiagnostic(t.checkOk);
+      else if (codes.includes(401) || codes.includes(403)) setDiagnostic(t.checkKey);
+      else if (codes.length > 0 && codes.every(code => code === 404)) setDiagnostic(t.checkModel);
+      else if (codes.length > 0) setDiagnostic(t.checkBusy);
+      else setDiagnostic(t.checkUnknown);
+      if (data.ready !== true) { setStatus("not_ready"); return false; }
       setStatus("ready"); return true;
     } catch { setStatus("not_ready"); return false; }
   }
@@ -143,7 +180,24 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
         body: { schemaVersion:1, locale, topic:query.topic, queryYear:query.queryYear, facts:selectedFacts },
       });
       if (error) {
-        const ctx = (error as unknown as { context?: { status?: number } }).context;
+        // Supabase returns a Response in FunctionsHttpError.context; parse only
+        // our fixed, non-sensitive error code. Never display Google's raw body.
+        const ctx = (error as unknown as { context?: Response }).context;
+        let result: { code?: string; remaining?: number } = {};
+        try {
+          if (ctx && typeof ctx.clone === "function") {
+            const parsed: unknown = await ctx.clone().json();
+            if (parsed && typeof parsed === "object") result = parsed as typeof result;
+          }
+        } catch { /* network or legacy response */ }
+        if (Number.isInteger(result.remaining)) setRemaining(result.remaining!);
+        const message = ({
+          GOOGLE_KEY_INVALID:t.errKey, GOOGLE_ACCESS_DENIED:t.errKey,
+          GOOGLE_MODEL_NOT_FOUND:t.errModel, GOOGLE_BAD_REQUEST:t.errBadRequest,
+          GOOGLE_OVERLOADED:t.errBusy, AI_EMPTY_OUTPUT:t.errEmpty,
+          AI_RESPONSE_REJECTED:t.errRejected, GOOGLE_NETWORK_ERROR:t.errNetwork,
+        } as Record<string,string>)[result.code ?? ""];
+        setDiagnostic(message || (ctx?.status === 429 ? t.limited : t.error));
         setStatus(ctx?.status === 429 ? "limit" : "error");
         return;
       }
@@ -194,8 +248,12 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
         onClick={()=>void ask()}>{status==="loading"?t.loading:t.ask}</button>
     </div>
     <p className="gemini-vault-status" role={status === "unchecked" || status === "not_ready" ? undefined : "status"}>{showStatus}</p>
+    {diagnostic && <p className="gemini-vault-status" role="status">{diagnostic}</p>}
+    {remaining !== null && <p className="gemini-vault-status">{locale === "de"
+      ? `Heute wurden ${10 - remaining}/10 Sendeversuche im Vault verbraucht.`
+      : `Đã dùng ${10 - remaining}/10 lượt thử hôm nay trong Vault.`}</p>
     {answer && <div className="gemini-vault-answer"><strong>{t.aiAnswer}</strong><p>{answer}</p>
-      {remaining!==null && <small>{locale==="de"?`Noch ${remaining} von 10 Fragen heute.`:`Hôm nay còn ${remaining}/10 câu.`}</small>}
+
     </div>}
     <p className="gemini-vault-disclaimer">{t.disclaimer} {t.quota}</p>
   </section>;
