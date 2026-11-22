@@ -7,7 +7,7 @@ revoke all on schema ai_internal from public, anon, authenticated;
 create table if not exists ai_internal.user_daily (
   user_id uuid not null,
   day_utc date not null,
-  attempts smallint not null default 0 check (attempts between 0 and 10),
+  attempts smallint not null default 0 check (attempts between 0 and 20),
   created_at timestamptz not null default now(),
   primary key (user_id, day_utc)
 );
@@ -16,12 +16,15 @@ create table if not exists ai_internal.global_daily (
   attempts smallint not null default 0 check (attempts between 0 and 40),
   pause_until timestamptz
 );
+-- Re-running this manual installer upgrades prior user_daily CHECK(<=10) safely.
+alter table ai_internal.user_daily drop constraint if exists user_daily_attempts_check;
+alter table ai_internal.user_daily add constraint user_daily_attempts_check check (attempts between 0 and 20);
 alter table ai_internal.user_daily enable row level security;
 alter table ai_internal.global_daily enable row level security;
 revoke all on all tables in schema ai_internal from public, anon, authenticated;
 revoke all on all sequences in schema ai_internal from public, anon, authenticated;
 
--- A single transaction/advisory lock makes the per-user 10/day and global 40/day
+-- A single transaction/advisory lock makes the per-user 20/day and global 40/day
 -- quota exact even under concurrent Edge Function requests. UTC reset is displayed
 -- explicitly in the UI; Google's independent free-tier reset may differ.
 create or replace function public.gemini_explain_claim(p_user_id uuid)
@@ -50,7 +53,7 @@ begin
   end if;
   select attempts into v_user from ai_internal.user_daily
     where user_id=p_user_id and day_utc=v_day;
-  if coalesce(v_user,0)>=10 then
+  if coalesce(v_user,0)>=20 then
     return jsonb_build_object('allowed',false,'reason','user_limit','remaining',0);
   end if;
   insert into ai_internal.user_daily(user_id,day_utc,attempts)
@@ -64,7 +67,7 @@ begin
   -- Opportunistic cleanup, never scheduled and never touches the investment ledger.
   delete from ai_internal.user_daily where day_utc < v_day-45;
   delete from ai_internal.global_daily where day_utc < v_day-45;
-  return jsonb_build_object('allowed',true,'remaining',9-coalesce(v_user,0));
+  return jsonb_build_object('allowed',true,'remaining',19-coalesce(v_user,0));
 end
 $body$;
 
@@ -77,7 +80,7 @@ set search_path = ''
 as $body$
   select jsonb_build_object(
     'ready',p_user_id is not null,
-    'remaining',greatest(0,10-coalesce((
+    'remaining',greatest(0,20-coalesce((
       select attempts from ai_internal.user_daily
       where user_id=p_user_id and day_utc=(now() at time zone 'UTC')::date
     ),0)),
