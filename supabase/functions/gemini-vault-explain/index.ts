@@ -41,7 +41,7 @@ function isObject(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 function boundedMoney(v: unknown): boolean {
-  return v === null || (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1e9 && Math.round(v * 100) === v * 100);
+  return v === null || (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1e9 && Math.abs(Math.round(v * 100) - v * 100) < 0.00001);
 }
 function parsePayload(v: unknown): SafeRequest | null {
   if (!isObject(v) || Object.keys(v).some(k => !["schemaVersion","locale","topic","queryYear","facts"].includes(k))
@@ -49,7 +49,7 @@ function parsePayload(v: unknown): SafeRequest | null {
     || typeof v.topic !== "string" || !TOPICS.has(v.topic as Topic)
     || !isObject(v.facts) || Object.keys(v.facts).some(k => !(FACT_KEYS as readonly string[]).includes(k))) return null;
   const year = v.queryYear;
-  if (year !== null && (!Number.isInteger(year) || Number(year) < 2020 || Number(year) > 2100)) return null;
+  if (year !== null && (!(typeof year === "number" && Number.isInteger(year)) || Number(year) < 2020 || Number(year) > 2100)) return null;
   const facts = {} as Facts;
   for (const key of FACT_KEYS) {
     const value = v.facts[key];
@@ -58,7 +58,7 @@ function parsePayload(v: unknown): SafeRequest | null {
       if (value !== null && value !== "nominal" && value !== "purchasing_power") return null;
       facts[key] = value as Facts[typeof key];
     } else if (key === "year" || key === "goalYear" || key === "simulationYear") {
-      if (value !== null && (!Number.isInteger(value) || Number(value) < 2020 || Number(value) > 2100)) return null;
+      if (value !== null && (!(typeof value === "number" && Number.isInteger(value)) || Number(value) < 2020 || Number(value) > 2100)) return null;
       facts[key] = value as number | null;
     } else {
       if (!boundedMoney(value)) return null;
@@ -158,7 +158,15 @@ Deno.serve(async (req: Request) => {
   const userId = await authUser(req,base,anon);
   if (!userId) return json(req,401,{code:"AUTH_REQUIRED"});
 
-  if (req.method === "GET") return json(req,200,{ready:active() && !!serviceKey(),limitPerDay:10});
+  if (req.method === "GET") {
+    if (!active() || !serviceKey()) return json(req,200,{ready:false,limitPerDay:10});
+    try {
+      const state = await rpc(base,serviceKey()!,"gemini_explain_status",{p_user_id:userId});
+      return json(req,200,{ready:state.ready === true,limitPerDay:10,remaining:state.remaining});
+    } catch {
+      return json(req,200,{ready:false,limitPerDay:10});
+    }
+  }
   if (!active() || !serviceKey()) return json(req,503,{code:"NOT_READY"});
   if (Number(req.headers.get("content-length") || 0) > MAX_BODY) return json(req,413,{code:"TOO_LARGE"});
   let payload: SafeRequest | null;
