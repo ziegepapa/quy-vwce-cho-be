@@ -45,6 +45,14 @@ const stub = http.createServer(async(req,res)=>{
       return reply(res,200,{paused:true});
     }
     if(req.url?.startsWith("/v1beta/models/")){
+      assert.equal(req.headers["x-goog-api-key"],"only-ci-not-real");
+      assert.equal(req.headers.authorization,undefined);
+      if(req.method==="GET"){
+        if(providerMode==="key") return reply(res,403,{error:"key_rejected"});
+        if(providerMode==="missing_model") return reply(res,404,{error:"model_missing"});
+        if(providerMode==="rate") return reply(res,429,{error:"quota"});
+        return reply(res,200,{name:"models/gemini-3.5-flash-lite",supportedGenerationMethods:["generateContent"]});
+      }
       assert.equal(req.method,"POST");
       assert.equal(req.headers["x-goog-api-key"],"only-ci-not-real");
       assert.equal(req.headers.authorization,undefined);
@@ -92,6 +100,21 @@ try{
   assert.equal((await fetch(edge,{method:"GET",headers:{Origin:"https://untrusted.example"}})).status,403);
   const check=await fetch(edge,{method:"GET",headers:{Authorization:"Bearer mock-user-jwt"}});
   assert.equal(check.status,200);assert.equal((await check.json()).ready,true);
+  // Health metadata request must not send a portfolio or spend daily calls.
+  providerMode="key";
+  const denied=await fetch(edge,{method:"GET",headers:{Authorization:"Bearer mock-user-jwt"}});
+  assert.equal(denied.status,200);
+  const deniedBody=await denied.json();
+  assert.equal(deniedBody.ready,false);
+  assert.equal(deniedBody.providerStatus,"invalid_key");
+  assert.equal(requests,0);
+  providerMode="missing_model";
+  const missing=await fetch(edge,{method:"GET",headers:{Authorization:"Bearer mock-user-jwt"}});
+  const missingBody=await missing.json();
+  assert.equal(missingBody.ready,false);
+  assert.equal(missingBody.providerStatus,"model_unavailable");
+  assert.equal(requests,0);
+  providerMode="normal";
   assert.equal((await call({...safe,childName:"PRIVATE"})).status,400);
   assert.equal((await call({...safe,facts:{...facts,accountId:"SECRET ACCOUNT"}})).status,400);
   assert.equal(requests,0);
@@ -99,6 +122,8 @@ try{
   assert.equal(response.status,200);
   const good=await response.json();
   assert.equal(good.remaining,9);
+  assert.equal(calls[0].msg.generationConfig.maxOutputTokens,1024);
+  assert.equal(calls[0].msg.generationConfig.thinkingConfig.thinkingLevel,"MINIMAL");
   assert.equal(calls.length,1);
   const serialized=JSON.stringify(calls[0].msg);
   for(const value of [userId,"mock-user-jwt","mock-private-role","PRIVATE","accountId","childName","localUserId"]){
