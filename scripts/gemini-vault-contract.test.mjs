@@ -63,7 +63,7 @@ test("AI answer cache stays on-device and prevents a second quota claim for iden
   assert.ok(client.includes("saveGeminiAnswer(key, clean, model)"));
   assert.ok(client.includes("if (saved)"));
   assert.ok(client.includes("No readiness probe, server quota claim or Google request"));
-  assert.ok(client.includes("useEffect(() => { setAnswer(\"\"); setCached(false); }, [answerContext])"));
+  assert.ok(client.includes("useEffect(() => { setAnswer(\"\"); setCached(false); setAnswerModel(null); }, [answerContext])"));
   assert.ok(cache.includes('crypto.subtle.digest("SHA-256"'));
   assert.ok(cache.includes("24 * 60 * 60 * 1000"));
   assert.ok(cache.includes("localStorage"));
