@@ -55,6 +55,7 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     bandPctLabel: "",
     readOnly: false,
     goals: [],
+    geminiFacts: { portfolioValue:null, contributed:null, monthly:null, yearRecorded:null, yearPlanned:null, year:2026, goalAmount:null, goalYear:null, goalMode:null, simulationYear:null, cautious:null, base:null, optimistic:null },
     exitPlanActualBalance: null,
     exitPlanActualMonthly: null,
     applyYearsFromGoal: noop,
