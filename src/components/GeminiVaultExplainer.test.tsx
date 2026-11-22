@@ -19,18 +19,18 @@ describe("Gemini AI screen — safe without any API key",()=>{
     render(<GeminiVaultExplainer locale="de" goals={[goal]} facts={facts}/>);
     expect(screen.getByText(/600,00/)).toBeTruthy();
     expect(screen.getByText(/591,95/)).toBeTruthy();
-    expect(screen.getByText("KI noch nicht bereit: Funktion, Schlüssel oder Serverfreigabe fehlen.")).toBeTruthy();
+    expect(screen.getByText("KI nicht bereit: Schlüssel oder Freigabe prüfen.")).toBeTruthy();
     expect(screen.getByRole("button",{name:"KI fragen"}).hasAttribute("disabled")).toBe(true);
-    expect(document.body.textContent).toContain("Google-Produkte zu verbessern");
+    expect(document.body.textContent).toContain("Free-Tier-Inhalte zur Produktverbesserung nutzen");
   });
   it("answers year and simulation using existing fact snapshot without a provider call",()=>{
     render(<GeminiVaultExplainer locale="de" goals={[goal]} facts={facts}/>);
     fireEvent.click(screen.getByRole("button",{name:"Dieses Jahr"}));
     expect(screen.getByText(/600,00/)).toBeTruthy();
-    expect(document.body.textContent).toContain("keine Bestätigung durch den Broker");
+    expect(document.body.textContent).toContain("Kein Brokerbeleg");
     fireEvent.click(screen.getByRole("button",{name:"Simulation"}));
-    expect(document.body.textContent).toContain("Rechenbeispiele");
-    expect(document.body.textContent).toContain("keine Zusage");
+    expect(document.body.textContent).toContain("Szenarien");
+    expect(document.body.textContent).toContain("Keine Prognose");
   });
   it("does not auto-select a sale year; the owner must select a Goal",()=>{
     render(<GeminiVaultExplainer locale="vi" goals={[goal]} facts={facts}/>);
@@ -41,7 +41,22 @@ describe("Gemini AI screen — safe without any API key",()=>{
       {target:{value:"test-goal"}});
     expect(document.body.textContent).toContain("2038");
     expect(document.body.textContent).toContain("10.000");
-    expect(screen.getByText(/Google có thể dùng nội dung gửi qua bản miễn phí/)).toBeTruthy();
+    expect(screen.getByText(/Google có thể dùng dữ liệu Free Tier/)).toBeTruthy();
+  });
+  it("uses correct 560 < 600 year comparison without exposing Gemini request",()=>{
+    render(<GeminiVaultExplainer locale="vi" goals={[goal]}
+      facts={{...facts,contributed:560,yearRecorded:560,yearPlanned:600}}/>);
+    fireEvent.click(screen.getByRole("button",{name:"Năm nay"}));
+    expect(document.body.textContent).toContain("Năm nay ghi 560,00 €, dự kiến 600,00 €");
+    expect(document.body.textContent).toContain("Số góp ghi trong sổ còn thấp hơn kế hoạch");
+    expect(document.body.textContent).toContain("không gửi Google, không trừ lượt AI");
+    expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
+    fireEvent.click(screen.getByRole("button",{name:"Chênh lệch"}));
+    expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
+    fireEvent.click(screen.getByRole("button",{name:"Tiến độ Goal"}));
+    expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
+    fireEvent.click(screen.getByRole("button",{name:"Kế hoạch"}));
+    expect(screen.getByRole("button",{name:"Hỏi Gemini"})).toBeTruthy();
   });
   it("does not enable a provider request simply because user checked consent",()=>{
     render(<GeminiVaultExplainer locale="de" goals={[]} facts={facts}/>);
