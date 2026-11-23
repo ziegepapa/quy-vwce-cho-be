@@ -267,7 +267,7 @@ for (const theme of themes) {
         await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-schedule.png"), animations: "disabled" });
         const ai = page.getByTestId("gemini-vault-explainer");
         await expect(ai).toBeVisible();
-        await expect(ai).toContainText("Giải thích từ sổ · không trừ lượt");
+        await expect(ai).toContainText("Từ Vault · không trừ lượt");
         await expect(ai).toContainText("600,00");
         await expect(ai).toContainText("591,95");
         await expect(ai).toContainText("AI chưa sẵn sàng");
@@ -509,7 +509,7 @@ test(`German reference screenshots · 390x844 · ${germanTheme}`, async ({ page 
       await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-de-schedule.png"), animations: "disabled" });
       const ai = page.getByTestId("gemini-vault-explainer");
       await expect(ai).toBeVisible();
-      await expect(ai).toContainText("Aus dem Vault · ohne KI-Limit");
+      await expect(ai).toContainText("Vault · ohne KI-Limit");
       await expect(ai).toContainText("600,00");
       await expect(ai).toContainText("591,95");
       await expect(ai).toContainText("KI nicht bereit");
