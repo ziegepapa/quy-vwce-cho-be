@@ -77,8 +77,8 @@ test("new Supabase Data API defaults require explicit least-privilege Guardian g
     "grant select, update on public.guardian_run_health to service_role;",
     "grant select on public.transactions to service_role;",
   ]) assert.ok(sql.includes(required),`Missing permission contract: ${required}`);
-  assert.doesNotMatch(sql,/grant\\s+(?:all|select|insert|update|delete)[^;]*\\bon\\s+public\\.guardian_alert_deliveries\\s+to\\s+(?:anon|authenticated)\\s*;/i);
-  assert.doesNotMatch(sql,/grant\\s+(?:all|select|insert|update|delete)[^;]*\\bon\\s+public\\.guardian_run_health\\s+to\\s+(?:anon|authenticated)\\s*;/i);
-  assert.match(sql,/create table if not exists public\\.guardian_service_status/);
+  assert.doesNotMatch(sql,/grant\s+(?:all|select|insert|update|delete)[^;]*\bon\s+public\.guardian_alert_deliveries\s+to\s+(?:anon|authenticated)\s*;/i);
+  assert.doesNotMatch(sql,/grant\s+(?:all|select|insert|update|delete)[^;]*\bon\s+public\.guardian_run_health\s+to\s+(?:anon|authenticated)\s*;/i);
+  assert.match(sql,/create table if not exists public\.guardian_service_status/);
   assert.match(sql,/active boolean not null default false/);
 });
