@@ -331,9 +331,9 @@ This frontend-only follow-up must pass its own CI before merging or publishing.
   status. No Google request can start from that state. Simulation still
   supports an optional Goal; other topics keep their original routing.
 - The Plan's *local* ledger summary now computes an exact, cents-rounded
-  shortfall versus the amount planned through today and the displayed
-  portfolio-value minus recorded contributions. These are snapshots of the
-  Vault ledger, **not** broker confirmations, realized returns, or forecasts.
+  shortfall versus the amount planned through today. The separate local
+  Difference topic continues to calculate portfolio value minus contributions.
+  These are snapshots of the Vault ledger, **not** broker confirmations, realized returns, or forecasts.
   No made-up data, new financial records, or Gemini calls are involved.
 - The Edge function rejects a Goal explanation lacking Goal year/amount
   before the 20/day SQL quota claim. Prompt instructions explicitly favor
