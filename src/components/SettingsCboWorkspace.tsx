@@ -11,7 +11,7 @@ const CONTRIBUTION_PRESETS = [100, 120, 150, 200, 300] as const;
 
 type CboTab = "general" | "prices" | "data";
 type ChildAction = "password-change" | "password-reset" | "mfa" | "diagnostics" | "backup" | "restore";
-type SettingsSheet = "profile" | "plan" | "simulation" | "theme" | "language" | "prices" | "sync" | "transfers" | null;
+type SettingsSheet = "profile" | "plan" | "simulation" | "theme" | "language" | "prices" | "vall" | "sync" | "transfers" | null;
 type HorizonPhase = "accumulate" | "transition" | "protect" | "use";
 type ContribInsightTone = "neutral" | "ok" | "caution" | "warn";
 type YearlyPlanRow = {
@@ -35,6 +35,7 @@ type Props = {
   syncing: boolean;
   lastSync: string | null;
   pricesPanel: ReactNode;
+  vallHealthPanel: ReactNode;
   dataHealthPanel: ReactNode;
   syncHealthPanel: ReactNode;
   syncConflictPanel: ReactNode;
@@ -373,6 +374,7 @@ export default function SettingsCboWorkspace(props: Props) {
       <SetRow icon={<IconArchive />} label={copy.backupRestore} onClick={() => setSheet("transfers")} />
       <SetRow icon={<IconSync />} label={copy.syncRow} value={props.lastSyncAt ? relativeTime(props.lastSyncAt, props.locale) : undefined} onClick={() => setSheet("sync")} />
       <SetRow icon={<IconCash />} label={copy.vwcePrice} onClick={() => setSheet("prices")} />
+      <SetRow icon={<IconShield />} label="VALL Health Monitor" onClick={() => setSheet("vall")} />
       <button type="button" className="set2-row" onClick={props.onExportCsv}>
         <span className="set2-ric" aria-hidden="true"><IconUpload /></span>
         <span className="set2-rtitle">{copy.csv}</span>
@@ -554,6 +556,9 @@ export default function SettingsCboWorkspace(props: Props) {
     </Sheet> : null}
     {sheet === "prices" ? <Sheet title={copy.vwcePrice} closeLabel={copy.close} onClose={() => setSheet(null)}>
       <div className="set2-panel">{props.pricesPanel}</div>
+    </Sheet> : null}
+    {sheet === "vall" ? <Sheet title="VALL Health Monitor" closeLabel={copy.close} onClose={() => setSheet(null)}>
+      <div className="set2-panel">{props.vallHealthPanel}</div>
     </Sheet> : null}
     {sheet === "sync" ? <Sheet title={copy.syncRow} closeLabel={copy.close} onClose={() => setSheet(null)}>
       {props.lastSync ? <p className="set2-sync-sub">{props.lastSync}</p> : null}
