@@ -91,24 +91,15 @@ export function withSelectedGoal(facts: GeminiFacts, goal: Goal | null): GeminiF
  * This does not alter the fully grounded local on-device explanation.
  */
 export function geminiFactsForTopic(f: GeminiFacts, topic: GeminiTopic): GeminiFacts {
-  const plan = topic === "plan";
-  const goal = topic === "goal";
-  const simulation = topic === "simulation";
-  return {
-    portfolioValue: plan || topic === "value" || goal ? f.portfolioValue : null,
-    contributed: plan ? f.contributed : null,
-    monthly: plan || topic === "monthly" || goal ? f.monthly : null,
-    yearRecorded: plan ? f.yearRecorded : null,
-    yearPlanned: plan ? f.yearPlanned : null,
-    year: plan ? f.year : null,
-    goalAmount: goal || simulation ? f.goalAmount : null,
-    goalYear: goal || simulation ? f.goalYear : null,
-    goalMode: goal || simulation ? f.goalMode : null,
-    simulationYear: simulation ? f.simulationYear : null,
-    cautious: simulation ? f.cautious : null,
-    base: simulation ? f.base : null,
-    optimistic: simulation ? f.optimistic : null,
+  const included: Record<GeminiTopic,string> = {
+    plan:"portfolioValue contributed monthly yearRecorded yearPlanned year",
+    year:"",goal:"portfolioValue monthly goalAmount goalYear goalMode",
+    simulation:"goalAmount goalYear goalMode simulationYear cautious base optimistic",
+    value:"portfolioValue",difference:"",monthly:"monthly",goalProgress:"",
   };
+  const keys = new Set(included[topic].split(" "));
+  return Object.fromEntries(Object.entries(f)
+    .map(([key,value])=>[key,keys.has(key)?value:null])) as GeminiFacts;
 }
 
 /**
