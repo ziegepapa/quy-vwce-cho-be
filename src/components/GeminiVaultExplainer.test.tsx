@@ -78,7 +78,7 @@ describe("Gemini AI screen — safe without any API key",()=>{
     expect(words).toContain("Còn thiếu 40,00 € theo sổ");
     expect(words).toContain("Giá trị quỹ trừ tiền đã góp: -38,03 €");
     fireEvent.click(screen.getByRole("button",{name:"Mục tiêu"}));
-    expect(screen.queryByText("Giá trị quỹ trừ tiền đã góp")).toBeNull();
+    expect(document.body.textContent).not.toContain("Giá trị quỹ trừ tiền đã góp");
     expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
   });
   it("shows only the outgoing aggregates for the selected topic",()=>{
@@ -134,6 +134,14 @@ describe("Gemini AI screen — safe without any API key",()=>{
     fireEvent.change(screen.getByRole("textbox"),{target:{value:"zzzzzz unklar"}});
     expect(document.body.textContent).toContain("Frage nicht erkannt");
     expect(screen.getByRole("button",{name:"KI fragen"}).hasAttribute("disabled")).toBe(true);
+  });
+  it("shows guidance rather than AI requests when there is no Goal to choose",()=>{
+    render(<GeminiVaultExplainer locale="vi" goals={[]} facts={facts}/>);
+    fireEvent.click(screen.getByRole("button",{name:"Mục tiêu"}));
+    expect(document.body.textContent).toContain("Hãy tạo Goal trong mục Mục tiêu");
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
+    expect(screen.queryByText("Các con số sẽ gửi")).toBeNull();
   });
   it("does not enable a provider request simply because user checked consent",()=>{
     render(<GeminiVaultExplainer locale="de" goals={[]} facts={facts}/>);
