@@ -21,8 +21,8 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     setMode: noop,
     planUnreachable: false,
     targetUnreachable,
-    headlineValue: mode === "B" ? 200 : mode === "C" ? 15 : 1000,
-    yearsForProject: 15,
+    headlineValue: mode === "B" ? 200 : mode === "C" ? (targetUnreachable ? 40 : 15) : 1000,
+    yearsForProject: mode === "C" && targetUnreachable ? 40 : 15,
     monthlyForProject: 200,
     headlineNote: locale === "de"
       ? "Schätzung · ohne deutsche Steuern · ohne Inflationsanpassung"
@@ -137,10 +137,21 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByText("Zielbetrag → Monatsrate")).toBeTruthy();
   });
 
-  it("shows the 40-year projection while disclosing that the target is unreachable", () => {
-    renderShell("vi", "", 0, true);
-    expect(screen.getByRole("status").textContent).toContain("Chưa thể đạt mục tiêu trong 40 năm");
-    expect(document.querySelector(".sh-big")?.textContent).not.toBe("—");
+  it("marks 40 years as a simulation limit, not an investment or app end date", () => {
+    renderShell("vi", "", 0, true, false, "C");
+    expect(screen.getByRole("status").textContent).toContain("40 năm mô phỏng");
+    expect(screen.getByRole("status").textContent).toContain("quỹ và app vẫn tiếp tục");
+    expect(screen.getByTestId("simulation-hero-amount").textContent).toBe("—");
+    expect(screen.getByText("Kỳ mô phỏng").nextElementSibling?.textContent).toContain("40 năm");
+    cleanup();
+    renderShell("de", "", 0, true, false, "C");
+    expect(screen.getByRole("status").textContent).toContain("40 Jahre simuliert");
+    expect(screen.getByRole("status").textContent).toContain("App bestehen");
+    expect(screen.getByTestId("simulation-hero-amount").textContent).toBe("—");
+    cleanup();
+    renderShell("de", "", 0, false, false, "C");
+    expect(screen.getByTestId("simulation-hero-amount").textContent).toContain("15 Jahre");
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("compares three nominal scenarios and labels them as assumptions, not forecasts", () => {
@@ -203,8 +214,8 @@ describe("SimulationDemoShell financial-policy containment", () => {
     cleanup();
     const timeResult = renderShell("de", "", 0, true, false, "C");
     expect(timeResult.container.querySelector(".sim-mode-badge")?.textContent).toContain("Modus C");
-    expect(timeResult.container.querySelector(".sim-headline .sh-big")?.textContent).toContain("15");
-    expect(timeResult.container.querySelector(".sim-headline .sh-big")?.textContent).toContain("Jahre");
+    expect(timeResult.container.querySelector(".sim-headline .sh-big")?.textContent).toBe("—");
+    expect(timeResult.container.querySelector(".sim-headline .sh-sub")?.textContent).toContain("50.000");
   });
 
   it("locks a calm mobile hero scale shared by modes A, B and C", () => {
@@ -244,7 +255,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
     expect(screen.getByLabelText("Góp mỗi tháng (EUR)")).toBeTruthy();
     expect(screen.getByLabelText("Lợi nhuận / năm (%)")).toBeTruthy();
-    expect(screen.getByLabelText("Thời hạn")).toBeTruthy();
+    expect(screen.getByLabelText("Kỳ mô phỏng")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Mô phỏng" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Tóm tắt kết quả mô phỏng" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Góp → Nhận/ }).getAttribute("aria-pressed")).toBe("true");
@@ -263,7 +274,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     fireEvent.click(screen.getByRole("button", { name: "Annahmen anpassen" }));
     expect(screen.getByLabelText("Monatlicher Beitrag (EUR)")).toBeTruthy();
     expect(screen.getByLabelText("Rendite / Jahr (%)")).toBeTruthy();
-    expect(screen.getByLabelText("Laufzeit")).toBeTruthy();
+    expect(screen.getByLabelText("Modelljahre")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Simulation" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Simulationsergebnis" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Einzahlen → Ergebnis/ }).getAttribute("aria-pressed")).toBe("true");
