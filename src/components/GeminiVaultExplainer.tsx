@@ -223,7 +223,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
 
   const local = fallback(localTopic, selectedFacts, locale);
   const money = (n: number | null): string | null => n === null ? null : formatEuro(n, locale, t.noData);
-  const outgoingRows: Array<[string, string | number | null]> = [
+  const outgoingRows = ([
     [t.values, money(scopedFacts.portfolioValue)],
     [t.paid, money(scopedFacts.contributed)],
     [t.monthly, money(scopedFacts.monthly)],
@@ -238,7 +238,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     [t.baseLabel, money(scopedFacts.base)],
     [t.optimisticLabel, money(scopedFacts.optimistic)],
     [t.queryYearLabel, query?.queryYear ?? null],
-  ].filter(([,value]) => value !== null);
+  ] as Array<[string, string | number | null]>).filter(([,value]) => value !== null);
   const hasTyped = question.trim().length > 0;
   const busy = status === "loading" || status === "checking";
   const showStatus = ({
