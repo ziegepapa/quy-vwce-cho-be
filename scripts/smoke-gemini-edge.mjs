@@ -353,7 +353,7 @@ try{
     const m=line.match(/^\[gemini-flash-google-http\] (\d{3})$/);
     assert.ok(m,"Flash log must be a fixed marker and HTTP integer only");
     return Number(m[1]);
-  }).sort((a,b)=>a-b),[404,429,503]);
+  }).sort((a,b)=>a-b),[404,429,503,503]); // Primary Flash 503 plus Flash fallback 503 after Lite overload.
   for(const secret of [userId,"mock-user-jwt","mock-private-role","only-ci-not-real","591.95","17000"]){
     assert.ok(!flashDiagnostics.join("\n").includes(secret),"Flash diagnostics must not contain identity, data or secrets");
   }
