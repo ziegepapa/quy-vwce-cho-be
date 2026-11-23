@@ -13,6 +13,28 @@ changed. No external monitoring is created or changed by this PR.
 Keep the PR in **Draft until Chien approves**. Do not merge/deploy before all
 test, build, preview/mobile, PWA budgets, CI and source review are green.
 
+## Premium UI upgrade (read-only, no new monitoring)
+
+- Evidence-first hero makes a clear distinction between **verified inputs** and
+  **unknown fund-health questions**. A count such as `0/5 flags checked` is a
+  count of manual fact dispositions, **not a fund score or evidence of safety**.
+- The date on the top ribbon is the **snapshot's last reviewed/committed
+  date**; the Total Assets and TER cards retain their own **Vanguard
+  factsheet as-of date**. These dates must never be represented as "live".
+- A deterministic, no-network presentation helper identifies which already
+  agreed **external** review date is next, without assuming an elapsed date
+  was completed or scheduling any in-app job.
+- Visitors may filter the five manually reviewed flags by **all / unknown**.
+  Filtering changes no data and triggers no network calls.
+- A separate comparison presents VALL (FTSE Global All Cap) and the
+  conditional VWCE alternative (FTSE All-World) with distinct benchmark
+  labels; fee differences alone are not presented as a performance ranking.
+- No background fetch, notifications, data edits, simulations, automatic
+  trades, fund health scoring or Gemini calls. The view remains an optional
+  lazy-loaded chunk, outside the **mandatory PWA precache**. The first
+  opening may therefore need internet; the existing offline ledger remains
+  unchanged.
+
 ## Current sourced snapshot
 
 - Fund: Vanguard FTSE Global All-Cap UCITS ETF USD Acc, **VALL**,
