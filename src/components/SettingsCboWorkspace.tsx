@@ -35,7 +35,7 @@ type Props = {
   syncing: boolean;
   lastSync: string | null;
   pricesPanel: ReactNode;
-  vallHealthPanel: ReactNode;
+  vallHealthPanel?: ReactNode;
   dataHealthPanel: ReactNode;
   syncHealthPanel: ReactNode;
   syncConflictPanel: ReactNode;
