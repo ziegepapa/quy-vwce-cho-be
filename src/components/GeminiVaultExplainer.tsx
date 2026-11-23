@@ -170,8 +170,17 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
   const summary = fill(t.personal,{paid:euro(f.contributed),value:euro(f.portfolioValue),monthly:euro(f.monthly)});
   if (topic === "plan" && f.yearRecorded !== null && f.yearPlanned !== null) {
     const yearText = fill(t.yearSummary,{recorded:euro(f.yearRecorded),planned:euro(f.yearPlanned)});
+    const gap = Math.round(f.yearPlanned * 100) - Math.round(f.yearRecorded * 100);
+    const shortfall = gap > 0 ? (locale === "vi"
+      ? ` Còn thiếu ${euro(gap / 100)} theo sổ.`
+      : ` Im Vault fehlen ${euro(gap / 100)}.`) : "";
+    const difference = f.portfolioValue !== null && f.contributed !== null
+      ? Math.round(f.portfolioValue * 100) - Math.round(f.contributed * 100) : null;
+    const valueGap = difference === null ? "" : (locale === "vi"
+      ? ` Giá trị quỹ trừ tiền đã góp: ${difference > 0 ? "+" : ""}${euro(difference / 100)} (chênh lệch tạm thời).`
+      : ` Depotwert minus Beiträge: ${difference > 0 ? "+" : ""}${euro(difference / 100)} (Momentaufnahme).`);
     return summary + " " + yearText + " "
-      + (f.yearRecorded >= f.yearPlanned ? t.yearAhead : t.yearBehind);
+      + (gap <= 0 ? t.yearAhead : t.yearBehind) + shortfall + valueGap;
   }
   return summary;
 }
@@ -368,7 +377,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       <h3>{t.localTitle}</h3><p>{local}</p>
       {ledgerOnly && <small>{t.sourceChecked}</small>}
     </div>
-    {!ledgerOnly && <>
+    {!ledgerOnly && !goalMissing && <>
     <div className="gemini-vault-payload">
       <h3>{t.data}</h3>
       <dl>
