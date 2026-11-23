@@ -60,7 +60,7 @@ export default defineConfig({
         // exactly the "app cập nhật chậm" symptom. The app already falls
         // back to local IndexedDB data when offline, so no data file needs
         // to be precached.
-        globIgnores: ["**/data/**", "**/icons/icon-512.png", "**/icons/apple-touch-icon.png", "**/icons/icon-512.svg", "**/icons/icon-maskable.svg", "**/assets/GuardianPanel-*.js"],
+        globIgnores: ["**/data/**", "**/icons/icon-512.png", "**/icons/apple-touch-icon.png", "**/icons/icon-192.svg", "**/icons/icon-512.svg", "**/icons/icon-maskable.svg", "**/assets/GuardianPanel-*.js"],
         navigateFallback: "/quy-vwce-cho-be/index.html",
         cleanupOutdatedCaches: true,
         clientsClaim: true,
