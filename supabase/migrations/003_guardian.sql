@@ -54,10 +54,14 @@ create table if not exists public.guardian_alert_deliveries (
 );
 alter table public.guardian_alert_deliveries enable row level security;
 revoke all on public.guardian_alert_deliveries from anon, authenticated;
+grant select, insert, update on public.guardian_alert_deliveries to service_role;
 -- Service-role calls bypass RLS; no client-side insert/update/delete policy.
 
 -- Subscription is user-owned, while the receipt table remains server-only.
 grant select, insert, update on public.guardian_subscriptions to authenticated;
+-- As of newer Supabase defaults, new tables do not automatically receive
+-- Data API privileges. Service role bypasses RLS but STILL needs SQL GRANTs.
+grant select on public.guardian_subscriptions to service_role;
 
 -- Fail-closed operational readiness gate. Never activated by a migration,
 -- merge, settings toggle, test, or a frontend request. A privileged operator
@@ -73,6 +77,7 @@ insert into public.guardian_service_status (id, active)
   values (true, false) on conflict (id) do nothing;
 revoke all on public.guardian_service_status from anon, authenticated;
 grant select on public.guardian_service_status to authenticated;
+grant select on public.guardian_service_status to service_role;
 drop policy if exists guardian_read_service_status on public.guardian_service_status;
 create policy guardian_read_service_status on public.guardian_service_status
   for select to authenticated using (id = true);
@@ -96,4 +101,7 @@ create table if not exists public.guardian_run_health (
 alter table public.guardian_run_health enable row level security;
 insert into public.guardian_run_health(id) values(true) on conflict(id) do nothing;
 revoke all on public.guardian_run_health from public, anon, authenticated;
+grant select, update on public.guardian_run_health to service_role;
+-- V1 only reads the already-existing transaction ledger; it never modifies it.
+grant select on public.transactions to service_role;
 -- service_role bypasses RLS, and clients have neither grants nor policies.
