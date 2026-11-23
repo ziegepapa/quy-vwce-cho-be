@@ -70,7 +70,13 @@ for(const locale of ["de","vi"] as const){
           await page.screenshot({path:testInfo.outputPath(`visual-evidence-gemini-${locale}-${theme}-year-VAULT.png`),animations:"disabled"});
           continue;
         }
-        if(topic==="goal") await card.locator("#gemini-vault-goal").selectOption("fixture-goal");
+        if(topic==="goal") {
+          await expect(card.locator(".gemini-vault-payload")).toHaveCount(0);
+          await expect(card.getByRole("checkbox")).toHaveCount(0);
+          await expect(card.getByRole("button",{name:labels[locale].ask})).toHaveCount(0);
+          await card.locator("#gemini-vault-goal").selectOption("fixture-goal");
+          await expect(card.locator(".gemini-vault-payload")).toBeVisible();
+        }
         await card.getByRole("button",{name:labels[locale].ask}).click();
         const badge=card.getByTestId("gemini-vault-model");
         const target=topic==="goal" || topic==="simulation"?"Flash":"Flash-Lite";

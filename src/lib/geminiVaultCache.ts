@@ -13,7 +13,7 @@ function entries(): Entry[] {
 }
 export async function geminiAnswerCacheKey(userId: string, request: unknown): Promise<string | null> {
   try {
-    const bytes = new TextEncoder().encode(JSON.stringify([userId,request]));
+    const bytes = new TextEncoder().encode(JSON.stringify([userId,request,"context-v2"]));
     const hash = await crypto.subtle.digest("SHA-256",bytes);
     return PREFIX + Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2,"0")).join("");
   } catch { return null; }
