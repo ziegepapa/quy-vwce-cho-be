@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   clearAllData,
@@ -52,6 +52,8 @@ import "../styles/settings-operation-errors.css";
 import "../styles/demo-v10-settings.css";
 import "../styles/settings-horizon.css";
 import "../styles/settings-clarity.css";
+
+const VallHealthPanel = lazy(() => import("../components/VallHealthPanel"));
 
 const SETTINGS_AUTOSAVE_MS = 650;
 type SettingsChildView = "password" | "mfa" | "diagnostics" | "backup" | "restore" | null;
@@ -890,6 +892,7 @@ export default function SettingsPage({
           syncing={syncingNow}
           lastSync={lastLocalSyncAt ? `${text.lastLocalSync}: ${localDateTime(lastLocalSyncAt, locale)}` : null}
           pricesPanel={<SettingsPricePanel refreshKey={refreshKey} onQuotesChanged={onQuotesChanged} />}
+          vallHealthPanel={<Suspense fallback={<p role="status">{locale === "de" ? "Fondsstatus wird geladen…" : "Đang mở dữ liệu VALL…"}</p>}><VallHealthPanel locale={locale}/></Suspense>}
           dataHealthPanel={<LocalDataInventoryPanel localeOverride={locale} />}
           syncHealthPanel={syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
           syncConflictPanel={conflictPanel}
