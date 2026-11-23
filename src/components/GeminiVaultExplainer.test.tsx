@@ -37,7 +37,7 @@ describe("Gemini AI screen — safe without any API key",()=>{
     fireEvent.click(screen.getByRole("button",{name:"Mục tiêu"}));
     expect(document.body.textContent).toContain("Chưa chọn Goal");
     expect(screen.getByRole("combobox").getAttribute("value")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Bạn muốn hỏi về Goal nào?"),
+    fireEvent.change(screen.getByLabelText("Chọn Goal cần giải thích"),
       {target:{value:"test-goal"}});
     expect(document.body.textContent).toContain("2038");
     expect(document.body.textContent).toContain("10.000");
