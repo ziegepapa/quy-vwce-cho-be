@@ -56,6 +56,26 @@ export function parseFactsheet(pages) {
   return {record:{asOf:date,totalAssetsUsdMillions:total,shareClassAssetsUsdMillions:share,ongoingChargesPercent:ocf,trackingDifferenceAnnualPp:null,sourceUrl:URL,provenance},
     replication:{asOf:date,sourceUrl:URL,provenance,holdings,priceEarnings:pair("Price/earnings ratio","\\s*x",5,50),priceBook:pair("Price/book ratio","\\s*x",0,100),returnOnEquityPercent:pair("Return on equity","\\s*%",0,100),earningsGrowthPercent:pair("Earnings growth rate","\\s*%",0,100),dividendYieldPercent:pair("Equity yield \\(dividend\\)","\\s*%",0,100)}};
 }
+// This is a review-routing policy, not a fund health score or trade signal.
+export function mergeDecision(previous, current, body) {
+  const reasons=[];
+  if(!Number.isFinite(previous.ongoingChargesPercent) || !Number.isFinite(current.ongoingChargesPercent))
+    reasons.push("OCF chưa đủ dữ liệu so sánh");
+  else if(previous.ongoingChargesPercent!==current.ongoingChargesPercent)
+    reasons.push("OCF "+previous.ongoingChargesPercent+"% → "+current.ongoingChargesPercent+"%");
+  if(!Number.isFinite(previous.totalAssetsUsdMillions) || !Number.isFinite(current.totalAssetsUsdMillions))
+    reasons.push("Total assets chưa đủ dữ liệu so sánh");
+  else if(current.totalAssetsUsdMillions<previous.totalAssetsUsdMillions)
+    reasons.push("Total assets USD "+previous.totalAssetsUsdMillions+"M → "+current.totalAssetsUsdMillions+"M");
+  // Also honor any warning emitted by the parser/planner, even if future
+  // warning conditions are added independently of the numeric comparisons.
+  if(/\bWARNING\b/i.test(body))
+    reasons.push("PR body có WARNING — xem nội dung bên dưới");
+  const autoMerge=reasons.length===0;
+  return {autoMerge,reasons,line:autoMerge
+    ?"Auto-merge: BẬT — tự merge khi CI xanh"
+    :"Auto-merge: TẮT — cần người duyệt vì "+reasons.join("; ")};
+}
 export function plan(snapshot, parsed, today) {
   if(!parseVallHealth(snapshot)) throw Error("Existing VALL data invalid");
   const {record,replication}=parsed, expected=previousMonthEnd(today);
@@ -75,8 +95,12 @@ export function plan(snapshot, parsed, today) {
     const old=snapshot.replicationSnapshot[k], next=replication[k];
     lines.push("- "+k+": "+old.fund+" / "+old.benchmark+" → "+next.fund+" / "+next.benchmark);
   }
-  lines.push("","PDF: "+URL,"","Draft only. Manual verification and approval required. TD, flags, Sparplan and review dates untouched.");
-  return {status:"new",updated,body:lines.join("\n")};
+  if(record.totalAssetsUsdMillions<last.totalAssetsUsdMillions)
+    lines.push("","**WARNING: Total assets decreased: USD "+last.totalAssetsUsdMillions+"M → "+record.totalAssetsUsdMillions+"M. Review manually.**");
+  lines.push("","PDF: "+URL,"","TD, flags, Sparplan and review dates untouched. No investment decision is automated.");
+  const decision=mergeDecision(last,record,lines.join("\n"));
+  lines.unshift(decision.line,"");
+  return {status:"new",updated,body:lines.join("\n"),autoMerge:decision.autoMerge,reasons:decision.reasons};
 }
 export async function fetchPages() {
   const res=await fetch(URL,{redirect:"error",signal:AbortSignal.timeout(30000),cache:"no-store",headers:{"Cache-Control":"no-cache"}});

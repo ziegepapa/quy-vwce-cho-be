@@ -56,7 +56,7 @@ jobs:
           node-version: "22"
       - run: npm ci
       - run: node --test scripts/update-vall-factsheet.test.mjs
-      - name: Validate, append and propose draft
+      - name: Validate, append and propose conditional merge
         env:
           GH_TOKEN: ${{ secrets.PRICE_BOT_TOKEN }}
         run: |
@@ -72,6 +72,20 @@ jobs:
             echo "::error::Unexpected working tree changes"; printf '%s\n' "$STATUS"; exit 1
           fi
           test -s "$VALL_PR_BODY"
+          # Fail closed: only an exact affirmative decision AND no WARNING
+          # can enable auto-merge. Unknown decision formats stop the job.
+          IFS= read -r DECISION < "$VALL_PR_BODY"
+          AUTO=false
+          case "$DECISION" in
+            "Auto-merge: BẬT — tự merge khi CI xanh")
+              if grep -Eiq '(^|[^[:alnum:]_])WARNING([^[:alnum:]_]|$)' "$VALL_PR_BODY"; then
+                echo "::error::Auto-merge decision conflicts with WARNING"; exit 1
+              fi
+              AUTO=true
+              ;;
+            "Auto-merge: TẮT — cần người duyệt vì "*) ;;
+            *) echo "::error::Unknown auto-merge decision"; exit 1 ;;
+          esac
           ASOF=$(node -p 'JSON.parse(require("fs").readFileSync(process.argv[1])).history.at(-1).asOf' "$DATA")
           [[ "$ASOF" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
           BRANCH="chore/vall-factsheet-$ASOF"
@@ -88,11 +102,20 @@ jobs:
             # Recover only an identical orphan branch; ignore checkedOn (run date).
             node -e 'const fs=require("fs");const [a,b]=process.argv.slice(1).map(p=>JSON.parse(fs.readFileSync(p)));delete a.checkedOn;delete b.checkedOn;if(JSON.stringify(a)!==JSON.stringify(b))process.exit(1)' "$TMP/remote.json" "$DATA"
             test "$(git diff --name-only origin/main...FETCH_HEAD)" = "$DATA"
+            EXPECTED_HEAD=$(git rev-parse FETCH_HEAD)
           else
             git switch -c "$BRANCH"
             git add -- "$DATA"
             test "$(git diff --cached --name-only)" = "$DATA"
             git commit -m "chore(data): VALL factsheet $ASOF"
             git push -u origin "$BRANCH"
+            EXPECTED_HEAD=$(git rev-parse HEAD)
           fi
-          gh pr create --draft --base main --head "$BRANCH" --title "chore(data): VALL factsheet $ASOF" --body-file "$VALL_PR_BODY"
+          # Same PAT and auto-merge command as the VWCE quote workflow.
+          # A draft is never converted or automatically merged here.
+          if [ "$AUTO" = true ]; then
+            PR_URL=$(gh pr create --base main --head "$BRANCH" --title "chore(data): VALL factsheet $ASOF" --body-file "$VALL_PR_BODY")
+            gh pr merge "$PR_URL" --auto --squash --match-head-commit "$EXPECTED_HEAD"
+          else
+            gh pr create --draft --base main --head "$BRANCH" --title "chore(data): VALL factsheet $ASOF — manual review" --body-file "$VALL_PR_BODY"
+          fi
