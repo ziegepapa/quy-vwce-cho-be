@@ -25,7 +25,8 @@ test("provider receives only numeric facts and fixed enum topics, never raw ques
   assert.ok(facts.includes("fixed, finance-safe intents"));
   assert.ok(server.includes("TOPIC_GUIDE_VI"));
   assert.ok(server.includes('"goalProgress"'));
-  assert.ok(client.includes("gemini-vault-grounded"));
+  assert.ok(client.includes('className="gemini-vault-local"'));
+  assert.ok(client.includes("topic === \"plan\" && f.yearRecorded !== null"));
 });
 test("server checks actual auth and spends quota only after key/enable gate",()=>{
   assert.ok(server.includes('"/auth/v1/user"'));
@@ -72,7 +73,8 @@ test("AI answer cache stays on-device and prevents a second quota claim for iden
 
 test("only local ledger may conclude progress or difference, and old wrong AI cache is invalidated",()=>{
   assert.ok(client.includes('localTopic === "year" || localTopic === "difference" || localTopic === "goalProgress"'));
-  assert.ok(client.includes("{!ledgerOnly && <button"));
+  assert.ok(client.includes("{!ledgerOnly && <>"));
+  assert.ok(client.includes('showGoal ? chosenGoal : null'));
   assert.ok(server.includes('code:"VAULT_ONLY"'));
   assert.ok(server.indexOf('code:"VAULT_ONLY"') < server.indexOf('gemini_explain_claim",{p_user_id:userId}'));
   assert.ok(server.includes("trăm|mươi|nghìn|ngàn|triệu"));
