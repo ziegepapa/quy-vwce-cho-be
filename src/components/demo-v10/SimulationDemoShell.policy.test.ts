@@ -145,8 +145,8 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.getByText("Kỳ mô phỏng").nextElementSibling?.textContent).toContain("40 năm");
     cleanup();
     renderShell("de", "", 0, true, false, "C");
-    expect(screen.getByRole("status").textContent).toContain("40 Modelljahre");
-    expect(screen.getByRole("status").textContent).toContain("laufen weiter");
+    expect(screen.getByRole("status").textContent).toContain("40 Jahre simuliert");
+    expect(screen.getByRole("status").textContent).toContain("App bestehen");
     expect(screen.getByTestId("simulation-hero-amount").textContent).toBe("—");
     cleanup();
     renderShell("de", "", 0, false, false, "C");
