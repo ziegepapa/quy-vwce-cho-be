@@ -25,10 +25,10 @@ export default defineConfig({
     VitePWA({
       registerType: "prompt",
       injectRegister: "script-defer",
-      // Keep 192px and maskable icons offline; the full 512px PNG remains online
-    // for installation, but is redundant in the offline precache.
+      // Keep the 192px icon and SVGs offline; large 512px install icons remain
+      // available online and are not needed for daily offline finance screens.
     includeManifestIcons: false,
-    includeAssets: ["icons/*.svg", "icons/icon-192.png", "icons/icon-maskable-512.png"],
+    includeAssets: ["icons/*.svg", "icons/icon-192.png"],
       manifest: {
         id: "/quy-vwce-cho-be/",
         name: "VWCE Vault",
