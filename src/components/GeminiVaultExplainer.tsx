@@ -169,14 +169,11 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
   if (f.contributed === null && f.portfolioValue === null) return t.missing;
   const summary = fill(t.personal,{paid:euro(f.contributed),value:euro(f.portfolioValue),monthly:euro(f.monthly)});
   if (topic === "plan" && f.yearRecorded !== null && f.yearPlanned !== null) {
-    const yearText = fill(t.yearSummary,{recorded:euro(f.yearRecorded),planned:euro(f.yearPlanned)});
     const gap = Math.round(f.yearPlanned * 100) - Math.round(f.yearRecorded * 100);
-    const shortfall = gap > 0
-      ? ` ${locale === "vi" ? "Còn thiếu" : "Im Vault fehlen"} ${euro(gap / 100)}${locale === "vi" ? " theo sổ." : "."}` : "";
-    const valueGap = f.portfolioValue !== null && f.contributed !== null
-      ? " " + fallback("difference",f,locale) : "";
-    return summary + " " + yearText + " "
-      + (gap <= 0 ? t.yearAhead : t.yearBehind) + shortfall + valueGap;
+    return summary + " " + fill(t.yearSummary,{recorded:euro(f.yearRecorded),planned:euro(f.yearPlanned)})
+      + " " + (gap > 0 ? t.yearBehind : t.yearAhead)
+      + (gap > 0 ? ` ${locale === "vi" ? "Còn thiếu" : "Fehlbetrag"} ${euro(gap / 100)}${locale === "vi" ? " theo sổ." : "."}` : "")
+      + (f.portfolioValue !== null && f.contributed !== null ? " " + fallback("difference",f,locale) : "");
   }
   return summary;
 }
