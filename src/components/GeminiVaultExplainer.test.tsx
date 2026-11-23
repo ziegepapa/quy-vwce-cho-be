@@ -71,6 +71,21 @@ describe("Gemini AI screen — safe without any API key",()=>{
     expect(screen.getByRole("textbox").getAttribute("placeholder")).not.toContain("Năm nay");
     expect(screen.getByRole("button",{name:"Hỏi Gemini"})).toBeTruthy();
   });
+  it("shows only the outgoing aggregates for the selected topic",()=>{
+    render(<GeminiVaultExplainer locale="vi" goals={[goal]} facts={facts}/>);
+    expect(document.body.textContent).toContain("Đã ghi trong năm");
+    expect(document.body.textContent).toContain("Kế hoạch tới hôm nay");
+    fireEvent.click(screen.getByRole("button",{name:"Góp tháng"}));
+    expect(screen.getByText("Góp mỗi tháng")).toBeTruthy();
+    expect(screen.queryByText("Tổng đã góp")).toBeNull();
+    expect(screen.queryByText("Đã ghi trong năm")).toBeNull();
+    expect(screen.queryByText("Năm mô phỏng")).toBeNull();
+    fireEvent.click(screen.getByRole("button",{name:"Mô phỏng"}));
+    expect(screen.getByText("Năm mô phỏng")).toBeTruthy();
+    expect(screen.getByText("Thận trọng")).toBeTruthy();
+    expect(screen.getByText("Lạc quan")).toBeTruthy();
+    expect(screen.queryByText("Tổng đã góp")).toBeNull();
+  });
   it("marks typed Year question as the effective topic even while Plan was selected",()=>{
     render(<GeminiVaultExplainer locale="vi" goals={[goal]}
       facts={{...facts,contributed:560,yearRecorded:560,yearPlanned:600}}/>);
