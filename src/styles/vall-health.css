@@ -1,0 +1,21 @@
+/* Passive, repo-snapshot-only health view. Color tokens support all themes. */
+.vall-health { display:grid; gap:14px; color:var(--text-primary); font-size:14px; line-height:1.5; min-width:0; }
+.vall-health h2,.vall-health h3,.vall-health p {margin:0}
+.vall-health-head h2 {font-size:19px;letter-spacing:-.025em}
+.vall-health-head small,.vall-health-muted,.vall-health-sub span {color:var(--text-secondary);font-size:12px}
+.vall-health-sub span {display:block}
+.vall-health-notice {padding:11px 12px;border:1px solid var(--border-subtle);border-radius:12px;background:var(--surface-sunken);font-weight:600}
+.vall-health-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+.vall-health-grid>div {padding:12px;background:var(--surface-raised);border:1px solid var(--border-subtle);border-radius:14px;min-width:0}
+.vall-health-grid dt {color:var(--text-secondary);font-size:12px}
+.vall-health-grid dd {margin:3px 0 5px;font-size:clamp(15px,3.8vw,21px);font-weight:800;overflow-wrap:anywhere}
+.vall-health-grid small {display:block;color:var(--text-secondary);font-size:11px}
+.vall-health-section {border-top:1px solid var(--border-subtle);padding-top:12px;display:grid;gap:8px}
+.vall-health-section h3 {font-size:14px}
+.vall-health-flags {list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.vall-health-flags li {display:grid;grid-template-columns:24px minmax(0,1fr);align-items:start;gap:8px}
+.vall-health-flags li>span:first-child {display:grid;place-items:center;min-width:22px;min-height:22px;border-radius:50%;background:var(--surface-sunken);font-weight:800}
+.vall-health-flags small {display:block;color:var(--text-secondary);font-size:11px}
+.vall-health-links {display:flex;flex-wrap:wrap;gap:8px 14px;font-size:12px}
+.vall-health-links a {color:var(--primary-600);text-decoration:underline;text-underline-offset:2px}
+@media(max-width:340px){.vall-health-grid{grid-template-columns:1fr}}

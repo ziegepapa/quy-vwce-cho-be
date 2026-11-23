@@ -60,7 +60,7 @@ export default defineConfig({
         // exactly the "app cập nhật chậm" symptom. The app already falls
         // back to local IndexedDB data when offline, so no data file needs
         // to be precached.
-        globIgnores: ["**/data/**", "**/icons/icon-512.png"],
+        globIgnores: ["**/data/**", "**/icons/icon-512.png", "**/assets/VallHealthPanel-*.js", "**/assets/VallHealthPanel-*.css", "**/assets/overview-mountain-*.webp"],
         navigateFallback: "/quy-vwce-cho-be/index.html",
         cleanupOutdatedCaches: true,
         clientsClaim: true,
