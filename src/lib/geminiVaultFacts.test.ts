@@ -74,7 +74,7 @@ describe("Gemini redacted aggregate data",()=>{
     expect(monthlyOn(new Date(2027,6,31))).toBe(75);
     expect(monthlyOn(new Date(2027,7,1))).toBe(140);
     settings.contributionY2=0;
-    expect(monthlyOn(new Date(2027,7,1))).toBe(0);
+    expect(monthlyOn(new Date(2027,7,1))).toBeNull();
     settings.startDate="2028-01-01";
     expect(monthlyOn(new Date(2027,7,1))).toBeNull();
     settings.startDate="bad-date";
