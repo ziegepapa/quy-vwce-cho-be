@@ -123,6 +123,7 @@ const facts={
   goalAmount:null,goalYear:null,goalMode:null,simulationYear:2045,cautious:17000,base:24000,optimistic:32000,
 };
 const safe={schemaVersion:1,locale:"de",topic:"plan",queryYear:null,facts};
+const goalFacts={...facts,goalAmount:10000,goalYear:2038,goalMode:"nominal"};
 async function call(input=safe, opts={}){
   return fetch(edge,{method:"POST",headers:{"Content-Type":"application/json",
     Origin:"http://localhost:5173",Authorization:"Bearer mock-user-jwt",...(opts.headers||{})},
@@ -160,6 +161,10 @@ try{
   providerMode="normal";
   assert.equal((await call({...safe,childName:"PRIVATE"})).status,400);
   assert.equal((await call({...safe,facts:{...facts,accountId:"SECRET ACCOUNT"}})).status,400);
+  // Missing Goal never reaches Google or consumes a SQL quota reservation.
+  const missingGoal=await call({...safe,topic:"goal"});
+  assert.equal(missingGoal.status,400);
+  assert.equal((await missingGoal.json()).code,"GOAL_REQUIRED");
   assert.equal(requests,0);
   let response=await call();
   assert.equal(response.status,200);
@@ -205,7 +210,7 @@ try{
   // Next mocked UTC day: exact comparisons are handled by Vault, never Gemini.
   requests=0;paused=false;calls=[];providerMode="normal";
   for (const topic of ["plan","goal","simulation","value","monthly"]) {
-    response=await call({...safe,topic});
+    response=await call({...safe,topic,facts:topic==="goal"?goalFacts:facts});
     assert.equal(response.status,200);
     const posted=JSON.parse(calls[calls.length-1].msg.contents[0].parts[0].text);
     assert.equal(posted.topic,topic);
@@ -215,7 +220,7 @@ try{
   assert.equal(requests,5);
   // Factual comparisons cannot reach the model or spend quota, even on old clients.
   for (const topic of ["year","difference","goalProgress"]) {
-    response=await call({...safe,topic});
+    response=await call({...safe,topic,facts:topic==="goal"?goalFacts:facts});
     assert.equal(response.status,400);
     assert.equal((await response.json()).code,"VAULT_ONLY");
   }
@@ -242,7 +247,7 @@ try{
     ["monthly","gemini-3.5-flash-lite"],
   ]) {
     const before=calls.length;
-    response=await call({...safe,topic});
+    response=await call({...safe,topic,facts:topic==="goal"?goalFacts:facts});
     assert.equal(response.status,200);
     const data=await response.json();
     assert.equal(data.model,model);
@@ -255,7 +260,7 @@ try{
   // Exhaust Flash budget without touching Google again after the fifth attempt.
   requests=0;paused=false;calls=[];flashAttempts=0;providerMode="normal";
   for(let i=0;i<6;i++){
-    const data=await (await call({...safe,topic:"goal",facts:{...facts,contributed:600+i}})).json();
+    const data=await (await call({...safe,topic:"goal",facts:{...goalFacts,contributed:600+i}})).json();
     assert.equal(data.model,i<5?"gemini-3.8-flash":"gemini-3.5-flash-lite");
   }
   assert.equal(flashAttempts,5);
@@ -294,20 +299,20 @@ try{
   // Cache only 200: exact payload hit must bypass both daily counters and Google.
   requests=0;paused=false;calls=[];flashAttempts=0;providerMode="normal";
   cacheEnabled=true;serverCache.clear();
-  response=await call({...safe,topic:"goal"});
+  response=await call({...safe,topic:"goal",facts:goalFacts});
   assert.equal(response.status,200);
   assert.equal((await response.json()).model,"gemini-3.8-flash");
   assert.equal(requests,1);assert.equal(flashAttempts,1);
-  response=await call({...safe,topic:"goal"});
+  response=await call({...safe,topic:"goal",facts:goalFacts});
   assert.equal(response.status,200);
   const cached=await response.json();
   assert.equal(cached.cached,true);
   assert.equal(cached.model,"gemini-3.8-flash");
   assert.equal(requests,1);assert.equal(flashAttempts,1);assert.equal(calls.length,1);
-  response=await call({...safe,topic:"goal",facts:{...facts,contributed:601}});
+  response=await call({...safe,topic:"goal",facts:{...goalFacts,contributed:601}});
   assert.equal(response.status,200);assert.equal((await response.json()).cached,false);
   assert.equal(requests,2);assert.equal(flashAttempts,2);
-  response=await call({...safe,topic:"goal",queryYear:2038});
+  response=await call({...safe,topic:"goal",queryYear:2038,facts:goalFacts});
   assert.equal(response.status,200);
   assert.equal(requests,3);assert.equal(flashAttempts,3);
 
@@ -324,7 +329,7 @@ try{
   cacheEnabled=false;serverCache.clear();
   requests=0;paused=false;calls=[];flashAttempts=0;providerMode="rate";
   const pauseBefore=pauseCalls;
-  response=await call({...safe,topic:"goal"});
+  response=await call({...safe,topic:"goal",facts:goalFacts});
   assert.equal(response.status,429);
   assert.equal((await response.json()).code,"FREE_LIMIT");
   assert.equal(calls.length,1);
