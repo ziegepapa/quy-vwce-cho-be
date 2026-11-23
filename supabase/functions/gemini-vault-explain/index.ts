@@ -271,7 +271,7 @@ Deno.serve(async (req: Request) => {
     return json(req,400,{code:"VAULT_ONLY"});
   }
   // A missing user-selected Goal cannot trigger an AI call or consume quota.
-  if (payload.topic === "goal" && (payload.facts.goalYear === null || payload.facts.goalAmount === null || payload.facts.goalAmount <= 0)) {
+  if (payload.topic === "goal" && (payload.facts.goalYear === null || typeof payload.facts.goalAmount !== "number" || payload.facts.goalAmount <= 0)) {
     return json(req,400,{code:"GOAL_REQUIRED"});
   }
 
