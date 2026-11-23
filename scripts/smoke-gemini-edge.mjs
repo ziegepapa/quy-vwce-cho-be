@@ -345,8 +345,20 @@ try{
   assert.equal(response.status,429);
   assert.equal(calls.length,1);
   assert.equal(flashAttempts,0);
+  // Flash generation logs must contain only genuine upstream HTTP error codes.
+  // Lite failures, valid Flash replies and local rejected/empty outputs are not Google HTTP errors.
+  await sleep(100);
+  const flashDiagnostics=logs.split(/\r?\n/).filter(line=>line.includes("[gemini-flash-google-http]"));
+  assert.deepEqual(flashDiagnostics.map(line=>{
+    const m=line.match(/^\[gemini-flash-google-http\] (\d{3})$/);
+    assert.ok(m,"Flash log must be a fixed marker and HTTP integer only");
+    return Number(m[1]);
+  }).sort((a,b)=>a-b),[404,429,503]);
+  for(const secret of [userId,"mock-user-jwt","mock-private-role","only-ci-not-real","591.95","17000"]){
+    assert.ok(!flashDiagnostics.join("\n").includes(secret),"Flash diagnostics must not contain identity, data or secrets");
+  }
   // Nothing in this isolated test calls the real project or Google API.
-  console.log("Gemini isolated smoke OK: key/model metadata GET without quota, auth, no-PII, exact errors, fallback and rate circuit.");
+  console.log("Gemini isolated smoke OK: key/model metadata GET, Flash-only status logs, auth, no-PII, fallback and rate circuit.");
 }finally{
   deno.kill("SIGTERM");
   await new Promise(resolve=>stub.close(resolve));
