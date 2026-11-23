@@ -171,8 +171,7 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
   if (topic === "plan" && f.yearRecorded !== null && f.yearPlanned !== null) {
     const gap = Math.round(f.yearPlanned * 100) - Math.round(f.yearRecorded * 100);
     return summary + " " + fallback("year",f,locale)
-      + (gap > 0 ? ` ${locale === "vi" ? "Còn thiếu" : "Fehlbetrag"} ${euro(gap / 100)}${locale === "vi" ? " theo sổ." : "."}` : "")
-      + (f.portfolioValue !== null && f.contributed !== null ? " " + fallback("difference",f,locale) : "");
+      + (gap > 0 ? ` ${locale === "vi" ? "Còn thiếu" : "Fehlbetrag"} ${euro(gap / 100)}${locale === "vi" ? " theo sổ." : "."}` : "");
   }
   return summary;
 }
