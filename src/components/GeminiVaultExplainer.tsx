@@ -18,7 +18,7 @@ const copy = {
     topicPlan: "Mein Plan", topicYear: "Dieses Jahr", topicGoal: "Mein Ziel", topicSim: "Simulation",
     topicValue: "Depotwert", topicDifference: "Differenz", topicMonthly: "Monatsrate", topicGoalProgress: "Zielstand",
     goal: "Ziel auswählen", simGoal: "Ziel (optional)", noGoal: "Ziel auswählen",
-    chooseGoal: "Bitte Ziel wählen. Ein genanntes Jahr genügt nicht.",
+    chooseGoal: "Bitte Ziel wählen. Ein genanntes Jahr genügt nicht.", noGoals:"Erstelle zuerst ein Ziel unter Ziele.",
     detected: "Frage erkannt als", unknownQuestion: "Frage nicht erkannt. Thema wählen oder Text löschen.",
     localTitle: "Vault · ohne KI-Limit", missing: "Daten fehlen im Vault.",
     valueSummary: "Depotwert: {value} (schwankend).",
@@ -74,7 +74,7 @@ const copy = {
     topicPlan: "Kế hoạch", topicYear: "Năm nay", topicGoal: "Mục tiêu", topicSim: "Mô phỏng",
     topicValue: "Giá trị quỹ", topicDifference: "Chênh lệch", topicMonthly: "Góp tháng", topicGoalProgress: "Tiến độ Goal",
     goal: "Chọn Goal cần giải thích", simGoal: "Goal (tùy chọn)", noGoal: "Chọn Goal",
-    chooseGoal: "Hãy chọn Goal trước khi hỏi Gemini; chỉ gõ năm là chưa đủ.",
+    chooseGoal: "Hãy chọn Goal trước khi hỏi Gemini; chỉ gõ năm là chưa đủ.", noGoals:"Hãy tạo Goal trong mục Mục tiêu trước.",
     detected: "Nhận diện câu hỏi", unknownQuestion: "Câu hỏi chưa rõ; chọn chủ đề hoặc xóa chữ.",
     localTitle: "Từ Vault · không trừ lượt", missing: "Chưa đủ dữ liệu trong sổ.",
     valueSummary: "Giá trị quỹ: {value} (có thể biến động).",
@@ -363,7 +363,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
         <option value="">{t.noGoal}</option>
         {goals.filter(g=>!g.deletedAt&&validExitDate(g.dueDate)).map(g=><option key={g.id} value={g.id}>{g.name} · {g.dueDate}</option>)}
       </select>
-      {goalMissing && <p className="gemini-vault-hint" role="status">{t.chooseGoal}</p>}
+      {goalMissing && <p className="gemini-vault-hint" role="status">{goals.some(g=>!g.deletedAt&&validExitDate(g.dueDate)) ? t.chooseGoal : t.noGoals}</p>}
     </>}
     <label htmlFor="gemini-vault-question">{t.question}</label>
     <input id="gemini-vault-question" value={question} maxLength={160} placeholder={t.input}
