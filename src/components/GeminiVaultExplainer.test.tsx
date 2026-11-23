@@ -71,6 +71,16 @@ describe("Gemini AI screen — safe without any API key",()=>{
     expect(screen.getByRole("textbox").getAttribute("placeholder")).not.toContain("Năm nay");
     expect(screen.getByRole("button",{name:"Hỏi Gemini"})).toBeTruthy();
   });
+  it("computes concrete Plan differences locally without inventing a Google answer",()=>{
+    render(<GeminiVaultExplainer locale="vi" goals={[goal]}
+      facts={{...facts,portfolioValue:521.97,contributed:560,yearRecorded:560,yearPlanned:600}}/>);
+    const words=document.body.textContent?.replaceAll("\u00a0"," ") || "";
+    expect(words).toContain("Còn thiếu 40,00 € theo sổ");
+    expect(words).toContain("Giá trị quỹ trừ tiền đã góp: -38,03 €");
+    fireEvent.click(screen.getByRole("button",{name:"Mục tiêu"}));
+    expect(screen.queryByText("Giá trị quỹ trừ tiền đã góp")).toBeNull();
+    expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
+  });
   it("shows only the outgoing aggregates for the selected topic",()=>{
     render(<GeminiVaultExplainer locale="vi" goals={[goal]} facts={facts}/>);
     expect(document.body.textContent).toContain("Đã ghi trong năm");
@@ -103,10 +113,16 @@ describe("Gemini AI screen — safe without any API key",()=>{
     fireEvent.click(screen.getByRole("button",{name:"Mục tiêu"}));
     expect(screen.getByLabelText("Chọn Goal cần giải thích")).toBeTruthy();
     expect(document.body.textContent).toContain("Hãy chọn Goal trước khi hỏi Gemini");
-    expect(screen.getByRole("button",{name:"Hỏi Gemini"}).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(document.body.textContent).not.toContain("Các con số sẽ gửi");
+    expect(document.body.textContent).not.toContain("AI sẵn sàng để hỏi");
     fireEvent.change(screen.getByLabelText("Chọn Goal cần giải thích"),
       {target:{value:"test-goal"}});
     expect(document.body.textContent).toContain("2038");
+    expect(screen.getByRole("button",{name:"Hỏi Gemini"})).toBeTruthy();
+    expect(screen.getByRole("checkbox")).toBeTruthy();
+    expect(document.body.textContent).toContain("Các con số sẽ gửi");
     fireEvent.click(screen.getByRole("button",{name:"Kế hoạch"}));
     expect(screen.queryByLabelText("Chọn Goal cần giải thích")).toBeNull();
     expect(document.body.textContent).not.toContain("Goal đã chọn");
