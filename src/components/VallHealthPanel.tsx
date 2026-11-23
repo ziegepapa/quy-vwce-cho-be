@@ -52,6 +52,24 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
     ...(trUnverified ? [de ? "VALL-spezifischer Sparplanstatus ungeprüft" : "Sparplan miễn phí riêng VALL chưa xác minh"] : []),
     ...(state.unknownFlags ? [de ? `${state.unknownFlags}/5 Warnsignale noch ungeprüft` : `${state.unknownFlags}/5 cờ đỏ chưa được xác minh`] : []),
   ];
+
+  const maxAum = Math.max(...data.history.map(item => item.totalAssetsUsdMillions));
+  const chartPoints = data.history.map((item,index)=>({
+    ...item, x: 25 + 270*index/Math.max(1,data.history.length-1),
+    y: 102 - (item.totalAssetsUsdMillions/maxAum)*78,
+  }));
+  const replicationMetrics = [
+    {key:"holdings", name:de?"Anzahl Aktien":"Số mã nắm giữ", note:de?"Der Fonds investiert über eine Stichprobe, nicht zwingend in jeden Indexwert.":"Quỹ mua một mẫu đại diện, không nhất thiết giữ đủ mọi mã trong chỉ số.", unit:"integer"},
+    {key:"priceEarnings", name:"P/E", note:de?"Marktpreis im Verhältnis zum Gewinn der Unternehmen.":"Giá cổ phiếu so với lợi nhuận của doanh nghiệp.", unit:"multiple"},
+    {key:"priceBook", name:"P/B", note:de?"Marktpreis im Verhältnis zum buchhalterischen Eigenkapital.":"Giá cổ phiếu so với giá trị sổ sách.", unit:"multiple"},
+    {key:"returnOnEquityPercent", name:"ROE", note:de?"Gewinn der Unternehmen im Verhältnis zum Eigenkapital.":"Lợi nhuận doanh nghiệp tạo ra so với vốn chủ sở hữu.", unit:"percent"},
+    {key:"earningsGrowthPercent", name:de?"Gewinnwachstum":"Tăng trưởng lợi nhuận", note:de?"Veränderung des Unternehmensgewinns im Bezugszeitraum.":"Mức tăng lợi nhuận của các công ty trong kỳ đo.", unit:"percent"},
+    {key:"dividendYieldPercent", name:de?"Dividendenrendite":"Lợi suất cổ tức", note:de?"Rendite der Aktien im Fonds, nicht eine Auszahlung an das Kind.":"Lợi suất cổ tức của cổ phiếu trong quỹ, không phải tiền tự trả cho Bé.", unit:"percent"},
+  ] as const satisfies readonly {key:keyof Omit<VallReplicationSnapshot,"asOf"|"sourceUrl"|"provenance">;name:string;note:string;unit:string}[];
+  const comparisonValue = (value:number,unit:string) => unit==="integer"
+    ? new Intl.NumberFormat(fmt(locale),{maximumFractionDigits:0}).format(value)
+    : unit==="multiple" ? new Intl.NumberFormat(fmt(locale),{minimumFractionDigits:1,maximumFractionDigits:1}).format(value)+"×"
+    : new Intl.NumberFormat(fmt(locale),{minimumFractionDigits:1,maximumFractionDigits:1}).format(value)+"%";
   return <section className="vall-health" aria-label="VALL Health Monitor" data-testid="vall-health">
     <header className="vh-hero">
       <div className="vh-topline">
@@ -90,34 +108,77 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
       <div><span className="vh-eyebrow">01 / {de?"FAKTEN":"DỮ KIỆN"}</span><h3>{de ? "Drei Kernwerte" : "Ba con số quan trọng nhất"}</h3></div>
       <span className="vh-quiet">{de ? "Stand: Vanguard-Factsheet" : "Theo factsheet Vanguard"} {date(latest.asOf)}</span>
     </div>
+
     <dl className="vh-metrics">
       <div className="vh-metric vh-metric-primary">
-        <dt>{de ? "Abweichung vom Index (Tracking difference)" : "Độ lệch so với chỉ số (Tracking difference)"} <span>01</span></dt>
-        <dd>{tdUnverified ? "—" : `${latest.trackingDifferenceAnnualPp! > 0 ? "+" : ""}${percent(latest.trackingDifferenceAnnualPp!,locale)}`}</dd>
-        <p className="vh-metric-tag">{tdUnverified ? (de ? "Nicht verfügbar" : "Chưa có số liệu") : (de ? "Quelle dokumentiert" : "Có số trong file")}</p>
-        <small>{tdUnverified ? (de ? "Noch keine 1-Jahres-Daten (Start 18.08.2026)" : "Chưa đủ lịch sử 1 năm (quỹ ra mắt 18/08/2026)") : (de ? "Gegen den FTSE Global All Cap – laut Quelle" : "So với FTSE Global All Cap, theo kỳ đã xác minh")}</small>
+        <dt>{de?"Geld im Fonds (Total assets)":"Tiền trong quỹ (Total assets)"} <span>01</span></dt>
+        <dd>US$ {new Intl.NumberFormat(fmt(locale),{maximumFractionDigits:0}).format(latest.totalAssetsUsdMillions)} <em>{de?"Mio.":"triệu"}</em></dd>
+        <p className="vh-metric-tag vh-tag-known">{date(latest.asOf)}</p>
+        <small>{de?"Gesamtvermögen laut Fonds-Factsheet, nicht das persönliche Geld des Kindes. Die Größe ist keine Bestandsgarantie.":"Quy mô tài sản của cả quỹ, không phải số dư của Bé. Quỹ lớn hơn không bảo đảm sẽ không đóng cửa."}</small>
       </div>
       <div className="vh-metric">
-        <dt>{de ? "Geld im Fonds (Total assets)" : "Tiền trong quỹ (Total assets)"} <span>02</span></dt>
-        <dd>US$ {new Intl.NumberFormat(fmt(locale), {maximumFractionDigits:0}).format(latest.totalAssetsUsdMillions)} <em>{de ? "Mio." : "triệu"}</em></dd>
-        <p className="vh-metric-tag vh-tag-known">Vanguard · {date(latest.asOf)}</p>
-        <small>{de ? "Total assets laut datiertem Factsheet; keine Quellmischung." : "Total assets theo factsheet có ngày chốt; không ghép số từ nguồn khác."}</small>
-      </div>
-      <div className="vh-metric">
-        <dt>{de ? "Jährliche Fondskosten (OCF/TER)" : "Phí quỹ mỗi năm (OCF/TER)"} <span>03</span></dt>
+        <dt>{de?"Jährliche Fondskosten (OCF/TER)":"Phí quỹ mỗi năm (OCF/TER)"} <span>02</span></dt>
         <dd>{latest.ongoingChargesPercent===null?"—":percent(latest.ongoingChargesPercent,locale)}</dd>
-        <p className="vh-metric-tag vh-tag-known">{de ? "Faktenblatt bestätigt" : "Đã có nguồn factsheet"}</p>
-        <small>{de ? "Laufende Kosten · Stand" : "Phí thường niên · ngày chốt"} {date(latest.asOf)}</small>
+        <p className="vh-metric-tag vh-tag-known">{date(latest.asOf)}</p>
+        <small>{de?"Anteil der jährlich laufenden Fondskosten, keine garantierte Rendite.":"Phần phí vận hành quỹ mỗi năm, không phải tỷ lệ lợi nhuận."}</small>
       </div>
       <div className="vh-metric">
-        <dt>Trade Republic Sparplan <span>04</span></dt>
-        <dd>{trUnverified ? "—" : data.tradeRepublic.vallSparplanFreeVerified ? (de ? "Kostenfrei" : "Miễn phí") : (de ? "Nicht gratis" : "Không miễn phí")}</dd>
-        <p className="vh-metric-tag">{trUnverified ? (de ? "VALL nicht einzeln geprüft" : "Riêng VALL chưa xác minh") : (de ? "Instrumentenprüfung dokumentiert" : "Có kết quả kiểm tra riêng")}</p>
-        <small>{data.tradeRepublic.generalSparplanExecutionFree
-          ? (de ? "Allgemeine Sparplan-Ausführung gratis; VALL-spezifischer Status ungeprüft." : "Chính sách chung miễn phí thực hiện Sparplan; riêng VALL chưa xác minh.")
-          : (de ? "Gebührenstatus nicht belegt." : "Chưa có bằng chứng về phí.")}</small>
+        <dt>{de?"Indexabweichung (Tracking difference)":"Độ lệch so với chỉ số (Tracking difference)"} <span>03</span></dt>
+        <dd>{tdUnverified ? "—" : (latest.trackingDifferenceAnnualPp! > 0 ? "+" : "")+percent(latest.trackingDifferenceAnnualPp!,locale)}</dd>
+        <p className="vh-metric-tag">{de?"Noch nicht veröffentlicht":"Chưa đủ dữ liệu"}</p>
+        <small>{de?"Der Fonds startete am 18.08.2026. Vanguard veröffentlicht 1-Jahres-Performance erst nach einem Jahr, frühestens ab August 2027.":"Quỹ mới ra mắt 18/08/2026. Vanguard chỉ công bố hiệu suất sau 1 năm, sớm nhất từ 08/2027."}</small>
+        <details className="vh-term"><summary>{de?"Begriff erklären":"Giải thích thuật ngữ"}</summary><p>{de?"Die Differenz zwischen Fondsrendite und eigenem Index über denselben Zeitraum.":"Chênh lệch lợi nhuận quỹ và chính chỉ số FTSE Global All Cap trong cùng một kỳ."}</p></details>
       </div>
     </dl>
+    <details className="vh-expand" data-testid="vall-tr-fees">
+      <summary>{de?"Trade Republic: Gebührenhinweis und Nachweis":"Trade Republic: phí mua và tình trạng xác minh"}</summary>
+      <div className="vh-expand-body">
+        <p><strong>{de?"Sparplan-Ausführung":"Mua theo Sparplan"}: {data.tradeRepublic.userReportedFees.sparplanExecutionEur} €</strong> · {de?"Einzelkauf":"Mua lẻ"}: {data.tradeRepublic.userReportedFees.oneOffOrderEur} €</p>
+        <p>{de?"Von Chien am":"Chien xác nhận ngày"} {date(data.tradeRepublic.userReportedFees.asOf)}. {de?"Kein verifizierter Broker-Beleg; VALL-spezifischer Status ungeprüft.":"Chưa có biên nhận broker để xác minh riêng cho VALL; trạng thái vẫn chưa xác minh."}</p>
+        <p>{de?"Allgemeine TR-Regel: kostenlose Sparplan-Ausführung. Konditionen je Order prüfen.":"Chính sách TR chung: Sparplan miễn phí thực hiện. Cần xem phí cụ thể của lệnh thật."}</p>
+      </div>
+    </details>
+
+    <section className="vh-data-section" aria-label={de?"Entwicklung des Fondsvermögens":"Xu hướng tiền trong quỹ"}>
+      <span className="vh-eyebrow">02 / {de?"FONDSVERMÖGEN":"XU HƯỚNG QUY MÔ"}</span>
+      <h3>{de?"Entwicklung der Total Assets":"Tiền trong quỹ qua các kỳ"}</h3>
+      <p>{de?"US-Dollar Millionen, je Stichtag des Factsheets; keine Performance des Kindes.":"Đơn vị: triệu USD; mỗi điểm là ngày chốt factsheet, không phải lãi/lỗ của Bé."}</p>
+      <svg className="vh-aum-chart" viewBox="0 0 320 124" role="img" aria-label={de?"Total Assets nach Factsheet: 660, 2573, 4353 Millionen US-Dollar":"AUM theo factsheet: 660, 2573, 4353 triệu USD"}>
+        <line x1="25" y1="109" x2="295" y2="109" stroke="currentColor" opacity=".25"/>
+        <polyline fill="none" stroke="#229e91" strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round"
+          points={chartPoints.map(point => String(point.x)+","+String(point.y)).join(" ")}/>
+        {chartPoints.map(point=><circle key={point.asOf} cx={point.x} cy={point.y} r="5" fill="#229e91" stroke="currentColor" strokeWidth="1"/>)}
+      </svg>
+      <ol className="vh-aum-values">{data.history.map(item=><li key={item.asOf}><strong>{new Intl.NumberFormat(fmt(locale)).format(item.totalAssetsUsdMillions)}</strong><small>{date(item.asOf)}</small></li>)}</ol>
+      <p className="vh-aum-change" data-testid="vall-aum-change">{previous&&aumChange!==null
+        ? (de?"Vom 30.09. bis 31.10.: +":"Từ 30/09 → 31/10: +")+Math.round(aumChange)+"% "+(de?"Total Assets, kein Anlageertrag.":"quy mô quỹ, không phải lợi nhuận.")
+        : (de?"Keine vergleichbare Vorperiode.":"Chưa có kỳ trước để so sánh.")}</p>
+      <details className="vh-expand">
+        <summary>{de?"Anteilsklassenvermögen / Herkunft":"Tài sản lớp quỹ (Share class assets) và nguồn"}</summary>
+        <div className="vh-expand-body">
+          <p>{data.history.map(item=>date(item.asOf)+": US$ "+new Intl.NumberFormat(fmt(locale)).format(item.shareClassAssetsUsdMillions)).join(" · ")} {de?"Millionen":"triệu USD"}</p>
+          <p>{de?"August/Oktober: Daten aus Chiens datiertem Prüfbuch; der aktuell zugängliche PDF-Link zeigt September. Vor unabhängiger Bestätigung nicht als live verifiziert darstellen.":"Tháng 8/10: số từ sổ factsheet bạn cung cấp; liên kết PDF hiện truy xuất bản 30/09. Chưa thể đối chiếu độc lập bản tháng 10 qua đường dẫn này."}</p>
+        </div>
+      </details>
+    </section>
+
+    <details className="vh-expand vh-replication" data-testid="vall-replication">
+      <summary>{de?"Indexmerkmale vergleichen (31.10.2026)":"Bám sát đặc điểm danh mục (31/10/2026)"}</summary>
+      <div className="vh-expand-body">
+        <p>{de?"Kennzahlen der Positionen, KEINE Fondsrendite und KEINE Tracking Difference. Klicke einen Begriff zur Erklärung.":"Đây là đặc điểm các cổ phiếu quỹ nắm giữ so với chỉ số, KHÔNG phải hiệu suất hay tracking difference. Bấm thuật ngữ để xem giải thích."}</p>
+        <div className="vh-replication-head"><span>{de?"Kennzahl":"Chỉ tiêu"}</span><span>VALL</span><span>FTSE Global All Cap</span></div>
+        {replicationMetrics.map(row=>{
+          const values=data.replicationSnapshot[row.key];
+          return <div className="vh-replication-row" key={row.key}>
+            <details className="vh-term"><summary>{row.name}</summary><p>{row.note}</p></details>
+            <span>{comparisonValue(values.fund,row.unit)}</span>
+            <span>{comparisonValue(values.benchmark,row.unit)}</span>
+          </div>;
+        })}
+        <p>{de?"Stichproben-Replikation: ähnliche Kennzahlen beweisen noch keine geringe Performance-Abweichung. Quelle: datierter Oktober-Eintrag aus Chiens Ledger.":"Quỹ sử dụng lấy mẫu đại diện. Chỉ số danh mục gần nhau không chứng minh độ lệch hiệu suất thấp. Nguồn: số tháng 10 từ sổ bạn đã đối chiếu."}</p>
+      </div>
+    </details>
+
 
     <div className="vh-insights">
       <div className="vh-insight-card">
