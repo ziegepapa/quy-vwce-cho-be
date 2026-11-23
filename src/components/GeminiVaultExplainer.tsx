@@ -44,7 +44,7 @@ const copy = {
     unsupported: "Frage nicht unterstützt. Wähle ein Thema.",
     aiAnswer: "Antwort von Gemini", modelLabel: "Modell", consent: "Ich erlaube, Summen bei neuen Fragen an Gemini zu senden.",
     privacy: "Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen. Keine Namen oder Einzelbuchungen. Antworten bleiben bis zu 24 h auf diesem Gerät.",
-    yearLabel:"Kalenderjahr", yearRecordedLabel:"Dieses Jahr erfasst", yearPlannedLabel:"Bis heute geplant",
+    yearLabel:"Kalenderjahr", goalYearLabel:"Zieljahr", yearRecordedLabel:"Dieses Jahr erfasst", yearPlannedLabel:"Bis heute geplant",
     goalModeLabel:"Zielmodus", simYearLabel:"Szenariojahr", cautiousLabel:"Vorsichtig", baseLabel:"Basis", optimisticLabel:"Optimistisch",
     nominalLabel:"Nominal", purchasingLabel:"Kaufkraft", queryYearLabel:"Jahr in der Frage",
     data: "Diese Angaben würden gesendet", values: "Aktueller Depotwert", paid: "Erfasste Beiträge", monthly: "Monatsbeitrag", milestone: "Gewähltes Ziel",
@@ -100,7 +100,7 @@ const copy = {
     unsupported: "Chưa hỗ trợ câu hỏi; chọn một chủ đề.",
     aiAnswer: "Gemini giải thích", modelLabel: "Mô hình", consent: "Tôi đồng ý gửi số liệu tổng hợp tới Gemini khi cần hỏi mới.",
     privacy: "Google có thể dùng dữ liệu Free Tier để cải thiện sản phẩm. Không gửi tên hay giao dịch lẻ. Câu trả lời lưu trên máy tối đa 24 giờ.",
-    yearLabel:"Năm đang xét", yearRecordedLabel:"Đã ghi trong năm", yearPlannedLabel:"Kế hoạch tới hôm nay",
+    yearLabel:"Năm đang xét", goalYearLabel:"Năm của Goal", yearRecordedLabel:"Đã ghi trong năm", yearPlannedLabel:"Kế hoạch tới hôm nay",
     goalModeLabel:"Kiểu Goal", simYearLabel:"Năm mô phỏng", cautiousLabel:"Thận trọng", baseLabel:"Cơ sở", optimisticLabel:"Lạc quan",
     nominalLabel:"Giá trị danh nghĩa", purchasingLabel:"Sức mua", queryYearLabel:"Năm nhắc trong câu hỏi",
     data: "Các con số sẽ gửi", values: "Giá trị quỹ", paid: "Tổng đã góp", monthly: "Góp mỗi tháng", milestone: "Goal đã chọn",
@@ -363,7 +363,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
         {scopedFacts.yearRecorded !== null && <div><dt>{t.yearRecordedLabel}</dt><dd>{formatEuro(scopedFacts.yearRecorded,locale,t.noData)}</dd></div>}
         {scopedFacts.yearPlanned !== null && <div><dt>{t.yearPlannedLabel}</dt><dd>{formatEuro(scopedFacts.yearPlanned,locale,t.noData)}</dd></div>}
         {scopedFacts.goalAmount !== null && <div><dt>{t.milestone}</dt><dd>{formatEuro(scopedFacts.goalAmount,locale,t.noData)}</dd></div>}
-        {scopedFacts.goalYear !== null && <div><dt>{t.yearLabel}</dt><dd>{scopedFacts.goalYear}</dd></div>}
+        {scopedFacts.goalYear !== null && <div><dt>{t.goalYearLabel}</dt><dd>{scopedFacts.goalYear}</dd></div>}
         {scopedFacts.goalMode !== null && <div><dt>{t.goalModeLabel}</dt><dd>{scopedFacts.goalMode === "nominal" ? t.nominalLabel : t.purchasingLabel}</dd></div>}
         {scopedFacts.simulationYear !== null && <div><dt>{t.simYearLabel}</dt><dd>{scopedFacts.simulationYear}</dd></div>}
         {scopedFacts.cautious !== null && <div><dt>{t.cautiousLabel}</dt><dd>{formatEuro(scopedFacts.cautious,locale,t.noData)}</dd></div>}
