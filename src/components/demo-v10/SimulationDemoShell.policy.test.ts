@@ -140,13 +140,13 @@ describe("SimulationDemoShell financial-policy containment", () => {
   it("marks 40 years as a simulation limit, not an investment or app end date", () => {
     renderShell("vi", "", 0, true, false, "C");
     expect(screen.getByRole("status").textContent).toContain("40 năm mô phỏng");
-    expect(screen.getByRole("status").textContent).toContain("không phải lúc kết thúc đầu tư hay ứng dụng");
+    expect(screen.getByRole("status").textContent).toContain("quỹ và app không kết thúc ở đó");
     expect(screen.getByTestId("simulation-hero-amount").textContent).toBe("—");
-    expect(screen.getByText("Khoảng mô phỏng").nextElementSibling?.textContent).toContain("40 năm");
+    expect(screen.getByText("Kỳ mô phỏng").nextElementSibling?.textContent).toContain("40 năm");
     cleanup();
     renderShell("de", "", 0, true, false, "C");
-    expect(screen.getByRole("status").textContent).toContain("40-Jahre-Rechenfenster");
-    expect(screen.getByRole("status").textContent).toContain("enden dort nicht");
+    expect(screen.getByRole("status").textContent).toContain("40 Modelljahren");
+    expect(screen.getByRole("status").textContent).toContain("laufen weiter");
     expect(screen.getByTestId("simulation-hero-amount").textContent).toBe("—");
     cleanup();
     renderShell("de", "", 0, false, false, "C");
@@ -255,7 +255,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     fireEvent.click(screen.getByRole("button", { name: "Điều chỉnh giả định" }));
     expect(screen.getByLabelText("Góp mỗi tháng (EUR)")).toBeTruthy();
     expect(screen.getByLabelText("Lợi nhuận / năm (%)")).toBeTruthy();
-    expect(screen.getByLabelText("Khoảng mô phỏng")).toBeTruthy();
+    expect(screen.getByLabelText("Kỳ mô phỏng")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Mô phỏng" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Tóm tắt kết quả mô phỏng" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Góp → Nhận/ }).getAttribute("aria-pressed")).toBe("true");
@@ -274,7 +274,7 @@ describe("SimulationDemoShell financial-policy containment", () => {
     fireEvent.click(screen.getByRole("button", { name: "Annahmen anpassen" }));
     expect(screen.getByLabelText("Monatlicher Beitrag (EUR)")).toBeTruthy();
     expect(screen.getByLabelText("Rendite / Jahr (%)")).toBeTruthy();
-    expect(screen.getByLabelText("Simulationszeitraum")).toBeTruthy();
+    expect(screen.getByLabelText("Modelljahre")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Simulation" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Simulationsergebnis" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Einzahlen → Ergebnis/ }).getAttribute("aria-pressed")).toBe("true");
