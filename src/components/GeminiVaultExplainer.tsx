@@ -161,7 +161,14 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
     ? fill(t.simSummary, { cautious:euro(f.cautious), base:euro(f.base),
         optimistic:euro(f.optimistic), year:String(f.simulationYear) }) : t.simMissing;
   if (f.contributed === null && f.portfolioValue === null) return t.missing;
-  return fill(t.personal,{paid:euro(f.contributed),value:euro(f.portfolioValue),monthly:euro(f.monthly)});
+  const summary = fill(t.personal,{paid:euro(f.contributed),value:euro(f.portfolioValue),monthly:euro(f.monthly)});
+  if (topic === "plan" && f.yearRecorded !== null && f.yearPlanned !== null) {
+    const yearText = t.yearSummary.replace("{recorded}",euro(f.yearRecorded))
+      .replace("{planned}",euro(f.yearPlanned));
+    return summary + " " + yearText + " "
+      + (f.yearRecorded >= f.yearPlanned ? t.yearAhead : t.yearBehind);
+  }
+  return summary;
 }
 
 export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
