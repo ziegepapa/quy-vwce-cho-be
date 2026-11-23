@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
-import vallSnapshot from "../src/data/vall-health.json";
+import { readFileSync } from "node:fs";
+import type { VallHealthSnapshot } from "../src/lib/vallHealthSnapshot";
+const vallSnapshot = JSON.parse(readFileSync(new URL("../src/data/vall-health.json", import.meta.url), "utf8")) as VallHealthSnapshot;
 import type { Goal, Quote, Transaction } from "../src/lib/types";
 
 const viewport = { width: 390, height: 844 };

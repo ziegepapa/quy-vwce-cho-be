@@ -84,8 +84,12 @@ export async function fetchPages() {
   const bytes=new Uint8Array(await res.arrayBuffer());
   if(bytes.length>10*1024*1024||String.fromCharCode(...bytes.slice(0,5))!=="%PDF-") throw Error("Invalid PDF response");
   const {getDocument}=await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const pdf=await getDocument({data:bytes,isEvalSupported:false,disableFontFace:true,useSystemFonts:false}).promise;
+  // PDF.js Node factories require the installed standard font directory.
+  const standardFontDataUrl=fileURLToPath(new globalThis.URL("../../standard_fonts/",import.meta.resolve("pdfjs-dist/legacy/build/pdf.mjs")));
+  const loadingTask=getDocument({data:bytes,isEvalSupported:false,disableFontFace:true,useSystemFonts:false,standardFontDataUrl});
+  let pdf;
   try {
+    pdf=await loadingTask.promise;
     if(pdf.numPages<3||pdf.numPages>10) throw Error("Unexpected PDF page count");
     const pages=[];
     for(let i=1;i<=3;i++) {
@@ -94,7 +98,11 @@ export async function fetchPages() {
       pages.push(t.items.filter(x=>"str" in x).map(x=>x.str).join(" "));
     }
     return pages;
-  } finally {await pdf.destroy();}
+  } finally {
+    // Newer PDF.js exposes disposal on the loading task rather than the proxy.
+    if(typeof loadingTask.destroy==="function") await loadingTask.destroy();
+    else if(typeof pdf?.destroy==="function") await pdf.destroy();
+  }
 }
 async function main() {
   const dry=process.argv.includes("--dry-run");

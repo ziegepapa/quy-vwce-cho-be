@@ -2,9 +2,9 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import VallHealthPanel from "./VallHealthPanel";
-import raw from "../data/vall-health.json";
-import oct from "../../scripts/fixtures/vall-october-snapshot.json";
-vi.mock("../data/vall-health.json", async()=>({default:structuredClone((await import("../../scripts/fixtures/vall-october-snapshot.json")).default)}));
+import raw from "../data/vall-health.json" with { type: "json" };
+import oct from "../../scripts/fixtures/vall-october-snapshot.json" with { type: "json" };
+vi.mock("../data/vall-health.json", async()=>({default:structuredClone((await import("../../scripts/fixtures/vall-october-snapshot.json", { with: { type: "json" } })).default)}));
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals();});
 
 it("shows only three plain-language KPIs, 31 October values and an honest unknown TD",()=>{

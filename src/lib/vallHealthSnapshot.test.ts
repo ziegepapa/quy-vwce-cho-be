@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import current from "../data/vall-health.json";
-import snapshot from "../../scripts/fixtures/vall-october-snapshot.json";
+import current from "../data/vall-health.json" with { type: "json" };
+import snapshot from "../../scripts/fixtures/vall-october-snapshot.json" with { type: "json" };
 import { parseVallHealth, verifiedVallWarning } from "./vallHealthSnapshot";
 
 const copy = () => JSON.parse(JSON.stringify(snapshot)) as Record<string, any>;
