@@ -38,7 +38,7 @@ export function buildGeminiVaultFacts(input: {
   });
   // The configured rates are for the first 12 plan months and subsequent
   // months, not a preference for Y2 whenever it is non-zero.
-  const start = settings && /^\\d{4}-\\d{2}-\\d{2}$/.test(settings.startDate)
+  const start = settings && /^\d{4}-\d{2}-\d{2}$/.test(settings.startDate)
     ? new Date(`${settings.startDate}T12:00:00`) : null;
   const validStart = start && Number.isFinite(start.getTime())
     && [start.getFullYear(), String(start.getMonth() + 1).padStart(2, "0"),
