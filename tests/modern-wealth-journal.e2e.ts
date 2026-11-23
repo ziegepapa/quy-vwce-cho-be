@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import type { VallHealthSnapshot } from "../src/lib/vallHealthSnapshot";
+const vallSnapshot = JSON.parse(readFileSync(new URL("../src/data/vall-health.json", import.meta.url), "utf8")) as VallHealthSnapshot;
 import type { Goal, Quote, Transaction } from "../src/lib/types";
 
 const viewport = { width: 390, height: 844 };
@@ -494,15 +497,19 @@ test(`German reference screenshots · 390x844 · ${germanTheme}`, async ({ page 
       const health = page.getByTestId("vall-health");
       await expect(health).toBeVisible();
       await expect(health).toContainText("FTSE Global All Cap Index");
-      await expect(health).toContainText("4.353");
-      await expect(health).toContainText("31.10.2026");
+      const current = vallSnapshot.history.at(-1)!;
+      const previous = vallSnapshot.history.at(-2)!;
+      const nf = new Intl.NumberFormat("de-DE");
+      await expect(health).toContainText(nf.format(current.totalAssetsUsdMillions));
+      await expect(health).toContainText(current.asOf.split("-").reverse().join("."));
       await expect(health).toContainText("2.573");
-      await expect(health).toContainText("0,07%");
+      await expect(health).toContainText(new Intl.NumberFormat("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}).format(current.ongoingChargesPercent!)+"%");
       await expect(health).toContainText("VALL-spezifischer Status ungeprüft");
-      await expect(health.getByTestId("vall-aum-change")).toContainText("+69%");
+      const change = (current.totalAssetsUsdMillions-previous.totalAssetsUsdMillions)/previous.totalAssetsUsdMillions*100;
+      await expect(health.getByTestId("vall-aum-change")).toContainText((change>0?"+":"")+Math.round(change)+"%");
       await expect(health.getByTestId("vall-countdown")).toBeVisible();
       await health.getByTestId("vall-replication").locator("summary").first().click();
-      await expect(health.getByTestId("vall-replication")).toContainText("10.207");
+      await expect(health.getByTestId("vall-replication")).toContainText(nf.format(vallSnapshot.replicationSnapshot.holdings.benchmark));
       await health.scrollIntoViewIfNeeded();
       await assertFits(page);
       await page.screenshot({ path: testInfo.outputPath(`vall-health-de-${germanTheme}.png`), animations: "disabled" });

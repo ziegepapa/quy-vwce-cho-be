@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "fundIsin": "IE000VAHT5T0",
+  "benchmark": "FTSE Global All Cap Index",
+  "checkedOn": "2026-11-23",
+  "source": "Vanguard FTSE Global All-Cap UCITS ETF USD Acc factsheet",
+  "sourceUrl": "https://fund-docs.vanguard.com/FTSE_Global_All-Cap_UCITS_ETF_USD_Acc_E161_EU_INT_UK_EN.pdf",
+  "history": [
+    {
+      "asOf": "2026-08-31",
+      "totalAssetsUsdMillions": 660,
+      "shareClassAssetsUsdMillions": 645,
+      "ongoingChargesPercent": null,
+      "trackingDifferenceAnnualPp": null,
+      "sourceUrl": "https://fund-docs.vanguard.com/FTSE_Global_All-Cap_UCITS_ETF_USD_Acc_E161_EU_INT_UK_EN.pdf",
+      "provenance": "owner-ledger"
+    },
+    {
+      "asOf": "2026-09-30",
+      "totalAssetsUsdMillions": 2573,
+      "ongoingChargesPercent": 0.07,
+      "trackingDifferenceAnnualPp": null,
+      "sourceUrl": "https://fund-docs.vanguard.com/FTSE_Global_All-Cap_UCITS_ETF_USD_Acc_E161_EU_INT_UK_EN.pdf",
+      "shareClassAssetsUsdMillions": 2506,
+      "provenance": "direct-pdf-2026-09"
+    },
+    {
+      "asOf": "2026-10-31",
+      "totalAssetsUsdMillions": 4353,
+      "shareClassAssetsUsdMillions": 4223,
+      "ongoingChargesPercent": 0.07,
+      "trackingDifferenceAnnualPp": null,
+      "sourceUrl": "https://fund-docs.vanguard.com/FTSE_Global_All-Cap_UCITS_ETF_USD_Acc_E161_EU_INT_UK_EN.pdf",
+      "provenance": "direct-pdf-2026-10"
+    }
+  ],
+  "tradeRepublic": {
+    "checkedOn": "2026-11-23",
+    "generalSparplanExecutionFree": true,
+    "vallSparplanFreeVerified": null,
+    "sourceUrl": "https://support.traderepublic.com/de-de/760",
+    "userReportedFees": {
+      "asOf": "2026-11-23",
+      "sparplanExecutionEur": 0,
+      "oneOffOrderEur": 1,
+      "provenance": "owner-reported-not-broker-confirmed"
+    }
+  },
+  "fundCorporateActionVerified": null,
+  "flags": {
+    "persistentNegativeTrackingDifference": null,
+    "severeAumDrop": null,
+    "lostFreeVallSparplan": null,
+    "increasedTer": null,
+    "mergerOrLiquidation": null
+  },
+  "externalReviewDates": {
+    "light": [
+      "2027-01-16",
+      "2027-04-16"
+    ],
+    "full": "2027-08-16"
+  },
+  "fallback": {
+    "isin": "IE00BK5BQT80",
+    "name": "Vanguard FTSE All-World UCITS ETF USD Acc (VWCE)",
+    "benchmark": "FTSE All-World Index",
+    "ongoingChargesPercent": 0.14,
+    "sourceUrl": "https://fund-docs.vanguard.com/FTSE_All-World_UCITS_ETF_USD_Accumulating_9679_INT_OFF_ETF_EN.pdf?domicile=IE"
+  },
+  "sourceVerificationNote": "The 31 October 2026 Vanguard factsheet was directly checked on 23 November 2026 (Muse, 21:00 CET); its asset figures and portfolio characteristics match the recorded snapshot. September was directly verified previously. Only the August entry retains owner-ledger provenance. The linked PDF is rolling, not an immutable archive; older versions may be returned by caches.",
+  "replicationSnapshot": {
+    "asOf": "2026-10-31",
+    "provenance": "direct-pdf-2026-10",
+    "sourceUrl": "https://fund-docs.vanguard.com/FTSE_Global_All-Cap_UCITS_ETF_USD_Acc_E161_EU_INT_UK_EN.pdf",
+    "holdings": {
+      "fund": 6977,
+      "benchmark": 10207
+    },
+    "priceEarnings": {
+      "fund": 19.4,
+      "benchmark": 19.3
+    },
+    "priceBook": {
+      "fund": 3.2,
+      "benchmark": 3.2
+    },
+    "returnOnEquityPercent": {
+      "fund": 18.5,
+      "benchmark": 18.5
+    },
+    "earningsGrowthPercent": {
+      "fund": 19,
+      "benchmark": 19
+    },
+    "dividendYieldPercent": {
+      "fund": 1.6,
+      "benchmark": 1.6
+    }
+  }
+}

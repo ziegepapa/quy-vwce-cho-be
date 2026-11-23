@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
-import snapshot from "../data/vall-health.json";
+import current from "../data/vall-health.json" with { type: "json" };
+import snapshot from "../../scripts/fixtures/vall-october-snapshot.json" with { type: "json" };
 import { parseVallHealth, verifiedVallWarning } from "./vallHealthSnapshot";
 
 const copy = () => JSON.parse(JSON.stringify(snapshot)) as Record<string, any>;
 
 describe("VALL dated, version-controlled factsheet ledger", () => {
+  it("accepts the current committed snapshot and future matching monthly provenance",()=>{
+    expect(parseVallHealth(current)).not.toBeNull();
+    const d=copy();d.checkedOn="2026-12-15";
+    d.history.push({...d.history.at(-1),asOf:"2026-11-30",provenance:"direct-pdf-2026-11"});
+    d.replicationSnapshot={...d.replicationSnapshot,asOf:"2026-11-30",provenance:"direct-pdf-2026-11"};
+    expect(parseVallHealth(d)).not.toBeNull();
+    d.replicationSnapshot.provenance="direct-pdf-2026-10";expect(parseVallHealth(d)).toBeNull();
+  });
   it("preserves the Sep observation and appends dated Aug and Oct Total vs share-class assets", () => {
     const data = parseVallHealth(snapshot);
     expect(data).not.toBeNull();
