@@ -133,6 +133,13 @@ test("authenticated Edge uses cache before spending 20/40 Vault quota and reserv
   assert.ok(server.includes("cached:true"));
   assert.ok(server.includes('Deno.env.get("GEMINI_TEST_MODE") === "1"'));
 });
+test("Flash HTTP diagnostics disclose only numeric upstream failures, never private values",()=>{
+  assert.ok(server.includes('if (model === flash && result.status >= 400 && result.reason === undefined)'));
+  assert.ok(server.includes('console.info("[gemini-flash-google-http]", result.status);'));
+  assert.doesNotMatch(server,/console\.(?:log|info|warn|error)\([^\n]*\[gemini-flash-google-http\][^\n]*(?:payload|facts|userId|key|response)/);
+  assert.doesNotMatch(server,/Vault hiện số đã xác minh riêng/);
+  assert.ok(server.includes("Vault chỉ hiển thị số liệu theo sổ đã nhập, không phải xác nhận từ broker"));
+});
 test("PWA shows provider-confirmed model (including device cache hits) without leaking secrets",()=>{
   assert.ok(client.includes('data-testid="gemini-vault-model"'));
   assert.ok(client.includes('modelLabel: "Modell"'));
