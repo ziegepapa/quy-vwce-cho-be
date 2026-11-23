@@ -14,7 +14,7 @@ describe("VALL dated, version-controlled factsheet ledger", () => {
       .toEqual([["2026-08-31",660,645],["2026-09-30",2573,2506],["2026-10-31",4353,4223]]);
     expect(data!.history.map(x => x.ongoingChargesPercent)).toEqual([null,0.07,0.07]);
     expect(data!.history.map(x => x.trackingDifferenceAnnualPp)).toEqual([null,null,null]);
-    expect(data!.history.map(x => x.provenance)).toEqual(["owner-ledger","direct-pdf-2026-09","owner-ledger"]);
+    expect(data!.history.map(x => x.provenance)).toEqual(["owner-ledger","direct-pdf-2026-09","direct-pdf-2026-10"]);
     expect(data!.tradeRepublic.vallSparplanFreeVerified).toBeNull();
     expect(data!.tradeRepublic.userReportedFees).toMatchObject({sparplanExecutionEur:0,oneOffOrderEur:1,provenance:"owner-reported-not-broker-confirmed"});
     expect(Object.values(data!.flags)).toEqual([null,null,null,null,null]);
@@ -24,7 +24,7 @@ describe("VALL dated, version-controlled factsheet ledger", () => {
   it("holds October portfolio characteristics as dated and non-performance evidence",()=>{
     const rep=parseVallHealth(snapshot)!.replicationSnapshot;
     expect(rep.asOf).toBe("2026-10-31");
-    expect(rep.provenance).toBe("owner-ledger");
+    expect(rep.provenance).toBe("direct-pdf-2026-10");
     expect(rep.holdings).toEqual({fund:6977,benchmark:10207});
     expect(rep.priceEarnings).toEqual({fund:19.4,benchmark:19.3});
     expect(rep.priceBook).toEqual({fund:3.2,benchmark:3.2});
@@ -39,6 +39,8 @@ describe("VALL dated, version-controlled factsheet ledger", () => {
       (d:any)=>d.history[0].asOf="2026-02-30",
       (d:any)=>d.history[1].shareClassAssetsUsdMillions=9999,
       (d:any)=>d.history[2].provenance="direct-pdf-2026-09",
+      (d:any)=>d.history[0].provenance="direct-pdf-2026-10",
+      (d:any)=>d.replicationSnapshot.asOf="2026-09-30",
       (d:any)=>d.history[2].sourceUrl="http://unverified.example",
       (d:any)=>d.history[2].trackingDifferenceAnnualPp=-0.2,
       (d:any)=>d.history[2].ongoingChargesPercent=-0.1,
@@ -54,7 +56,7 @@ describe("VALL dated, version-controlled factsheet ledger", () => {
   it("permits later dated AUM observations without claiming the October replication facts were updated",()=>{
     const d=copy();
     d.checkedOn="2027-09-30";
-    d.history.push({...d.history.at(-1),asOf:"2027-09-30",totalAssetsUsdMillions:4800,shareClassAssetsUsdMillions:4700,trackingDifferenceAnnualPp:-0.21});
+    d.history.push({...d.history.at(-1),asOf:"2027-09-30",provenance:"owner-ledger",totalAssetsUsdMillions:4800,shareClassAssetsUsdMillions:4700,trackingDifferenceAnnualPp:-0.21});
     expect(parseVallHealth(d)?.history.at(-1)?.totalAssetsUsdMillions).toBe(4800);
     expect(parseVallHealth(d)?.replicationSnapshot.asOf).toBe("2026-10-31");
     expect(verifiedVallWarning(parseVallHealth(d)!)).toBe(false);

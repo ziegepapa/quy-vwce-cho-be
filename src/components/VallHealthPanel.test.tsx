@@ -33,7 +33,8 @@ it("renders 660→2573→4353 chart with source dates and the Sep→Oct +69% AUM
   expect(screen.getByTestId("vall-aum-change").textContent).toContain("+69%");
   expect(screen.getByTestId("vall-aum-change").textContent).toContain("không phải lợi nhuận");
   expect(p.textContent).toContain("4.223");
-  expect(p.textContent).toContain("chưa thể đối chiếu độc lập");
+  expect(p.textContent).toContain("Tháng 8: số từ sổ của chủ sở hữu");
+  expect(p.textContent).toContain("tháng 10 xác minh ngày 23/11/2026");
 });
 it("shows six 31 October fund-vs-index characteristics and one-sentence glossary, never performance",()=>{
   render(<VallHealthPanel locale="vi"/>);
@@ -49,6 +50,7 @@ it("shows six 31 October fund-vs-index characteristics and one-sentence glossary
   expect(text).toContain("19,0%");
   expect(text).toContain("1,6%");
   expect(text).toContain("KHÔNG phải hiệu suất hay tracking difference");
+  expect(text).toContain("đối chiếu trực tiếp ngày 23/11/2026");
   expect(detail.querySelectorAll(".vh-replication-row")).toHaveLength(6);
   expect(detail.querySelectorAll(".vh-term > summary")).toHaveLength(6);
 });
@@ -79,6 +81,7 @@ it("keeps German descriptions, all unknown flags and distinct VALL/VWCE benchmar
   expect(p.textContent).toContain("0,14%");
   expect(p.textContent).toContain("VALL-spezifischer Status ungeprüft");
   expect(p.textContent).toContain("Ungeprüft bedeutet NICHT sicher");
+  expect(p.textContent).toContain("Oktober am 23.11.2026");
   const unknown=screen.getByRole("button",{name:"Offen (5)"});
   fireEvent.click(unknown);
   expect(unknown.getAttribute("aria-pressed")).toBe("true");

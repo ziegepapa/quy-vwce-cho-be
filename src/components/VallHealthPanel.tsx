@@ -43,8 +43,8 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
     : (de ? "Keine gemeldeten Warnsignale" : "Chưa ghi nhận cờ đỏ trong sổ");
   const judgement = state.warningFlags > 0
     ? (de ? "Dokumentiertes Warnsignal prüfen; nur zukünftige Sparraten erwägen." : "Đối chiếu nguồn cờ đỏ; chỉ xem xét khoản góp mới, không tự bán vị thế.")
-    : (de ? `Gemeldete Total Assets: ${aumChange===null?"—":"+"+Math.round(aumChange)+"%"} von September bis Oktober; OCF weiter 0,07%. Portfolio-Kennzahlen ähneln dem Index. Eine echte Tracking Difference ist erst nach einem Jahr ab August 2027 verfügbar. Ungeprüft bedeutet NICHT sicher.`
-          : `Theo sổ factsheet, tiền trong quỹ tăng ${aumChange===null?"—":"+"+Math.round(aumChange)+"%"} từ 30/09 đến 31/10, phí vẫn 0,07% và vài đặc điểm danh mục gần chỉ số. Có dấu hiệu tích cực về quy mô nhưng chưa đủ để kết luận quỹ an toàn. Độ lệch hiệu suất chỉ có sau một năm, từ 08/2027; 5 cờ đỏ vẫn chưa xác minh.`);
+    : (de ? `Total Assets laut Factsheets: ${aumChange===null?"—":"+"+Math.round(aumChange)+"%"} von September bis Oktober; OCF weiter 0,07%. Portfolio-Kennzahlen ähneln dem Index. Eine echte Tracking Difference ist erst nach einem Jahr ab August 2027 verfügbar. Ungeprüft bedeutet NICHT sicher.`
+          : `Theo factsheet Vanguard, tiền trong quỹ tăng ${aumChange===null?"—":"+"+Math.round(aumChange)+"%"} từ 30/09 đến 31/10, phí vẫn 0,07% và vài đặc điểm danh mục gần chỉ số. Có dấu hiệu tích cực về quy mô nhưng chưa đủ để kết luận quỹ an toàn. Độ lệch hiệu suất chỉ có sau một năm, từ 08/2027; 5 cờ đỏ vẫn chưa xác minh.`);
   const trUnverified = data.tradeRepublic.vallSparplanFreeVerified === null;
   const tdUnverified = latest.trackingDifferenceAnnualPp === null;
   const unverified = [
@@ -106,7 +106,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
 
     <div className="vh-section-heading">
       <div><span className="vh-eyebrow">01 / {de?"FAKTEN":"DỮ KIỆN"}</span><h3>{de ? "Drei Kernwerte" : "Ba con số quan trọng nhất"}</h3></div>
-      <span className="vh-quiet">{de ? "Vermerk aus dem Factsheet-Buch" : "Sổ factsheet theo kỳ"} · {date(latest.asOf)}</span>
+      <span className="vh-quiet">{de ? "Datierter Factsheet-Stand" : "Factsheet theo kỳ"} · {date(latest.asOf)}</span>
     </div>
 
     <dl className="vh-metrics">
@@ -157,7 +157,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
         <summary>{de?"Anteilsklassenvermögen / Herkunft":"Tài sản lớp quỹ (Share class assets) và nguồn"}</summary>
         <div className="vh-expand-body">
           <p>{data.history.map(item=>date(item.asOf)+": US$ "+new Intl.NumberFormat(fmt(locale)).format(item.shareClassAssetsUsdMillions)).join(" · ")} {de?"Millionen":"triệu USD"}</p>
-          <p>{de?"August/Oktober: Daten aus Chiens datiertem Prüfbuch; der aktuell zugängliche PDF-Link zeigt September. Vor unabhängiger Bestätigung nicht als live verifiziert darstellen.":"Tháng 8/10: số từ sổ factsheet bạn cung cấp; liên kết PDF hiện truy xuất bản 30/09. Chưa thể đối chiếu độc lập bản tháng 10 qua đường dẫn này."}</p>
+          <p>{de?"August: Daten aus dem Prüfbuch des Eigentümers. September und Oktober: direkt aus Vanguard-Factsheets geprüft; Oktober am 23.11.2026. Der PDF-Link wird laufend aktualisiert und ist kein Archiv.":"Tháng 8: số từ sổ của chủ sở hữu. Tháng 9 và 10: đã đối chiếu trực tiếp factsheet Vanguard; tháng 10 xác minh ngày 23/11/2026. Link PDF được cập nhật theo kỳ, không phải bản lưu trữ cố định."}</p>
         </div>
       </details>
     </section>
@@ -175,7 +175,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
             <span>{comparisonValue(values.benchmark,row.unit)}</span>
           </div>;
         })}
-        <p>{de?"Stichproben-Replikation: ähnliche Kennzahlen beweisen noch keine geringe Performance-Abweichung. Quelle: datierter Oktober-Eintrag aus Chiens Ledger.":"Quỹ sử dụng lấy mẫu đại diện. Chỉ số danh mục gần nhau không chứng minh độ lệch hiệu suất thấp. Nguồn: số tháng 10 từ sổ bạn đã đối chiếu."}</p>
+        <p>{de?"Stichproben-Replikation: ähnliche Kennzahlen beweisen noch keine geringe Performance-Abweichung. Quelle: Vanguard-Factsheet vom 31.10.2026, direkt geprüft am 23.11.2026.":"Quỹ sử dụng lấy mẫu đại diện. Chỉ số danh mục gần nhau không chứng minh độ lệch hiệu suất thấp. Nguồn: factsheet Vanguard ngày 31/10/2026, đối chiếu trực tiếp ngày 23/11/2026."}</p>
       </div>
     </details>
 

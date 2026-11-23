@@ -6,12 +6,12 @@ export type VallHealthRecord = {
   ongoingChargesPercent: number | null;
   trackingDifferenceAnnualPp: number | null;
   sourceUrl: string;
-  provenance: "owner-ledger" | "direct-pdf-2026-09";
+  provenance: "owner-ledger" | "direct-pdf-2026-09" | "direct-pdf-2026-10";
 };
 export type VallComparison = { fund: number; benchmark: number };
 export type VallReplicationSnapshot = {
   asOf: string;
-  provenance: "owner-ledger";
+  provenance: "owner-ledger" | "direct-pdf-2026-10";
   sourceUrl: string;
   holdings: VallComparison;
   priceEarnings: VallComparison;
@@ -82,8 +82,9 @@ export function parseVallHealth(input: unknown): VallHealthSnapshot | null {
         !(v.trackingDifferenceAnnualPp === null || finite(v.trackingDifferenceAnnualPp)) ||
         (v.trackingDifferenceAnnualPp !== null && v.asOf < "2027-08-18") ||
         !link(v.sourceUrl,"fund-docs.vanguard.com") ||
-        (typeof v.provenance !== "string" || !["owner-ledger","direct-pdf-2026-09"].includes(v.provenance)) ||
-        (v.provenance === "direct-pdf-2026-09" && v.asOf !== "2026-09-30")) return null;
+        (typeof v.provenance !== "string" || !["owner-ledger","direct-pdf-2026-09","direct-pdf-2026-10"].includes(v.provenance)) ||
+        (v.provenance === "direct-pdf-2026-09" && v.asOf !== "2026-09-30") ||
+        (v.provenance === "direct-pdf-2026-10" && v.asOf !== "2026-10-31")) return null;
     last = v.asOf;
   }
   const tr = input.tradeRepublic;
@@ -98,7 +99,8 @@ export function parseVallHealth(input: unknown): VallHealthSnapshot | null {
       !finite(userFees.oneOffOrderEur) || userFees.oneOffOrderEur < 0) return null;
   const replication = input.replicationSnapshot;
   if (!isRecord(replication) || !day(replication.asOf) || replication.asOf > input.checkedOn ||
-      replication.provenance !== "owner-ledger" ||
+      (replication.provenance !== "owner-ledger" && replication.provenance !== "direct-pdf-2026-10") ||
+      (replication.provenance === "direct-pdf-2026-10" && replication.asOf !== "2026-10-31") ||
       !link(replication.sourceUrl,"fund-docs.vanguard.com") ||
       replication.asOf > last || !input.history.some(item => isRecord(item) && item.asOf === replication.asOf)) return null;
   for (const field of ["holdings","priceEarnings","priceBook","returnOnEquityPercent","earningsGrowthPercent","dividendYieldPercent"]) {

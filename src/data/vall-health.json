@@ -31,7 +31,7 @@
       "ongoingChargesPercent": 0.07,
       "trackingDifferenceAnnualPp": null,
       "sourceUrl": "https://fund-docs.vanguard.com/FTSE_Global_All-Cap_UCITS_ETF_USD_Acc_E161_EU_INT_UK_EN.pdf",
-      "provenance": "owner-ledger"
+      "provenance": "direct-pdf-2026-10"
     }
   ],
   "tradeRepublic": {
@@ -68,10 +68,10 @@
     "ongoingChargesPercent": 0.14,
     "sourceUrl": "https://fund-docs.vanguard.com/FTSE_All-World_UCITS_ETF_USD_Accumulating_9679_INT_OFF_ETF_EN.pdf?domicile=IE"
   },
-  "sourceVerificationNote": "The Vanguard PDF returned to the reviewer still has 30 September 2026 data. August and October figures were transcribed from the owner's dated factsheet ledger; the linked rolling PDF does not presently independently substantiate those months.",
+  "sourceVerificationNote": "The 31 October 2026 Vanguard factsheet was directly checked on 23 November 2026 (Muse, 21:00 CET); its asset figures and portfolio characteristics match the recorded snapshot. September was directly verified previously. Only the August entry retains owner-ledger provenance. The linked PDF is rolling, not an immutable archive; older versions may be returned by caches.",
   "replicationSnapshot": {
     "asOf": "2026-10-31",
-    "provenance": "owner-ledger",
+    "provenance": "direct-pdf-2026-10",
     "sourceUrl": "https://fund-docs.vanguard.com/FTSE_Global_All-Cap_UCITS_ETF_USD_Acc_E161_EU_INT_UK_EN.pdf",
     "holdings": {
       "fund": 6977,

@@ -38,33 +38,31 @@ test, build, preview/mobile, PWA budgets, CI and source review are green.
 ## Dated asset observations — do not conflate a rolling PDF link with an archive
 
 - VALL: **IE000VAHT5T0**, its own **FTSE Global All Cap Index**.
-- Three historically dated observations from the owner's factsheet monitoring
-  ledger, in **million USD**, preserved in `history`:
+- Three historically dated factsheet observations, in **million USD**,
+  preserved in `history`:
   - **31 Aug 2026:** **Total assets $660**, **share class assets $645**.
     August OCF was not supplied for that date, therefore **null**.
   - **30 Sep 2026:** **Total assets $2,573**, **share class assets $2,506**,
     OCF **0.07%**. The original September PDF was directly readable.
   - **31 Oct 2026:** **Total assets $4,353**, **share class assets $4,223**,
-    OCF **0.07%**. Figures were **provided by Chien from a dated October
-    factsheet entry**, not independently confirmed from the dynamic PDF
-    in this review.
+    OCF **0.07%**. Directly checked against the Vanguard factsheet on
+    **23 November 2026** (Muse, 21:00 CET).
 - September→October **Total assets +69.18%**, displayed rounded **+69%**.
   This is **NOT a fund return**, not a personal gain and cannot reveal the
   exact amount of investor inflows or whether the fund is safe from closure.
   Never mix `Total assets` with `share class assets` in the same trend.
 - October portfolio characteristics (fund vs **FTSE Global All Cap**),
-  owner-supplied: holdings **6,977 vs 10,207**, P/E **19.4 vs 19.3**,
+  directly checked against the October factsheet: holdings **6,977 vs 10,207**, P/E **19.4 vs 19.3**,
   P/B **3.2 vs 3.2**, ROE **18.5% vs 18.5%**, earnings growth **19.0% vs
   19.0%**, dividend yield **1.6% vs 1.6%**. These describe holdings
   composition/sampling **only** — not returns or tracking difference.
-- **Provenance warning:** as of this review, the public Vanguard PDF at
+- **Provenance:** the October factsheet was directly checked on 23 November
+  2026. The public Vanguard PDF at
   https://fund-docs.vanguard.com/FTSE_Global_All-Cap_UCITS_ETF_USD_Acc_E161_EU_INT_UK_EN.pdf
-  still returned **30 September 2026** when inspected, despite the newer
-  numbers supplied by the user. It is a rolling file URL, **not immutable
-  archived October evidence**. The app labels the August/October entries
-  `owner-ledger`; avoid claiming we personally verified the October
-  PDF. To upgrade provenance, attach/locate the actual archived October
-  factsheet and check its date and measurements.
+  is a rolling file URL, **not an immutable archive**; caches can return
+  older issues. August retains `owner-ledger`; September retains
+  `direct-pdf-2026-09`; October AUM and replication use `direct-pdf-2026-10`.
+  Always check the actual factsheet date before using this URL.
 - Tracking difference: **null** for all three months, not zero. Vanguard says
   performance data will be available **after one year**, measured from
   fund launch **18 August 2026**. August 2027 is **earliest expected**, not
