@@ -323,6 +323,23 @@ during this review; real offline/device behavior remains a manual check.
 This frontend-only follow-up must pass its own CI before merging or publishing.
 
 
+## Flash provider diagnostics (23 Nov 2026)
+
+Only a **failed Google HTTP response for an actual Flash generation** writes
+a production log entry of the shape `[gemini-flash-google-http] 503`
+(the actual HTTP code varies, e.g. 404 or 429). Log entries never include
+model input, user ID, financial facts, request/response bodies, provider
+messages, tokens or secrets. Flash success and rejected/empty Google-200
+content are **not** misreported as upstream HTTP errors. Neither Lite
+errors nor an absence of an upstream response trigger this logger.
+
+The Vietnamese system prompt now explicitly states that numbers displayed in
+Vault reflect the ledger and **are not broker confirmations**; Gemini must not
+describe portfolio values as broker-verified balances. This code change does
+not by itself prove the original Flash 404-vs-503 diagnosis; a future
+user-initiated generation is required to observe an actual status.
+No real Google API requests are made by the CI tests.
+
 ## Goal UX and meaningful explanations — 23 Nov 2026 follow-up
 
 - If the Goal topic has no explicitly selected, valid Goal, the PWA shows
