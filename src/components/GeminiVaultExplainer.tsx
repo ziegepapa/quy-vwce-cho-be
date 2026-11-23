@@ -222,6 +222,23 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   }, []);
 
   const local = fallback(localTopic, selectedFacts, locale);
+  const money = (n: number | null): string | null => n === null ? null : formatEuro(n, locale, t.noData);
+  const outgoingRows: Array<[string, string | number | null]> = [
+    [t.values, money(scopedFacts.portfolioValue)],
+    [t.paid, money(scopedFacts.contributed)],
+    [t.monthly, money(scopedFacts.monthly)],
+    [t.yearLabel, scopedFacts.year],
+    [t.yearRecordedLabel, money(scopedFacts.yearRecorded)],
+    [t.yearPlannedLabel, money(scopedFacts.yearPlanned)],
+    [t.milestone, money(scopedFacts.goalAmount)],
+    [t.goalYearLabel, scopedFacts.goalYear],
+    [t.goalModeLabel, scopedFacts.goalMode === null ? null : scopedFacts.goalMode === "nominal" ? t.nominalLabel : t.purchasingLabel],
+    [t.simYearLabel, scopedFacts.simulationYear],
+    [t.cautiousLabel, money(scopedFacts.cautious)],
+    [t.baseLabel, money(scopedFacts.base)],
+    [t.optimisticLabel, money(scopedFacts.optimistic)],
+    [t.queryYearLabel, query?.queryYear ?? null],
+  ].filter(([,value]) => value !== null);
   const hasTyped = question.trim().length > 0;
   const busy = status === "loading" || status === "checking";
   const showStatus = ({
@@ -356,21 +373,8 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     <div className="gemini-vault-payload">
       <h3>{t.data}</h3>
       <dl>
-        {scopedFacts.portfolioValue !== null && <div><dt>{t.values}</dt><dd>{formatEuro(scopedFacts.portfolioValue,locale,t.noData)}</dd></div>}
-        {scopedFacts.contributed !== null && <div><dt>{t.paid}</dt><dd>{formatEuro(scopedFacts.contributed,locale,t.noData)}</dd></div>}
-        {scopedFacts.monthly !== null && <div><dt>{t.monthly}</dt><dd>{formatEuro(scopedFacts.monthly,locale,t.noData)}</dd></div>}
-        {scopedFacts.year !== null && <div><dt>{t.yearLabel}</dt><dd>{scopedFacts.year}</dd></div>}
-        {scopedFacts.yearRecorded !== null && <div><dt>{t.yearRecordedLabel}</dt><dd>{formatEuro(scopedFacts.yearRecorded,locale,t.noData)}</dd></div>}
-        {scopedFacts.yearPlanned !== null && <div><dt>{t.yearPlannedLabel}</dt><dd>{formatEuro(scopedFacts.yearPlanned,locale,t.noData)}</dd></div>}
-        {scopedFacts.goalAmount !== null && <div><dt>{t.milestone}</dt><dd>{formatEuro(scopedFacts.goalAmount,locale,t.noData)}</dd></div>}
-        {scopedFacts.goalYear !== null && <div><dt>{t.goalYearLabel}</dt><dd>{scopedFacts.goalYear}</dd></div>}
-        {scopedFacts.goalMode !== null && <div><dt>{t.goalModeLabel}</dt><dd>{scopedFacts.goalMode === "nominal" ? t.nominalLabel : t.purchasingLabel}</dd></div>}
-        {scopedFacts.simulationYear !== null && <div><dt>{t.simYearLabel}</dt><dd>{scopedFacts.simulationYear}</dd></div>}
-        {scopedFacts.cautious !== null && <div><dt>{t.cautiousLabel}</dt><dd>{formatEuro(scopedFacts.cautious,locale,t.noData)}</dd></div>}
-        {scopedFacts.base !== null && <div><dt>{t.baseLabel}</dt><dd>{formatEuro(scopedFacts.base,locale,t.noData)}</dd></div>}
-        {scopedFacts.optimistic !== null && <div><dt>{t.optimisticLabel}</dt><dd>{formatEuro(scopedFacts.optimistic,locale,t.noData)}</dd></div>}
-        {query?.queryYear !== null && query?.queryYear !== undefined && <div><dt>{t.queryYearLabel}</dt><dd>{query.queryYear}</dd></div>}
-        {!Object.values(scopedFacts).some(value => value !== null) && query?.queryYear === null && <div><dt>{t.noData}</dt></div>}
+        {outgoingRows.length ? outgoingRows.map(([label,value])=>
+          <div key={label}><dt>{label}</dt><dd>{value}</dd></div>) : <div><dt>{t.noData}</dt></div>}
       </dl>
     </div>
     <p className="gemini-vault-privacy">{t.privacy}</p>
