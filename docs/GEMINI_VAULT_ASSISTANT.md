@@ -105,6 +105,33 @@ restricts shared Flash generation to five attempted calls per UTC day,
 but Google's quota reset window may differ. No Billing activation is part
 of this PR.
 
+## UI clarification: topic-first, with verified Plan context
+
+The optional free-text question is classified **on the device** into one
+of the existing fixed topics; the original text is never sent to Gemini.
+The highlighted button always reflects the **effective** detected topic.
+When it differs from the button the user first selected, the screen
+explicitly shows the recognized topic. An unsupported question shows a
+localized explanation and disables submission, without spending quota.
+
+The Goal selector appears only where it is relevant (`goal`,
+`goalProgress`, optionally `simulation`). A `goal` Gemini question
+requires an explicit selected Goal; no year or goal is inferred from a
+typed sentence or automatically chosen from the goal list. The Plan
+topic no longer displays an irrelevant "no Goal selected" label.
+The existing source-of-truth ledger summary now includes verified
+yearRecorded vs yearPlanned on the Plan tab, when both are available.
+For example, if the actual recorded contribution is 560 € and the
+planned amount is 600 €, the Vault says **below planned contributions**
+rather than that the plan was reached. That comparison is determined
+locally; Gemini remains an optional qualitative explanation, not a
+source of arithmetic truth.
+
+This is a **front-end-only** change: no new Edge/SQL deployment,
+secrets, background jobs, new data sent to Google, quota change,
+cache change, or change to the finance ledger. Consent and all model
+routing remain intact.
+
 ## Exact numeric comparisons: never decided by Gemini
 
 - The current owner-confirmed contribution amount is **560 €** (the live Vault
