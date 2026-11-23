@@ -60,7 +60,7 @@ const day = (v: unknown): v is string => typeof v === "string" &&
   /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v + "T00:00:00Z")) &&
   new Date(v + "T00:00:00Z").toISOString().slice(0,10) === v;
 const maybeBool = (v: unknown) => v === null || typeof v === "boolean";
-const finite = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const link = (v: unknown, host: string) => typeof v === "string" &&
   v.startsWith("https://" + host + "/");
 
@@ -82,7 +82,7 @@ export function parseVallHealth(input: unknown): VallHealthSnapshot | null {
         !(v.trackingDifferenceAnnualPp === null || finite(v.trackingDifferenceAnnualPp)) ||
         (v.trackingDifferenceAnnualPp !== null && v.asOf < "2027-08-18") ||
         !link(v.sourceUrl,"fund-docs.vanguard.com") ||
-        !["owner-ledger","direct-pdf-2026-09"].includes(v.provenance) ||
+        (typeof v.provenance !== "string" || !["owner-ledger","direct-pdf-2026-09"].includes(v.provenance)) ||
         (v.provenance === "direct-pdf-2026-09" && v.asOf !== "2026-09-30")) return null;
     last = v.asOf;
   }
