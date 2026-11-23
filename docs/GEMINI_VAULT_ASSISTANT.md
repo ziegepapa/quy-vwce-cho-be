@@ -1,9 +1,11 @@
 # Gemini Free Tier explainer — owner-operated activation guide
 
-**Status (22 Nov 2026):** Production Gemini integration is working after the owner
-replaced an incompatible Google API key. The server runs a JWT-protected Edge
-Function. This follow-up adds richer explanations and more local question
-intents; release and deployment remain subject to CI checks.
+**Status (23 Nov 2026):** PR #413 (Flash routing + server cache) and PR #414
+(clarified topic/Goal/Plan UX) are merged. Read-only production inspection
+confirmed `gemini-vault-explain` v11 ACTIVE with JWT verification enabled;
+`ai_internal.gemini_flash_daily` and `ai_internal.gemini_reply_cache`
+exist with RLS enabled. PR #414's GitHub CI passed. This document does
+not assert that a new real Google generation test has been performed.
 
 **Financial source of truth:** the owner confirms **560 €** currently
 contributed in the actual Vault. Historical **600 €** fixture values in isolated
@@ -28,7 +30,13 @@ tests are synthetic and must never be copied into the real ledger.
   Edge Function receives only an enum, optional year and these aggregates:
   current value (or null), total contributed (or null), saved monthly amount,
   recorded and planned YTD, selected Goal's year/amount/mode (or null), and
-  the three *hypothetical* scenario totals (or null). It never receives name,
+  the three *hypothetical* scenario totals (or null). The 23 Nov follow-up
+  further minimizes non-null fields by topic: Plan uses Plan figures, Monthly
+  only monthly rate, Value only portfolio value, Goal only relevant chosen-Goal
+  context, and Simulation only scenarios and any deliberately selected Goal.
+  The privacy preview displays the actual scoped fields. The shown monthly
+  contribution follows Y1 for the first 12 months from the plan start and Y2
+  after that, rather than always prioritizing Y2. It never receives name,
   account number, ISIN, transactions, note, Goal title, phone or email.
   Authentication JWT goes **only to Supabase**, not to Google.
 - Server-side auth `/auth/v1/user` + restricted PostgREST service RPC.
@@ -38,21 +46,23 @@ tests are synthetic and must never be copied into the real ledger.
 - A private SQL counter with a transactional advisory lock enforces **20
   attempts per authenticated user per UTC day** and a conservative **40
   attempts per project per UTC day**. A Google 429 pauses new attempts until
-  the next UTC day; never switches models on 429. **Current production** uses
-  Flash-Lite as primary with one Flash fallback on 404/503. The **Draft PR**
-  described below adds topic-based Flash routing, subject to separate approval.
+  the next UTC day; never switches models on 429. The merged topic routing
+  uses Flash for Goal/Simulation when a shared five-attempt UTC-day budget
+  reservation succeeds, else Flash-Lite; other AI topics use Flash-Lite
+  first. A backup is attempted only after a provider 404/503.
 - The Edge Function is **OFF by default** until the explicit server-side
   `GEMINI_ASSISTANT_ENABLED=true` is set. It fails closed if either the key,
   SQL RPC installation, auth service or quota backend is missing. Existing
   local explanation remains visible on any failure.
 
-## DRAFT only — topic-based Flash routing and private 24h server cache
+## Installed — topic-based Flash routing and private 24h server cache
 
-**No database SQL has been executed and no Edge Function or PWA from this
-Draft PR has been deployed.** Merging, SQL installation, Edge deployment and
-any secret changes each require separate explicit owner approval. This PR
-does not change any provider keys, Billing, cron, background processing,
-financial tables, auth/Guardian/Resend code, or the 20-user/40-project UTC limit.
+PR #413 was merged and the matching SQL and Edge deployment were separately
+approved by the owner. Production metadata checks on 23 Nov confirm the two
+private RLS tables, three Flash/cache RPCs and active Edge v11. There is no
+reason to rerun SQL or redeploy Edge for the frontend-only follow-up.
+No changes to provider keys, billing, cron, background processing, financial
+tables, auth/Guardian/Resend code or 20-user/40-project UTC limit are needed.
 
 Main currently supports **eight** bounded topics, not the four listed in the
 original #404 specification. Retain all eight to avoid regression:
@@ -229,7 +239,7 @@ Official references:
 
 ## Owner-operated procedure — only when each step is separately approved
 
-**Do not do any of these steps automatically from a Draft PR.**
+**For future maintenance only; avoid repeating completed production steps.**
 
 1. In a browser, open https://aistudio.google.com/api-keys and sign in with
    your own Google account. In Google AI Studio, open **API keys**. Confirm the
@@ -292,10 +302,10 @@ Official references:
 - The UI now labels the server's counter **attempts** instead of successful
   answers; previously recorded 6 attempts on Nov 22 are **not reset or
   reimbursed**. No quota schema, RLS, Guardian or finance data are changed.
-- Before activating: run GitHub tests, review the Draft PR, merge only with
-  approval, then deploy the matching updated Edge Function with JWT
-  verification still enabled. Test one voluntary response in the phone app.
-  Do not repeat real Gemini calls to diagnose a 503.
+- For future changes, run GitHub tests, review the proposed PR and deploy
+  Edge only if backend code changes and the owner separately approves it.
+  Test a voluntary response in the phone app if necessary; do not repeat
+  real Gemini calls just to diagnose a transient 503.
 
 ## Tests and known validation boundary
 
@@ -306,7 +316,8 @@ screen in German/Vietnamese, light/dark, with a **local-only fixture**. None of
 these calls the real Google API, real Supabase production, or writes the
 real portfolio.
 
-**Not yet verified until separately authorized:** actual Gemini API key,
-real-model free-tier eligibility/quota, Supabase production SQL install,
-server deploy, auth from the owner's signed-in phone, and real network outage
-behaviour. Do not mark production activated from CI evidence alone.
+**Verification boundary (23 Nov):** Supabase SQL objects and active JWT-protected
+Edge v11 were verified read-only, and PR #414 CI passed. No new authenticated
+phone generation or actual Google quota/eligibility test was carried out
+during this review; real offline/device behavior remains a manual check.
+This frontend-only follow-up must pass its own CI before merging or publishing.
