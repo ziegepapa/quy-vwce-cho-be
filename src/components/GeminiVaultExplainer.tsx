@@ -174,11 +174,8 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
     const shortfall = gap > 0 ? (locale === "vi"
       ? ` Còn thiếu ${euro(gap / 100)} theo sổ.`
       : ` Im Vault fehlen ${euro(gap / 100)}.`) : "";
-    const difference = f.portfolioValue !== null && f.contributed !== null
-      ? Math.round(f.portfolioValue * 100) - Math.round(f.contributed * 100) : null;
-    const valueGap = difference === null ? "" : (locale === "vi"
-      ? ` Giá trị quỹ trừ tiền đã góp: ${difference > 0 ? "+" : ""}${euro(difference / 100)} (chênh lệch tạm thời).`
-      : ` Depotwert minus Beiträge: ${difference > 0 ? "+" : ""}${euro(difference / 100)} (Momentaufnahme).`);
+    const valueGap = f.portfolioValue !== null && f.contributed !== null
+      ? " " + fallback("difference",f,locale) : "";
     return summary + " " + yearText + " "
       + (gap <= 0 ? t.yearAhead : t.yearBehind) + shortfall + valueGap;
   }
