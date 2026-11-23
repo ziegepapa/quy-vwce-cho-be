@@ -77,6 +77,49 @@ in this feature. A missing synced VALL trade **does not prove** a missed Sparpla
   Reconcile the current UI/CI files, run fresh CI and isolated migration
   evidence, and require separate approval for hosted rollout.
 
+## Resend sandbox transport test — preparation only (23 Nov 2026)
+
+**Known facts:** The previous `onboarding@resend.dev` email already reached
+the Resend account mailbox during the earlier 21 Nov test, but that was an
+independent transport proof, **not** a V1 staging end-to-end test. The
+`quy-vwce-staging` Supabase project is currently **INACTIVE/paused**.
+The assistant's current connections do not provide the Resend sending API key
+or an approved recipient from Resend Dashboard. Thus no new live email was
+sent or claimed during this PR review.
+
+A manual, isolated transport check now lives in
+`scripts/guardian/resend-staging-smoke.mjs`. CI runs only the **mock**
+`scripts/guardian/resend-staging-smoke.test.mjs`, which checks the exact
+single-call request and that it is blocked by default. This is neither a
+scheduled scan nor a Guardian alert. A **real** test requires ALL of:
+
+1. A trusted, manually authorized staging shell/runner containing a Resend
+   test-scope `RESEND_API_KEY`; **never commit or paste this secret**.
+2. `SUPABASE_PROJECT_REF=cfpiocofgmtbaelsfvnr` and
+   `GUARDIAN_STAGING_SEND_APPROVED=ONE_TEST_EMAIL_ONLY`. These are
+   explicit *runner guard settings*, **not proof that Supabase staging is
+   running**. The transport-only script talks directly to Resend.
+3. `GUARDIAN_FROM_EMAIL=onboarding@resend.dev`. Both
+   `RESEND_TEST_TO` and `RESEND_ACCOUNT_EMAIL` must be the **same**
+   authorized account mailbox. Do not add any other user's email.
+4. Execute `node scripts/guardian/resend-staging-smoke.mjs` **once**
+   in the manually authorized sandbox environment. It performs precisely
+   one Resend `POST /emails`, with a stable UTC-day idempotency key,
+   sanitized outcome logs, and **no retries**. A 2xx only shows API
+   acceptance; independently verify the actual Resend log and permitted
+   recipient inbox (or delivery webhook). No finance data is included.
+
+Do **not** run this manual script from the normal PR workflows. The
+test sender cannot mail other Vault Auth users without a verified domain.
+**Do not unblock V1 by forwarding their alerts to the Resend owner mailbox**:
+that would expose user-specific alert existence to a third party.
+
+Full V1 staging E2E remains a separate blocked gate until staging has
+been resumed, isolated test Auth/transactions have been provisioned,
+schema/RLS/Edge are safely installed on staging, and a sender/recipient
+configuration is approved. No production migration, Edge deploy, Cron, or
+readiness activation follows from this direct transport proof.
+
 ## Required owner-controlled deployment, after PR review
 
 1. Reconcile hosted Supabase schema/migration history and run the **new 003
