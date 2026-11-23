@@ -22,6 +22,7 @@ import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
 import { formatDisplayMoney } from "../ui/localeFormatting";
 import SimulationDemoShell from "../components/demo-v10/SimulationDemoShell";
+import { buildGeminiVaultFacts } from "../lib/geminiVaultFacts";
 import "../styles/demo-v10-simulation.css";
 import "../styles/clean-shared.css";
 
@@ -453,6 +454,15 @@ export default function Simulation() {
   advParts.push(text.terFee(round2(ter * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN")));
   const advSummary = text.advanced(advParts.join(" · "));
 
+  // Read-only facts from the same ledger valuation and contribution definitions
+  // as Overview. Editable Simulation inputs NEVER overwrite the actual figures.
+  const geminiFacts = buildGeminiVaultFacts({
+    settings, transactions: txs,
+    currentValue: startValue.valuationStatus === "fresh" ? realBalance : null,
+    today: new Date(), simulationEndYear: nowY + yearsForProject,
+    scenarioTotals: Object.fromEntries(results.map(({ sc, out }) => [sc.id, out.terminal])),
+  });
+
   return (
     <SimulationDemoShell
       locale={locale}
@@ -488,6 +498,9 @@ export default function Simulation() {
       bandPctLabel={bandPctLabel}
       readOnly={readOnly}
       goals={goals}
+      geminiFacts={geminiFacts}
+      exitPlanActualBalance={startValue.valuationStatus === "fresh" ? realBalance : null}
+      exitPlanActualMonthly={settings && Number.isFinite(settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1) ? (settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1) : null}
       applyYearsFromGoal={applyYearsFromGoal}
       advSummary={advSummary}
       bandInput={bandInput}

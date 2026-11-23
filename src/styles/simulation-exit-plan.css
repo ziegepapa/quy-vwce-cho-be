@@ -1,0 +1,44 @@
+/* Exit Plan is a quiet, plain-language section on the Simulation page. */
+.sim-wrap .exit-plan{display:grid;gap:16px;min-width:0;padding:18px 14px;color:var(--text-primary)}
+.exit-plan h2,.exit-plan h3,.exit-plan p{margin:0}
+.exit-plan h2{font-size:20px;line-height:1.2;letter-spacing:-.02em;margin:5px 0 13px}
+.exit-plan h3{font-size:14px;line-height:1.35;margin-bottom:10px}
+.exit-plan-head>small{font-size:10px;letter-spacing:.045em;font-weight:750;color:var(--primary-600)}
+.exit-plan-story{display:grid;gap:7px;border-radius:14px;background:var(--surface-sunken);padding:13px}
+.exit-plan-story p{font-size:13px;line-height:1.55;color:var(--text-secondary)}
+.exit-plan-story strong{color:var(--text-primary);font-weight:750}
+.exit-plan-story small{color:var(--text-tertiary);font-size:10px;line-height:1.45}
+.exit-plan-goal{display:grid;gap:8px;border-top:1px solid var(--border-subtle);padding-top:15px}
+.exit-plan label{font-size:12px;font-weight:750;line-height:1.4;color:var(--text-primary)}
+.sim-wrap .exit-plan select,.sim-wrap .exit-plan input{width:100%;max-width:100%;min-width:0;border:1px solid var(--border-subtle);background:var(--surface-raised);border-radius:11px;min-height:42px;padding:9px 11px;font:inherit;font-size:13px;color:var(--text-primary)}
+.sim-wrap .exit-plan :is(select,input):focus-visible,.exit-plan-link:focus-visible{outline:2px solid var(--primary-600);outline-offset:3px}
+.sim-wrap .exit-plan input:disabled{opacity:.6}
+.exit-plan-facts{border-radius:13px;border:1px solid var(--border-subtle);padding:12px;margin-top:4px}
+.exit-plan-facts h3{font-size:13px;margin-bottom:8px}
+.exit-plan-facts dl{display:grid;gap:8px;margin:0}
+.exit-plan-facts dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+.exit-plan-facts dt{font-size:11px;color:var(--text-secondary);line-height:1.4;max-width:57%}
+.exit-plan-facts dd{font-size:12px;font-weight:700;text-align:right;line-height:1.4;margin:0}
+.exit-plan-facts p{font-size:11px;color:var(--text-secondary);margin:10px 0 0;line-height:1.4}
+.exit-plan-todo{border-top:1px solid var(--border-subtle);padding-top:15px}
+.exit-plan-steps{counter-reset:exit-step;list-style:none;display:grid;gap:15px;margin:0;padding:0 0 0 22px;border-left:2px solid var(--border-subtle)}
+.exit-plan-steps>li{counter-increment:exit-step;position:relative;padding-left:10px;min-width:0}
+.exit-plan-steps>li:before{content:counter(exit-step);position:absolute;top:0;left:-33px;width:19px;height:19px;border-radius:50%;background:var(--primary-600);color:white;font-size:10px;font-weight:800;display:grid;place-items:center}
+.exit-plan-steps strong{font-size:12px;line-height:1.4;display:block}
+.exit-plan-steps p{font-size:12px;color:var(--text-secondary);line-height:1.55;margin:4px 0 0}
+.exit-plan-today{margin:14px 0 0!important;padding:11px 12px;border-radius:12px;background:var(--surface-sunken);font-size:12px;font-weight:650;line-height:1.5}
+.exit-plan-example{display:grid;gap:9px;border-top:1px solid var(--border-subtle);padding-top:15px}
+.exit-plan-example h3{margin:0;font-size:14px}
+.exit-plan-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.exit-plan-choices label{font-size:11px;line-height:1.35;align-self:end}
+.exit-plan-choices select{min-width:0}
+.exit-plan-table-wrap{min-width:0;width:100%;overflow-x:auto;margin-top:0}
+.exit-plan-table{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+.exit-plan-table :is(th,td){padding:9px 4px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border-subtle)}
+.exit-plan-table :is(th,td):first-child{text-align:left}
+.exit-plan-table th{font-size:10px;color:var(--text-secondary);font-weight:700}
+.exit-plan-note{font-size:11px;line-height:1.5;color:var(--text-secondary);margin:2px 0 0}
+.exit-plan-warning{font-size:11px;color:var(--danger-600);margin:0}
+.exit-plan-link{display:inline-flex;justify-self:start;font-size:12px;color:var(--primary-600);font-weight:750;text-decoration:underline;text-underline-offset:2px}
+.exit-plan-disclaimer{margin:0;padding-top:9px;border-top:1px solid var(--border-subtle);color:var(--text-tertiary);font-size:10px;line-height:1.5}
+@media(max-width:390px){.sim-wrap .exit-plan{padding:16px 11px}.exit-plan-table{font-size:10px}.exit-plan-table :is(th,td){padding:8px 3px}}

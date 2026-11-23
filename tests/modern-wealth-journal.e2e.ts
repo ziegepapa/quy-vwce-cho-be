@@ -251,6 +251,43 @@ for (const theme of themes) {
         await page.screenshot({ path: testInfo.outputPath("guardian-settings.png"), animations: "disabled" });
         await page.locator(".mwj-settings-head").scrollIntoViewIfNeeded();
       }
+      if (name === "simulation") {
+        const plan = page.getByTestId("simulation-exit-plan");
+        await expect(plan).toBeVisible();
+        // The fixture's Goal is present, but MUST NOT be selected automatically.
+        await expect(page.locator("#exit-plan-goal")).toHaveValue("");
+        await expect(plan.locator("table")).toHaveCount(0);
+        await expect(plan).toContainText("Hãy tưởng tượng quỹ này như một ống heo:");
+        await expect(plan).toContainText(/591,95/);
+        await expect(plan).toContainText(/120,00/);
+        await expect(plan.locator(".exit-plan-steps > li")).toHaveCount(3);
+        await plan.evaluate((element) => element.scrollIntoView({ block: "start" }));
+        await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-empty.png"), animations: "disabled" });
+
+        // Only an explicit owner action reveals the illustrative schedule.
+        await page.locator("#exit-plan-goal").selectOption("test-goal");
+        await expect(plan.locator("table")).toHaveCount(0);
+        await page.locator("#exit-plan-budget").fill("600,00");
+        await expect(plan.locator("tbody tr")).toHaveCount(6);
+        await expect(plan.locator("tbody tr").last()).toContainText(/0,00/);
+        await expect.poll(() => plan.locator(".exit-plan-table-wrap").evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+        await assertFits(page);
+        await page.locator(".exit-plan-table").evaluate((element) => element.scrollIntoView({ block: "center" }));
+        await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-schedule.png"), animations: "disabled" });
+        const ai = page.getByTestId("gemini-vault-explainer");
+        await expect(ai).toBeVisible();
+        await expect(ai).toContainText("Từ Vault · không trừ lượt");
+        await expect(ai).toContainText("600,00");
+        await expect(ai).toContainText("591,95");
+        await expect(ai).toContainText("AI chưa sẵn sàng");
+        await expect(ai.getByRole("button", { name: "Hỏi Gemini" })).toBeDisabled();
+        await ai.evaluate(el => el.scrollIntoView({ block: "start" }));
+        await page.screenshot({ path: testInfo.outputPath(`gemini-vault-vi-${theme}-top.png`), animations: "disabled" });
+        await ai.locator(".gemini-vault-consent").scrollIntoViewIfNeeded();
+        await page.screenshot({ path: testInfo.outputPath(`gemini-vault-vi-${theme}-consent.png`), animations: "disabled" });
+        await assertFits(page);
+      }
+
       if (name === "overview") {
         await page.locator(".ovb2-chart-card").scrollIntoViewIfNeeded();
         await page.screenshot({ path: testInfo.outputPath("overview-chart.png"), animations: "disabled" });
@@ -430,14 +467,15 @@ for (const theme of themes) {
 // The approved visual reference uses German. Capture the same isolated
 // portfolio with the German locale; do not compare German mockups with
 // Vietnamese-only screenshots.
-test("German reference screenshots · 390x844 · light", async ({ page }, testInfo) => {
+for (const germanTheme of ["light", "dark"] as const) {
+test(`German reference screenshots · 390x844 · ${germanTheme}`, async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   await page.setViewportSize(viewport);
   await page.clock.setFixedTime(new Date("2026-11-20T12:00:00Z"));
-  await page.addInitScript(() => {
-    localStorage.setItem("vwce-theme", "light");
+  await page.addInitScript((theme) => {
+    localStorage.setItem("vwce-theme", theme);
     localStorage.setItem("vwce-locale", "de");
-  });
+  }, germanTheme);
   await page.route("**/data/quotes.json", (route) => route.abort());
   await page.route("**/data/price-history/*.json", (route) => route.fulfill({
     json: { points: route.request().url().endsWith(`${vwce}.json`) ? [
@@ -464,8 +502,35 @@ test("German reference screenshots · 390x844 · light", async ({ page }, testIn
       // Same zero-start 120 €/month, 5 %, 30 years, TER fixture as the approved mockup.
       await page.getByRole("button", { name: /Beispiel ab 0 € laden/ }).click();
       await expect(page.locator(".sim-chart-values strong")).toContainText(/95\.277/);
+      const plan = page.getByTestId("simulation-exit-plan");
+      await expect(plan).toContainText("Stellen Sie sich Ihr Depot wie ein Sparschwein vor:");
+      await expect(plan.locator(".exit-plan-steps > li")).toHaveCount(3);
+      await expect(page.locator("#exit-plan-goal")).toHaveValue("");
+      await expect(plan.locator("table")).toHaveCount(0);
+      await plan.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-de-empty.png"), animations: "disabled" });
+      await page.locator("#exit-plan-goal").selectOption("test-goal");
+      await page.locator("#exit-plan-budget").fill("140,25");
+      await expect(plan.locator("tbody tr")).toHaveCount(6);
+      await expect.poll(() => plan.locator(".exit-plan-table-wrap").evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+      await assertFits(page);
+      await plan.locator(".exit-plan-table").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-de-schedule.png"), animations: "disabled" });
+      const ai = page.getByTestId("gemini-vault-explainer");
+      await expect(ai).toBeVisible();
+      await expect(ai).toContainText("Vault · ohne KI-Limit");
+      await expect(ai).toContainText("600,00");
+      await expect(ai).toContainText("591,95");
+      await expect(ai).toContainText("KI nicht bereit");
+      await expect(ai.getByRole("button", { name: "KI fragen" })).toBeDisabled();
+      await ai.evaluate(el => el.scrollIntoView({ block: "start" }));
+      await page.screenshot({ path: testInfo.outputPath(`gemini-vault-de-${germanTheme}-top.png`), animations: "disabled" });
+      await ai.locator(".gemini-vault-consent").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath(`gemini-vault-de-${germanTheme}-consent.png`), animations: "disabled" });
+      await assertFits(page);
     }
     await assertFits(page);
     await page.screenshot({ path: testInfo.outputPath(`${name}-de.png`), animations: "disabled" });
   }
 });
+}

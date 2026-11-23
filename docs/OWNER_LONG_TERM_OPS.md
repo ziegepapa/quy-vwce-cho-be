@@ -61,6 +61,7 @@ CI: workflow `Production Health` (`verify:production`, `MAX_QUOTE_AGE_DAYS=7`).
 - Bảng kế hoạch năm = **minh họa thực tế từ góp + pha**, không phải lệnh mua/bán.
 - **Không** đưa lại control “Preview chuyển đổi/năm” 8/12/16%.
 - Giả định mô phỏng chỉ ảnh hưởng preview, không sửa ledger.
+- **40 năm chỉ là cửa sổ tính của bộ mô phỏng, không phải vòng đời của app, kế hoạch, ETF hay ngày bán**. Chế độ C tìm mốc đạt mục tiêu tối đa 40 năm; nếu chưa đạt, kết quả là chưa xác định trong cửa sổ đó, không phải "40 năm là kết thúc". Không tự kéo dài phép dự báo vượt ngưỡng khi chưa có chính sách mô hình và kiểm thử. App/sổ đầu tư vẫn tồn tại không thời hạn cố định.
 
 ## 8. CSP
 

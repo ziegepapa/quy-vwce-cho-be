@@ -25,7 +25,10 @@ export default defineConfig({
     VitePWA({
       registerType: "prompt",
       injectRegister: "script-defer",
-      includeAssets: ["icons/*.svg", "icons/*.png"],
+      // Keep 192px and maskable icons offline; the full 512px PNG remains online
+    // for installation, but is redundant in the offline precache.
+    includeManifestIcons: false,
+    includeAssets: ["icons/*.svg", "icons/icon-192.png", "icons/icon-maskable-512.png"],
       manifest: {
         id: "/quy-vwce-cho-be/",
         name: "VWCE Vault",
@@ -57,10 +60,7 @@ export default defineConfig({
         // exactly the "app cập nhật chậm" symptom. The app already falls
         // back to local IndexedDB data when offline, so no data file needs
         // to be precached.
-        // Guardian is cloud-only. Its lazy control cannot work offline and
-        // must not displace finance-critical offline screens from the budget.
-        // Settings renders a safe offline fallback without importing it.
-        globIgnores: ["**/data/**", "**/assets/GuardianPanel-*.js"],
+        globIgnores: ["**/data/**", "**/icons/icon-512.png", "**/assets/GuardianPanel-*.js"],
         navigateFallback: "/quy-vwce-cho-be/index.html",
         cleanupOutdatedCaches: true,
         clientsClaim: true,
@@ -90,6 +90,7 @@ export default defineConfig({
       "src/pages/Overview.loadState.test.tsx",
       "src/pages/continuitySnapshot.test.ts",
       "src/pages/Settings.pendingSyncImport.test.tsx",
+      "src/components/GeminiVaultExplainer.test.tsx",
       "src/components/AppFailureBoundary.test.tsx",
       "src/components/ModalAccessibilityManager.test.tsx",
       "src/components/LocalDiagnosticsPanel.test.tsx",

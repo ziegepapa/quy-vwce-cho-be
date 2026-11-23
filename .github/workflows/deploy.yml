@@ -67,14 +67,20 @@ jobs:
       - run: npm ci
       - name: Check Edge Functions in Deno
         run: |
-          deno check supabase/functions/explain-trace/index.ts
-          deno check supabase/functions/silent-guardian/index.ts
-      - name: Silent Guardian isolated rule tests (no cloud or emails)
-        run: deno test supabase/functions/silent-guardian/rules.test.ts
-      - name: Silent Guardian self-heal retry tests
-        run: deno test supabase/functions/silent-guardian/retry.test.ts
+          deno check --node-modules-dir=auto supabase/functions/explain-trace/index.ts
+          deno check --node-modules-dir=auto supabase/functions/silent-guardian-health-check/index.ts
+          deno check --node-modules-dir=auto supabase/functions/silent-guardian-email-test/index.ts
+          deno check --node-modules-dir=auto supabase/functions/silent-guardian-worker/index.ts
+          deno check --node-modules-dir=auto supabase/functions/gemini-vault-explain/index.ts
+          deno check --node-modules-dir=auto supabase/functions/silent-guardian/index.ts
+      - name: Silent Guardian isolated rules + retry tests (no cloud or email)
+        run: |
+          deno test supabase/functions/silent-guardian/rules.test.ts
+          deno test supabase/functions/silent-guardian/retry.test.ts
       - name: Run isolated Edge Function smoke environment
         run: npm run test:edge-smoke
+      - name: Run isolated Gemini/Supabase quota smoke (no Google key)
+        run: npm run test:gemini-edge
   preview-smoke:
     needs: test-build
     runs-on: ubuntu-latest
@@ -130,6 +136,8 @@ jobs:
             test-results/**/transactions.png
             test-results/**/timeline.png
             test-results/**/simulation.png
+            test-results/**/simulation-exit-plan-*.png
+            test-results/**/gemini-vault-*.png
             test-results/**/goals.png
             test-results/**/notfallmappe.png
             test-results/**/settings.png

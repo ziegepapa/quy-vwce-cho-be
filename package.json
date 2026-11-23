@@ -10,7 +10,7 @@
     "prebuild": "npm run generate:pwa-icons",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run && npm run test:pwa-update-lifecycle && npm run test:price && npm run test:locale-audit && npm run test:bundle && npm run test:external-boundary && npm run test:client-security && npm run test:reproducible-install && npm run test:app-version && npm run test:financial-policy && npm run test:operational-posture && npm run test:guardian-watchdog",
+    "test": "vitest run && npm run test:pwa-update-lifecycle && npm run test:price && npm run test:locale-audit && npm run test:bundle && npm run test:external-boundary && npm run test:client-security && npm run test:reproducible-install && npm run test:app-version && npm run test:financial-policy && npm run test:operational-posture && npm run test:guardian && npm run test:guardian-server && npm run test:gemini-contract && npm run test:guardian-watchdog",
     "benchmark:ledger": "vite-node scripts/benchmark-ledger.ts",
     "benchmark:ledger:check": "LEDGER_BENCHMARK_ASSERT_BUDGET=1 vite-node scripts/benchmark-ledger.ts",
     "audit:locale": "node scripts/audit-ui-localization.mjs",
@@ -37,6 +37,10 @@
     "verify:production-routes": "node scripts/verify-production-routes.mjs",
     "update:price": "node scripts/update-quotes.mjs",
     "update:price:legacy": "node scripts/update-vwce-price.mjs",
+    "test:gemini-contract": "node --test scripts/gemini-vault-contract.test.mjs",
+    "test:gemini-edge": "node scripts/smoke-gemini-edge.mjs",
+    "test:guardian": "node --test scripts/silent-guardian-audit.test.mjs",
+    "test:guardian-server": "node --test scripts/silent-guardian-server.test.mjs",
     "test:guardian-watchdog": "node --test scripts/guardian/production-watchdog.test.mjs"
   },
   "dependencies": {
