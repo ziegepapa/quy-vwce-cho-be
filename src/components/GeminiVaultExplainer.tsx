@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Goal } from "../lib/types";
 import type { DisplayLocale } from "../ui/localeFormatting";
 import { supabase } from "../lib/supabase";
-import { classifyGeminiQuestion, withSelectedGoal, type GeminiFacts, type GeminiTopic } from "../lib/geminiVaultFacts";
+import { classifyGeminiQuestion, geminiFactsForTopic, withSelectedGoal, type GeminiFacts, type GeminiTopic } from "../lib/geminiVaultFacts";
 import { validExitDate } from "../lib/simulation/exitPlan";
 import { clearGeminiAnswers, geminiAnswerCacheKey, readGeminiAnswer, readGeminiModel, saveGeminiAnswer } from "../lib/geminiVaultCache";
 import "../styles/gemini-vault-explainer.css";
@@ -44,6 +44,9 @@ const copy = {
     unsupported: "Frage nicht unterstützt. Wähle ein Thema.",
     aiAnswer: "Antwort von Gemini", modelLabel: "Modell", consent: "Ich erlaube, Summen bei neuen Fragen an Gemini zu senden.",
     privacy: "Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen. Keine Namen oder Einzelbuchungen. Antworten bleiben bis zu 24 h auf diesem Gerät.",
+    yearLabel:"Kalenderjahr", yearRecordedLabel:"Dieses Jahr erfasst", yearPlannedLabel:"Bis heute geplant",
+    goalModeLabel:"Zielmodus", simYearLabel:"Szenariojahr", cautiousLabel:"Vorsichtig", baseLabel:"Basis", optimisticLabel:"Optimistisch",
+    nominalLabel:"Nominal", purchasingLabel:"Kaufkraft", queryYearLabel:"Jahr in der Frage",
     data: "Diese Angaben würden gesendet", values: "Aktueller Depotwert", paid: "Erfasste Beiträge", monthly: "Monatsbeitrag", milestone: "Gewähltes Ziel",
     noData: "nicht verfügbar", disclaimer: "Nur allgemeine Erläuterung — keine Anlage- oder Steuerberatung. Keine Renditegarantie.",
     quota: "Maximal 20 Sendeversuche je Person und UTC-Tag, auch bei Fehlern. Der Modellcheck verbraucht keinen Vault-Versuch.",
@@ -97,6 +100,9 @@ const copy = {
     unsupported: "Chưa hỗ trợ câu hỏi; chọn một chủ đề.",
     aiAnswer: "Gemini giải thích", modelLabel: "Mô hình", consent: "Tôi đồng ý gửi số liệu tổng hợp tới Gemini khi cần hỏi mới.",
     privacy: "Google có thể dùng dữ liệu Free Tier để cải thiện sản phẩm. Không gửi tên hay giao dịch lẻ. Câu trả lời lưu trên máy tối đa 24 giờ.",
+    yearLabel:"Năm đang xét", yearRecordedLabel:"Đã ghi trong năm", yearPlannedLabel:"Kế hoạch tới hôm nay",
+    goalModeLabel:"Kiểu Goal", simYearLabel:"Năm mô phỏng", cautiousLabel:"Thận trọng", baseLabel:"Cơ sở", optimisticLabel:"Lạc quan",
+    nominalLabel:"Giá trị danh nghĩa", purchasingLabel:"Sức mua", queryYearLabel:"Năm nhắc trong câu hỏi",
     data: "Các con số sẽ gửi", values: "Giá trị quỹ", paid: "Tổng đã góp", monthly: "Góp mỗi tháng", milestone: "Goal đã chọn",
     noData: "chưa có", disclaimer: "Chỉ là thông tin chung, không tư vấn đầu tư/thuế và không hứa lợi nhuận.",
     quota: "Tối đa 20 lượt gửi/người/ngày UTC, kể cả lượt lỗi. Kiểm tra key/model không trừ lượt trong Vault.",
@@ -196,11 +202,12 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const selectedFacts = useMemo(() => withSelectedGoal(facts, showGoal ? chosenGoal : null),
     [facts, chosenGoal, showGoal]);
   const goalMissing = localTopic === "goal" && !chosenGoal;
+  const scopedFacts = useMemo(() => geminiFactsForTopic(selectedFacts, localTopic), [selectedFacts, localTopic]);
   const topicLabels: Record<GeminiTopic,string> = {
     plan:t.topicPlan,year:t.topicYear,goal:t.topicGoal,simulation:t.topicSim,
     value:t.topicValue,difference:t.topicDifference,monthly:t.topicMonthly,goalProgress:t.topicGoalProgress,
   };
-  const answerContext = JSON.stringify([locale, query?.topic, query?.queryYear, selectedFacts]);
+  const answerContext = JSON.stringify([locale, query?.topic, query?.queryYear, scopedFacts]);
   const contextRef = useRef(answerContext);
   contextRef.current = answerContext;
   useEffect(() => { setAnswer(""); setCached(false); setAnswerModel(null); }, [answerContext]);
@@ -258,7 +265,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       if (!supabase) { setStatus("not_ready"); return; }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) { setStatus("sign_in"); return; }
-      const body = { schemaVersion:1, locale, topic:query.topic, queryYear:query.queryYear, facts:selectedFacts };
+      const body = { schemaVersion:1, locale, topic:query.topic, queryYear:query.queryYear, facts:scopedFacts };
       const key = await geminiAnswerCacheKey(session.user.id, body);
       const saved = key && readGeminiAnswer(key);
       if (context !== contextRef.current) return;
@@ -349,10 +356,21 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     <div className="gemini-vault-payload">
       <h3>{t.data}</h3>
       <dl>
-        <div><dt>{t.values}</dt><dd>{formatEuro(selectedFacts.portfolioValue,locale,t.noData)}</dd></div>
-        <div><dt>{t.paid}</dt><dd>{formatEuro(selectedFacts.contributed,locale,t.noData)}</dd></div>
-        <div><dt>{t.monthly}</dt><dd>{formatEuro(selectedFacts.monthly,locale,t.noData)}</dd></div>
-        {showGoal && <div><dt>{t.milestone}</dt><dd>{selectedFacts.goalYear || t.noData}</dd></div>}
+        {scopedFacts.portfolioValue !== null && <div><dt>{t.values}</dt><dd>{formatEuro(scopedFacts.portfolioValue,locale,t.noData)}</dd></div>}
+        {scopedFacts.contributed !== null && <div><dt>{t.paid}</dt><dd>{formatEuro(scopedFacts.contributed,locale,t.noData)}</dd></div>}
+        {scopedFacts.monthly !== null && <div><dt>{t.monthly}</dt><dd>{formatEuro(scopedFacts.monthly,locale,t.noData)}</dd></div>}
+        {scopedFacts.year !== null && <div><dt>{t.yearLabel}</dt><dd>{scopedFacts.year}</dd></div>}
+        {scopedFacts.yearRecorded !== null && <div><dt>{t.yearRecordedLabel}</dt><dd>{formatEuro(scopedFacts.yearRecorded,locale,t.noData)}</dd></div>}
+        {scopedFacts.yearPlanned !== null && <div><dt>{t.yearPlannedLabel}</dt><dd>{formatEuro(scopedFacts.yearPlanned,locale,t.noData)}</dd></div>}
+        {scopedFacts.goalAmount !== null && <div><dt>{t.milestone}</dt><dd>{formatEuro(scopedFacts.goalAmount,locale,t.noData)}</dd></div>}
+        {scopedFacts.goalYear !== null && <div><dt>{t.yearLabel}</dt><dd>{scopedFacts.goalYear}</dd></div>}
+        {scopedFacts.goalMode !== null && <div><dt>{t.goalModeLabel}</dt><dd>{scopedFacts.goalMode === "nominal" ? t.nominalLabel : t.purchasingLabel}</dd></div>}
+        {scopedFacts.simulationYear !== null && <div><dt>{t.simYearLabel}</dt><dd>{scopedFacts.simulationYear}</dd></div>}
+        {scopedFacts.cautious !== null && <div><dt>{t.cautiousLabel}</dt><dd>{formatEuro(scopedFacts.cautious,locale,t.noData)}</dd></div>}
+        {scopedFacts.base !== null && <div><dt>{t.baseLabel}</dt><dd>{formatEuro(scopedFacts.base,locale,t.noData)}</dd></div>}
+        {scopedFacts.optimistic !== null && <div><dt>{t.optimisticLabel}</dt><dd>{formatEuro(scopedFacts.optimistic,locale,t.noData)}</dd></div>}
+        {query?.queryYear !== null && query?.queryYear !== undefined && <div><dt>{t.queryYearLabel}</dt><dd>{query.queryYear}</dd></div>}
+        {!Object.values(scopedFacts).some(value => value !== null) && query?.queryYear === null && <div><dt>{t.noData}</dt></div>}
       </dl>
     </div>
     <p className="gemini-vault-privacy">{t.privacy}</p>
