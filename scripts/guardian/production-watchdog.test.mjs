@@ -1,4 +1,5 @@
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { evaluateGuardianHealth, checkHeartbeat, notifyNtfy, run } from "./production-watchdog.mjs";
 
@@ -65,4 +66,19 @@ test("malformed ntfy token rejects before HTTP call",async()=>{
 
 test("watchdog is NOT armed without explicit operator flag",async()=>{
   await run({GUARDIAN_WATCHDOG_ENABLED:"false"});
+});
+
+test("new Supabase Data API defaults require explicit least-privilege Guardian grants",()=>{
+  const sql=readFileSync(new URL("../../supabase/migrations/003_guardian.sql",import.meta.url),"utf8");
+  for(const required of [
+    "grant select on public.guardian_subscriptions to service_role;",
+    "grant select, insert, update on public.guardian_alert_deliveries to service_role;",
+    "grant select on public.guardian_service_status to service_role;",
+    "grant select, update on public.guardian_run_health to service_role;",
+    "grant select on public.transactions to service_role;",
+  ]) assert.ok(sql.includes(required),`Missing permission contract: ${required}`);
+  assert.doesNotMatch(sql,/grant\\s+(?:all|select|insert|update|delete)[^;]*\\bon\\s+public\\.guardian_alert_deliveries\\s+to\\s+(?:anon|authenticated)\\s*;/i);
+  assert.doesNotMatch(sql,/grant\\s+(?:all|select|insert|update|delete)[^;]*\\bon\\s+public\\.guardian_run_health\\s+to\\s+(?:anon|authenticated)\\s*;/i);
+  assert.match(sql,/create table if not exists public\\.guardian_service_status/);
+  assert.match(sql,/active boolean not null default false/);
 });
