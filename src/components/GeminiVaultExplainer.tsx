@@ -35,7 +35,7 @@ const copy = {
     simMissing: "Die Rechenbeispiele sind derzeit nicht vollständig verfügbar.",
     check: "Verfügbarkeit prüfen", ask: "KI fragen", checking: "Prüfe...", loading: "Erkläre...",
     unchecked: "KI ungeprüft; Vault bleibt verfügbar.",
-    notReady: "KI nicht bereit: Zugang prüfen.",
+    notReady: "KI nicht bereit: Schlüssel oder Freigabe prüfen.",
     signIn: "Bitte im Vault anmelden.",
     offline: "Offline; Vault bleibt verfügbar.",
     ready: "KI bereit zum Fragen.",
