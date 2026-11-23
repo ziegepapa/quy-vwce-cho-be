@@ -11,7 +11,7 @@
 .sim-wrap .gemini-vault :is(select,input:not([type=checkbox])){width:100%;min-width:0;min-height:42px;font:inherit;font-size:13px;padding:9px 10px;border:1px solid var(--border-subtle);border-radius:10px;color:var(--text-primary);background:var(--surface-raised)}
 .gemini-vault-suggestions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
 .gemini-vault-grounded{margin-top:10px!important;padding-top:10px;border-top:1px solid var(--border-subtle)}
-.sim-wrap .gemini-vault button{min-width:0;min-height:39px;padding:6px;border:1px solid var(--border-subtle);border-radius:10px;font:inherit;font-weight:650;font-size:11px;color:var(--text-primary);background:var(--surface-sunken);cursor:pointer}
+.sim-wrap .gemini-vault button{min-width:0;min-height:44px;padding:8px 7px;border:1px solid var(--border-subtle);border-radius:10px;font:inherit;font-weight:650;font-size:12px;color:var(--text-primary);background:var(--surface-sunken);cursor:pointer}
 .sim-wrap .gemini-vault button[aria-pressed=true]{background:var(--primary-600);border-color:var(--primary-600);color:white}
 .sim-wrap .gemini-vault button:disabled{opacity:.5;cursor:not-allowed}
 .sim-wrap .gemini-vault :is(button,input,select):focus-visible{outline:2px solid var(--primary-600);outline-offset:3px}
