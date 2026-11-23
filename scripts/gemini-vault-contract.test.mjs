@@ -68,13 +68,14 @@ test("AI answer cache stays on-device and prevents a second quota claim for iden
   assert.ok(client.includes("useEffect(() => { setAnswer(\"\"); setCached(false); setAnswerModel(null); }, [answerContext])"));
   assert.ok(cache.includes('crypto.subtle.digest("SHA-256"'));
   assert.ok(cache.includes("24 * 60 * 60 * 1000"));
+  assert.ok(cache.includes('"context-v2"'));
   assert.ok(cache.includes("localStorage"));
   assert.doesNotMatch(cache,/GEMINI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|x-goog-api-key|localStorage\.setItem\([^,]+,\s*JSON\.stringify\(request/);
 });
 
 test("only local ledger may conclude progress or difference, and old wrong AI cache is invalidated",()=>{
   assert.ok(client.includes('localTopic === "year" || localTopic === "difference" || localTopic === "goalProgress"'));
-  assert.ok(client.includes("{!ledgerOnly && <>"));
+  assert.ok(client.includes("{!ledgerOnly && !goalMissing && <>"));
   assert.ok(client.includes('showGoal ? chosenGoal : null'));
   assert.ok(server.includes('code:"VAULT_ONLY"'));
   assert.ok(server.indexOf('code:"VAULT_ONLY"') < server.indexOf('gemini_explain_claim",{p_user_id:userId}'));
@@ -117,6 +118,11 @@ test("authenticated Edge uses cache before spending 20/40 Vault quota and reserv
   assert.ok(cacheGet>=0 && appClaim>cacheGet);
   assert.ok(server.includes('serverCacheHash(payload)'));
   assert.ok(server.includes("payload.topic,payload.locale,payload.facts,payload.queryYear"));
+  assert.ok(server.includes("RESPONSE_REV"));
+  assert.ok(server.includes('code:"GOAL_REQUIRED"'));
+  assert.ok(server.indexOf('code:"GOAL_REQUIRED"') < server.indexOf('"gemini_explain_claim"'));
+  assert.ok(server.includes("Giải thích Ý NGHĨA"));
+  assert.ok(server.includes("Erkläre die BEDEUTUNG"));
   assert.ok(server.includes('payload.topic === "goal" || payload.topic === "simulation"'));
   assert.ok(server.includes('gemini_flash_claim'));
   assert.ok(server.includes("if (model === flash && !reservedPrimary && !(await reserveFlash(base,role)))"));
