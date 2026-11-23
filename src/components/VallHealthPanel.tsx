@@ -1,7 +1,7 @@
 import { useState } from "react";
 import snapshot from "../data/vall-health.json";
-import { parseVallHealth, type VallFlag } from "../lib/vallHealthSnapshot";
-import { vallFlagOrder, vallViewState } from "../lib/vallHealthView";
+import { parseVallHealth, type VallFlag, type VallReplicationSnapshot } from "../lib/vallHealthSnapshot";
+import { vallFlagOrder, vallViewState, aumChangePercent, daysUntilExternalReview } from "../lib/vallHealthView";
 import type { AppLocale } from "../lib/locale";
 import "../styles/vall-health.css";
 
@@ -30,15 +30,21 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
   if (!data) return <section role="alert">{de ? "VALL-Snapshot ungültig. Keine Werte anzeigen." : "Dữ liệu VALL không hợp lệ; không hiển thị số."}</section>;
 
   const latest = data.history.at(-1)!;
-  const state = vallViewState(data);
+  const previous = data.history.at(-2);
+  const aumChange = previous ? aumChangePercent(latest.totalAssetsUsdMillions,previous.totalAssetsUsdMillions) : null;
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+  const state = vallViewState(data,today);
+  const daysToReview = state.nextReview ? daysUntilExternalReview(state.nextReview.date,today) : null;
   const date = (value:string) => displayDate(value,locale);
   const flags = vallFlagOrder.filter(key => filter === "all" || data.flags[key] === null);
-  const decision = state.warningFlags > 0 ? (de ? "Bestätigte Warnung im Snapshot" : "Có cờ đỏ đã ghi nhận")
-    : state.unknownFlags > 0 ? (de ? "Einordnung noch offen" : "Chưa đủ bằng chứng để kết luận")
-    : (de ? "Kein dokumentiertes Warnsignal" : "Chưa ghi nhận cờ đỏ");
+  const decision = state.warningFlags > 0 ? (de ? "Bestätigtes Warnsignal" : "Có cờ đỏ cần kiểm tra")
+    : state.unknownFlags > 0 ? (de ? "Noch kein endgültiges Urteil" : "Chưa đủ bằng chứng để kết luận")
+    : (de ? "Keine gemeldeten Warnsignale" : "Chưa ghi nhận cờ đỏ trong sổ");
   const judgement = state.warningFlags > 0
-    ? (de ? "Quelle und Auswirkung prüfen. Nur künftige Sparraten gegebenenfalls neu bewerten." : "Đối chiếu nguồn và mức độ ảnh hưởng; chỉ xem xét thay đổi khoản góp mới.")
-    : (de ? "Die bekannten Kennzahlen sind kein Fonds-Gesundheitsscore. Ungeprüft bedeutet NICHT sicher." : "Các số đã biết không tạo thành điểm sức khỏe quỹ. Chưa kiểm tra KHÔNG đồng nghĩa an toàn.");
+    ? (de ? "Dokumentiertes Warnsignal prüfen; nur zukünftige Sparraten erwägen." : "Đối chiếu nguồn cờ đỏ; chỉ xem xét khoản góp mới, không tự bán vị thế.")
+    : (de ? `Gemeldete Total Assets: ${aumChange===null?"—":"+"+Math.round(aumChange)+"%"} von September bis Oktober; OCF weiter 0,07%. Portfolio-Kennzahlen ähneln dem Index. Eine echte Tracking Difference ist erst nach einem Jahr ab August 2027 verfügbar. Ungeprüft bedeutet NICHT sicher.`
+          : `Theo sổ factsheet, tiền trong quỹ tăng ${aumChange===null?"—":"+"+Math.round(aumChange)+"%"} từ 30/09 đến 31/10, phí vẫn 0,07% và vài đặc điểm danh mục gần chỉ số. Có dấu hiệu tích cực về quy mô nhưng chưa đủ để kết luận quỹ an toàn. Độ lệch hiệu suất chỉ có sau một năm, từ 08/2027; 5 cờ đỏ vẫn chưa xác minh.`);
   const trUnverified = data.tradeRepublic.vallSparplanFreeVerified === null;
   const tdUnverified = latest.trackingDifferenceAnnualPp === null;
   const unverified = [
@@ -62,7 +68,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
         <div className="vh-orbit" aria-hidden="true"><span>V</span></div>
       </div>
       <div className="vh-hero-foot">
-        <span className="vh-hero-pill">{de ? "Nur verifizierte Quellen" : "Nguồn có ngày đối chiếu"}</span>
+        <span className="vh-hero-pill">{de ? "Datierter Quellenstand" : "Số liệu theo kỳ đã ghi nhận"}</span>
         <span>{de ? "Keine Live-Überwachung" : "Không giám sát trực tiếp"}</span>
       </div>
     </header>
@@ -70,7 +76,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
     <div className={`vh-interpretation${state.warningFlags ? " vh-interpretation-warning" : ""}`} role="status">
       <span className="vh-status-glyph" aria-hidden="true">{state.warningFlags ? "!" : "i"}</span>
       <div>
-        <span className="vh-eyebrow">{de ? "EINORDNUNG DER QUELLEN" : "NHẬN ĐỊNH TỪ DỮ LIỆU"}</span>
+        <span className="vh-eyebrow">{de ? "IST DER FONDS FÜR DAS KIND IN ORDNUNG?" : "QUỸ CỦA BÉ CÓ ỔN KHÔNG?"}</span>
         <h3>{decision}</h3>
         <p>{judgement}</p>
       </div>
@@ -81,25 +87,25 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
     </div>
 
     <div className="vh-section-heading">
-      <div><span className="vh-eyebrow">01 / {de?"FAKTEN":"DỮ KIỆN"}</span><h3>{de ? "Werte mit Quellenbeleg" : "Chỉ số có nguồn kiểm chứng"}</h3></div>
+      <div><span className="vh-eyebrow">01 / {de?"FAKTEN":"DỮ KIỆN"}</span><h3>{de ? "Drei Kernwerte" : "Ba con số quan trọng nhất"}</h3></div>
       <span className="vh-quiet">{de ? "Stand: Vanguard-Factsheet" : "Theo factsheet Vanguard"} {date(latest.asOf)}</span>
     </div>
     <dl className="vh-metrics">
       <div className="vh-metric vh-metric-primary">
-        <dt>Tracking difference <span>01</span></dt>
+        <dt>{de ? "Abweichung vom Index (Tracking difference)" : "Độ lệch so với chỉ số (Tracking difference)"} <span>01</span></dt>
         <dd>{tdUnverified ? "—" : `${latest.trackingDifferenceAnnualPp! > 0 ? "+" : ""}${percent(latest.trackingDifferenceAnnualPp!,locale)}`}</dd>
         <p className="vh-metric-tag">{tdUnverified ? (de ? "Nicht verfügbar" : "Chưa có số liệu") : (de ? "Quelle dokumentiert" : "Có số trong file")}</p>
         <small>{tdUnverified ? (de ? "Noch keine 1-Jahres-Daten (Start 18.08.2026)" : "Chưa đủ lịch sử 1 năm (quỹ ra mắt 18/08/2026)") : (de ? "Gegen den FTSE Global All Cap – laut Quelle" : "So với FTSE Global All Cap, theo kỳ đã xác minh")}</small>
       </div>
       <div className="vh-metric">
-        <dt>Total assets <span>02</span></dt>
+        <dt>{de ? "Geld im Fonds (Total assets)" : "Tiền trong quỹ (Total assets)"} <span>02</span></dt>
         <dd>US$ {new Intl.NumberFormat(fmt(locale), {maximumFractionDigits:0}).format(latest.totalAssetsUsdMillions)} <em>{de ? "Mio." : "triệu"}</em></dd>
         <p className="vh-metric-tag vh-tag-known">Vanguard · {date(latest.asOf)}</p>
         <small>{de ? "Total assets laut datiertem Factsheet; keine Quellmischung." : "Total assets theo factsheet có ngày chốt; không ghép số từ nguồn khác."}</small>
       </div>
       <div className="vh-metric">
-        <dt>OCF / TER <span>03</span></dt>
-        <dd>{percent(latest.ongoingChargesPercent,locale)}</dd>
+        <dt>{de ? "Jährliche Fondskosten (OCF/TER)" : "Phí quỹ mỗi năm (OCF/TER)"} <span>03</span></dt>
+        <dd>{latest.ongoingChargesPercent===null?"—":percent(latest.ongoingChargesPercent,locale)}</dd>
         <p className="vh-metric-tag vh-tag-known">{de ? "Faktenblatt bestätigt" : "Đã có nguồn factsheet"}</p>
         <small>{de ? "Laufende Kosten · Stand" : "Phí thường niên · ngày chốt"} {date(latest.asOf)}</small>
       </div>
@@ -165,7 +171,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
       <span className="vh-eyebrow">05 / {de ? "ORIENTIERUNG" : "SO SÁNH CÓ NGỮ CẢNH"}</span>
       <h3>{de ? "Zwei Fonds. Zwei unterschiedliche Indizes." : "Hai quỹ — hai chỉ số khác nhau"}</h3>
       <div className="vh-compare-grid">
-        <div><span className="vh-symbol">VALL</span><strong>{percent(latest.ongoingChargesPercent,locale)}</strong><small>{data.benchmark}</small><small>{data.fundIsin}</small></div>
+        <div><span className="vh-symbol">VALL</span><strong>{latest.ongoingChargesPercent===null?"—":percent(latest.ongoingChargesPercent,locale)}</strong><small>{data.benchmark}</small><small>{data.fundIsin}</small></div>
         <div><span className="vh-symbol">VWCE</span><strong>{percent(data.fallback.ongoingChargesPercent,locale)}</strong><small>{data.fallback.benchmark}</small><small>{data.fallback.isin}</small></div>
       </div>
       <p>{de
