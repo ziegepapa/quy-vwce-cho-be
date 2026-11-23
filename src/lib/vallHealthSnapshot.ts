@@ -68,8 +68,9 @@ export function parseVallHealth(input: unknown): VallHealthSnapshot | null {
       typeof tr.generalSparplanExecutionFree !== "boolean" ||
       !maybeBool(tr.vallSparplanFreeVerified) ||
       !link(tr.sourceUrl,"support.traderepublic.com")) return null;
-  if (!maybeBool(input.fundCorporateActionVerified) || !isRecord(input.flags) ||
-      !flags.every(key=>maybeBool(input.flags[key]))) return null;
+  const verifiedFlags = input.flags;
+  if (!maybeBool(input.fundCorporateActionVerified) || !isRecord(verifiedFlags) ||
+      !flags.every(key=>maybeBool(verifiedFlags[key]))) return null;
   const next = input.externalReviewDates;
   if (!isRecord(next) || !Array.isArray(next.light) ||
       next.light.length !== 2 || !next.light.every(day) || !day(next.full) ||
