@@ -51,6 +51,8 @@ describe("Gemini AI screen — safe without any API key",()=>{
     expect(document.body.textContent).toContain("Số góp ghi trong sổ còn thấp hơn kế hoạch");
     expect(document.body.textContent).toContain("không gửi Google, không trừ lượt AI");
     expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
+    expect(screen.queryByRole("button",{name:"Kiểm tra kết nối AI"})).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
     fireEvent.click(screen.getByRole("button",{name:"Chênh lệch"}));
     expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
     fireEvent.click(screen.getByRole("button",{name:"Tiến độ Goal"}));
@@ -92,6 +94,9 @@ describe("Gemini AI screen — safe without any API key",()=>{
     expect(document.body.textContent).toContain("2038");
     fireEvent.click(screen.getByRole("button",{name:"Kế hoạch"}));
     expect(screen.queryByLabelText("Chọn Goal cần giải thích")).toBeNull();
+    expect(document.body.textContent).not.toContain("Goal đã chọn");
+    fireEvent.click(screen.getByRole("button",{name:"Mục tiêu"}));
+    expect((screen.getByLabelText("Chọn Goal cần giải thích") as HTMLSelectElement).value).toBe("test-goal");
   });
   it("shows unsupported question feedback instead of silently hiding why AI is unavailable",()=>{
     render(<GeminiVaultExplainer locale="de" goals={[goal]} facts={facts}/>);
