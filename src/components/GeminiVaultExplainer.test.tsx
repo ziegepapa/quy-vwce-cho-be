@@ -76,9 +76,9 @@ describe("Gemini AI screen — safe without any API key",()=>{
       facts={{...facts,portfolioValue:521.97,contributed:560,yearRecorded:560,yearPlanned:600}}/>);
     const words=document.body.textContent?.replaceAll("\u00a0"," ") || "";
     expect(words).toContain("Còn thiếu 40,00 € theo sổ");
-    expect(words).toContain("Giá trị quỹ trừ tiền đã góp: -38,03 €");
+    expect(words).toContain("lệch -38,03 €");
     fireEvent.click(screen.getByRole("button",{name:"Mục tiêu"}));
-    expect(document.body.textContent).not.toContain("Giá trị quỹ trừ tiền đã góp");
+    expect(document.body.textContent).not.toContain("lệch -38,03 €");
     expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
   });
   it("shows only the outgoing aggregates for the selected topic",()=>{
