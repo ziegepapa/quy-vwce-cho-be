@@ -115,7 +115,9 @@ explicitly shows the recognized topic. An unsupported question shows a
 localized explanation and disables submission, without spending quota.
 
 The Goal selector appears only where it is relevant (`goal`,
-`goalProgress`, optionally `simulation`). A `goal` Gemini question
+`goalProgress`, optionally `simulation`). Goal fields are also **omitted from
+unrelated topics’ outgoing fact payload**, even when the user selected a Goal
+earlier in this screen. A `goal` Gemini question
 requires an explicit selected Goal; no year or goal is inferred from a
 typed sentence or automatically chosen from the goal list. The Plan
 topic no longer displays an irrelevant "no Goal selected" label.
@@ -126,6 +128,10 @@ planned amount is 600 €, the Vault says **below planned contributions**
 rather than that the plan was reached. That comparison is determined
 locally; Gemini remains an optional qualitative explanation, not a
 source of arithmetic truth.
+
+All Google opt-in/availability controls are hidden on the three
+Vault-only topics so a read-only calculation is not mistaken for an AI call.
+The general financial disclaimer is still shown.
 
 This is a **front-end-only** change: no new Edge/SQL deployment,
 secrets, background jobs, new data sent to Google, quota change,
