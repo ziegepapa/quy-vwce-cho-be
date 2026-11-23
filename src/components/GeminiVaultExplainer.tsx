@@ -14,10 +14,12 @@ const copy = {
   de: {
     tag: "Kostenlose KI · freiwillig", title: "Dein Sparplan, einfach erklärt",
     description: "Nur Erklärung deiner Vault-Zahlen; keine Transaktionen.",
-    question: "Kurze Frage", input: "Zum Beispiel: Habe ich dieses Jahr genug eingezahlt?",
+    question: "Eigene Frage (optional)", input: "Frage zum ausgewählten Thema (optional)",
     topicPlan: "Mein Plan", topicYear: "Dieses Jahr", topicGoal: "Mein Ziel", topicSim: "Simulation",
     topicValue: "Depotwert", topicDifference: "Differenz", topicMonthly: "Monatsrate", topicGoalProgress: "Zielstand",
-    goal: "Welches Ziel möchtest du besprechen?", noGoal: "Kein Ziel ausgewählt",
+    goal: "Ziel für diese Erklärung auswählen", simGoal: "Ziel einbeziehen (optional)", noGoal: "Bitte Ziel auswählen",
+    chooseGoal: "Bitte wähle zuerst dein Ziel. Ein Jahr im Fragetext ersetzt diese Auswahl nicht.",
+    detected: "Frage erkannt als", unknownQuestion: "Frage nicht erkannt. Wähle ein Thema oder lösche den Text.",
     localTitle: "Aus dem Vault · ohne KI-Limit", missing: "Dazu fehlen noch Zahlen im Vault.",
     valueSummary: "Depotwert: {value} (schwankend).",
     differenceSummary: "Depot {value}; Beiträge {paid}; Differenz {difference}. Keine Jahresrendite.",
@@ -65,10 +67,12 @@ const copy = {
   vi: {
     tag: "AI miễn phí · tự chọn", title: "Giải thích kế hoạch bằng lời thường",
     description: "AI chỉ giải thích số liệu Vault; không giao dịch.",
-    question: "Hỏi ngắn", input: "Ví dụ: Năm nay tôi góp đủ chưa?",
+    question: "Câu hỏi riêng (không bắt buộc)", input: "Hỏi thêm về chủ đề đã chọn (không bắt buộc)",
     topicPlan: "Kế hoạch", topicYear: "Năm nay", topicGoal: "Mục tiêu", topicSim: "Mô phỏng",
     topicValue: "Giá trị quỹ", topicDifference: "Chênh lệch", topicMonthly: "Góp tháng", topicGoalProgress: "Tiến độ Goal",
-    goal: "Bạn muốn hỏi về Goal nào?", noGoal: "Chưa chọn Goal",
+    goal: "Chọn Goal cần giải thích", simGoal: "Liên kết Goal (tùy chọn)", noGoal: "Chọn Goal…",
+    chooseGoal: "Hãy chọn Goal trước khi hỏi Gemini. Chỉ gõ năm trong câu hỏi chưa phải là chọn Goal.",
+    detected: "Nhận diện câu hỏi", unknownQuestion: "Chưa nhận diện được câu hỏi. Hãy chọn chủ đề hoặc xóa nội dung ô này.",
     localTitle: "Giải thích từ sổ · không trừ lượt", missing: "Hiện chưa đủ dữ liệu trong sổ để giải thích chi tiết.",
     valueSummary: "Giá trị quỹ: {value} (có thể biến động).",
     differenceSummary: "Quỹ {value}; đã góp {paid}; chênh lệch {difference}. Không phải lợi suất năm.",
@@ -157,7 +161,14 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
     ? fill(t.simSummary, { cautious:euro(f.cautious), base:euro(f.base),
         optimistic:euro(f.optimistic), year:String(f.simulationYear) }) : t.simMissing;
   if (f.contributed === null && f.portfolioValue === null) return t.missing;
-  return fill(t.personal,{paid:euro(f.contributed),value:euro(f.portfolioValue),monthly:euro(f.monthly)});
+  const summary = fill(t.personal,{paid:euro(f.contributed),value:euro(f.portfolioValue),monthly:euro(f.monthly)});
+  if (topic === "plan" && f.yearRecorded !== null && f.yearPlanned !== null) {
+    const yearText = t.yearSummary.replace("{recorded}",euro(f.yearRecorded))
+      .replace("{planned}",euro(f.yearPlanned));
+    return summary + " " + yearText + " "
+      + (f.yearRecorded >= f.yearPlanned ? t.yearAhead : t.yearBehind);
+  }
+  return summary;
 }
 
 export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
@@ -175,10 +186,20 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [limitPerDay, setLimitPerDay] = useState(20);
   const chosenGoal = goals.find(g => !g.deletedAt && g.id === goalId && validExitDate(g.dueDate)) ?? null;
-  const selectedFacts = useMemo(() => withSelectedGoal(facts, chosenGoal), [facts, chosenGoal]);
   const query = question.trim() ? classifyGeminiQuestion(question) : { topic, queryYear: null };
   const localTopic: GeminiTopic = query?.topic ?? topic;
   const ledgerOnly = localTopic === "year" || localTopic === "difference" || localTopic === "goalProgress";
+  const needsGoal = localTopic === "goal" || localTopic === "goalProgress";
+  const showGoal = needsGoal || localTopic === "simulation";
+  // Keep a manually selected Goal in UI state, but do not send its data to
+  // unrelated topics. Goal fields are absent even after a prior Goal question.
+  const selectedFacts = useMemo(() => withSelectedGoal(facts, showGoal ? chosenGoal : null),
+    [facts, chosenGoal, showGoal]);
+  const goalMissing = localTopic === "goal" && !chosenGoal;
+  const topicLabels: Record<GeminiTopic,string> = {
+    plan:t.topicPlan,year:t.topicYear,goal:t.topicGoal,simulation:t.topicSim,
+    value:t.topicValue,difference:t.topicDifference,monthly:t.topicMonthly,goalProgress:t.topicGoalProgress,
+  };
   const answerContext = JSON.stringify([locale, query?.topic, query?.queryYear, selectedFacts]);
   const contextRef = useRef(answerContext);
   contextRef.current = answerContext;
@@ -194,6 +215,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   }, []);
 
   const local = fallback(localTopic, selectedFacts, locale);
+  const hasTyped = question.trim().length > 0;
   const busy = status === "loading" || status === "checking";
   const showStatus = ({
     unchecked:t.unchecked,checking:t.checking,ready:t.ready,not_ready:t.notReady,
@@ -228,7 +250,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     } catch { setStatus("not_ready"); return false; }
   }
   async function ask(): Promise<void> {
-    if (asking.current || busy || ledgerOnly || !consent) return;
+    if (asking.current || busy || ledgerOnly || goalMissing || !consent) return;
     asking.current = true; // A double-tap must not spend two Vault quota claims.
     const context = answerContext;
     try {
@@ -297,33 +319,40 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
 
   return <section className="gl gemini-vault" data-testid="gemini-vault-explainer" aria-labelledby="gemini-vault-title">
     <header><small>{t.tag}</small><h2 id="gemini-vault-title">{t.title}</h2><p>{t.description}</p></header>
+    <div className="gemini-vault-suggestions" role="group" aria-label={t.question}>
+      {(["plan","year","goal","simulation","value","difference","monthly","goalProgress"] as const).map(v=><button key={v} type="button"
+        aria-pressed={localTopic===v} onClick={()=>{setTopic(v);setQuestion("");setAnswer("");}}>
+        {topicLabels[v]}
+      </button>)}
+    </div>
+    {showGoal && <>
+      <label htmlFor="gemini-vault-goal">{localTopic === "simulation" ? t.simGoal : t.goal}</label>
+      <select id="gemini-vault-goal" value={goalId} onChange={e=>{setGoalId(e.target.value);setAnswer("");}}>
+        <option value="">{t.noGoal}</option>
+        {goals.filter(g=>!g.deletedAt&&validExitDate(g.dueDate)).map(g=><option key={g.id} value={g.id}>{g.name} · {g.dueDate}</option>)}
+      </select>
+      {goalMissing && <p className="gemini-vault-hint" role="status">{t.chooseGoal}</p>}
+    </>}
+    <label htmlFor="gemini-vault-question">{t.question}</label>
+    <input id="gemini-vault-question" value={question} maxLength={160} placeholder={t.input}
+      onChange={e=>{setQuestion(e.target.value);setAnswer("");}} />
+    {hasTyped && query && query.topic !== topic && <p className="gemini-vault-hint" role="status">
+      {t.detected}: <strong>{topicLabels[query.topic]}</strong>
+    </p>}
+    {hasTyped && !query && <p className="gemini-vault-hint" role="status">{t.unknownQuestion}</p>}
+    <p className="gemini-vault-hint">{t.limitNotice}</p>
     <div className="gemini-vault-local">
       <h3>{t.localTitle}</h3><p>{local}</p>
       {ledgerOnly && <small>{t.sourceChecked}</small>}
     </div>
-    <label htmlFor="gemini-vault-goal">{t.goal}</label>
-    <select id="gemini-vault-goal" value={goalId} onChange={e=>{setGoalId(e.target.value);setAnswer("");}}>
-      <option value="">{t.noGoal}</option>
-      {goals.filter(g=>!g.deletedAt&&validExitDate(g.dueDate)).map(g=><option key={g.id} value={g.id}>{g.name} · {g.dueDate}</option>)}
-    </select>
-    <div className="gemini-vault-suggestions" role="group" aria-label={t.question}>
-      {(["plan","year","goal","simulation","value","difference","monthly","goalProgress"] as const).map(v=><button key={v} type="button"
-        aria-pressed={topic===v} onClick={()=>{setTopic(v);setQuestion("");setAnswer("");}}>
-        {({plan:t.topicPlan,year:t.topicYear,goal:t.topicGoal,simulation:t.topicSim,
-          value:t.topicValue,difference:t.topicDifference,monthly:t.topicMonthly,goalProgress:t.topicGoalProgress})[v]}
-      </button>)}
-    </div>
-    <label htmlFor="gemini-vault-question">{t.question}</label>
-    <input id="gemini-vault-question" value={question} maxLength={160} placeholder={t.input}
-      onChange={e=>{setQuestion(e.target.value);setAnswer("");}} />
-    <p className="gemini-vault-hint">{t.limitNotice}</p>
+    {!ledgerOnly && <>
     <div className="gemini-vault-payload">
       <h3>{t.data}</h3>
       <dl>
         <div><dt>{t.values}</dt><dd>{formatEuro(selectedFacts.portfolioValue,locale,t.noData)}</dd></div>
         <div><dt>{t.paid}</dt><dd>{formatEuro(selectedFacts.contributed,locale,t.noData)}</dd></div>
         <div><dt>{t.monthly}</dt><dd>{formatEuro(selectedFacts.monthly,locale,t.noData)}</dd></div>
-        <div><dt>{t.milestone}</dt><dd>{selectedFacts.goalYear || t.noData}</dd></div>
+        {showGoal && <div><dt>{t.milestone}</dt><dd>{selectedFacts.goalYear || t.noData}</dd></div>}
       </dl>
     </div>
     <p className="gemini-vault-privacy">{t.privacy}</p>
@@ -331,8 +360,8 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       onChange={e=>setConsent(e.target.checked)} /> <span>{t.consent}</span></label>
     <div className="gemini-vault-actions">
       <button type="button" disabled={busy || !supabase} onClick={()=>void connectionCheck()}>{busy ? t.checking : t.check}</button>
-      {!ledgerOnly && <button type="button" disabled={busy || !consent || !query || !supabase}
-        onClick={()=>void ask()}>{status==="loading"?t.loading:t.ask}</button>}
+      <button type="button" disabled={busy || goalMissing || !consent || !query || !supabase}
+        onClick={()=>void ask()}>{status==="loading"?t.loading:t.ask}</button>
     </div>
     <p className="gemini-vault-status" role={status === "unchecked" || status === "not_ready" ? undefined : "status"}>{showStatus}</p>
     {diagnostic && <p className="gemini-vault-status" role="status">{diagnostic}</p>}
@@ -343,9 +372,10 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       {answerModel && <small className="gemini-vault-model" data-testid="gemini-vault-model">{t.modelLabel}: {answerModel === "gemini-3.8-flash" ? "Flash" : "Flash-Lite"}</small>}
       <p>{answer}</p>
       {cached && <button type="button" onClick={clearCache}>{t.cacheClear}</button>}
-      <p className="gemini-vault-grounded"><strong>{t.localTitle}: </strong>{local}</p>
+
 
     </div>}
+    </>}
     <p className="gemini-vault-disclaimer">{t.disclaimer} {t.quota}</p>
   </section>;
 }
