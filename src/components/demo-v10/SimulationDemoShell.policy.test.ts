@@ -140,12 +140,12 @@ describe("SimulationDemoShell financial-policy containment", () => {
   it("marks 40 years as a simulation limit, not an investment or app end date", () => {
     renderShell("vi", "", 0, true, false, "C");
     expect(screen.getByRole("status").textContent).toContain("40 năm mô phỏng");
-    expect(screen.getByRole("status").textContent).toContain("quỹ và app không kết thúc ở đó");
+    expect(screen.getByRole("status").textContent).toContain("quỹ và app vẫn tiếp tục");
     expect(screen.getByTestId("simulation-hero-amount").textContent).toBe("—");
     expect(screen.getByText("Kỳ mô phỏng").nextElementSibling?.textContent).toContain("40 năm");
     cleanup();
     renderShell("de", "", 0, true, false, "C");
-    expect(screen.getByRole("status").textContent).toContain("40 Modelljahren");
+    expect(screen.getByRole("status").textContent).toContain("40 Modelljahre");
     expect(screen.getByRole("status").textContent).toContain("laufen weiter");
     expect(screen.getByTestId("simulation-hero-amount").textContent).toBe("—");
     cleanup();
