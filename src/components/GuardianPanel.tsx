@@ -90,7 +90,7 @@ export default function GuardianPanel({ locale, userId, emailVerified }: {
     }
   }
 
-  return <div className="set2-group" role="region" aria-label={text.title}>
+  return <div className="set2-group">
     <div style={{ padding: "12px 14px", display: "grid", gap: 9 }}>
       <strong>{text.title}</strong>
       <p style={{ margin: 0, fontSize: 13 }}>{text.description}</p>
