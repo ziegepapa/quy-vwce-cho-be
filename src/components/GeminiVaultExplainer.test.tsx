@@ -58,6 +58,47 @@ describe("Gemini AI screen — safe without any API key",()=>{
     fireEvent.click(screen.getByRole("button",{name:"Kế hoạch"}));
     expect(screen.getByRole("button",{name:"Hỏi Gemini"})).toBeTruthy();
   });
+  it("Plan prioritizes ledger facts, without irrelevant Goal selection or a misleading input example",()=>{
+    render(<GeminiVaultExplainer locale="vi" goals={[goal]}
+      facts={{...facts,contributed:560,yearRecorded:560,yearPlanned:600}}/>);
+    const text=document.body.textContent?.replaceAll("\u00a0"," ") || "";
+    expect(text).toContain("Đã ghi góp 560,00 €");
+    expect(text).toContain("Năm nay ghi 560,00 €, dự kiến 600,00 €");
+    expect(text).toContain("Số góp ghi trong sổ còn thấp hơn kế hoạch");
+    expect(screen.queryByLabelText("Chọn Goal cần giải thích")).toBeNull();
+    expect(screen.getByRole("textbox").getAttribute("placeholder")).not.toContain("Năm nay");
+    expect(screen.getByRole("button",{name:"Hỏi Gemini"})).toBeTruthy();
+  });
+  it("marks typed Year question as the effective topic even while Plan was selected",()=>{
+    render(<GeminiVaultExplainer locale="vi" goals={[goal]}
+      facts={{...facts,contributed:560,yearRecorded:560,yearPlanned:600}}/>);
+    fireEvent.change(screen.getByRole("textbox"),{target:{value:"Năm nay tôi góp đủ chưa?"}});
+    expect(screen.getByText(/Nhận diện câu hỏi/)).toBeTruthy();
+    expect(screen.getByRole("button",{name:"Năm nay"}).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button",{name:"Kế hoạch"}).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByRole("button",{name:"Hỏi Gemini"})).toBeNull();
+    fireEvent.click(screen.getByRole("button",{name:"Kế hoạch"}));
+    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("");
+    expect(screen.getByRole("button",{name:"Hỏi Gemini"})).toBeTruthy();
+  });
+  it("requires an explicit selected Goal for Gemini Goal, but not Plan or other topics",()=>{
+    render(<GeminiVaultExplainer locale="vi" goals={[goal]} facts={facts}/>);
+    fireEvent.click(screen.getByRole("button",{name:"Mục tiêu"}));
+    expect(screen.getByLabelText("Chọn Goal cần giải thích")).toBeTruthy();
+    expect(document.body.textContent).toContain("Hãy chọn Goal trước khi hỏi Gemini");
+    expect(screen.getByRole("button",{name:"Hỏi Gemini"}).hasAttribute("disabled")).toBe(true);
+    fireEvent.change(screen.getByLabelText("Chọn Goal cần giải thích"),
+      {target:{value:"test-goal"}});
+    expect(document.body.textContent).toContain("2038");
+    fireEvent.click(screen.getByRole("button",{name:"Kế hoạch"}));
+    expect(screen.queryByLabelText("Chọn Goal cần giải thích")).toBeNull();
+  });
+  it("shows unsupported question feedback instead of silently hiding why AI is unavailable",()=>{
+    render(<GeminiVaultExplainer locale="de" goals={[goal]} facts={facts}/>);
+    fireEvent.change(screen.getByRole("textbox"),{target:{value:"zzzzzz unklar"}});
+    expect(document.body.textContent).toContain("Frage nicht erkannt");
+    expect(screen.getByRole("button",{name:"KI fragen"}).hasAttribute("disabled")).toBe(true);
+  });
   it("does not enable a provider request simply because user checked consent",()=>{
     render(<GeminiVaultExplainer locale="de" goals={[]} facts={facts}/>);
     fireEvent.click(screen.getByRole("checkbox"));
