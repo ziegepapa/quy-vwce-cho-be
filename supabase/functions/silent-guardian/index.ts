@@ -1,5 +1,5 @@
 import { retryRead } from "./retry.ts";
-import { detectGuardianSignals } from "./rules.ts";
+import { detectGuardianSignals, reserveNewGuardianSignals } from "./rules.ts";
 import type { SyncedGuardianRow, GuardianSignal } from "./rules.ts";
 
 /**
@@ -56,7 +56,7 @@ async function getAllTransactions(userId: string): Promise<SyncedGuardianRow[]> 
   const all: SyncedGuardianRow[] = [];
   for (let offset = 0; offset < 10_000; offset += 500) {
     const result = await adminJson<SyncedGuardianRow[]>(
-      `/rest/v1/transactions?select=id,data,deleted_at&user_id=eq.${encodeURIComponent(userId)}&deleted_at=is.null&order=id.asc&limit=500&offset=${offset}`,
+      `/rest/v1/transactions?select=id,data,created_at,deleted_at&user_id=eq.${encodeURIComponent(userId)}&deleted_at=is.null&order=id.asc&limit=500&offset=${offset}`,
     );
     all.push(...result);
     if (result.length < 500) return all;
@@ -132,10 +132,9 @@ async function checkSubscription(sub: Subscription): Promise<{ sent: number; fai
 
   const rows = await getAllTransactions(sub.user_id);
   const events = detectGuardianSignals(rows, sub.enrolled_at);
-  const newlyReserved: Deliverable[] = [];
-  for (const event of events.slice(0, 50)) {
-    if (await reserve(sub.user_id, event)) newlyReserved.push(event);
-  }
+  const newlyReserved: Deliverable[] = await reserveNewGuardianSignals(
+    events, (event) => reserve(sub.user_id, event),
+  );
   if (newlyReserved.length === 0) return { sent: 0, failed: 0 };
   // Re-check consent immediately before sending. Changes to subscriptions
   // cannot create a guaranteed cancellation of an already in-flight email.
