@@ -186,12 +186,15 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [limitPerDay, setLimitPerDay] = useState(20);
   const chosenGoal = goals.find(g => !g.deletedAt && g.id === goalId && validExitDate(g.dueDate)) ?? null;
-  const selectedFacts = useMemo(() => withSelectedGoal(facts, chosenGoal), [facts, chosenGoal]);
   const query = question.trim() ? classifyGeminiQuestion(question) : { topic, queryYear: null };
   const localTopic: GeminiTopic = query?.topic ?? topic;
   const ledgerOnly = localTopic === "year" || localTopic === "difference" || localTopic === "goalProgress";
   const needsGoal = localTopic === "goal" || localTopic === "goalProgress";
   const showGoal = needsGoal || localTopic === "simulation";
+  // Keep a manually selected Goal in UI state, but do not send its data to
+  // unrelated topics. Goal fields are absent even after a prior Goal question.
+  const selectedFacts = useMemo(() => withSelectedGoal(facts, showGoal ? chosenGoal : null),
+    [facts, chosenGoal, showGoal]);
   const goalMissing = localTopic === "goal" && !chosenGoal;
   const topicLabels: Record<GeminiTopic,string> = {
     plan:t.topicPlan,year:t.topicYear,goal:t.topicGoal,simulation:t.topicSim,
@@ -342,6 +345,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       <h3>{t.localTitle}</h3><p>{local}</p>
       {ledgerOnly && <small>{t.sourceChecked}</small>}
     </div>
+    {!ledgerOnly && <>
     <div className="gemini-vault-payload">
       <h3>{t.data}</h3>
       <dl>
@@ -356,8 +360,8 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       onChange={e=>setConsent(e.target.checked)} /> <span>{t.consent}</span></label>
     <div className="gemini-vault-actions">
       <button type="button" disabled={busy || !supabase} onClick={()=>void connectionCheck()}>{busy ? t.checking : t.check}</button>
-      {!ledgerOnly && <button type="button" disabled={busy || goalMissing || !consent || !query || !supabase}
-        onClick={()=>void ask()}>{status==="loading"?t.loading:t.ask}</button>}
+      <button type="button" disabled={busy || goalMissing || !consent || !query || !supabase}
+        onClick={()=>void ask()}>{status==="loading"?t.loading:t.ask}</button>
     </div>
     <p className="gemini-vault-status" role={status === "unchecked" || status === "not_ready" ? undefined : "status"}>{showStatus}</p>
     {diagnostic && <p className="gemini-vault-status" role="status">{diagnostic}</p>}
@@ -371,6 +375,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
 
 
     </div>}
+    </>}
     <p className="gemini-vault-disclaimer">{t.disclaimer} {t.quota}</p>
   </section>;
 }
