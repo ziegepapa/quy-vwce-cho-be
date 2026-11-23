@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Goal } from "../lib/types";
 import type { DisplayLocale } from "../ui/localeFormatting";
 import { supabase } from "../lib/supabase";
-import { classifyGeminiQuestion, withSelectedGoal, type GeminiFacts, type GeminiTopic } from "../lib/geminiVaultFacts";
+import { classifyGeminiQuestion, geminiFactsForTopic, withSelectedGoal, type GeminiFacts, type GeminiTopic } from "../lib/geminiVaultFacts";
 import { validExitDate } from "../lib/simulation/exitPlan";
 import { clearGeminiAnswers, geminiAnswerCacheKey, readGeminiAnswer, readGeminiModel, saveGeminiAnswer } from "../lib/geminiVaultCache";
 import "../styles/gemini-vault-explainer.css";
@@ -13,109 +13,115 @@ type Status = "unchecked" | "checking" | "ready" | "not_ready" | "sign_in" | "of
 const copy = {
   de: {
     tag: "Kostenlose KI · freiwillig", title: "Dein Sparplan, einfach erklärt",
-    description: "Nur Erklärung deiner Vault-Zahlen; keine Transaktionen.",
-    question: "Eigene Frage (optional)", input: "Frage zum ausgewählten Thema (optional)",
+    description: "Vault-Zahlen; keine Trades.",
+    question: "Eigene Frage (optional)", input: "Frage zum Thema (optional)",
     topicPlan: "Mein Plan", topicYear: "Dieses Jahr", topicGoal: "Mein Ziel", topicSim: "Simulation",
     topicValue: "Depotwert", topicDifference: "Differenz", topicMonthly: "Monatsrate", topicGoalProgress: "Zielstand",
-    goal: "Ziel für diese Erklärung auswählen", simGoal: "Ziel einbeziehen (optional)", noGoal: "Bitte Ziel auswählen",
-    chooseGoal: "Bitte wähle zuerst dein Ziel. Ein Jahr im Fragetext ersetzt diese Auswahl nicht.",
-    detected: "Frage erkannt als", unknownQuestion: "Frage nicht erkannt. Wähle ein Thema oder lösche den Text.",
-    localTitle: "Aus dem Vault · ohne KI-Limit", missing: "Dazu fehlen noch Zahlen im Vault.",
+    goal: "Ziel auswählen", simGoal: "Ziel (optional)", noGoal: "Ziel auswählen",
+    chooseGoal: "Bitte Ziel wählen. Ein genanntes Jahr genügt nicht.",
+    detected: "Frage erkannt als", unknownQuestion: "Frage nicht erkannt. Thema wählen oder Text löschen.",
+    localTitle: "Vault · ohne KI-Limit", missing: "Daten fehlen im Vault.",
     valueSummary: "Depotwert: {value} (schwankend).",
-    differenceSummary: "Depot {value}; Beiträge {paid}; Differenz {difference}. Keine Jahresrendite.",
-    monthlySummary: "Sparplan: {monthly}/Monat, keine bestätigte Zahlung.",
+    differenceSummary: "Depot {value}; Einzahlungen {paid}; Unterschied {difference}. Keine Jahresrendite.",
+    monthlySummary: "Geplant: {monthly}/Monat; keine Zahlung bestätigt.",
     goalProgressSummary: "Depot {value}, Ziel {goal}: {progress}. Keine Garantie.",
-    goalBelow: "Abstand {remaining}", goalReached: "Betrag derzeit erreicht",
+    goalBelow: "Abstand {remaining}", goalReached: "Zielwert derzeit erreicht",
     personal: "Erfasst: {paid}. Depot: {value}. Monatsplan: {monthly}.",
     yearSummary: "Dieses Jahr: {recorded} erfasst, {planned} geplant. Kein Brokerbeleg.",
-    yearAhead: "Die eingetragenen Beiträge erreichen den Planstand bis heute.", yearBehind: "Die eingetragenen Beiträge liegen unter dem Planstand bis heute.",
-    goalSummary: "Gewähltes Ziel: {goal} bis {year}; kein Verkaufstermin.",
-    goalUnknown: "Es wurde noch kein Ziel ausgewählt. Ein genanntes Jahr ist keine automatisch festgelegte Auszahlung.",
+    yearAhead: "Beiträge erreichen den Planstand.", yearBehind: "Erfasste Beiträge liegen unter Plan.",
+    goalSummary: "Ziel: {goal} bis {year}; kein Verkauf.",
+    goalUnknown: "Kein Ziel gewählt; Jahr ist kein Verkaufstermin.",
     simSummary: "Szenarien bis {year}: {cautious}, {base}, {optimistic}. Keine Prognose.",
-    simMissing: "Die Rechenbeispiele sind derzeit nicht vollständig verfügbar.",
+    simMissing: "Szenariodaten unvollständig.",
     check: "Verfügbarkeit prüfen", ask: "KI fragen", checking: "Prüfe...", loading: "Erkläre...",
-    unchecked: "Nicht geprüft. Vault-Erklärungen bleiben verfügbar.",
+    unchecked: "KI ungeprüft; Vault nutzbar.",
     notReady: "KI nicht bereit: Schlüssel oder Freigabe prüfen.",
-    signIn: "Bitte zuerst im Vault anmelden.",
-    offline: "Offline. Vault-Erklärung bleibt verfügbar.",
-    ready: "KI bereit. Frage kann gesendet werden.",
-    limited: "KI-Limit erreicht. Bitte morgen erneut versuchen.",
-    error: "KI nicht erreichbar. Nutze die Vault-Erklärung.",
-    unsupported: "Frage nicht unterstützt. Wähle ein Thema.",
-    aiAnswer: "Antwort von Gemini", modelLabel: "Modell", consent: "Ich erlaube, Summen bei neuen Fragen an Gemini zu senden.",
-    privacy: "Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen. Keine Namen oder Einzelbuchungen. Antworten bleiben bis zu 24 h auf diesem Gerät.",
-    data: "Diese Angaben würden gesendet", values: "Aktueller Depotwert", paid: "Erfasste Beiträge", monthly: "Monatsbeitrag", milestone: "Gewähltes Ziel",
-    noData: "nicht verfügbar", disclaimer: "Nur allgemeine Erläuterung — keine Anlage- oder Steuerberatung. Keine Renditegarantie.",
-    quota: "Maximal 20 Sendeversuche je Person und UTC-Tag, auch bei Fehlern. Der Modellcheck verbraucht keinen Vault-Versuch.",
-    checkOk: "Schlüssel und Modell erreichbar; Antwort noch ungetestet.",
-    checkKey: "Google verweigert Schlüssel/Zugriff (401/403).",
-    checkModel: "Beide Modelle nicht gefunden (404).",
-    checkBusy: "Modellcheck derzeit nicht erreichbar.",
-    checkUnknown: "Modellcheck fehlgeschlagen; Antwort offen.",
-    errKey: "Google lehnt den Schlüssel oder die Berechtigung ab.",
-    errModel: "Das angeforderte Google-Modell wurde nicht gefunden.",
-    errBadRequest: "Google hat die Anfrage abgelehnt (400); Modellparameter prüfen.",
+    signIn: "Bitte im Vault anmelden.",
+    offline: "Offline; Vault bleibt verfügbar.",
+    ready: "KI bereit zum Fragen.",
+    limited: "KI-Limit erreicht; morgen erneut versuchen.",
+    error: "KI nicht erreichbar; Vault nutzbar.",
+    unsupported: "Frage nicht unterstützt; Thema wählen.",
+    aiAnswer: "Antwort von Gemini", modelLabel: "Modell", consent: "Ich erlaube, Summen an Gemini zu senden.",
+    privacy: "Google kann Free-Tier-Inhalte zur Produktverbesserung nutzen. Keine Namen/Einzelbuchungen. Lokal gespeichert bis 24 h.",
+    yearLabel:"Kalenderjahr", goalYearLabel:"Zieljahr", yearRecordedLabel:"Dieses Jahr erfasst", yearPlannedLabel:"Bis heute geplant",
+    goalModeLabel:"Zielmodus", simYearLabel:"Szenariojahr", cautiousLabel:"Vorsichtig", baseLabel:"Basis", optimisticLabel:"Optimistisch",
+    nominalLabel:"Nominal", purchasingLabel:"Kaufkraft", queryYearLabel:"Jahr in der Frage",
+    data: "An Gemini gesendet", values: "Aktueller Depotwert", paid: "Erfasste Beiträge", monthly: "Sparrate", milestone: "Ziel",
+    noData: "nicht verfügbar", disclaimer: "Keine Anlage-/Steuerberatung oder Renditegarantie.",
+    quota: "20 Versuche/Person/UTC-Tag, auch bei Fehlern. Modellcheck ohne Vault-Versuch.",
+    checkOk: "Key/Modell erreichbar; Antwort ungetestet.",
+    checkKey: "Google: Zugriff verweigert (401/403).",
+    checkModel: "Modelle nicht gefunden (404).",
+    checkBusy: "Modellcheck nicht erreichbar.",
+    checkUnknown: "Modellcheck fehlgeschlagen.",
+    errKey: "Google lehnt Schlüssel/Zugriff ab.",
+    errModel: "Google-Modell nicht gefunden.",
+    errBadRequest: "Google: ungültige Anfrage (400).",
     errBusy: "Google überlastet (503).",
-    errEmpty: "Leere KI-Antwort; mögliches Tokenlimit.",
-    errRejected: "Antwort wegen Sicherheitsprüfung verworfen.",
-    errNetwork: "Google: Netzwerkfehler oder Timeout.",
-    limitNotice: "Nur Fragetyp und Summen werden gesendet, nie dein Fragetext.",
-    cached: "Gespeicherte Antwort auf diesem Gerät · kein neuer KI-Versuch.",
-    cacheClear: "Gespeicherte KI-Antworten löschen", cacheCleared: "KI-Cache auf diesem Gerät gelöscht.",
-    sourceChecked: "Jahresplan, Differenz und Zielabstand berechnet der Vault direkt – ohne Google oder KI-Limit.",
+    errEmpty: "Leere KI-Antwort (Tokenlimit möglich).",
+    errRejected: "Antwort aus Sicherheitsgründen verworfen.",
+    errNetwork: "Google: Netzwerkfehler/Timeout.",
+    limitNotice: "Nur Typ und Summen, nie dein Fragetext.",
+    cached: "Geräte-Cache · kein neuer KI-Versuch.",
+    cacheClear: "Gespeicherte KI-Antworten löschen", cacheCleared: "KI-Cache gelöscht.",
+    sourceChecked: "Jahresplan, Differenz, Zielstand: nur Vault; kein KI-Limit.",
   },
   vi: {
-    tag: "AI miễn phí · tự chọn", title: "Giải thích kế hoạch bằng lời thường",
-    description: "AI chỉ giải thích số liệu Vault; không giao dịch.",
-    question: "Câu hỏi riêng (không bắt buộc)", input: "Hỏi thêm về chủ đề đã chọn (không bắt buộc)",
+    tag: "AI miễn phí · tự chọn", title: "Giải thích tiết kiệm",
+    description: "AI giải thích sổ Vault; không giao dịch.",
+    question: "Câu hỏi riêng (không bắt buộc)", input: "Hỏi về chủ đề đã chọn (tùy chọn)",
     topicPlan: "Kế hoạch", topicYear: "Năm nay", topicGoal: "Mục tiêu", topicSim: "Mô phỏng",
     topicValue: "Giá trị quỹ", topicDifference: "Chênh lệch", topicMonthly: "Góp tháng", topicGoalProgress: "Tiến độ Goal",
-    goal: "Chọn Goal cần giải thích", simGoal: "Liên kết Goal (tùy chọn)", noGoal: "Chọn Goal…",
-    chooseGoal: "Hãy chọn Goal trước khi hỏi Gemini. Chỉ gõ năm trong câu hỏi chưa phải là chọn Goal.",
-    detected: "Nhận diện câu hỏi", unknownQuestion: "Chưa nhận diện được câu hỏi. Hãy chọn chủ đề hoặc xóa nội dung ô này.",
-    localTitle: "Giải thích từ sổ · không trừ lượt", missing: "Hiện chưa đủ dữ liệu trong sổ để giải thích chi tiết.",
+    goal: "Chọn Goal cần giải thích", simGoal: "Goal (tùy chọn)", noGoal: "Chọn Goal",
+    chooseGoal: "Hãy chọn Goal trước khi hỏi Gemini; chỉ gõ năm là chưa đủ.",
+    detected: "Nhận diện câu hỏi", unknownQuestion: "Câu hỏi chưa rõ; chọn chủ đề hoặc xóa chữ.",
+    localTitle: "Từ Vault · không trừ lượt", missing: "Chưa đủ dữ liệu trong sổ.",
     valueSummary: "Giá trị quỹ: {value} (có thể biến động).",
-    differenceSummary: "Quỹ {value}; đã góp {paid}; chênh lệch {difference}. Không phải lợi suất năm.",
-    monthlySummary: "Dự kiến {monthly}/tháng, không xác nhận lệnh mua.",
+    differenceSummary: "Quỹ {value}; góp {paid}; lệch {difference}. Không là lợi suất năm.",
+    monthlySummary: "Góp dự kiến {monthly}/tháng; chưa mua.",
     goalProgressSummary: "Quỹ {value} so với Goal {goal}: {progress}. Không bảo đảm.",
     goalBelow: "còn thiếu {remaining}", goalReached: "đang bằng hoặc vượt mốc",
     personal: "Đã ghi góp {paid}; quỹ hiện có {value}; kế hoạch tháng {monthly}.",
     yearSummary: "Năm nay ghi {recorded}, dự kiến {planned}. Chưa phải xác nhận broker.",
     yearAhead: "Theo giao dịch đã nhập, số góp đạt mức dự kiến tới hôm nay.", yearBehind: "Số góp ghi trong sổ còn thấp hơn kế hoạch tới hôm nay.",
-    goalSummary: "Goal đã chọn: {goal} vào năm {year}; không phải ngày bán.",
-    goalUnknown: "Chưa chọn Goal. Năm trong câu hỏi không tự thành ngày cần bán.",
+    goalSummary: "Goal {goal}, năm {year}; không phải ngày bán.",
+    goalUnknown: "Chưa chọn Goal; năm nhập không là ngày bán.",
     simSummary: "Mô phỏng đến {year}: {cautious}, {base}, {optimistic}; không bảo đảm.",
-    simMissing: "Chưa đủ dữ liệu mô phỏng để tóm tắt.",
+    simMissing: "Thiếu dữ liệu mô phỏng.",
     check: "Kiểm tra kết nối AI", ask: "Hỏi Gemini", checking: "Đang kiểm tra...", loading: "Đang giải thích...",
-    unchecked: "Chưa kiểm tra AI; sổ vẫn giải thích được.",
-    notReady: "AI chưa sẵn sàng; kiểm tra key hoặc máy chủ.",
-    signIn: "Hãy đăng nhập để dùng AI.",
-    offline: "Mất mạng; sổ vẫn giải thích được.",
-    ready: "AI sẵn sàng; có thể hỏi.",
-    limited: "Hết lượt AI hôm nay; thử lại ngày mai.",
-    error: "AI đang lỗi; vẫn xem được câu trả lời từ sổ.",
-    unsupported: "Chưa hỗ trợ câu hỏi; chọn một chủ đề.",
-    aiAnswer: "Gemini giải thích", modelLabel: "Mô hình", consent: "Tôi đồng ý gửi số liệu tổng hợp tới Gemini khi cần hỏi mới.",
-    privacy: "Google có thể dùng dữ liệu Free Tier để cải thiện sản phẩm. Không gửi tên hay giao dịch lẻ. Câu trả lời lưu trên máy tối đa 24 giờ.",
+    unchecked: "Chưa kiểm tra AI; Vault vẫn dùng được.",
+    notReady: "AI chưa sẵn sàng; kiểm tra server.",
+    signIn: "Hãy đăng nhập để hỏi AI.",
+    offline: "Ngoại tuyến; Vault vẫn hoạt động.",
+    ready: "AI sẵn sàng để hỏi.",
+    limited: "Hết lượt AI; thử lại ngày mai.",
+    error: "AI lỗi; vẫn đọc được sổ.",
+    unsupported: "Chưa hỗ trợ; hãy chọn chủ đề.",
+    aiAnswer: "Gemini giải thích", modelLabel: "Mô hình", consent: "Tôi cho phép gửi số liệu tổng hợp tới Gemini khi hỏi mới.",
+    privacy: "Google có thể dùng dữ liệu Free Tier để cải thiện sản phẩm. Không gửi tên/giao dịch lẻ. Lưu tối đa 24 giờ trên máy.",
+    yearLabel:"Năm đang xét", goalYearLabel:"Năm của Goal", yearRecordedLabel:"Đã ghi trong năm", yearPlannedLabel:"Kế hoạch tới hôm nay",
+    goalModeLabel:"Kiểu Goal", simYearLabel:"Năm mô phỏng", cautiousLabel:"Thận trọng", baseLabel:"Cơ sở", optimisticLabel:"Lạc quan",
+    nominalLabel:"Danh nghĩa", purchasingLabel:"Sức mua", queryYearLabel:"Năm trong câu hỏi",
     data: "Các con số sẽ gửi", values: "Giá trị quỹ", paid: "Tổng đã góp", monthly: "Góp mỗi tháng", milestone: "Goal đã chọn",
-    noData: "chưa có", disclaimer: "Chỉ là thông tin chung, không tư vấn đầu tư/thuế và không hứa lợi nhuận.",
-    quota: "Tối đa 20 lượt gửi/người/ngày UTC, kể cả lượt lỗi. Kiểm tra key/model không trừ lượt trong Vault.",
-    checkOk: "Key và model truy cập được; chưa kiểm thử trả lời.",
+    noData: "chưa có", disclaimer: "Không tư vấn đầu tư/thuế hay bảo đảm lợi nhuận.",
+    quota: "Tối đa 20 lượt gửi/người/ngày UTC, kể cả lỗi. Kiểm tra model không trừ lượt Vault.",
+    checkOk: "Key/model sẵn sàng; chưa thử trả lời.",
     checkKey: "Google từ chối key/quyền (401/403).",
-    checkModel: "Cả hai model không khả dụng (404).",
-    checkBusy: "Google không phản hồi kiểm tra model.",
-    checkUnknown: "Chưa xác nhận được model và khả năng trả lời.",
-    errKey: "Google từ chối API key hoặc quyền truy cập.",
-    errModel: "Google không tìm thấy model được yêu cầu.",
-    errBadRequest: "Google từ chối tham số yêu cầu (400).",
+    checkModel: "Không tìm thấy model (404).",
+    checkBusy: "Không kiểm tra được model.",
+    checkUnknown: "Chưa xác nhận trả lời.",
+    errKey: "Google từ chối key/quyền.",
+    errModel: "Không tìm thấy model.",
+    errBadRequest: "Google từ chối yêu cầu (400).",
     errBusy: "Google đang quá tải (503).",
-    errEmpty: "Google trả lời rỗng; có thể thiếu token.",
-    errRejected: "Câu trả lời không đạt kiểm tra an toàn.",
-    errNetwork: "Google lỗi kết nối hoặc hết thời gian.",
-    limitNotice: "Chỉ gửi loại câu hỏi và số liệu tổng hợp, không gửi câu bạn gõ.",
-    cached: "Câu trả lời lưu trên thiết bị · không trừ thêm lượt AI.",
-    cacheClear: "Xóa các câu trả lời đã lưu", cacheCleared: "Đã xóa cache AI trên thiết bị.",
-    sourceChecked: "Năm nay, chênh lệch và tiến độ Goal được Vault tính trực tiếp – không gửi Google, không trừ lượt AI.",
+    errEmpty: "Phản hồi trống; có thể thiếu token.",
+    errRejected: "Phản hồi bị từ chối vì an toàn.",
+    errNetwork: "Google: mất kết nối/timeout.",
+    limitNotice: "Chỉ gửi chủ đề và số tổng, không gửi chữ gõ.",
+    cached: "Cache trên máy · không trừ lượt AI.",
+    cacheClear: "Xóa cache AI", cacheCleared: "Đã xóa cache AI.",
+    sourceChecked: "Năm nay, chênh lệch và tiến độ Goal do Vault tính; không gửi Google, không trừ lượt AI.",
   },
 };
 function formatEuro(n: number | null, locale: DisplayLocale, empty: string): string {
@@ -130,7 +136,7 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
   const euro = (n: number | null) => formatEuro(n, locale, t.noData);
   if (topic === "year") {
     if (f.yearRecorded === null || f.yearPlanned === null) return t.missing;
-    return t.yearSummary.replace("{recorded}", euro(f.yearRecorded)).replace("{planned}", euro(f.yearPlanned))
+    return fill(t.yearSummary,{recorded:euro(f.yearRecorded),planned:euro(f.yearPlanned)})
       + " " + (f.yearRecorded >= f.yearPlanned ? t.yearAhead : t.yearBehind);
   }
   if (topic === "monthly") return f.monthly !== null
@@ -163,8 +169,7 @@ function fallback(topic: GeminiTopic, f: GeminiFacts, locale: DisplayLocale): st
   if (f.contributed === null && f.portfolioValue === null) return t.missing;
   const summary = fill(t.personal,{paid:euro(f.contributed),value:euro(f.portfolioValue),monthly:euro(f.monthly)});
   if (topic === "plan" && f.yearRecorded !== null && f.yearPlanned !== null) {
-    const yearText = t.yearSummary.replace("{recorded}",euro(f.yearRecorded))
-      .replace("{planned}",euro(f.yearPlanned));
+    const yearText = fill(t.yearSummary,{recorded:euro(f.yearRecorded),planned:euro(f.yearPlanned)});
     return summary + " " + yearText + " "
       + (f.yearRecorded >= f.yearPlanned ? t.yearAhead : t.yearBehind);
   }
@@ -196,11 +201,12 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   const selectedFacts = useMemo(() => withSelectedGoal(facts, showGoal ? chosenGoal : null),
     [facts, chosenGoal, showGoal]);
   const goalMissing = localTopic === "goal" && !chosenGoal;
+  const scopedFacts = useMemo(() => geminiFactsForTopic(selectedFacts, localTopic), [selectedFacts, localTopic]);
   const topicLabels: Record<GeminiTopic,string> = {
     plan:t.topicPlan,year:t.topicYear,goal:t.topicGoal,simulation:t.topicSim,
     value:t.topicValue,difference:t.topicDifference,monthly:t.topicMonthly,goalProgress:t.topicGoalProgress,
   };
-  const answerContext = JSON.stringify([locale, query?.topic, query?.queryYear, selectedFacts]);
+  const answerContext = JSON.stringify([locale, query?.topic, query?.queryYear, scopedFacts]);
   const contextRef = useRef(answerContext);
   contextRef.current = answerContext;
   useEffect(() => { setAnswer(""); setCached(false); setAnswerModel(null); }, [answerContext]);
@@ -215,6 +221,23 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
   }, []);
 
   const local = fallback(localTopic, selectedFacts, locale);
+  const money = (n: number | null): string | null => n === null ? null : formatEuro(n, locale, t.noData);
+  const outgoingRows = ([
+    [t.values, money(scopedFacts.portfolioValue)],
+    [t.paid, money(scopedFacts.contributed)],
+    [t.monthly, money(scopedFacts.monthly)],
+    [t.yearLabel, scopedFacts.year],
+    [t.yearRecordedLabel, money(scopedFacts.yearRecorded)],
+    [t.yearPlannedLabel, money(scopedFacts.yearPlanned)],
+    [t.milestone, money(scopedFacts.goalAmount)],
+    [t.goalYearLabel, scopedFacts.goalYear],
+    [t.goalModeLabel, scopedFacts.goalMode === null ? null : scopedFacts.goalMode === "nominal" ? t.nominalLabel : t.purchasingLabel],
+    [t.simYearLabel, scopedFacts.simulationYear],
+    [t.cautiousLabel, money(scopedFacts.cautious)],
+    [t.baseLabel, money(scopedFacts.base)],
+    [t.optimisticLabel, money(scopedFacts.optimistic)],
+    [t.queryYearLabel, query?.queryYear ?? null],
+  ] as Array<[string, string | number | null]>).filter(([,value]) => value !== null);
   const hasTyped = question.trim().length > 0;
   const busy = status === "loading" || status === "checking";
   const showStatus = ({
@@ -258,7 +281,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
       if (!supabase) { setStatus("not_ready"); return; }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) { setStatus("sign_in"); return; }
-      const body = { schemaVersion:1, locale, topic:query.topic, queryYear:query.queryYear, facts:selectedFacts };
+      const body = { schemaVersion:1, locale, topic:query.topic, queryYear:query.queryYear, facts:scopedFacts };
       const key = await geminiAnswerCacheKey(session.user.id, body);
       const saved = key && readGeminiAnswer(key);
       if (context !== contextRef.current) return;
@@ -349,10 +372,8 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
     <div className="gemini-vault-payload">
       <h3>{t.data}</h3>
       <dl>
-        <div><dt>{t.values}</dt><dd>{formatEuro(selectedFacts.portfolioValue,locale,t.noData)}</dd></div>
-        <div><dt>{t.paid}</dt><dd>{formatEuro(selectedFacts.contributed,locale,t.noData)}</dd></div>
-        <div><dt>{t.monthly}</dt><dd>{formatEuro(selectedFacts.monthly,locale,t.noData)}</dd></div>
-        {showGoal && <div><dt>{t.milestone}</dt><dd>{selectedFacts.goalYear || t.noData}</dd></div>}
+        {outgoingRows.length ? outgoingRows.map(([label,value])=>
+          <div key={label}><dt>{label}</dt><dd>{value}</dd></div>) : <div><dt>{t.noData}</dt></div>}
       </dl>
     </div>
     <p className="gemini-vault-privacy">{t.privacy}</p>

@@ -65,7 +65,7 @@ for(const locale of ["de","vi"] as const){
         await card.getByRole("button",{name:labels[locale][topic],exact:true}).click();
         if(topic==="year"){
           await expect(card.getByTestId("gemini-vault-model")).toHaveCount(0);
-          await expect(card.getByText(locale==="vi"?/Vault tính trực tiếp/:/berechnet der Vault direkt/)).toBeVisible();
+          await expect(card.getByText(locale==="vi"?/Năm nay, chênh lệch và tiến độ Goal do Vault tính/:/Jahresplan, Differenz, Zielstand: nur Vault/)).toBeVisible();
           await card.locator(".gemini-vault-local").scrollIntoViewIfNeeded();
           await page.screenshot({path:testInfo.outputPath(`visual-evidence-gemini-${locale}-${theme}-year-VAULT.png`),animations:"disabled"});
           continue;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaultSettings } from "./defaults";
-import { buildGeminiVaultFacts, classifyGeminiQuestion, withSelectedGoal } from "./geminiVaultFacts";
+import { buildGeminiVaultFacts, classifyGeminiQuestion, geminiFactsForTopic, withSelectedGoal } from "./geminiVaultFacts";
 import type { Goal, Transaction } from "./types";
 
 const times = ["2026-08-02","2026-09-02","2026-10-02","2026-11-02","2026-11-16"];
@@ -61,6 +61,48 @@ describe("Gemini redacted aggregate data",()=>{
     settings.trackInAppCash=true;
     expect(buildGeminiVaultFacts({settings,transactions:withCash,currentValue:null,
       today:new Date(2026,10,22)}).contributed).toBe(120);
+  });
+  it("uses first-year rate for the first 12 plan months, then Y2 without fallback",()=>{
+    const settings=defaultSettings();
+    settings.startDate="2026-08-01";
+    settings.contributionY1=75;
+    settings.contributionY2=140;
+    const monthlyOn=(today:Date) => buildGeminiVaultFacts({
+      settings,transactions:[],currentValue:null,today,
+    }).monthly;
+    expect(monthlyOn(new Date(2026,10,22))).toBe(75);
+    expect(monthlyOn(new Date(2027,6,31))).toBe(75);
+    expect(monthlyOn(new Date(2027,7,1))).toBe(140);
+    settings.contributionY2=0;
+    expect(monthlyOn(new Date(2027,7,1))).toBeNull();
+    settings.startDate="2028-01-01";
+    expect(monthlyOn(new Date(2027,7,1))).toBeNull();
+    settings.startDate="bad-date";
+    expect(monthlyOn(new Date(2027,7,1))).toBeNull();
+  });
+  it("scopes all outgoing financial aggregates to the effective topic",()=>{
+    const original=withSelectedGoal(build(),goal);
+    const payload=geminiFactsForTopic(original,"plan");
+    expect(payload.monthly).toBe(120);
+    expect(payload.yearRecorded).toBe(600);
+    expect(payload.yearPlanned).toBe(480);
+    expect(payload.goalAmount).toBeNull();
+    expect(payload.goalYear).toBeNull();
+    expect(payload.simulationYear).toBeNull();
+    expect(payload.cautious).toBeNull();
+    const monthly=geminiFactsForTopic(original,"monthly");
+    expect(monthly.monthly).toBe(120);
+    expect(Object.entries(monthly).filter(([key,value])=>key!=="monthly" && value!==null)).toEqual([]);
+    const simulation=geminiFactsForTopic(original,"simulation");
+    expect(simulation.simulationYear).toBe(2047);
+    expect(simulation.goalYear).toBe(2047);
+    expect(simulation.base).toBe(31000);
+    expect(simulation.contributed).toBeNull();
+    expect(simulation.portfolioValue).toBeNull();
+    for (const topic of ["year","difference","goalProgress"] as const) {
+      expect(Object.values(geminiFactsForTopic(original,topic)).every(v=>v===null)).toBe(true);
+    }
+    expect(original.goalAmount).toBe(32000); // Scope never mutates the local truth.
   });
   it("classifies text locally, never sending it as the question",()=>{
     expect(classifyGeminiQuestion("Habe ich dieses Jahr genug eingezahlt?")).toEqual({topic:"year",queryYear:null});
