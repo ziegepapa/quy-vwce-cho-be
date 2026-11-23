@@ -489,6 +489,19 @@ test(`German reference screenshots · 390x844 · ${germanTheme}`, async ({ page 
   for (const [name, [route, ready]] of Object.entries(routes)) {
     await page.goto(`./#${route}`);
     await expect(page.locator(ready)).toBeVisible();
+    if (name === "settings") {
+      await page.getByRole("button", { name: "VALL Health Monitor" }).click();
+      const health = page.getByTestId("vall-health");
+      await expect(health).toBeVisible();
+      await expect(health).toContainText("FTSE Global All Cap Index");
+      await expect(health).toContainText("2.573");
+      await expect(health).toContainText("30.09.2026");
+      await expect(health).toContainText("VALL-spezifischer Status ungeprüft");
+      await health.scrollIntoViewIfNeeded();
+      await assertFits(page);
+      await page.screenshot({ path: testInfo.outputPath(`vall-health-de-${germanTheme}.png`), animations: "disabled" });
+      await page.getByRole("button", { name: "Schließen" }).click();
+    }
     if (name === "simulation") {
       // Same zero-start 120 €/month, 5 %, 30 years, TER fixture as the approved mockup.
       await page.getByRole("button", { name: /Beispiel ab 0 € laden/ }).click();
