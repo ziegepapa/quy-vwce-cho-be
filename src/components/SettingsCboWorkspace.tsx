@@ -382,9 +382,7 @@ export default function SettingsCboWorkspace(props: Props) {
     </div>
 
     </section>
-    {props.guardianPanel ? <section className="mwj-settings-group" aria-label="Silent Guardian">
-      <div>{props.guardianPanel}</div>
-    </section> : null}
+    {props.guardianPanel && <section className="mwj-settings-group" aria-label="Silent Guardian">{props.guardianPanel}</section>}
     <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.securityGroup}</h2>
     <div className="set2-group">
