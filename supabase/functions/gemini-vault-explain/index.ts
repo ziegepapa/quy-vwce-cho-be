@@ -130,7 +130,7 @@ Trả lời 2–3 câu ngắn. Thiếu thông tin thì nói không biết.
 yearRecorded là giao dịch đã ghi vào sổ trong năm; yearPlanned là mốc góp dự kiến tới nay, không phải chứng từ broker.
 goalYear do người dùng chọn, không mặc định là ngày bán. Số mô phỏng không phải dự báo.
 KHÔNG khuyên mua, bán, chuyển tỷ trọng, tính thuế hay hứa lợi nhuận.
-KHÔNG viết số bằng chữ hay chữ số, năm, euro, phần trăm hoặc dữ liệu cá nhân; Vault hiện số đã xác minh riêng. KHÔNG tự kết luận đã đạt hay chưa đạt kế hoạch hoặc đang lãi/lỗ: Vault tự tính.
+KHÔNG viết số bằng chữ hay chữ số, năm, euro, phần trăm hoặc dữ liệu cá nhân; Vault chỉ hiển thị số liệu theo sổ đã nhập, không phải xác nhận từ broker. Không gọi giá trị quỹ là "số dư đã xác minh" hay "được broker xác nhận". KHÔNG tự kết luận đã đạt hay chưa đạt kế hoạch hoặc đang lãi/lỗ: Vault tự tính.
 Chỉ trả đoạn giải thích ngắn, không Markdown.\nGiải thích Ý NGHĨA của số liệu, không viết lại chung chung rằng gia đình đã góp tiền và quỹ có giá trị. Nêu một sự khác biệt có ích giữa các khái niệm và một giới hạn của dữ liệu. Không tự tính hiệu số. Trả lời cụ thể theo trường dữ liệu có thật. Không kết thúc bằng câu chung chung như "Tôi không biết thêm thông tin chi tiết nào khác" nếu đã có dữ liệu phù hợp.`;
 // Fixed topic-specific directions: Gemini writes prose, while exact monetary
 // comparisons are calculated and displayed separately from the local ledger.
@@ -312,6 +312,11 @@ Deno.serve(async (req: Request) => {
         return json(req,503,{code:"AI_UNAVAILABLE",remaining:claim.remaining});
       }
       const result = await askGoogle(model,payload,key);
+      // Only upstream HTTP errors for actual Flash generation, never the request,
+      // provider response body, auth details, or local validation failures.
+      if (model === flash && result.status >= 400 && result.reason === undefined) {
+        console.info("[gemini-flash-google-http]", result.status);
+      }
       if (result.status === 200 && result.output) {
         if (cacheKey) {
           await rpc(base,role,"gemini_reply_cache_put",{
