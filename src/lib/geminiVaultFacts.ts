@@ -36,9 +36,19 @@ export function buildGeminiVaultFacts(input: {
   const contributedResult = computeHeroLifetimeContribution({
     transactions, trackInAppCash: settings?.trackInAppCash,
   });
-  const monthly = settings
-    ? amount(settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1)
-    : null;
+  // The configured rates are for the first 12 plan months and subsequent
+  // months, not a preference for Y2 whenever it is non-zero.
+  const start = settings && /^\\d{4}-\\d{2}-\\d{2}$/.test(settings.startDate)
+    ? new Date(`${settings.startDate}T12:00:00`) : null;
+  const validStart = start && Number.isFinite(start.getTime())
+    && [start.getFullYear(), String(start.getMonth() + 1).padStart(2, "0"),
+      String(start.getDate()).padStart(2, "0")].join("-") === settings?.startDate;
+  const todayDate = [current, String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0")].join("-");
+  const monthsSinceStart = validStart && settings!.startDate <= todayDate
+    ? (current - start!.getFullYear()) * 12 + today.getMonth() - start!.getMonth() : null;
+  const monthly = settings && monthsSinceStart !== null && monthsSinceStart >= 0
+    ? amount(monthsSinceStart < 12 ? settings.contributionY1 : settings.contributionY2) : null;
   const progress = settings ? buildPlanVsReality({
     startDate: settings.startDate,
     contributionY1: settings.contributionY1,
@@ -75,6 +85,32 @@ export function withSelectedGoal(facts: GeminiFacts, goal: Goal | null): GeminiF
     goalMode: goal.mode,
   };
 }
+/**
+ * Minimize outgoing aggregates per intent. All 13 fields remain in the Edge
+ * contract (null when irrelevant); Vault-only comparisons are never sent.
+ * This does not alter the fully grounded local on-device explanation.
+ */
+export function geminiFactsForTopic(f: GeminiFacts, topic: GeminiTopic): GeminiFacts {
+  const plan = topic === "plan";
+  const goal = topic === "goal";
+  const simulation = topic === "simulation";
+  return {
+    portfolioValue: plan || topic === "value" || goal ? f.portfolioValue : null,
+    contributed: plan ? f.contributed : null,
+    monthly: plan || topic === "monthly" || goal ? f.monthly : null,
+    yearRecorded: plan ? f.yearRecorded : null,
+    yearPlanned: plan ? f.yearPlanned : null,
+    year: plan ? f.year : null,
+    goalAmount: goal || simulation ? f.goalAmount : null,
+    goalYear: goal || simulation ? f.goalYear : null,
+    goalMode: goal || simulation ? f.goalMode : null,
+    simulationYear: simulation ? f.simulationYear : null,
+    cautious: simulation ? f.cautious : null,
+    base: simulation ? f.base : null,
+    optimistic: simulation ? f.optimistic : null,
+  };
+}
+
 /**
  * Raw question text stays on the device. Route supported Vietnamese/German
  * wording into fixed, finance-safe intents; unrecognized questions are rejected.
