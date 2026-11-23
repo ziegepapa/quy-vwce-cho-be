@@ -12,6 +12,13 @@ The PWA, iPhone and background push APIs are not part of execution.
 not a user-supplied third-party address. Messages contain no balances, account
 references, personal names, amount or ISIN. The email links to the actual app.
 
+The enrollment boundary for a *new cloud record* uses the database's
+`public.transactions.created_at` timestamp, not the `createdAt` field stored
+inside a user-editable JSON transaction. A backdated imported document
+therefore cannot suppress a newly synced event, and changing the JSON date on
+an old cloud row cannot fabricate a new one. This detects new cloud rows, not
+all edits to older rows and not Trade Republic's actual execution timeline.
+
 V1 signals (only after opt-in):
 1. A **new recorded sell transaction** in the cloud ledger. Wording never says
    the broker executed a sale; the ledger record is the only evidence.
@@ -35,8 +42,11 @@ in this feature. A missing synced VALL trade **does not prove** a missed Sparpla
 - No Dexie/IndexedDB access from Cron. Unsynced local data cannot be monitored.
 - Alert receipts are server-only with a unique `(user_id,event_key)` key.
   At most **one summary email per user per scan**; the function deduplicates
-  events across scans. An ambiguous provider failure is intentionally not
-  retried automatically (at-most-once attempt, not guaranteed delivery).
+  events across scans. Each run reserves at most 50 **new** events after
+  checking previously reserved receipts, so events after an already-reserved
+  first page are not silently starved. High backlogs can span multiple scans.
+  An ambiguous provider failure is intentionally not retried automatically
+  (at-most-once attempt, not guaranteed delivery).
 - If `RESEND_API_KEY`, `GUARDIAN_FROM_EMAIL`, `SUPABASE_SERVICE_ROLE_KEY`
   or `GUARDIAN_CRON_SECRET` is missing, it fails closed. Nothing is emitted.
 - The service key is only ever available to the function in Supabase secrets.
@@ -48,6 +58,24 @@ in this feature. A missing synced VALL trade **does not prove** a missed Sparpla
 - Hosted Supabase schema/history reconciliation (H4/H5) remains a project
   release prerequisite. **Do not run migrations against hosted production
   from CI** or assume the service is live after merging code.
+
+## Current hosted production boundary (read-only check, 23 Nov 2026)
+
+- The already-existing **structural** `silent-guardian-worker` is ACTIVE;
+  it must not be confused with this PR's **sale/duplicate alerting** service.
+- The four tables for this V1 (`guardian_subscriptions`,
+  `guardian_service_status`, `guardian_alert_deliveries`,
+  `guardian_run_health`) are **absent** on the hosted project.
+  This PR does not add them automatically. No production Edge/Cron/email
+  activation was performed during this review.
+- Resend's historical test using `onboarding@resend.dev` reached the
+  account's own registered test mailbox only. **That does not establish a
+  verified production sending domain or permission to email every user's
+  Auth address.** Keep V1 inactive until actual sender authorization is
+  confirmed; do not purchase a domain or change billing automatically.
+- The PR currently conflicts with newer `main`. Do **not** merge it as-is.
+  Reconcile the current UI/CI files, run fresh CI and isolated migration
+  evidence, and require separate approval for hosted rollout.
 
 ## Required owner-controlled deployment, after PR review
 
