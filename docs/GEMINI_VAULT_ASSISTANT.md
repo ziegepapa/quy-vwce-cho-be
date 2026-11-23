@@ -321,3 +321,35 @@ Edge v11 were verified read-only, and PR #414 CI passed. No new authenticated
 phone generation or actual Google quota/eligibility test was carried out
 during this review; real offline/device behavior remains a manual check.
 This frontend-only follow-up must pass its own CI before merging or publishing.
+
+
+## Goal UX and meaningful explanations — 23 Nov 2026 follow-up
+
+- If the Goal topic has no explicitly selected, valid Goal, the PWA shows
+  a selection/create-Goal prompt and the deterministic Vault notice; it hides
+  the outgoing-facts preview, consent checkbox, AI buttons, and readiness
+  status. No Google request can start from that state. Simulation still
+  supports an optional Goal; other topics keep their original routing.
+- The Plan's *local* ledger summary now computes an exact, cents-rounded
+  shortfall versus the amount planned through today and the displayed
+  portfolio-value minus recorded contributions. These are snapshots of the
+  Vault ledger, **not** broker confirmations, realized returns, or forecasts.
+  No made-up data, new financial records, or Gemini calls are involved.
+- The Edge function rejects a Goal explanation lacking Goal year/amount
+  before the 20/day SQL quota claim. Prompt instructions explicitly favor
+  explaining the difference between contributions, fluctuating valuation,
+  and planned monthly savings rather than generic restatements. The ban
+  on model-generated numbers, investment instructions, and invented progress
+  remains in force. This improves the *instructions*, not a guarantee of
+  prose quality from the provider.
+- The server response cache hash and local device answer key use
+  `context-v2` as a revision component, so a previously cached generic
+  response is not replayed. Existing stored entries are not deleted and
+  expire on their normal 24-hour schedule. A genuinely new Gemini response
+  is a new quota-bearing generation if neither revised cache has a hit.
+- Deployment boundary: the frontend can ship through the ordinary GitHub
+  Pages flow after CI/merge; **the prompt and Goal API guard require a
+  separately verified Edge Function deployment**. No database SQL, keys,
+  billing settings, or Guardian code must be changed. Run mocked Deno/Edge,
+  Vitest, Playwright mobile, PWA bundle and full workflow checks before
+  shipping. Never use synthetic fixture figures as the user's real ledger.
