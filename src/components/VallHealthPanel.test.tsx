@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import VallHealthPanel from "./VallHealthPanel";
 
 afterEach(()=>{cleanup();vi.restoreAllMocks();});
@@ -20,7 +20,15 @@ it("shows sourced Vietnamese VALL metrics, dates and no false green tracking or 
   expect(panel.textContent).toContain("16/08/2027");
   expect(panel.textContent).toContain("IE00BK5BQT80");
   expect(screen.getAllByRole("link")).toHaveLength(3);
-  expect(screen.queryByRole("button")).toBeNull();
+  const all = screen.getByRole("button",{name:"Tất cả 5"});
+  const unknown = screen.getByRole("button",{name:"Chưa xác minh (5)"});
+  expect(all.getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByTestId("vall-flags").querySelectorAll("li")).toHaveLength(5);
+  fireEvent.click(unknown);
+  expect(unknown.getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByTestId("vall-flags").querySelectorAll("li")).toHaveLength(5);
+  fireEvent.click(all);
+  expect(all.getAttribute("aria-pressed")).toBe("true");
 });
 it("shows German copy without network or Gemini calls",()=>{
   const net=vi.fn();
@@ -30,4 +38,16 @@ it("shows German copy without network or Gemini calls",()=>{
   expect(screen.getByTestId("vall-health").textContent).toContain("VALL-spezifischer Status ungeprüft");
   expect(net).not.toHaveBeenCalled();
   vi.unstubAllGlobals();
+});
+
+it("does not claim monitoring, health score, dated asset trend or auto-switch",()=>{
+  render(<VallHealthPanel locale="vi"/>);
+  const t=screen.getByTestId("vall-health").textContent??"";
+  expect(t).toContain("Chưa đủ bằng chứng để kết luận");
+  expect(t).toContain("0/5");
+  expect(t).toContain("Không giám sát trực tiếp");
+  expect(t).toContain("Không tải dữ liệu nền");
+  expect(t).toContain("Hai quỹ — hai chỉ số khác nhau");
+  expect(t).toContain("Chỉ khi cờ đỏ được xác minh");
+  expect(t).not.toContain("Quỹ an toàn");
 });
