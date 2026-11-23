@@ -106,7 +106,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
 
     <div className="vh-section-heading">
       <div><span className="vh-eyebrow">01 / {de?"FAKTEN":"DỮ KIỆN"}</span><h3>{de ? "Drei Kernwerte" : "Ba con số quan trọng nhất"}</h3></div>
-      <span className="vh-quiet">{de ? "Stand: Vanguard-Factsheet" : "Theo factsheet Vanguard"} {date(latest.asOf)}</span>
+      <span className="vh-quiet">{de ? "Vermerk aus dem Factsheet-Buch" : "Sổ factsheet theo kỳ"} · {date(latest.asOf)}</span>
     </div>
 
     <dl className="vh-metrics">
@@ -182,9 +182,10 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
 
     <div className="vh-insights">
       <div className="vh-insight-card">
-        <span className="vh-eyebrow">02 / {de ? "NÄCHSTER CHECK" : "LỊCH KIỂM TRA"}</span>
+        <span className="vh-eyebrow">04 / {de ? "NÄCHSTER CHECK" : "LỊCH KIỂM TRA"}</span>
         <h3>{de ? "Nächster externer Termin" : "Mốc kiểm tra bên ngoài kế tiếp"}</h3>
         <div className="vh-upcoming">{state.nextReview ? date(state.nextReview.date) : "—"}</div>
+        <p className="vh-countdown" data-testid="vall-countdown">{daysToReview !== null ? (daysToReview===0 ? (de?"Heute geplant — kein Abschlussbeleg":"Dự kiến hôm nay — chưa xác nhận đã kiểm tra") : (de?"Noch "+daysToReview+" Tage":"Còn "+daysToReview+" ngày")) : (de?"Kein weiterer Termin in der Datei":"Chưa có mốc mới trong file")}</p>
         <p>{state.nextReview
           ? state.nextReview.kind === "light" ? (de ? "Kurzprüfung laut bestehendem externem Plan" : "Kiểm tra nhẹ theo kế hoạch có sẵn") : (de ? "Vollprüfung laut externem Plan" : "Đợt kiểm tra đầy đủ theo lịch bên ngoài")
           : (de ? "Alle eingetragenen Termine sind vergangen; kein Abschlussbeleg im Snapshot." : "Các mốc trong file đã qua; chưa có bằng chứng hoàn tất từ dữ liệu này.")}</p>
@@ -194,7 +195,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
         </div>
       </div>
       <div className="vh-insight-card">
-        <span className="vh-eyebrow">03 / {de?"OFFENE FRAGEN":"CHƯA CÓ BẰNG CHỨNG"}</span>
+        <span className="vh-eyebrow">05 / {de?"OFFENE FRAGEN":"CHƯA CÓ BẰNG CHỨNG"}</span>
         <h3>{de ? "Was noch fehlt" : "Cần xác minh những gì?"}</h3>
         <p className="vh-insight-lead">{de ? "Nicht verifiziert ≠ unbedenklich" : "Chưa xác minh ≠ không có rủi ro"}</p>
         <ul className="vh-unverified">
@@ -203,8 +204,18 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
       </div>
     </div>
 
+
+    <section className="vh-know-when" aria-label={de?"Wann gibt es neue Daten?":"Khi nào có dữ liệu mới?"}>
+      <span className="vh-eyebrow">06 / {de?"ZEITPLAN DER NACHWEISE":"KHI NÀO BIẾT ĐƯỢC GÌ?"}</span>
+      <h3>{de?"Welche Antwort ist wann möglich?":"Khi nào biết được gì?"}</h3>
+      <ol>
+        <li><strong>{de?"Mitte Dezember 2026 (voraussichtlich)":"Giữa 12/2026 (dự kiến)"}</strong><span>{de?"November-Factsheet prüfen; nur wenn tatsächlich veröffentlicht.":"Xem factsheet tháng 11 khi Vanguard thực sự phát hành; không tự cập nhật."}</span></li>
+        <li><strong>{de?"Ab August 2027":"Từ 08/2027"}</strong><span>{de?"Erste Jahres-Performance möglich; dann erst Tracking Difference zum eigenen FTSE Global All Cap beurteilen.":"Có thể bắt đầu có dữ liệu hiệu suất một năm để đánh giá độ lệch so với đúng FTSE Global All Cap."}</span></li>
+        <li><strong>{de?"Nach Beleg einer echten Order":"Khi Chien xác nhận biên nhận lệnh thật"}</strong><span>{de?"Dann erst den VALL-Sparplan-Gebührenstatus als verifiziert markieren.":"Lúc đó mới được đánh dấu phí Sparplan riêng VALL đã xác minh từ broker."}</span></li>
+      </ol>
+    </section>
     <div className="vh-section-heading vh-section-heading-flags">
-      <div><span className="vh-eyebrow">04 / {de?"BEOBACHTUNGSPUNKTE":"CỜ ĐỎ"}</span><h3>{de ? "Prüfprotokoll" : "Danh sách đối chiếu thủ công"}</h3></div>
+      <div><span className="vh-eyebrow">07 / {de?"BEOBACHTUNGSPUNKTE":"CỜ ĐỎ"}</span><h3>{de ? "Prüfprotokoll" : "Danh sách đối chiếu thủ công"}</h3></div>
       <span className="vh-quiet">{state.unknownFlags}/5 {de ? "ungeprüft" : "chưa xác minh"}</span>
     </div>
     <div className="vh-filter" role="group" aria-label={de ? "Warnsignale filtern" : "Lọc cờ đỏ"}>
@@ -229,7 +240,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
     </ul>
 
     <section className="vh-compare">
-      <span className="vh-eyebrow">05 / {de ? "ORIENTIERUNG" : "SO SÁNH CÓ NGỮ CẢNH"}</span>
+      <span className="vh-eyebrow">08 / {de ? "ORIENTIERUNG" : "SO SÁNH CÓ NGỮ CẢNH"}</span>
       <h3>{de ? "Zwei Fonds. Zwei unterschiedliche Indizes." : "Hai quỹ — hai chỉ số khác nhau"}</h3>
       <div className="vh-compare-grid">
         <div><span className="vh-symbol">VALL</span><strong>{latest.ongoingChargesPercent===null?"—":percent(latest.ongoingChargesPercent,locale)}</strong><small>{data.benchmark}</small><small>{data.fundIsin}</small></div>
@@ -241,7 +252,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
     </section>
 
     <footer className="vh-footer">
-      <span className="vh-eyebrow">06 / {de ? "QUELLEN" : "BẰNG CHỨNG"}</span>
+      <span className="vh-eyebrow">09 / {de ? "QUELLEN" : "BẰNG CHỨNG"}</span>
       <h3>{de ? "Daten nachprüfen" : "Kiểm tra nguồn gốc số liệu"}</h3>
       <nav className="vh-links" aria-label={de?"Quellen":"Nguồn dữ liệu"}>
         <a href={latest.sourceUrl} target="_blank" rel="noopener noreferrer">Vanguard factsheet <span aria-hidden="true">↗</span></a>
