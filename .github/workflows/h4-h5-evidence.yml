@@ -196,6 +196,10 @@ jobs:
           test -s "$RUNNER_TEMP/h5-pre002-backup.sql"
           grep -q "COPY auth.users" "$RUNNER_TEMP/h5-pre002-backup.sql"
           grep -q "COPY public.goals" "$RUNNER_TEMP/h5-pre002-backup.sql"
+          # Runner pg_dump 17 can emit a session SET unknown to Supabase PG 15.
+          # Remove ONLY this client/session GUC from the disposable fixture dump;
+          # never touch COPY rows, production data, or hosted databases.
+          sed -i '/^SET transaction_timeout = /d' "$RUNNER_TEMP/h5-pre002-backup.sql"
 
           # Apply the pending migration exactly as a normal local upgrade would.
           supabase migration up --local

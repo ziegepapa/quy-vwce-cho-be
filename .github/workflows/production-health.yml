@@ -53,3 +53,25 @@ jobs:
           path: /tmp/prod-route-smoke/
           if-no-files-found: ignore
           retention-days: 14
+
+  # Reuses Production Health, NOT a second financial monitor.
+  # The GET heartbeat is protected by a separate read-only token.
+  # ntfy is an independent channel; Resend is never used here.
+  # Defaults to unarmed until the owner separately approves all secrets/variables.
+  guardian-watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Check Guardian heartbeat, report outage to ntfy if armed
+        env:
+          GUARDIAN_WATCHDOG_ENABLED: ${{ vars.GUARDIAN_WATCHDOG_ENABLED }}
+          GUARDIAN_WATCHDOG_URL: ${{ vars.GUARDIAN_WATCHDOG_URL }}
+          GUARDIAN_WATCHDOG_SECRET: ${{ secrets.GUARDIAN_WATCHDOG_SECRET }}
+          GUARDIAN_NTFY_URL: ${{ secrets.GUARDIAN_NTFY_URL }}
+          GUARDIAN_NTFY_TOKEN: ${{ secrets.GUARDIAN_NTFY_TOKEN }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: node scripts/guardian/production-watchdog.mjs

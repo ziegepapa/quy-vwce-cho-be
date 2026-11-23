@@ -308,6 +308,38 @@ Branch protection (`main`): bắt buộc PR, required check `test-build`, cấm 
 - [ ] Nói tiếng Việt với owner, xưng mình/bạn, câu ngắn, đi thẳng vào việc; hỏi bằng lựa chọn đánh số, mỗi lần một quyết định thật cần thiết.
 - [ ] Đừng mặc định trọn vòng push → PR → CI → merge: chốt phạm vi ủy quyền theo từng việc.
 
+
+### 14.8 Silent Guardian V1 — self-heal and independent operations (PR #399 Draft)
+
+- **Do not confuse the services.** PR #399 is opt-in alerts for newly recorded
+  sales and possible PDF import duplicates. The previously deployed
+  `silent-guardian-worker` monitors structural cloud data. Their prior E2E
+  proofs do not automatically validate PR #399. Do not add a second redundant
+  financial scan; compare scopes before enabling either.
+- Existing V1 `guardian_alert_deliveries` is the event-level dedupe ledger.
+  Keep its at-most-once semantics: **no retries of ambiguous Resend sends**.
+- Bounded self-heal is limited to safe Supabase GETs: 3 retries at
+  0.6/1.8/5.4 seconds, then stop. Invalid secret, HTTP 401/403, bad data,
+  RLS and schema errors are **not** auto-fixed.
+- Server heartbeat `guardian_run_health` stores status only; a separate
+  watchdog job is added to the **existing** `production-health.yml`. It uses
+  a read-only secret distinct from the Cron secret and ntfy rather than
+  Resend. It is unarmed until owner-approved setup after Merge.
+- If expected active and the last success is >36h old, or failure streak
+  is >=2, the independent watchdog reports to ntfy. Since the job runs
+  daily at 05:17 UTC, notification may be delayed; an outage at GitHub can
+  also delay the watchdog. Treat this as a known limitation, not zero-risk.
+- Investigation order: GitHub Production Health job → Cron job details →
+  Supabase Edge invocations → aggregate heartbeat → Resend status, without
+  exposing user, transaction or credential data. For iPhone-only sync issues,
+  use Sync Health and Local Diagnostics, **not** server auto-repair.
+- Operator and user actions, provisioning, security controls and verification
+  are defined in [SILENT_GUARDIAN_V1.md](./SILENT_GUARDIAN_V1.md).
+- Owner alone decides when PR #399 leaves Draft, is merged, and when each
+  hosted production action (migration, function deploy, secret, Cron,
+  readiness gate, opt-in) can occur. PR CI must never contact Resend/ntfy or
+  hosted production to send alerts.
+
 ## References
 
 [1]: ./LONG_TERM_READINESS.md "Current security, reproducibility and readiness evidence"

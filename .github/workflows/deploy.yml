@@ -72,6 +72,11 @@ jobs:
           deno check --node-modules-dir=auto supabase/functions/silent-guardian-email-test/index.ts
           deno check --node-modules-dir=auto supabase/functions/silent-guardian-worker/index.ts
           deno check --node-modules-dir=auto supabase/functions/gemini-vault-explain/index.ts
+          deno check --node-modules-dir=auto supabase/functions/silent-guardian/index.ts
+      - name: Silent Guardian isolated rules + retry tests (no cloud or email)
+        run: |
+          deno test supabase/functions/silent-guardian/rules.test.ts
+          deno test supabase/functions/silent-guardian/retry.test.ts
       - name: Run isolated Edge Function smoke environment
         run: npm run test:edge-smoke
       - name: Run isolated Gemini/Supabase quota smoke (no Google key)
@@ -136,6 +141,7 @@ jobs:
             test-results/**/goals.png
             test-results/**/notfallmappe.png
             test-results/**/settings.png
+            test-results/**/guardian-settings.png
             test-results/**/onboarding.png
             test-results/**/overview-chart.png
             test-results/**/transactions-empty.png

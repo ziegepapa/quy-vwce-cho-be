@@ -25,10 +25,10 @@ export default defineConfig({
     VitePWA({
       registerType: "prompt",
       injectRegister: "script-defer",
-      // Keep 192px and maskable icons offline; the full 512px PNG remains online
-    // for installation, but is redundant in the offline precache.
+      // Precache required PWA PNG icons; large/install-only variants remain
+      // available online without displacing offline app screens.
     includeManifestIcons: false,
-    includeAssets: ["icons/*.svg", "icons/icon-192.png", "icons/icon-maskable-512.png"],
+    includeAssets: ["icons/icon-192.png", "icons/icon-maskable-512.png"],
       manifest: {
         id: "/quy-vwce-cho-be/",
         name: "VWCE Vault",
@@ -60,7 +60,7 @@ export default defineConfig({
         // exactly the "app cập nhật chậm" symptom. The app already falls
         // back to local IndexedDB data when offline, so no data file needs
         // to be precached.
-        globIgnores: ["**/data/**", "**/icons/icon-512.png"],
+        globIgnores: ["**/data/**", "**/icons/icon-512.png", "**/icons/apple-touch-icon.png", "**/icons/icon-192.svg", "**/icons/icon-512.svg", "**/icons/icon-maskable.svg", "**/assets/GuardianPanel-*.js", "**/assets/overview-mountain-*.webp"],
         navigateFallback: "/quy-vwce-cho-be/index.html",
         cleanupOutdatedCaches: true,
         clientsClaim: true,
