@@ -1,0 +1,98 @@
+name: Update VALL factsheet
+on:
+  schedule:
+    - cron: "17 10 15,18,21 * *"
+      timezone: Europe/Berlin
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Read PDF only; never push or open a PR"
+        type: boolean
+        default: true
+  pull_request:
+    paths:
+      - '.github/workflows/update-vall-factsheet.yml'
+      - 'scripts/update-vall-factsheet*'
+      - 'scripts/fixtures/vall-october-snapshot.json'
+      - 'src/lib/vallHealthSnapshot.ts'
+permissions:
+  contents: read
+concurrency:
+  group: update-vall-factsheet-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+jobs:
+  dry-run:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.dry_run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: node --test scripts/update-vall-factsheet.test.mjs
+      - name: Read live PDF without writes
+        run: |
+          node scripts/update-vall-factsheet.mjs --dry-run
+          test -z "$(git status --porcelain --untracked-files=all)"
+  update:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard bot token present
+        env:
+          PRICE_BOT_TOKEN: ${{ secrets.PRICE_BOT_TOKEN }}
+        run: |
+          test -n "$PRICE_BOT_TOKEN" || { echo "::error::PRICE_BOT_TOKEN missing"; exit 1; }
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.PRICE_BOT_TOKEN }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: node --test scripts/update-vall-factsheet.test.mjs
+      - name: Validate, append and propose draft
+        env:
+          GH_TOKEN: ${{ secrets.PRICE_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          DATA=src/data/vall-health.json
+          TMP=$(mktemp -d)
+          trap 'rm -rf "$TMP"' EXIT
+          export VALL_PR_BODY="$TMP/body"
+          node scripts/update-vall-factsheet.mjs
+          STATUS=$(git status --porcelain --untracked-files=all)
+          if [ -z "$STATUS" ]; then exit 0; fi
+          if [ "$STATUS" != " M $DATA" ]; then
+            echo "::error::Unexpected working tree changes"; printf '%s\n' "$STATUS"; exit 1
+          fi
+          test -s "$VALL_PR_BODY"
+          ASOF=$(node -p 'JSON.parse(require("fs").readFileSync(process.argv[1])).history.at(-1).asOf' "$DATA")
+          [[ "$ASOF" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+          BRANCH="chore/vall-factsheet-$ASOF"
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || { echo "::error::main moved; retry next run"; exit 1; }
+          EXISTING=$(gh pr list --head "$BRANCH" --base main --state all --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then echo "PR #$EXISTING exists; no duplicate"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          REMOTE=$(git ls-remote --heads origin "refs/heads/$BRANCH")
+          if [ -n "$REMOTE" ]; then
+            git fetch origin "$BRANCH"
+            git show "FETCH_HEAD:$DATA" > "$TMP/remote.json"
+            # Recover only an identical orphan branch; ignore checkedOn (run date).
+            node -e 'const fs=require("fs");const [a,b]=process.argv.slice(1).map(p=>JSON.parse(fs.readFileSync(p)));delete a.checkedOn;delete b.checkedOn;if(JSON.stringify(a)!==JSON.stringify(b))process.exit(1)' "$TMP/remote.json" "$DATA"
+            test "$(git diff --name-only origin/main...FETCH_HEAD)" = "$DATA"
+          else
+            git switch -c "$BRANCH"
+            git add -- "$DATA"
+            test "$(git diff --cached --name-only)" = "$DATA"
+            git commit -m "chore(data): VALL factsheet $ASOF"
+            git push -u origin "$BRANCH"
+          fi
+          gh pr create --draft --base main --head "$BRANCH" --title "chore(data): VALL factsheet $ASOF" --body-file "$VALL_PR_BODY"

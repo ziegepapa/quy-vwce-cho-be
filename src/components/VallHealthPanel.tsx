@@ -41,10 +41,14 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
   const decision = state.warningFlags > 0 ? (de ? "Bestätigtes Warnsignal" : "Có cờ đỏ cần kiểm tra")
     : state.unknownFlags > 0 ? (de ? "Noch kein endgültiges Urteil" : "Chưa đủ bằng chứng để kết luận")
     : (de ? "Keine gemeldeten Warnsignale" : "Chưa ghi nhận cờ đỏ trong sổ");
+  const signedChange = aumChange === null ? "—" : (aumChange > 0 ? "+" : "") + Math.round(aumChange) + "%";
+  const fee = latest.ongoingChargesPercent === null ? "—" : percent(latest.ongoingChargesPercent,locale);
+  const period = previous ? `${date(previous.asOf)} → ${date(latest.asOf)}` : date(latest.asOf);
+  const provenanceLabel = (p:string) => p === "owner-ledger" ? (de?"Eigentümer-Prüfbuch":"số từ sổ của chủ sở hữu") : (de?"Vanguard-Factsheet direkt geprüft":"đối chiếu trực tiếp factsheet Vanguard");
   const judgement = state.warningFlags > 0
     ? (de ? "Dokumentiertes Warnsignal prüfen; nur zukünftige Sparraten erwägen." : "Đối chiếu nguồn cờ đỏ; chỉ xem xét khoản góp mới, không tự bán vị thế.")
-    : (de ? `Total Assets laut Factsheets: ${aumChange===null?"—":"+"+Math.round(aumChange)+"%"} von September bis Oktober; OCF weiter 0,07%. Portfolio-Kennzahlen ähneln dem Index. Eine echte Tracking Difference ist erst nach einem Jahr ab August 2027 verfügbar. Ungeprüft bedeutet NICHT sicher.`
-          : `Theo factsheet Vanguard, tiền trong quỹ tăng ${aumChange===null?"—":"+"+Math.round(aumChange)+"%"} từ 30/09 đến 31/10, phí vẫn 0,07% và vài đặc điểm danh mục gần chỉ số. Có dấu hiệu tích cực về quy mô nhưng chưa đủ để kết luận quỹ an toàn. Độ lệch hiệu suất chỉ có sau một năm, từ 08/2027; 5 cờ đỏ vẫn chưa xác minh.`);
+    : (de ? `Total Assets: ${signedChange} (${period}); OCF ${fee}. Kennzahlen sind kein Nachweis für geringe Tracking Difference oder Sicherheit. Ungeprüft bedeutet NICHT sicher.`
+          : `Quy mô quỹ: ${signedChange} (${period}); OCF ${fee}. Các chỉ số không chứng minh độ lệch thấp hay quỹ an toàn. Còn ${state.unknownFlags} cờ đỏ chưa xác minh.`);
   const trUnverified = data.tradeRepublic.vallSparplanFreeVerified === null;
   const tdUnverified = latest.trackingDifferenceAnnualPp === null;
   const unverified = [
@@ -143,7 +147,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
       <span className="vh-eyebrow">02 / {de?"FONDSVERMÖGEN":"XU HƯỚNG QUY MÔ"}</span>
       <h3>{de?"Entwicklung der Total Assets":"Tiền trong quỹ qua các kỳ"}</h3>
       <p>{de?"US-Dollar Millionen, je Stichtag des Factsheets; keine Performance des Kindes.":"Đơn vị: triệu USD; mỗi điểm là ngày chốt factsheet, không phải lãi/lỗ của Bé."}</p>
-      <svg className="vh-aum-chart" viewBox="0 0 320 124" role="img" aria-label={de?"Total Assets nach Factsheet: 660, 2573, 4353 Millionen US-Dollar":"AUM theo factsheet: 660, 2573, 4353 triệu USD"}>
+      <svg className="vh-aum-chart" viewBox="0 0 320 124" role="img" aria-label={(de?"Total Assets (US-Dollar Millionen): ":"AUM (triệu USD): ")+data.history.map(item=>`${date(item.asOf)}: ${item.totalAssetsUsdMillions}`).join(", ")}>
         <line x1="25" y1="109" x2="295" y2="109" stroke="currentColor" opacity=".25"/>
         <polyline fill="none" stroke="#229e91" strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round"
           points={chartPoints.map(point => String(point.x)+","+String(point.y)).join(" ")}/>
@@ -151,19 +155,19 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
       </svg>
       <ol className="vh-aum-values">{data.history.map(item=><li key={item.asOf}><strong>{new Intl.NumberFormat(fmt(locale)).format(item.totalAssetsUsdMillions)}</strong><small>{date(item.asOf)}</small></li>)}</ol>
       <p className="vh-aum-change" data-testid="vall-aum-change">{previous&&aumChange!==null
-        ? (de?"Vom 30.09. bis 31.10.: +":"Từ 30/09 → 31/10: +")+Math.round(aumChange)+"% "+(de?"Total Assets, kein Anlageertrag.":"quy mô quỹ, không phải lợi nhuận.")
+        ? period+": "+signedChange+" "+(de?"Total Assets, kein Anlageertrag.":"quy mô quỹ, không phải lợi nhuận.")
         : (de?"Keine vergleichbare Vorperiode.":"Chưa có kỳ trước để so sánh.")}</p>
       <details className="vh-expand">
         <summary>{de?"Anteilsklassenvermögen / Herkunft":"Tài sản lớp quỹ (Share class assets) và nguồn"}</summary>
         <div className="vh-expand-body">
           <p>{data.history.map(item=>date(item.asOf)+": US$ "+new Intl.NumberFormat(fmt(locale)).format(item.shareClassAssetsUsdMillions)).join(" · ")} {de?"Millionen":"triệu USD"}</p>
-          <p>{de?"August: Daten aus dem Prüfbuch des Eigentümers. September und Oktober: direkt aus Vanguard-Factsheets geprüft; Oktober am 23.11.2026. Der PDF-Link wird laufend aktualisiert und ist kein Archiv.":"Tháng 8: số từ sổ của chủ sở hữu. Tháng 9 và 10: đã đối chiếu trực tiếp factsheet Vanguard; tháng 10 xác minh ngày 23/11/2026. Link PDF được cập nhật theo kỳ, không phải bản lưu trữ cố định."}</p>
+          <p>{data.history.map(item=>`${date(item.asOf)}: ${provenanceLabel(item.provenance)}`).join(" · ")}. {de?"Der PDF-Link ist kein Archiv.":"Link PDF không phải bản lưu trữ cố định."}</p>
         </div>
       </details>
     </section>
 
     <details className="vh-expand vh-replication" data-testid="vall-replication">
-      <summary>{de?"Indexmerkmale vergleichen (31.10.2026)":"Bám sát đặc điểm danh mục (31/10/2026)"}</summary>
+      <summary>{de?"Indexmerkmale vergleichen":"Bám sát đặc điểm danh mục"} ({date(data.replicationSnapshot.asOf)})</summary>
       <div className="vh-expand-body">
         <p>{de?"Kennzahlen der Positionen, KEINE Fondsrendite und KEINE Tracking Difference. Klicke einen Begriff zur Erklärung.":"Đây là đặc điểm các cổ phiếu quỹ nắm giữ so với chỉ số, KHÔNG phải hiệu suất hay tracking difference. Bấm thuật ngữ để xem giải thích."}</p>
         <div className="vh-replication-head"><span>{de?"Kennzahl":"Chỉ tiêu"}</span><span>VALL</span><span>FTSE Global All Cap</span></div>
@@ -175,7 +179,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
             <span>{comparisonValue(values.benchmark,row.unit)}</span>
           </div>;
         })}
-        <p>{de?"Stichproben-Replikation: ähnliche Kennzahlen beweisen noch keine geringe Performance-Abweichung. Quelle: Vanguard-Factsheet vom 31.10.2026, direkt geprüft am 23.11.2026.":"Quỹ sử dụng lấy mẫu đại diện. Chỉ số danh mục gần nhau không chứng minh độ lệch hiệu suất thấp. Nguồn: factsheet Vanguard ngày 31/10/2026, đối chiếu trực tiếp ngày 23/11/2026."}</p>
+        <p>{de?"Stichproben-Replikation: Kennzahlen beweisen keine geringe Performance-Abweichung. Quelle:":"Quỹ sử dụng lấy mẫu đại diện. Các chỉ số không chứng minh độ lệch hiệu suất thấp. Nguồn:"} {date(data.replicationSnapshot.asOf)} · {provenanceLabel(data.replicationSnapshot.provenance)}.</p>
       </div>
     </details>
 
@@ -209,7 +213,7 @@ export default function VallHealthPanel({locale}: {locale:AppLocale}) {
       <span className="vh-eyebrow">06 / {de?"ZEITPLAN DER NACHWEISE":"KHI NÀO BIẾT ĐƯỢC GÌ?"}</span>
       <h3>{de?"Welche Antwort ist wann möglich?":"Khi nào biết được gì?"}</h3>
       <ol>
-        <li><strong>{de?"Mitte Dezember 2026 (voraussichtlich)":"Giữa 12/2026 (dự kiến)"}</strong><span>{de?"November-Factsheet prüfen; nur wenn tatsächlich veröffentlicht.":"Xem factsheet tháng 11 khi Vanguard thực sự phát hành; không tự cập nhật."}</span></li>
+        <li><strong>{de?"Monatlich am 15., 18., 21.":"Hàng tháng ngày 15, 18, 21"}</strong><span>{de?"Repo-Prüfung auf neues Factsheet; Übernahme erst nach Freigabe.":"Repo kiểm tra factsheet mới; chỉ cập nhật sau duyệt PR."}</span></li>
         <li><strong>{de?"Ab August 2027":"Từ 08/2027"}</strong><span>{de?"Erste Jahres-Performance möglich; dann erst Tracking Difference zum eigenen FTSE Global All Cap beurteilen.":"Có thể bắt đầu có dữ liệu hiệu suất một năm để đánh giá độ lệch so với đúng FTSE Global All Cap."}</span></li>
         <li><strong>{de?"Nach Beleg einer echten Order":"Khi Chien xác nhận biên nhận lệnh thật"}</strong><span>{de?"Dann erst den VALL-Sparplan-Gebührenstatus als verifiziert markieren.":"Lúc đó mới được đánh dấu phí Sparplan riêng VALL đã xác minh từ broker."}</span></li>
       </ol>

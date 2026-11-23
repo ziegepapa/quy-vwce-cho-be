@@ -1,4 +1,5 @@
 /** Versioned, reviewed repo-only data. Never accesses network, Dexie, SQL or Gemini. */
+type VallProvenance = "owner-ledger" | `direct-pdf-${number}-${number}`;
 export type VallHealthRecord = {
   asOf: string;
   totalAssetsUsdMillions: number;
@@ -6,12 +7,12 @@ export type VallHealthRecord = {
   ongoingChargesPercent: number | null;
   trackingDifferenceAnnualPp: number | null;
   sourceUrl: string;
-  provenance: "owner-ledger" | "direct-pdf-2026-09" | "direct-pdf-2026-10";
+  provenance: VallProvenance;
 };
 export type VallComparison = { fund: number; benchmark: number };
 export type VallReplicationSnapshot = {
   asOf: string;
-  provenance: "owner-ledger" | "direct-pdf-2026-10";
+  provenance: VallProvenance;
   sourceUrl: string;
   holdings: VallComparison;
   priceEarnings: VallComparison;
@@ -59,6 +60,8 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const day = (v: unknown): v is string => typeof v === "string" &&
   /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v + "T00:00:00Z")) &&
   new Date(v + "T00:00:00Z").toISOString().slice(0,10) === v;
+const validProvenance = (v: unknown, asOf: string) => v === "owner-ledger" ||
+  (v === `direct-pdf-${asOf.slice(0,7)}` && new Date(Date.parse(asOf + "T00:00:00Z") + 86400000).getUTCDate() === 1);
 const maybeBool = (v: unknown) => v === null || typeof v === "boolean";
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const link = (v: unknown, host: string) => typeof v === "string" &&
@@ -82,9 +85,7 @@ export function parseVallHealth(input: unknown): VallHealthSnapshot | null {
         !(v.trackingDifferenceAnnualPp === null || finite(v.trackingDifferenceAnnualPp)) ||
         (v.trackingDifferenceAnnualPp !== null && v.asOf < "2027-08-18") ||
         !link(v.sourceUrl,"fund-docs.vanguard.com") ||
-        (typeof v.provenance !== "string" || !["owner-ledger","direct-pdf-2026-09","direct-pdf-2026-10"].includes(v.provenance)) ||
-        (v.provenance === "direct-pdf-2026-09" && v.asOf !== "2026-09-30") ||
-        (v.provenance === "direct-pdf-2026-10" && v.asOf !== "2026-10-31")) return null;
+        !validProvenance(v.provenance,v.asOf)) return null;
     last = v.asOf;
   }
   const tr = input.tradeRepublic;
@@ -99,10 +100,9 @@ export function parseVallHealth(input: unknown): VallHealthSnapshot | null {
       !finite(userFees.oneOffOrderEur) || userFees.oneOffOrderEur < 0) return null;
   const replication = input.replicationSnapshot;
   if (!isRecord(replication) || !day(replication.asOf) || replication.asOf > input.checkedOn ||
-      (replication.provenance !== "owner-ledger" && replication.provenance !== "direct-pdf-2026-10") ||
-      (replication.provenance === "direct-pdf-2026-10" && replication.asOf !== "2026-10-31") ||
+      !validProvenance(replication.provenance,replication.asOf) ||
       !link(replication.sourceUrl,"fund-docs.vanguard.com") ||
-      replication.asOf > last || !input.history.some(item => isRecord(item) && item.asOf === replication.asOf)) return null;
+      replication.asOf > last || !input.history.some(item => isRecord(item) && item.asOf === replication.asOf && item.provenance === replication.provenance)) return null;
   for (const field of ["holdings","priceEarnings","priceBook","returnOnEquityPercent","earningsGrowthPercent","dividendYieldPercent"]) {
     const point = replication[field];
     if (!isRecord(point) || !finite(point.fund) || !finite(point.benchmark) ||

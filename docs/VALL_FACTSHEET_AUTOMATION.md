@@ -1,0 +1,7 @@
+# VALL factsheet updater
+
+GitHub Actions checks on the 15th, 18th and 21st, 10:17 Europe/Berlin, or manually via workflow_dispatch (dry-run defaults to true). Existing PRICE_BOT_TOKEN is used only on main for a data-only draft PR; no auto-merge. PR CI reads the PDF with no write credentials. After approval and merge of this workflow, run it manually with dry_run=true; inspect the logged date, AUM, OCF and characteristics. A stale PDF or an existing month is a no-op; malformed or mixed dates, unexpected fund/units, missing prior month or out-of-range numbers fail closed. Retry next slot or investigate logs. An existing PR is never duplicated or reopened automatically.
+
+Parser uses the existing pdfjs-dist package and checks the dated cover and characteristics table in one downloaded PDF. The rolling URL is not an archive. Review the actual PDF and all proposed values before merging the data PR; a changed OCF is highlighted, not automatically a confirmed red flag. No background app requests, ledger changes, Gemini, Supabase or new secrets. The January 16 2027 manual review and existing schedule remain. TD after August 2027, broker-specific Sparplan fee and all five red flags remain human checks. Machine-provided characteristics are not TD or returns.
+
+Run fixture tests: node --test scripts/update-vall-factsheet.test.mjs (Node 22). Live dry-run: node scripts/update-vall-factsheet.mjs --dry-run. For an unmerged earlier observation, reconcile it before accepting later months; never synthesize missing periods.
