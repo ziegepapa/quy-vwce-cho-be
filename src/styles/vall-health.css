@@ -81,3 +81,37 @@
 @media(max-width:480px){.vh-hero{padding:18px}.vh-topline{align-items:start}.vh-orbit{flex-basis:66px;width:66px;height:66px;box-shadow:0 0 0 8px #7cd5d60d,0 0 0 16px #7cd5d60a}.vh-orbit span{font-size:30px}.vh-insights{grid-template-columns:1fr}.vh-metric-primary{grid-column:1/-1}.vh-metric:last-child{grid-column:1/-1}.vh-interpretation{grid-template-columns:23px minmax(0,1fr) auto;gap:9px;padding:13px}}
 @media(max-width:345px){.vh-metrics,.vh-compare-grid{grid-template-columns:1fr}.vh-metric-primary,.vh-metric:last-child{grid-column:auto}.vh-orbit{display:none}.vh-evidence-count>span{max-width:50px}}
 @media(prefers-reduced-motion:no-preference){.vh-filter button,.vh-links a{transition:background-color .15s ease,transform .15s ease}.vh-links a:hover{transform:translateY(-1px)}}
+
+/* Dated factsheet history and plain-language expansion, all shipped locally. */
+.vh-data-section{display:grid;gap:10px;padding:17px;border:1px solid var(--vh-line);border-radius:17px;background:var(--surface-raised);min-width:0}
+.vh-data-section h3{font-size:16px}
+.vh-data-section>p{font-size:11px;color:var(--vh-muted)}
+.vh-aum-chart{display:block;width:100%;height:auto;max-height:160px;margin-top:4px;color:var(--vh-ink);overflow:visible}
+.vh-aum-values{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:0;margin:0}
+.vh-aum-values li{display:grid;justify-items:center;gap:2px;min-width:0;text-align:center}
+.vh-aum-values strong{font-size:clamp(14px,4vw,19px);font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.vh-aum-values small{font-size:10px;color:var(--vh-muted);font-variant-numeric:tabular-nums}
+.vh-data-section .vh-aum-change{padding:9px 12px;border-radius:12px;background:var(--surface-sunken);font-size:12px;font-weight:700;color:var(--vh-ink)}
+.vh-expand{min-width:0;border:1px solid var(--vh-line);border-radius:13px;padding:0 12px;background:var(--surface-raised)}
+.vh-expand>summary{display:list-item;cursor:pointer;padding:12px 0;font-size:12px;font-weight:750;list-style-position:inside}
+.vh-expand>summary::marker{color:var(--primary-600)}
+.vh-expand[open]>summary{border-bottom:1px solid var(--vh-line)}
+.vh-expand-body{display:grid;gap:10px;padding:12px 0;color:var(--vh-muted);font-size:12px}
+.vh-expand-body p{font-size:11px;color:var(--vh-muted)}
+.vh-expand-body p strong{color:var(--vh-ink)}
+.vh-term{font-size:11px;min-width:0}
+.vh-term>summary{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;font-weight:700;list-style:none;display:inline-block}
+.vh-term>summary::-webkit-details-marker{display:none}
+.vh-term p{margin-top:7px;font-size:11px;color:var(--vh-muted)}
+.vh-replication-head,.vh-replication-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.65fr) minmax(0,1fr);gap:6px;align-items:start;min-width:0}
+.vh-replication-head{color:var(--vh-muted);font-size:10px;font-weight:800}
+.vh-replication-row{border-top:1px solid var(--vh-line);padding-top:9px;font-variant-numeric:tabular-nums}
+.vh-replication-row>span{text-align:right;font-weight:800;font-size:11px;overflow-wrap:anywhere;color:var(--vh-ink)}
+.vh-replication-head span:not(:first-child){text-align:right}
+.vh-countdown{display:inline-block;align-self:start;border-radius:999px;background:var(--surface-raised);border:1px solid var(--vh-line);padding:4px 9px;font-weight:800!important;color:var(--vh-ink)!important;margin:5px 0!important}
+.vh-know-when{display:grid;gap:10px;padding:16px;border:1px solid var(--vh-line);border-radius:16px;background:var(--surface-raised)}
+.vh-know-when ol{padding:0;list-style:none;margin:0;display:grid;gap:9px}
+.vh-know-when li{display:grid;grid-template-columns:minmax(110px,.8fr) minmax(0,1.7fr);gap:10px;border-top:1px solid var(--vh-line);padding-top:9px;font-size:11px}
+.vh-know-when li strong{font-weight:800;color:var(--vh-ink)}
+.vh-know-when li span{color:var(--vh-muted)}
+@media(max-width:410px){.vh-replication-head,.vh-replication-row{grid-template-columns:minmax(0,1fr) 61px 86px;gap:3px}.vh-replication-head{font-size:9px}.vh-replication-row>span{font-size:10px}.vh-know-when li{grid-template-columns:1fr;gap:2px}}

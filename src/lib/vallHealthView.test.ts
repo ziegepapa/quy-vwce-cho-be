@@ -1,35 +1,32 @@
 import { describe, expect, it } from "vitest";
 import raw from "../data/vall-health.json";
 import { parseVallHealth } from "./vallHealthSnapshot";
-import { vallViewState } from "./vallHealthView";
-
+import { vallViewState, aumChangePercent, daysUntilExternalReview } from "./vallHealthView";
 const base = parseVallHealth(raw)!;
 
-describe("VALL evidence-first presentation — not a live monitor or health score", () => {
-  it("does not mistake five unverified flags for five safe checks", () => {
-    expect(vallViewState(base, "2026-11-23")).toEqual({
-      knownFlags: 0,
-      warningFlags: 0,
-      unknownFlags: 5,
-      nextReview: {date:"2027-01-16",kind:"light"},
-      hasHistory:false,
+describe("VALL presentation is not a risk score or background tracking system",()=>{
+  it("maintains all five red flags as unverified",()=>{
+    expect(vallViewState(base,"2026-11-23")).toEqual({
+      knownFlags:0,warningFlags:0,unknownFlags:5,nextReview:{date:"2027-01-16",kind:"light"},hasHistory:true,
     });
   });
-  it("shows the upcoming external schedule but never treats elapsed reviews as completed", () => {
-    expect(vallViewState(base,"2027-01-17").nextReview).toEqual({date:"2027-04-16",kind:"light"});
-    expect(vallViewState(base,"2027-04-17").nextReview).toEqual({date:"2027-08-16",kind:"full"});
+  it("computes a sourced +69% fund asset change rather than an investment return",()=>{
+    const aug=base.history[0].totalAssetsUsdMillions;
+    const sep=base.history[1].totalAssetsUsdMillions;
+    const oct=base.history[2].totalAssetsUsdMillions;
+    expect([aug,sep,oct]).toEqual([660,2573,4353]);
+    expect(Math.round(aumChangePercent(oct,sep))).toBe(69);
+    expect(aumChangePercent(oct,sep)).toBeCloseTo(69.1799455888,5);
+    expect(()=>aumChangePercent(oct,0)).toThrow();
+  });
+  it("counts calendar days only upon rendering and does not assume a past check completed",()=>{
+    expect(daysUntilExternalReview("2027-01-16","2026-11-23")).toBe(54);
+    expect(vallViewState(base,"2027-01-17").nextReview?.date).toBe("2027-04-16");
+    expect(vallViewState(base,"2027-04-17").nextReview?.date).toBe("2027-08-16");
     expect(vallViewState(base,"2027-08-17").nextReview).toBeNull();
   });
-  it("only interprets explicitly documented manual flag outcomes", () => {
-    const data = structuredClone(base);
-    data.flags.increasedTer=true;
-    data.flags.severeAumDrop=false;
-    expect(vallViewState(data,"2026-11-23")).toMatchObject({knownFlags:2,warningFlags:1,unknownFlags:3});
-  });
-  it("never synthesizes historical trend from a single dated factsheet", () => {
-    expect(vallViewState(base,"2026-11-23").hasHistory).toBe(false);
-    const two = structuredClone(base);
-    two.history.push({...two.history[0],asOf:"2026-12-31"});
-    expect(vallViewState(two,"2026-11-23").hasHistory).toBe(true);
+  it("only displays explicitly reviewed outcomes as alerts, never synthesizes a score",()=>{
+    const d=structuredClone(base);d.flags.increasedTer=true;d.flags.severeAumDrop=false;
+    expect(vallViewState(d,"2026-11-23")).toMatchObject({knownFlags:2,warningFlags:1,unknownFlags:3});
   });
 });

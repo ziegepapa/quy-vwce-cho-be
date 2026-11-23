@@ -35,34 +35,67 @@ test, build, preview/mobile, PWA budgets, CI and source review are green.
   opening may therefore need internet; the existing offline ledger remains
   unchanged.
 
-## Current sourced snapshot
+## Dated asset observations — do not conflate a rolling PDF link with an archive
 
-- Fund: Vanguard FTSE Global All-Cap UCITS ETF USD Acc, **VALL**,
-  **IE000VAHT5T0**, *its own* **FTSE Global All Cap Index** (not FTSE
-  All-World/VWCE's benchmark).
-- Vanguard **factsheet for 30 September 2026**:
-  **Total assets (million) US$2,573** (fund-wide, **not share-class assets**);
-  **OCF/TER 0.07%**. PDF:
+- VALL: **IE000VAHT5T0**, its own **FTSE Global All Cap Index**.
+- Three historically dated factsheet observations, in **million USD**,
+  preserved in `history`:
+  - **31 Aug 2026:** **Total assets $660**, **share class assets $645**.
+    August OCF was not supplied for that date, therefore **null**.
+  - **30 Sep 2026:** **Total assets $2,573**, **share class assets $2,506**,
+    OCF **0.07%**. The original September PDF was directly readable.
+  - **31 Oct 2026:** **Total assets $4,353**, **share class assets $4,223**,
+    OCF **0.07%**. Directly checked against the Vanguard factsheet on
+    **23 November 2026** (Muse, 21:00 CET).
+- September→October **Total assets +69.18%**, displayed rounded **+69%**.
+  This is **NOT a fund return**, not a personal gain and cannot reveal the
+  exact amount of investor inflows or whether the fund is safe from closure.
+  Never mix `Total assets` with `share class assets` in the same trend.
+- October portfolio characteristics (fund vs **FTSE Global All Cap**),
+  directly checked against the October factsheet: holdings **6,977 vs 10,207**, P/E **19.4 vs 19.3**,
+  P/B **3.2 vs 3.2**, ROE **18.5% vs 18.5%**, earnings growth **19.0% vs
+  19.0%**, dividend yield **1.6% vs 1.6%**. These describe holdings
+  composition/sampling **only** — not returns or tracking difference.
+- **Provenance:** the October factsheet was directly checked on 23 November
+  2026. The public Vanguard PDF at
   https://fund-docs.vanguard.com/FTSE_Global_All-Cap_UCITS_ETF_USD_Acc_E161_EU_INT_UK_EN.pdf
-- Tracking difference: **unknown**, not zero. The fund launched 18 Aug
-  2026; Vanguard says performance data will become available after one year.
-  Do not compare incomplete fund performance to an unrelated index or annualise
-  the recent partial period.
-- Trade Republic: the published generic rule says ETF Sparplan execution is
-  free (https://support.traderepublic.com/de-de/760). This **does not verify
-  that VALL specifically remains available as an eligible free Sparplan** for
-  this user; instrument-specific status stays **null/unknown**.
-- Changes/merger/liquidation and all red flags are **unknown** rather than
-  falsely "healthy". Only an externally verified check may update them.
-- VWCE alternative: IE00BK5BQT80, FTSE **All-World** Index, OCF/TER
-  **0.14%**, distinct benchmark:
+  is a rolling file URL, **not an immutable archive**; caches can return
+  older issues. August retains `owner-ledger`; September retains
+  `direct-pdf-2026-09`; October AUM and replication use `direct-pdf-2026-10`.
+  Always check the actual factsheet date before using this URL.
+- Tracking difference: **null** for all three months, not zero. Vanguard says
+  performance data will be available **after one year**, measured from
+  fund launch **18 August 2026**. August 2027 is **earliest expected**, not
+  a fixed provider publication promise.
+- Trade Republic: the general published rule says ETF Sparplan execution
+  is free (https://support.traderepublic.com/de-de/760). Chien reported
+  **0 € per Sparplan execution and 1 € for one-off buys as of 23 Nov 2026**.
+  These appear as **owner-reported costs**. This does **not** validate the
+  VALL instrument's broker order receipt; keep
+  `tradeRepublic.vallSparplanFreeVerified = null` until independently
+  confirmed from a real execution.
+- Five manually checked red-flag outcomes stay **null/unknown**:
+  **no confirmation is not a green light**.
+- VWCE alternative: **IE00BK5BQT80**, **FTSE All-World Index**,
+  OCF/TER **0.14%**; a distinct index, not a direct tracking comparison:
   https://fund-docs.vanguard.com/FTSE_All-World_UCITS_ETF_USD_Accumulating_9679_INT_OFF_ETF_EN.pdf?domicile=IE
 
-The Vanguard live product page may show a **different, undated** Total Assets
-value than the dated September factsheet. Never import an undated number,
-mix a third-party AUM denominator, silently change "Total assets" into
-"Share class assets", or compare rounded cross-source snapshots as a trend.
-The UI displays only date-stamped factsheet data.
+## Readability and evidence boundaries
+
+The first screen shows only **three metric cards**: Total assets, annual fees
+and unreported TD. Each has one plain-language explanation and an as-of date
+(or explanation why a TD date does not exist). Fee details and the six
+portfolio-vs-index characteristics appear only when expanded, with glossary
+entries opening in-place. The SVG AUM chart uses only committed observations
+and does not call a network API or calculate a fund health score.
+
+The UI answers "Is the child's fund OK?" in qualified plain language:
+growing total assets, unchanged 0.07% OCF and several similar portfolio
+attributes are *useful facts*, but **not proof of ETF health**, low tracking
+difference or absence of red flags. The next **external** check displays a
+countdown calculated when the panel is opened; the app does not schedule the
+check or infer that elapsed dates were completed. The November factsheet
+estimate (mid-Dec 2026) is a possible check, not a guaranteed publication.
 
 ## External checks already agreed (NOT scheduled here)
 

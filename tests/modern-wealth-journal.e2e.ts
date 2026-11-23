@@ -494,9 +494,15 @@ test(`German reference screenshots · 390x844 · ${germanTheme}`, async ({ page 
       const health = page.getByTestId("vall-health");
       await expect(health).toBeVisible();
       await expect(health).toContainText("FTSE Global All Cap Index");
+      await expect(health).toContainText("4.353");
+      await expect(health).toContainText("31.10.2026");
       await expect(health).toContainText("2.573");
-      await expect(health).toContainText("30.09.2026");
+      await expect(health).toContainText("0,07%");
       await expect(health).toContainText("VALL-spezifischer Status ungeprüft");
+      await expect(health.getByTestId("vall-aum-change")).toContainText("+69%");
+      await expect(health.getByTestId("vall-countdown")).toBeVisible();
+      await health.getByTestId("vall-replication").locator("summary").first().click();
+      await expect(health.getByTestId("vall-replication")).toContainText("10.207");
       await health.scrollIntoViewIfNeeded();
       await assertFits(page);
       await page.screenshot({ path: testInfo.outputPath(`vall-health-de-${germanTheme}.png`), animations: "disabled" });
