@@ -100,7 +100,7 @@ export function parseVallHealth(input: unknown): VallHealthSnapshot | null {
   if (!isRecord(replication) || !day(replication.asOf) || replication.asOf > input.checkedOn ||
       replication.provenance !== "owner-ledger" ||
       !link(replication.sourceUrl,"fund-docs.vanguard.com") ||
-      replication.asOf !== last) return null;
+      replication.asOf > last || !input.history.some(item => isRecord(item) && item.asOf === replication.asOf)) return null;
   for (const field of ["holdings","priceEarnings","priceBook","returnOnEquityPercent","earningsGrowthPercent","dividendYieldPercent"]) {
     const point = replication[field];
     if (!isRecord(point) || !finite(point.fund) || !finite(point.benchmark) ||
