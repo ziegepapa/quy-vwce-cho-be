@@ -3,6 +3,7 @@
 export type SyncedGuardianRow = {
   id: string;
   data: unknown;
+  created_at: string; // Database timestamp: when the record first reached cloud.
   deleted_at?: string | null;
 };
 
@@ -24,13 +25,14 @@ function tradeFrom(row: SyncedGuardianRow): Trade | null {
   const d = row.data as Record<string, unknown>;
   if (typeof row.id !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(row.id)) return null;
   if (typeof d.createdAt !== "string" || !Number.isFinite(Date.parse(d.createdAt))) return null;
+  if (typeof row.created_at !== "string" || !Number.isFinite(Date.parse(row.created_at))) return null;
   if (typeof d.type !== "string") return null;
   if (typeof d.amount !== "number" || !Number.isFinite(d.amount) || d.amount <= 0) return null;
   if (d.deletedAt) return null;
   return {
     id: row.id,
     type: d.type,
-    createdAt: d.createdAt,
+    createdAt: row.created_at, // Never use client-editable d.createdAt for the opt-in boundary.
     externalRef: typeof d.externalRef === "string" ? d.externalRef.trim() : undefined,
     source: typeof d.source === "string" ? d.source : undefined,
   };
@@ -65,4 +67,25 @@ export function detectGuardianSignals(rows: SyncedGuardianRow[], enrolledAt: str
     }
   }
   return signals.sort((a, b) => a.key.localeCompare(b.key));
+}
+
+/**
+ * A scan can send one digest with up to 50 *new* event receipts. Do not slice
+ * before checking the dedupe table: already-reserved early events would starve
+ * later events forever on every subsequent daily scan.
+ */
+export async function reserveNewGuardianSignals(
+  events: readonly GuardianSignal[],
+  reserve: (event: GuardianSignal) => Promise<boolean>,
+  maxNew = 50,
+): Promise<GuardianSignal[]> {
+  if (!Number.isInteger(maxNew) || maxNew < 1 || maxNew > 50) {
+    throw new RangeError("guardian_reservation_limit_invalid");
+  }
+  const result: GuardianSignal[] = [];
+  for (const event of events) {
+    if (await reserve(event)) result.push(event);
+    if (result.length >= maxNew) break;
+  }
+  return result;
 }
