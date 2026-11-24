@@ -77,3 +77,12 @@ test("fails when baseline differs from the reviewed schema", () => {
     /001 baseline differs/
   );
 });
+
+
+test("accepts the actual local-only 003 candidate in the ordered chain", async () => {
+  const fs=await import("node:fs");
+  const file="003_owner_only_least_privilege.sql";
+  const sql=fs.readFileSync("scripts/h5-003-owner-only-candidate.sql","utf8");
+  assert.equal(validate([[file,sql]],{files:[baseFile,migration2,file]}).files.length,3);
+  assert.match(sql,/h5_disposable_003_marker/);
+});

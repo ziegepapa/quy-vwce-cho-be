@@ -15,6 +15,15 @@ on:
       - "scripts/h5-migration-guard-lib.mjs"
       - "scripts/h5-migration-guard-contract.mjs"
       - "scripts/h5-upgrade-recovery.mjs"
+      - "scripts/h5-full-*"
+      - "scripts/h5-003-*"
+      - "scripts/h5-truncate-probe.sql"
+      - "scripts/h5-materialize-003.sh"
+      - "scripts/h5-private-recovery-fixture.sql"
+      - "scripts/h5-restored-http.mjs"
+      - "scripts/h5-schema-inventory.sql"
+      - "scripts/h5-compare-catalog.mjs"
+      - "docs/evidence/h5-hosted-catalog-*.json"
       - ".github/workflows/h4-h5-evidence.yml"
   pull_request:
     paths:
@@ -28,6 +37,15 @@ on:
       - "scripts/h5-migration-guard-lib.mjs"
       - "scripts/h5-migration-guard-contract.mjs"
       - "scripts/h5-upgrade-recovery.mjs"
+      - "scripts/h5-full-*"
+      - "scripts/h5-003-*"
+      - "scripts/h5-truncate-probe.sql"
+      - "scripts/h5-materialize-003.sh"
+      - "scripts/h5-private-recovery-fixture.sql"
+      - "scripts/h5-restored-http.mjs"
+      - "scripts/h5-schema-inventory.sql"
+      - "scripts/h5-compare-catalog.mjs"
+      - "docs/evidence/h5-hosted-catalog-*.json"
       - ".github/workflows/h4-h5-evidence.yml"
 
 concurrency:
@@ -48,13 +66,20 @@ jobs:
       - name: Test migration numbering and dependency guard
         run: node --test scripts/h5-migration-guard-contract.mjs
 
+      - name: Test globals diagnostics and bootstrap replay contract
+        run: node --test scripts/h5-full-globals.test.mjs
+
       - name: Run migration numbering guard
         run: node scripts/h5-migration-guard.mjs
 
   h4-h5-local:
-    name: H4 behavioral RLS + H5 blank install
+    name: H4 behavioral RLS + H5 blank install (PG${{ matrix.pg }})
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: [15, 17]
     env:
       SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
@@ -97,14 +122,21 @@ jobs:
           if [ ! -f supabase/config.toml ]; then
             supabase init
           fi
+          sed -i "s/^major_version = 15$/major_version = ${{ matrix.pg }}/" supabase/config.toml
           supabase start -x studio,imgproxy,logflare,vector,supavisor
           supabase status -o env > "$RUNNER_TEMP/supabase.env"
           echo "Supabase status environment captured in runner temp storage; credential contents withheld."
 
+      - name: Materialize 003 candidate using local CLI only
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: bash scripts/h5-materialize-003.sh
+
       - name: Apply ordered migrations from a clean local database
         run: |
           set -euo pipefail
-          supabase db reset --yes
+          export DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          bash scripts/h5-003-apply.sh reset
           node --input-type=module -e '
             import fs from "node:fs";
             import { createHash } from "node:crypto";
@@ -115,7 +147,7 @@ jobs:
               .update(fs.readFileSync("supabase/schema.sql")).digest("hex");
             evidence.blankInstall = {
               result: "PASS",
-              command: "supabase db reset --yes",
+              command: "local reset through 002; guard refusal; create NOLOGIN marker; local migration up to 003",
               target: "disposable-supabase-local",
               sourceCommit: process.env.SOURCE_COMMIT ?? process.env.GITHUB_SHA ?? null,
               workflowRunId: process.env.GITHUB_RUN_ID ?? null,
@@ -141,6 +173,8 @@ jobs:
             }
           '
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h5-truncate-probe.sql
+          test "$(psql "$DB_URL" -XAt -c "select current_setting('server_version_num')::int/10000")" = "${{ matrix.pg }}"
           node --input-type=module -e '
             import fs from "node:fs";
             const evidence = {
@@ -151,7 +185,7 @@ jobs:
               workflowRunId: process.env.GITHUB_RUN_ID ?? null,
               generatedAt: new Date().toISOString(),
               result: "PASS",
-              assertions: ["all six protected tables have RLS enabled", "required owner-scoped policies are present"]
+              assertions: ["six FORCE RLS tables", "23 exact owner-scoped policies", "effective least-privilege ACLs", "12 actual TRUNCATE denials"]
             };
             fs.writeFileSync("h4-catalog-evidence.json", JSON.stringify(evidence, null, 2) + "\n", { mode: 0o600 });
           '
@@ -198,7 +232,8 @@ jobs:
           grep -q "COPY public.goals" "$RUNNER_TEMP/h5-pre002-backup.sql"
 
           # Apply the pending migration exactly as a normal local upgrade would.
-          supabase migration up --local
+          bash scripts/h5-003-apply.sh upgrade
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
           node scripts/h5-upgrade-recovery.mjs verify-upgrade
 
           # Recovery rehearsal: restore that synthetic pre-002 snapshot into a
@@ -207,12 +242,32 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/h5-pre002-backup.sql"
           node scripts/h5-upgrade-recovery.mjs verify-restore
 
+      - name: H5 explicit 002 to 003 upgrade with preserved synthetic ledger
+        run: |
+          set -euo pipefail
+          supabase db reset --local --yes --version 002
+          node scripts/h5-full-seed.mjs
+          node scripts/h5-003-verify-upgrade.mjs before
+          bash scripts/h5-003-apply.sh upgrade
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
+          node scripts/h5-003-verify-upgrade.mjs after
+          node scripts/h5-restored-http.mjs
+          rm -f "$RUNNER_TEMP/h5-full-users.json" "$RUNNER_TEMP/h5-full-credentials.json"
+
+      - name: H5 hosted metadata comparison (offline fixture; no hosted access)
+        run: |
+          bash scripts/h5-003-apply.sh reset
+          node scripts/h5-compare-catalog.mjs
+
+      - name: H5 full local database backup and clean cluster restore
+        run: bash scripts/h5-full-recovery.sh
+
       - name: Validate machine-readable evidence JSON
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          for file in h4-evidence.json h4-catalog-evidence.json h5-migration-evidence.json; do
+          for file in h4-evidence.json h4-catalog-evidence.json h5-migration-evidence.json h5-catalog-diff.json h5-full-recovery-evidence.json h5-003-upgrade-evidence.json; do
             if [ ! -s "$file" ]; then
               echo "Missing evidence file: $file"
               exit 1
@@ -235,16 +290,21 @@ jobs:
 
       - name: Stop local stack
         if: always()
-        run: supabase stop --no-backup || true
+        run: |
+          rm -f "$RUNNER_TEMP/h5-full-users.json" "$RUNNER_TEMP/h5-full-credentials.json" "$RUNNER_TEMP/h5-003-before.json"
+          supabase stop --no-backup || true
 
       - name: Upload redacted H4/H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: h4-h5-evidence-${{ github.run_id }}
+          name: h4-h5-evidence-${{ github.run_id }}-pg${{ matrix.pg }}
           path: |
             h4-evidence.json
             h4-catalog-evidence.json
             h5-migration-evidence.json
+            h5-catalog-diff.json
+            h5-full-recovery-evidence.json
+            h5-003-upgrade-evidence.json
           if-no-files-found: ignore
           retention-days: 14

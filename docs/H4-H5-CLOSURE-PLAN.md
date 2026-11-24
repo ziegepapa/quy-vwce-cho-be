@@ -62,3 +62,7 @@ The main workflow step and job passed. This is not proof of the hosted project's
 4. Conduct full backup/restore rehearsal and document rollback/recovery.
 5. Update readiness only after each new proof is independently checked.
 6. Treat any production adoption/reconciliation as a separate reviewed change with explicit owner approval and backup.
+
+## Update 2026-11-24 — hosted inventory and full local recovery candidate
+
+See [H5 hosted catalog and recovery rehearsal](H5-HOSTED-RECOVERY-2026-11-24.md). The hosted metadata-only read found drift; full local logical restore is an unverified candidate until CI evidence exists. H5 remains PARTIAL. MU2 is design only.

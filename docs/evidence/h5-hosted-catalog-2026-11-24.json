@@ -1,0 +1,2799 @@
+{
+  "sourceCommit": "0d21b7332b651d78a98456533cee2bd1de6e5939",
+  "date": "2026-11-24",
+  "scope": "metadata only, read-only transaction; no application rows; routine definitions hashed; managed schemas excluded",
+  "migrationHistory": [
+    {
+      "version": "20261121195357",
+      "name": "silent_guardian_server_state_and_safe_ticket_dispatch_20261121"
+    },
+    {
+      "version": "20261121202631",
+      "name": "guardian_e2e_isolated_synthetic_exercise_20261121"
+    },
+    {
+      "version": "20261122094518",
+      "name": "gemini_explain_private_daily_quota_v1"
+    },
+    {
+      "version": "20261122212839",
+      "name": "gemini_explain_user_quota_20"
+    },
+    {
+      "version": "20261122224659",
+      "name": "gemini_flash_routing_install_20261122"
+    }
+  ],
+  "inventory": {
+    "tables": [
+      [
+        "ai_internal",
+        "gemini_flash_daily",
+        "r",
+        true,
+        false
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "r",
+        true,
+        false
+      ],
+      [
+        "ai_internal",
+        "global_daily",
+        "r",
+        true,
+        false
+      ],
+      [
+        "ai_internal",
+        "user_daily",
+        "r",
+        true,
+        false
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "r",
+        false,
+        false
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "r",
+        false,
+        false
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "r",
+        false,
+        false
+      ],
+      [
+        "guardian_internal",
+        "scans_scan_id_seq",
+        "S",
+        false,
+        false
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "r",
+        false,
+        false
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "r",
+        true,
+        true
+      ],
+      [
+        "public",
+        "app_settings",
+        "r",
+        true,
+        true
+      ],
+      [
+        "public",
+        "goals",
+        "r",
+        true,
+        true
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "r",
+        true,
+        true
+      ],
+      [
+        "public",
+        "profiles",
+        "r",
+        true,
+        true
+      ],
+      [
+        "public",
+        "transactions",
+        "r",
+        true,
+        true
+      ]
+    ],
+    "columns": [
+      [
+        "ai_internal",
+        "gemini_flash_daily",
+        "day_utc",
+        "date",
+        "date",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "gemini_flash_daily",
+        "attempts",
+        "smallint",
+        "int2",
+        "NO",
+        "0",
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "user_id",
+        "uuid",
+        "uuid",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "cache_key",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "explanation",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "model",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "expires_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "global_daily",
+        "day_utc",
+        "date",
+        "date",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "global_daily",
+        "attempts",
+        "smallint",
+        "int2",
+        "NO",
+        "0",
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "global_daily",
+        "pause_until",
+        "timestamp with time zone",
+        "timestamptz",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "user_daily",
+        "user_id",
+        "uuid",
+        "uuid",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "user_daily",
+        "day_utc",
+        "date",
+        "date",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "user_daily",
+        "attempts",
+        "smallint",
+        "int2",
+        "NO",
+        "0",
+        "NO",
+        null
+      ],
+      [
+        "ai_internal",
+        "user_daily",
+        "created_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "singleton",
+        "boolean",
+        "bool",
+        "NO",
+        "true",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "owner_user_id",
+        "uuid",
+        "uuid",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "monitoring_enabled",
+        "boolean",
+        "bool",
+        "NO",
+        "false",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "notifications_enabled",
+        "boolean",
+        "bool",
+        "NO",
+        "false",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "bad_streak",
+        "integer",
+        "int4",
+        "NO",
+        "0",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "last_scan_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "last_scan_status",
+        "text",
+        "text",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "last_sent_fingerprint",
+        "text",
+        "text",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "last_sent_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "id",
+        "uuid",
+        "uuid",
+        "NO",
+        "gen_random_uuid()",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "kind",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "fingerprint",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "status",
+        "text",
+        "text",
+        "NO",
+        "'reserved'::text",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "created_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "finished_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "provider_id",
+        "text",
+        "text",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "scan_id",
+        "bigint",
+        "int8",
+        "NO",
+        null,
+        "YES",
+        "ALWAYS"
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "checked_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "status",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "bad_streak",
+        "integer",
+        "int4",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "live_transactions",
+        "integer",
+        "int4",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "tombstones",
+        "integer",
+        "int4",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "live_goals",
+        "integer",
+        "int4",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "issues",
+        "integer",
+        "int4",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "fingerprint",
+        "text",
+        "text",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "token_hash",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "kind",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "day_utc",
+        "date",
+        "date",
+        "NO",
+        "((now() AT TIME ZONE 'utc'::text))::date",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "issued_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "expires_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "(now() + '00:05:00'::interval)",
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "claimed_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "request_id",
+        "bigint",
+        "int8",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "id",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "user_id",
+        "uuid",
+        "uuid",
+        "NO",
+        "auth.uid()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "data",
+        "jsonb",
+        "jsonb",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "version",
+        "integer",
+        "int4",
+        "NO",
+        "1",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "updated_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "deleted_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "created_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "app_settings",
+        "id",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "app_settings",
+        "user_id",
+        "uuid",
+        "uuid",
+        "NO",
+        "auth.uid()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "app_settings",
+        "data",
+        "jsonb",
+        "jsonb",
+        "NO",
+        "'{}'::jsonb",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "app_settings",
+        "version",
+        "integer",
+        "int4",
+        "NO",
+        "1",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "app_settings",
+        "updated_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "app_settings",
+        "deleted_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "app_settings",
+        "created_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "goals",
+        "id",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "goals",
+        "user_id",
+        "uuid",
+        "uuid",
+        "NO",
+        "auth.uid()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "goals",
+        "data",
+        "jsonb",
+        "jsonb",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "goals",
+        "version",
+        "integer",
+        "int4",
+        "NO",
+        "1",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "goals",
+        "updated_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "goals",
+        "deleted_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "goals",
+        "created_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "id",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "user_id",
+        "uuid",
+        "uuid",
+        "NO",
+        "auth.uid()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "data",
+        "jsonb",
+        "jsonb",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "version",
+        "integer",
+        "int4",
+        "NO",
+        "1",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "updated_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "deleted_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "created_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "profiles",
+        "id",
+        "uuid",
+        "uuid",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "profiles",
+        "display_name",
+        "text",
+        "text",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "profiles",
+        "created_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "profiles",
+        "updated_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "transactions",
+        "id",
+        "text",
+        "text",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "transactions",
+        "user_id",
+        "uuid",
+        "uuid",
+        "NO",
+        "auth.uid()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "transactions",
+        "data",
+        "jsonb",
+        "jsonb",
+        "NO",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "transactions",
+        "version",
+        "integer",
+        "int4",
+        "NO",
+        "1",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "transactions",
+        "updated_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "transactions",
+        "deleted_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "YES",
+        null,
+        "NO",
+        null
+      ],
+      [
+        "public",
+        "transactions",
+        "created_at",
+        "timestamp with time zone",
+        "timestamptz",
+        "NO",
+        "now()",
+        "NO",
+        null
+      ]
+    ],
+    "indexes": [
+      [
+        "ai_internal",
+        "gemini_flash_daily",
+        "gemini_flash_daily_pkey",
+        "CREATE UNIQUE INDEX gemini_flash_daily_pkey ON ai_internal.gemini_flash_daily USING btree (day_utc)"
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "gemini_reply_cache_pkey",
+        "CREATE UNIQUE INDEX gemini_reply_cache_pkey ON ai_internal.gemini_reply_cache USING btree (user_id, cache_key)"
+      ],
+      [
+        "ai_internal",
+        "global_daily",
+        "global_daily_pkey",
+        "CREATE UNIQUE INDEX global_daily_pkey ON ai_internal.global_daily USING btree (day_utc)"
+      ],
+      [
+        "ai_internal",
+        "user_daily",
+        "user_daily_pkey",
+        "CREATE UNIQUE INDEX user_daily_pkey ON ai_internal.user_daily USING btree (user_id, day_utc)"
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "config_pkey",
+        "CREATE UNIQUE INDEX config_pkey ON guardian_internal.config USING btree (singleton)"
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "deliveries_pkey",
+        "CREATE UNIQUE INDEX deliveries_pkey ON guardian_internal.deliveries USING btree (id)"
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "scans_pkey",
+        "CREATE UNIQUE INDEX scans_pkey ON guardian_internal.scans USING btree (scan_id)"
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "tickets_kind_day_utc_key",
+        "CREATE UNIQUE INDEX tickets_kind_day_utc_key ON guardian_internal.tickets USING btree (kind, day_utc)"
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "tickets_pkey",
+        "CREATE UNIQUE INDEX tickets_pkey ON guardian_internal.tickets USING btree (token_hash)"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "annual_checklists_pkey",
+        "CREATE UNIQUE INDEX annual_checklists_pkey ON public.annual_checklists USING btree (user_id, id)"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "annual_checklists_user_id_id_uidx",
+        "CREATE UNIQUE INDEX annual_checklists_user_id_id_uidx ON public.annual_checklists USING btree (user_id, id)"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "annual_checklists_user_updated_idx",
+        "CREATE INDEX annual_checklists_user_updated_idx ON public.annual_checklists USING btree (user_id, updated_at)"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "idx_checklist_user_updated",
+        "CREATE INDEX idx_checklist_user_updated ON public.annual_checklists USING btree (user_id, updated_at)"
+      ],
+      [
+        "public",
+        "app_settings",
+        "app_settings_pkey",
+        "CREATE UNIQUE INDEX app_settings_pkey ON public.app_settings USING btree (user_id, id)"
+      ],
+      [
+        "public",
+        "app_settings",
+        "app_settings_user_id_id_uidx",
+        "CREATE UNIQUE INDEX app_settings_user_id_id_uidx ON public.app_settings USING btree (user_id, id)"
+      ],
+      [
+        "public",
+        "app_settings",
+        "app_settings_user_updated_idx",
+        "CREATE INDEX app_settings_user_updated_idx ON public.app_settings USING btree (user_id, updated_at)"
+      ],
+      [
+        "public",
+        "app_settings",
+        "idx_settings_user_updated",
+        "CREATE INDEX idx_settings_user_updated ON public.app_settings USING btree (user_id, updated_at)"
+      ],
+      [
+        "public",
+        "goals",
+        "goals_pkey",
+        "CREATE UNIQUE INDEX goals_pkey ON public.goals USING btree (user_id, id)"
+      ],
+      [
+        "public",
+        "goals",
+        "goals_user_id_id_uidx",
+        "CREATE UNIQUE INDEX goals_user_id_id_uidx ON public.goals USING btree (user_id, id)"
+      ],
+      [
+        "public",
+        "goals",
+        "goals_user_updated_idx",
+        "CREATE INDEX goals_user_updated_idx ON public.goals USING btree (user_id, updated_at)"
+      ],
+      [
+        "public",
+        "goals",
+        "idx_goals_user_updated",
+        "CREATE INDEX idx_goals_user_updated ON public.goals USING btree (user_id, updated_at)"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "idx_snap_user_updated",
+        "CREATE INDEX idx_snap_user_updated ON public.monthly_snapshots USING btree (user_id, updated_at)"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "monthly_snapshots_pkey",
+        "CREATE UNIQUE INDEX monthly_snapshots_pkey ON public.monthly_snapshots USING btree (user_id, id)"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "monthly_snapshots_user_id_id_uidx",
+        "CREATE UNIQUE INDEX monthly_snapshots_user_id_id_uidx ON public.monthly_snapshots USING btree (user_id, id)"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "monthly_snapshots_user_updated_idx",
+        "CREATE INDEX monthly_snapshots_user_updated_idx ON public.monthly_snapshots USING btree (user_id, updated_at)"
+      ],
+      [
+        "public",
+        "profiles",
+        "profiles_pkey",
+        "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)"
+      ],
+      [
+        "public",
+        "transactions",
+        "idx_tx_user_updated",
+        "CREATE INDEX idx_tx_user_updated ON public.transactions USING btree (user_id, updated_at)"
+      ],
+      [
+        "public",
+        "transactions",
+        "transactions_pkey",
+        "CREATE UNIQUE INDEX transactions_pkey ON public.transactions USING btree (user_id, id)"
+      ],
+      [
+        "public",
+        "transactions",
+        "transactions_user_id_id_uidx",
+        "CREATE UNIQUE INDEX transactions_user_id_id_uidx ON public.transactions USING btree (user_id, id)"
+      ],
+      [
+        "public",
+        "transactions",
+        "transactions_user_updated_idx",
+        "CREATE INDEX transactions_user_updated_idx ON public.transactions USING btree (user_id, updated_at)"
+      ]
+    ],
+    "policies": [
+      {
+        "cmd": "DELETE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "annual_checklists",
+        "permissive": "PERMISSIVE",
+        "policyname": "annual_checklists_delete_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "annual_checklists",
+        "permissive": "PERMISSIVE",
+        "policyname": "annual_checklists_insert_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "annual_checklists",
+        "permissive": "PERMISSIVE",
+        "policyname": "annual_checklists_select_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "annual_checklists",
+        "permissive": "PERMISSIVE",
+        "policyname": "annual_checklists_update_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "cmd": "DELETE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "app_settings",
+        "permissive": "PERMISSIVE",
+        "policyname": "app_settings_delete_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "app_settings",
+        "permissive": "PERMISSIVE",
+        "policyname": "app_settings_insert_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "app_settings",
+        "permissive": "PERMISSIVE",
+        "policyname": "app_settings_select_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "app_settings",
+        "permissive": "PERMISSIVE",
+        "policyname": "app_settings_update_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "cmd": "DELETE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "goals",
+        "permissive": "PERMISSIVE",
+        "policyname": "goals_delete_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "goals",
+        "permissive": "PERMISSIVE",
+        "policyname": "goals_insert_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "goals",
+        "permissive": "PERMISSIVE",
+        "policyname": "goals_select_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "goals",
+        "permissive": "PERMISSIVE",
+        "policyname": "goals_update_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "cmd": "DELETE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "monthly_snapshots",
+        "permissive": "PERMISSIVE",
+        "policyname": "monthly_snapshots_delete_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "monthly_snapshots",
+        "permissive": "PERMISSIVE",
+        "policyname": "monthly_snapshots_insert_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "monthly_snapshots",
+        "permissive": "PERMISSIVE",
+        "policyname": "monthly_snapshots_select_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "monthly_snapshots",
+        "permissive": "PERMISSIVE",
+        "policyname": "monthly_snapshots_update_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "profiles",
+        "permissive": "PERMISSIVE",
+        "policyname": "profiles_insert_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = id)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(auth.uid() = id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "profiles",
+        "permissive": "PERMISSIVE",
+        "policyname": "profiles_select_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "(auth.uid() = id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "profiles",
+        "permissive": "PERMISSIVE",
+        "policyname": "profiles_update_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = id)"
+      },
+      {
+        "cmd": "DELETE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "transactions",
+        "permissive": "PERMISSIVE",
+        "policyname": "transactions_delete_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "transactions",
+        "permissive": "PERMISSIVE",
+        "policyname": "transactions_insert_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "transactions",
+        "permissive": "PERMISSIVE",
+        "policyname": "transactions_select_own",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "transactions",
+        "permissive": "PERMISSIVE",
+        "policyname": "transactions_update_own",
+        "schemaname": "public",
+        "with_check": "(auth.uid() = user_id)"
+      }
+    ],
+    "triggers": [
+      [
+        "auth",
+        "users",
+        "on_auth_user_created",
+        "O",
+        "CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_new_user()"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "trg_checklist_bump",
+        "O",
+        "CREATE TRIGGER trg_checklist_bump BEFORE UPDATE ON public.annual_checklists FOR EACH ROW EXECUTE FUNCTION bump_version_and_updated_at()"
+      ],
+      [
+        "public",
+        "app_settings",
+        "trg_settings_bump",
+        "O",
+        "CREATE TRIGGER trg_settings_bump BEFORE UPDATE ON public.app_settings FOR EACH ROW EXECUTE FUNCTION bump_version_and_updated_at()"
+      ],
+      [
+        "public",
+        "goals",
+        "trg_goals_bump",
+        "O",
+        "CREATE TRIGGER trg_goals_bump BEFORE UPDATE ON public.goals FOR EACH ROW EXECUTE FUNCTION bump_version_and_updated_at()"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "trg_snap_bump",
+        "O",
+        "CREATE TRIGGER trg_snap_bump BEFORE UPDATE ON public.monthly_snapshots FOR EACH ROW EXECUTE FUNCTION bump_version_and_updated_at()"
+      ],
+      [
+        "public",
+        "transactions",
+        "trg_tx_bump",
+        "O",
+        "CREATE TRIGGER trg_tx_bump BEFORE UPDATE ON public.transactions FOR EACH ROW EXECUTE FUNCTION bump_version_and_updated_at()"
+      ]
+    ],
+    "functions": [
+      [
+        "guardian_internal",
+        "enqueue",
+        "p_kind text",
+        true,
+        [
+          "search_path=\"\""
+        ],
+        "e4c043f903b69835b482ec93d5090912"
+      ],
+      [
+        "public",
+        "bump_version_and_updated_at",
+        "",
+        false,
+        null,
+        "08e2fcf2e5bd53cb107ba95484fcd020"
+      ],
+      [
+        "public",
+        "gemini_explain_claim",
+        "p_user_id uuid",
+        true,
+        [
+          "search_path=\"\""
+        ],
+        "a0819af3d4719c0f07b395ceb02c66c1"
+      ],
+      [
+        "public",
+        "gemini_explain_pause",
+        "",
+        true,
+        [
+          "search_path=\"\""
+        ],
+        "0b89a04768292d080c72fac8c7b411a3"
+      ],
+      [
+        "public",
+        "gemini_explain_status",
+        "p_user_id uuid",
+        true,
+        [
+          "search_path=\"\""
+        ],
+        "9333138324b5f351b78f29f870b44fea"
+      ],
+      [
+        "public",
+        "gemini_flash_claim",
+        "",
+        true,
+        [
+          "search_path=\"\""
+        ],
+        "9ccfaeffcbdffc4f83db0e0b43639f9d"
+      ],
+      [
+        "public",
+        "gemini_reply_cache_get",
+        "p_user_id uuid, p_cache_key text",
+        true,
+        [
+          "search_path=\"\""
+        ],
+        "1611f0d0a4eafaf4a51243121a09cb30"
+      ],
+      [
+        "public",
+        "gemini_reply_cache_put",
+        "p_user_id uuid, p_cache_key text, p_explanation text, p_model text",
+        true,
+        [
+          "search_path=\"\""
+        ],
+        "fe21f001bab566225c9dd568724e2508"
+      ],
+      [
+        "public",
+        "guardian_worker_claim",
+        "p_token text",
+        true,
+        [
+          "search_path=\"\""
+        ],
+        "2304647283faaa9cf65b158384fd0b13"
+      ],
+      [
+        "public",
+        "guardian_worker_finish",
+        "p_delivery_id uuid, p_ok boolean, p_provider_id text",
+        true,
+        [
+          "search_path=\"\""
+        ],
+        "88f102a7c0cc35ab764ddc15b76071ac"
+      ],
+      [
+        "public",
+        "handle_new_user",
+        "",
+        true,
+        [
+          "search_path=public"
+        ],
+        "a8fa778778d94fd0fdffbf108954d100"
+      ]
+    ],
+    "constraints": [
+      [
+        "ai_internal",
+        "gemini_flash_daily",
+        "gemini_flash_daily_attempts_check",
+        "CHECK (((attempts >= 0) AND (attempts <= 5)))"
+      ],
+      [
+        "ai_internal",
+        "gemini_flash_daily",
+        "gemini_flash_daily_pkey",
+        "PRIMARY KEY (day_utc)"
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "gemini_reply_cache_cache_key_check",
+        "CHECK ((cache_key ~ '^[0-9a-f]{64}$'::text))"
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "gemini_reply_cache_explanation_check",
+        "CHECK (((length(explanation) >= 1) AND (length(explanation) <= 800)))"
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "gemini_reply_cache_model_check",
+        "CHECK ((model = ANY (ARRAY['gemini-3.5-flash-lite'::text, 'gemini-3.8-flash'::text])))"
+      ],
+      [
+        "ai_internal",
+        "gemini_reply_cache",
+        "gemini_reply_cache_pkey",
+        "PRIMARY KEY (user_id, cache_key)"
+      ],
+      [
+        "ai_internal",
+        "global_daily",
+        "global_daily_attempts_check",
+        "CHECK (((attempts >= 0) AND (attempts <= 40)))"
+      ],
+      [
+        "ai_internal",
+        "global_daily",
+        "global_daily_pkey",
+        "PRIMARY KEY (day_utc)"
+      ],
+      [
+        "ai_internal",
+        "user_daily",
+        "user_daily_attempts_check",
+        "CHECK (((attempts >= 0) AND (attempts <= 20)))"
+      ],
+      [
+        "ai_internal",
+        "user_daily",
+        "user_daily_pkey",
+        "PRIMARY KEY (user_id, day_utc)"
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "config_bad_streak_check",
+        "CHECK ((bad_streak >= 0))"
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "config_pkey",
+        "PRIMARY KEY (singleton)"
+      ],
+      [
+        "guardian_internal",
+        "config",
+        "config_singleton_check",
+        "CHECK (singleton)"
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "deliveries_kind_check",
+        "CHECK ((kind = ANY (ARRAY['alert'::text, 'selftest'::text])))"
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "deliveries_pkey",
+        "PRIMARY KEY (id)"
+      ],
+      [
+        "guardian_internal",
+        "deliveries",
+        "deliveries_status_check",
+        "CHECK ((status = ANY (ARRAY['reserved'::text, 'sent'::text, 'failed'::text])))"
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "scans_pkey",
+        "PRIMARY KEY (scan_id)"
+      ],
+      [
+        "guardian_internal",
+        "scans",
+        "scans_status_check",
+        "CHECK ((status = ANY (ARRAY['pass_basic_checks'::text, 'review'::text, 'incomplete'::text])))"
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "tickets_kind_check",
+        "CHECK ((kind = ANY (ARRAY['scheduled'::text, 'selftest'::text])))"
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "tickets_kind_day_utc_key",
+        "UNIQUE (kind, day_utc)"
+      ],
+      [
+        "guardian_internal",
+        "tickets",
+        "tickets_pkey",
+        "PRIMARY KEY (token_hash)"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "annual_checklists_pkey",
+        "PRIMARY KEY (user_id, id)"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "annual_checklists_user_id_fkey",
+        "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+      ],
+      [
+        "public",
+        "app_settings",
+        "app_settings_pkey",
+        "PRIMARY KEY (user_id, id)"
+      ],
+      [
+        "public",
+        "app_settings",
+        "app_settings_user_id_fkey",
+        "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+      ],
+      [
+        "public",
+        "goals",
+        "goals_pkey",
+        "PRIMARY KEY (user_id, id)"
+      ],
+      [
+        "public",
+        "goals",
+        "goals_user_id_fkey",
+        "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "monthly_snapshots_pkey",
+        "PRIMARY KEY (user_id, id)"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "monthly_snapshots_user_id_fkey",
+        "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+      ],
+      [
+        "public",
+        "profiles",
+        "profiles_id_fkey",
+        "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE"
+      ],
+      [
+        "public",
+        "profiles",
+        "profiles_pkey",
+        "PRIMARY KEY (id)"
+      ],
+      [
+        "public",
+        "transactions",
+        "transactions_pkey",
+        "PRIMARY KEY (user_id, id)"
+      ],
+      [
+        "public",
+        "transactions",
+        "transactions_user_id_fkey",
+        "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+      ]
+    ],
+    "table_grants": [
+      [
+        "public",
+        "annual_checklists",
+        "anon",
+        "DELETE"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "anon",
+        "INSERT"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "anon",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "anon",
+        "SELECT"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "anon",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "anon",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "anon",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "authenticated",
+        "DELETE"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "authenticated",
+        "INSERT"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "authenticated",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "authenticated",
+        "SELECT"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "authenticated",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "authenticated",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "authenticated",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "service_role",
+        "DELETE"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "service_role",
+        "INSERT"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "service_role",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "service_role",
+        "SELECT"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "service_role",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "service_role",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "annual_checklists",
+        "service_role",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "app_settings",
+        "anon",
+        "DELETE"
+      ],
+      [
+        "public",
+        "app_settings",
+        "anon",
+        "INSERT"
+      ],
+      [
+        "public",
+        "app_settings",
+        "anon",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "app_settings",
+        "anon",
+        "SELECT"
+      ],
+      [
+        "public",
+        "app_settings",
+        "anon",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "app_settings",
+        "anon",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "app_settings",
+        "anon",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "app_settings",
+        "authenticated",
+        "DELETE"
+      ],
+      [
+        "public",
+        "app_settings",
+        "authenticated",
+        "INSERT"
+      ],
+      [
+        "public",
+        "app_settings",
+        "authenticated",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "app_settings",
+        "authenticated",
+        "SELECT"
+      ],
+      [
+        "public",
+        "app_settings",
+        "authenticated",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "app_settings",
+        "authenticated",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "app_settings",
+        "authenticated",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "app_settings",
+        "service_role",
+        "DELETE"
+      ],
+      [
+        "public",
+        "app_settings",
+        "service_role",
+        "INSERT"
+      ],
+      [
+        "public",
+        "app_settings",
+        "service_role",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "app_settings",
+        "service_role",
+        "SELECT"
+      ],
+      [
+        "public",
+        "app_settings",
+        "service_role",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "app_settings",
+        "service_role",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "app_settings",
+        "service_role",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "goals",
+        "anon",
+        "DELETE"
+      ],
+      [
+        "public",
+        "goals",
+        "anon",
+        "INSERT"
+      ],
+      [
+        "public",
+        "goals",
+        "anon",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "goals",
+        "anon",
+        "SELECT"
+      ],
+      [
+        "public",
+        "goals",
+        "anon",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "goals",
+        "anon",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "goals",
+        "anon",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "goals",
+        "authenticated",
+        "DELETE"
+      ],
+      [
+        "public",
+        "goals",
+        "authenticated",
+        "INSERT"
+      ],
+      [
+        "public",
+        "goals",
+        "authenticated",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "goals",
+        "authenticated",
+        "SELECT"
+      ],
+      [
+        "public",
+        "goals",
+        "authenticated",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "goals",
+        "authenticated",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "goals",
+        "authenticated",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "goals",
+        "service_role",
+        "DELETE"
+      ],
+      [
+        "public",
+        "goals",
+        "service_role",
+        "INSERT"
+      ],
+      [
+        "public",
+        "goals",
+        "service_role",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "goals",
+        "service_role",
+        "SELECT"
+      ],
+      [
+        "public",
+        "goals",
+        "service_role",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "goals",
+        "service_role",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "goals",
+        "service_role",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "anon",
+        "DELETE"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "anon",
+        "INSERT"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "anon",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "anon",
+        "SELECT"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "anon",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "anon",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "anon",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "authenticated",
+        "DELETE"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "authenticated",
+        "INSERT"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "authenticated",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "authenticated",
+        "SELECT"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "authenticated",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "authenticated",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "authenticated",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "service_role",
+        "DELETE"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "service_role",
+        "INSERT"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "service_role",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "service_role",
+        "SELECT"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "service_role",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "service_role",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "monthly_snapshots",
+        "service_role",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "profiles",
+        "anon",
+        "DELETE"
+      ],
+      [
+        "public",
+        "profiles",
+        "anon",
+        "INSERT"
+      ],
+      [
+        "public",
+        "profiles",
+        "anon",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "profiles",
+        "anon",
+        "SELECT"
+      ],
+      [
+        "public",
+        "profiles",
+        "anon",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "profiles",
+        "anon",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "profiles",
+        "anon",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "profiles",
+        "authenticated",
+        "DELETE"
+      ],
+      [
+        "public",
+        "profiles",
+        "authenticated",
+        "INSERT"
+      ],
+      [
+        "public",
+        "profiles",
+        "authenticated",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "profiles",
+        "authenticated",
+        "SELECT"
+      ],
+      [
+        "public",
+        "profiles",
+        "authenticated",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "profiles",
+        "authenticated",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "profiles",
+        "authenticated",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "profiles",
+        "service_role",
+        "DELETE"
+      ],
+      [
+        "public",
+        "profiles",
+        "service_role",
+        "INSERT"
+      ],
+      [
+        "public",
+        "profiles",
+        "service_role",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "profiles",
+        "service_role",
+        "SELECT"
+      ],
+      [
+        "public",
+        "profiles",
+        "service_role",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "profiles",
+        "service_role",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "profiles",
+        "service_role",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "transactions",
+        "anon",
+        "DELETE"
+      ],
+      [
+        "public",
+        "transactions",
+        "anon",
+        "INSERT"
+      ],
+      [
+        "public",
+        "transactions",
+        "anon",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "transactions",
+        "anon",
+        "SELECT"
+      ],
+      [
+        "public",
+        "transactions",
+        "anon",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "transactions",
+        "anon",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "transactions",
+        "anon",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "transactions",
+        "authenticated",
+        "DELETE"
+      ],
+      [
+        "public",
+        "transactions",
+        "authenticated",
+        "INSERT"
+      ],
+      [
+        "public",
+        "transactions",
+        "authenticated",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "transactions",
+        "authenticated",
+        "SELECT"
+      ],
+      [
+        "public",
+        "transactions",
+        "authenticated",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "transactions",
+        "authenticated",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "transactions",
+        "authenticated",
+        "UPDATE"
+      ],
+      [
+        "public",
+        "transactions",
+        "service_role",
+        "DELETE"
+      ],
+      [
+        "public",
+        "transactions",
+        "service_role",
+        "INSERT"
+      ],
+      [
+        "public",
+        "transactions",
+        "service_role",
+        "REFERENCES"
+      ],
+      [
+        "public",
+        "transactions",
+        "service_role",
+        "SELECT"
+      ],
+      [
+        "public",
+        "transactions",
+        "service_role",
+        "TRIGGER"
+      ],
+      [
+        "public",
+        "transactions",
+        "service_role",
+        "TRUNCATE"
+      ],
+      [
+        "public",
+        "transactions",
+        "service_role",
+        "UPDATE"
+      ]
+    ],
+    "schema_access": [
+      [
+        "ai_internal",
+        "anon",
+        false,
+        false
+      ],
+      [
+        "ai_internal",
+        "authenticated",
+        false,
+        false
+      ],
+      [
+        "ai_internal",
+        "service_role",
+        false,
+        false
+      ],
+      [
+        "guardian_internal",
+        "anon",
+        false,
+        false
+      ],
+      [
+        "guardian_internal",
+        "authenticated",
+        false,
+        false
+      ],
+      [
+        "guardian_internal",
+        "service_role",
+        false,
+        false
+      ],
+      [
+        "public",
+        "anon",
+        true,
+        false
+      ],
+      [
+        "public",
+        "authenticated",
+        true,
+        false
+      ],
+      [
+        "public",
+        "service_role",
+        true,
+        false
+      ]
+    ],
+    "routine_grants": [
+      [
+        "public",
+        "bump_version_and_updated_at",
+        "PUBLIC",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "bump_version_and_updated_at",
+        "anon",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "bump_version_and_updated_at",
+        "authenticated",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "bump_version_and_updated_at",
+        "service_role",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "gemini_explain_claim",
+        "service_role",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "gemini_explain_pause",
+        "service_role",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "gemini_explain_status",
+        "service_role",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "gemini_flash_claim",
+        "service_role",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "gemini_reply_cache_get",
+        "service_role",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "gemini_reply_cache_put",
+        "service_role",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "guardian_worker_claim",
+        "service_role",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "guardian_worker_finish",
+        "service_role",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "handle_new_user",
+        "PUBLIC",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "handle_new_user",
+        "anon",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "handle_new_user",
+        "authenticated",
+        "EXECUTE"
+      ],
+      [
+        "public",
+        "handle_new_user",
+        "service_role",
+        "EXECUTE"
+      ]
+    ]
+  }
+}
