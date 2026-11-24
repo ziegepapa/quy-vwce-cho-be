@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   parseDate,
+  goalAmountAtDueDate,
   parseDecimal,
   round2,
 } from "../lib/calc";
 import { getSettings, listGoals, listQuotes, listTransactions, saveSettings } from "../lib/db";
 import { buildSimulationStartValue } from "../lib/simulation/portfolioStart";
+import { buildEtfSleeves, simulationFees, suggestedVallShare } from "../lib/simulation/etfAllocation";
 import { VALL_ISIN, VWCE_ISIN } from "../lib/types";
 import {
-  DEFAULT_TER,
   MAX_YEARS,
   clamp,
   findMonthlyForTarget,
@@ -22,6 +23,8 @@ import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
 import { formatDisplayMoney } from "../ui/localeFormatting";
 import SimulationDemoShell from "../components/demo-v10/SimulationDemoShell";
+import { configuredMonthlyAt } from "../lib/configuredMonthly";
+import { isValidAsOfDate } from "../lib/instrument";
 import { buildGeminiVaultFacts } from "../lib/geminiVaultFacts";
 import "../styles/demo-v10-simulation.css";
 import "../styles/clean-shared.css";
@@ -37,11 +40,11 @@ function simulationPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     cautious: "Vorsichtig", base: "Basis", bull: "Günstig", heroEstimateUnadjusted: "Schätzung · ohne deutsche Steuern · ohne Inflationsanpassung", heroEstimateAdjusted: "Schätzung · ohne deutsche Steuern · in heutiger Kaufkraft",
     missingPrices: (funds: string) => `Startwert unvollständig: Für ${funds} fehlt ein verwendbarer Kurs; der nicht bewertete Anteil ist nicht enthalten.`,
-    stalePrices: (funds: string) => `Veraltete Kurse für ${funds}; die Projektion nutzt den letzten verfügbaren Stand.`, setYearOne: (value: string) => `Jahr 1 wurde auf ${value} gesetzt`, setFromYearTwo: (value: string) => `Beitrag ab Jahr 2 wurde auf ${value} gesetzt`, setReturn: (value: string) => `VWCE-Rendite wurde auf ${value} gesetzt`, yearOne: (value: string) => `Jahr 1 = ${value}`, fromYearTwo: (value: string) => `Beitrag ab Jahr 2 = ${value}`, return: (value: string) => `VWCE-Rendite = ${value}`, savedChanges: (count: number) => `${count} Änderungen wurden gespeichert`, noSelection: "Keine Auswahl", saveOne: "1 Änderung speichern", saveMany: (count: number) => `${count} Änderungen speichern`, range: "Bandbreite", inflation: (value: string) => `Inflation ${value}%`, contributionGrowth: (value: string) => `Beitrag ${value}% / Jahr`, terFee: (value: string) => `TER ${value}%/Jahr`, advanced: (parts: string) => `Erweiterte Optionen · ${parts}`,
+    stalePrices: (funds: string) => `Veraltete Kurse für ${funds}; die Projektion nutzt den letzten verfügbaren Stand.`, setYearOne: (value: string) => `Jahr 1 wurde auf ${value} gesetzt`, setFromYearTwo: (value: string) => `Beitrag ab Jahr 2 wurde auf ${value} gesetzt`, setReturn: (value: string) => `VWCE-Rendite wurde auf ${value} gesetzt`, yearOne: (value: string) => `Jahr 1 = ${value}`, fromYearTwo: (value: string) => `Beitrag ab Jahr 2 = ${value}`, return: (value: string) => `VWCE-Rendite = ${value}`, savedChanges: (count: number) => `${count} Änderungen wurden gespeichert`, noSelection: "Keine Auswahl", saveOne: "1 Änderung speichern", saveMany: (count: number) => `${count} Änderungen speichern`, range: "Bandbreite", inflation: (value: string) => `Inflation ${value}%`, contributionGrowth: (value: string) => `Beitrag ${value}% / Jahr`, terFee: (value: string) => `TER neue Beiträge ${value}%/Jahr`, advanced: (parts: string) => `Erweiterte Optionen · ${parts}`,
   } : {
     cautious: "Thận trọng", base: "Cơ sở", bull: "Thuận lợi", heroEstimateUnadjusted: "Ước tính · chưa tính thuế · chưa chỉnh lạm phát", heroEstimateAdjusted: "Ước tính · chưa tính thuế · theo sức mua hôm nay",
     missingPrices: (funds: string) => `Giá trị đầu kỳ chưa đầy đủ: ${funds} chưa có giá dùng được; phần chưa định giá không được tính vào số dư ban đầu.`,
-    stalePrices: (funds: string) => `Giá của ${funds} đã cũ; mô phỏng dùng mức giá gần nhất còn khả dụng.`, setYearOne: (value: string) => `Đã đặt Góp năm 1 = ${value}`, setFromYearTwo: (value: string) => `Đã đặt Góp từ năm 2 = ${value}`, setReturn: (value: string) => `Đã đặt Lợi nhuận VWCE = ${value}`, yearOne: (value: string) => `Góp năm 1 = ${value}`, fromYearTwo: (value: string) => `Góp từ năm 2 = ${value}`, return: (value: string) => `Lợi nhuận VWCE = ${value}`, savedChanges: (count: number) => `Đã lưu ${count} thay đổi`, noSelection: "Chưa chọn gì", saveOne: "Lưu 1 thay đổi", saveMany: (count: number) => `Lưu ${count} thay đổi`, range: "biên độ", inflation: (value: string) => `lạm phát ${value}%`, contributionGrowth: (value: string) => `góp ${value}%/năm`, terFee: (value: string) => `phí ${value}%/năm`, advanced: (parts: string) => `Tùy chọn nâng cao · ${parts}`,
+    stalePrices: (funds: string) => `Giá của ${funds} đã cũ; mô phỏng dùng mức giá gần nhất còn khả dụng.`, setYearOne: (value: string) => `Đã đặt Góp năm 1 = ${value}`, setFromYearTwo: (value: string) => `Đã đặt Góp từ năm 2 = ${value}`, setReturn: (value: string) => `Đã đặt Lợi nhuận VWCE = ${value}`, yearOne: (value: string) => `Góp năm 1 = ${value}`, fromYearTwo: (value: string) => `Góp từ năm 2 = ${value}`, return: (value: string) => `Lợi nhuận VWCE = ${value}`, savedChanges: (count: number) => `Đã lưu ${count} thay đổi`, noSelection: "Chưa chọn gì", saveOne: "Lưu 1 thay đổi", saveMany: (count: number) => `Lưu ${count} thay đổi`, range: "biên độ", inflation: (value: string) => `lạm phát ${value}%`, contributionGrowth: (value: string) => `góp ${value}%/năm`, terFee: (value: string) => `phí vốn góp mới ${value}%/năm`, advanced: (parts: string) => `Tùy chọn nâng cao · ${parts}`,
   };
 }
 
@@ -57,11 +60,12 @@ export default function Simulation() {
 
   const [mode, setMode] = useState<Mode>("A");
   const [years, setYears] = useState(30);
-  const [monthly, setMonthly] = useState("120");
+  const [monthly, setMonthly] = useState("0");
   const [growthOn, setGrowthOn] = useState(false);
   const [growthPct, setGrowthPct] = useState("2");
   const [lumpSum, setLumpSum] = useState("0");
   const [balanceOverride, setBalanceOverride] = useState("");
+  const [allocationOverride, setAllocationOverride] = useState<number | null>(null);
   const [rateInput, setRateInput] = useState("5");
   const [bandInput, setBandInput] = useState("2");
   const [inflationOn, setInflationOn] = useState(true);
@@ -95,8 +99,8 @@ export default function Simulation() {
       setGoals(await listGoals());
       setTxs(await listTransactions());
       setQuotes(await listQuotes());
-      const recurringContribution = s.contributionY2 > 0 ? s.contributionY2 : s.contributionY1;
-      if (recurringContribution > 0) setMonthly(String(recurringContribution));
+      // Start with the current configured plan rate, including an explicit zero.
+      setMonthly(String(configuredMonthlyAt(s,new Date()) ?? 0));
       if (s.inflationRate > 0) setInflationPct(String(round2(s.inflationRate * 100)));
       if (Number.isFinite(s.vwceReturn)) setRateInput(String(round2(s.vwceReturn * 100)));
       const targetDate = s.planTarget?.targetUseDate;
@@ -132,8 +136,13 @@ export default function Simulation() {
   const lumpN = Math.max(0, parseDecimal(lumpSum));
   const inflationN = inflationOn ? Math.max(0, parseDecimal(inflationPct) / 100) : 0;
   const targetN = Math.max(0, parseDecimal(targetAmount));
-  // TER remains a disclosed simulation assumption. Tax calculation is not part of the production path.
-  const ter = DEFAULT_TER;
+  const targetAmountValid = Number.isFinite(targetN) && targetN > 0;
+  // The last recorded ETF buy is a starting suggestion, not a broker Sparplan.
+  const suggestedShare = useMemo(()=>suggestedVallShare(txs),[txs]);
+  const vallShare = allocationOverride ?? suggestedShare;
+  const fees = simulationFees;
+  const ter = fees.vwce*(1-vallShare)+fees.vall*vallShare;
+  const sleeves = useMemo(()=>buildEtfSleeves(startValue,initialBalance,balanceOverride.trim()!=="",vallShare,fees),[startValue,initialBalance,balanceOverride,vallShare,fees]);
 
   // Permit negative nominal returns so the cautious scenario can model drawdowns.
   const baseRate = clamp(parseDecimal(rateInput) / 100, -0.5, 0.5);
@@ -147,39 +156,40 @@ export default function Simulation() {
     [baseRate, band, text],
   );
 
-  const yearsB = useMemo(() => {
-    const ty = Number(targetYear) || new Date().getFullYear();
-    return Math.max(1, Math.min(MAX_YEARS, ty - new Date().getFullYear()));
-  }, [targetYear]);
+  const requestedYear = Number(targetYear);
+  const targetYearValid = Number.isInteger(requestedYear) && requestedYear > new Date().getFullYear() && requestedYear <= new Date().getFullYear()+MAX_YEARS;
+  const yearsB = targetYearValid ? requestedYear-new Date().getFullYear() : 0;
 
   const effectiveYears = mode === "B" ? yearsB : years;
 
   const baseCommon = useMemo(
-    () => ({ initialBalance, lumpSum: lumpN, annualContributionGrowth: growthN, ter }),
-    [initialBalance, lumpN, growthN, ter],
+    () => ({ initialBalance, lumpSum: lumpN, annualContributionGrowth: growthN, ter, sleeves }),
+    [initialBalance, lumpN, growthN, ter, sleeves],
   );
 
   const requiredMonthlyBase = useMemo(() => {
     if (mode !== "B") return monthlyN;
+    if (!targetYearValid || !targetAmountValid) return -1;
     const br = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
     return findMonthlyForTarget(targetN, { ...baseCommon, years: yearsB, annualReturn: br });
-  }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN]);
+  }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN,targetYearValid,targetAmountValid]);
 
   const monthlyForProject = mode === "B" ? Math.max(0, requiredMonthlyBase) : monthlyN;
 
   const yearsC = useMemo(() => {
     if (mode !== "C") return { years: effectiveYears, reached: true };
+    if (!targetAmountValid) return {years:0,reached:false};
     const br = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
     return findYearsForTarget(targetN, {
       ...baseCommon,
       monthlyContribution: monthlyN,
       annualReturn: br,
     });
-  }, [mode, targetN, baseCommon, monthlyN, scenarios, effectiveYears]);
+  }, [mode, targetN, baseCommon, monthlyN, scenarios, effectiveYears,targetAmountValid]);
 
   const yearsForProject = mode === "C" ? yearsC.years : effectiveYears;
-  const planUnreachable = mode === "B" && requiredMonthlyBase < 0;
-  const targetUnreachable = mode === "C" && !yearsC.reached;
+  const planUnreachable = (mode === "B" && requiredMonthlyBase < 0) || (mode==="C"&&!targetAmountValid);
+  const targetUnreachable = mode === "C" && targetAmountValid && !yearsC.reached;
 
   const results = useMemo(() => {
     return scenarios.map((sc) => {
@@ -199,20 +209,23 @@ export default function Simulation() {
   const goalMarkers = useMemo(() => {
     const nowY = new Date().getFullYear();
     return goals
+      .filter(g=>!g.deletedAt&&isValidAsOfDate(g.dueDate))
       .map((g) => {
         const due = parseDate(g.dueDate);
         const yi = due.getFullYear() - nowY;
-        return { name: g.name, yearIndex: yi, amount: g.amount };
+        return { name: g.name, yearIndex: yi, amount: goalAmountAtDueDate(g) };
       })
-      .filter((m) => m.yearIndex >= 0 && m.yearIndex <= MAX_YEARS);
+      .filter((m) => m.yearIndex >= 0 && m.yearIndex <= MAX_YEARS && Number.isFinite(m.amount) && m.amount>0);
   }, [goals]);
 
   function applyYearsFromGoal(g: Goal) {
+    if(g.deletedAt||!isValidAsOfDate(g.dueDate)) return;
     const due = parseDate(g.dueDate);
     const y = Math.max(1, Math.min(MAX_YEARS, due.getFullYear() - new Date().getFullYear()));
     setYears(y);
     setTargetYear(String(due.getFullYear()));
-    if (g.amount > 0) setTargetAmount(String(g.amount));
+    const amount=goalAmountAtDueDate(g);
+    setTargetAmount(Number.isFinite(amount)&&amount>0?String(round2(amount)):"0");
   }
 
   function moneyEq(a: number, b: number): boolean {
@@ -400,11 +413,11 @@ export default function Simulation() {
     if (initialBalance > 0) milestones.add(0);
     const all: number[] = [];
     for (let yi = 0; yi <= yearsForProject; yi++) {
-      if (yi === 0 && initialBalance <= 0) continue;
+      if (yi === 0 && initialBalance <= 0 && lumpN <= 0 && yearsForProject > 0) continue;
       if (showAllYears || milestones.has(yi)) all.push(yi);
     }
     return all;
-  }, [yearsForProject, goalYearSet, initialBalance, showAllYears]);
+  }, [yearsForProject, goalYearSet, initialBalance, showAllYears,lumpN]);
 
   if (loading) {
     return <main className="demo-v10-screen" aria-busy="true" />;
@@ -451,7 +464,7 @@ export default function Simulation() {
   advParts.push(`${text.range} ±${round2(band * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN")}`);
   if (inflationOn) advParts.push(text.inflation(inflationPct));
   if (growthOn) advParts.push(text.contributionGrowth(growthPct));
-  advParts.push(text.terFee(round2(ter * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN")));
+  advParts.push(text.terFee((ter * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN",{maximumFractionDigits:3})));
   const advSummary = text.advanced(advParts.join(" · "));
 
   // Read-only facts from the same ledger valuation and contribution definitions
@@ -459,8 +472,12 @@ export default function Simulation() {
   const geminiFacts = buildGeminiVaultFacts({
     settings, transactions: txs,
     currentValue: startValue.valuationStatus === "fresh" ? realBalance : null,
-    today: new Date(), simulationEndYear: nowY + yearsForProject,
-    scenarioTotals: Object.fromEntries(results.map(({ sc, out }) => [sc.id, out.terminal])),
+    today: new Date(), simulationEndYear: planUnreachable ? null : nowY + yearsForProject,
+    scenarioTotals: planUnreachable || (!balanceOverride.trim()&&startValue.valuationStatus==="missing") ? undefined : {
+      cautious:results.find(r=>r.sc.id==="cautious")?.out.terminal,
+      base:results.find(r=>r.sc.id==="base")?.out.terminal,
+      optimistic:results.find(r=>r.sc.id==="bull")?.out.terminal,
+    },
   });
 
   return (
@@ -470,6 +487,8 @@ export default function Simulation() {
       setMode={setMode}
       planUnreachable={planUnreachable}
       targetUnreachable={targetUnreachable}
+      invalidTargetYear={mode==="B"&&!targetYearValid}
+      invalidTargetAmount={mode!=="A"&&!targetAmountValid}
       headlineValue={headlineValue}
       yearsForProject={yearsForProject}
       monthlyForProject={monthlyForProject}
@@ -477,6 +496,7 @@ export default function Simulation() {
       startingBalanceWarning={startingBalanceWarning}
       primary={primary}
       initialBalance={initialBalance}
+      etfAllocation={{vallShare,setVallShare:setAllocationOverride,reset:()=>{setAllocationOverride(null);setBalanceOverride("");},suggested:allocationOverride===null,fees,sleeves,missingFunds:startValue.missingIsins.map(displayIsin),overridden:balanceOverride.trim()!=="",ter}}
       shownInterest={shownInterest}
       results={results}
       goalMarkers={goalMarkers}
@@ -500,7 +520,7 @@ export default function Simulation() {
       goals={goals}
       geminiFacts={geminiFacts}
       exitPlanActualBalance={startValue.valuationStatus === "fresh" ? realBalance : null}
-      exitPlanActualMonthly={settings && Number.isFinite(settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1) ? (settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1) : null}
+      exitPlanActualMonthly={configuredMonthlyAt(settings,new Date())}
       applyYearsFromGoal={applyYearsFromGoal}
       advSummary={advSummary}
       bandInput={bandInput}

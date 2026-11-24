@@ -218,8 +218,14 @@ for (const theme of themes) {
         await expect(page.getByRole("meter")).toHaveAttribute("value", "25");
         await expect(page.locator(".mwj-goal-progress strong")).toHaveText(/250,00\s*€/);
       }
+      let currentPlanMonthly = "";
       if (name === "simulation") {
+        const allocation = page.getByTestId("simulation-etf-allocation");
+        await expect(allocation).toBeVisible();
+        currentPlanMonthly=await allocation.locator("#sim-quick-monthly").inputValue();
+        await expect(allocation.getByRole("button",{name:"VALL",exact:true})).toHaveAttribute("aria-pressed","true");
         await page.getByRole("button", { name: "Thử ví dụ từ 0 €" }).click();
+        await allocation.getByRole("button",{name:"VWCE",exact:true}).click();
         const monthlyRate = 1.05 ** (1 / 12) - 1;
         const yearGrowth = (1 + monthlyRate) ** 12;
         const afterTer = 1 - 0.0014;
@@ -230,7 +236,7 @@ for (const theme of themes) {
         await expect(page.getByTestId("simulation-hero-amount")).toContainText(rounded(projected));
         await expect(page.locator(".summary-strip")).toContainText(rounded(120 * 12 * 30));
         await expect(page.locator(".summary-strip")).toContainText(rounded(projected - 120 * 12 * 30));
-        await expect(page.locator(".sim-assumptions")).toContainText(/TER \/ năm\s*0,14\s*%/);
+        await expect(page.locator(".sim-assumptions")).toContainText(/Phí góp mới\s*0,14\s*%/);
         await expect(page.locator(".sim-assumptions")).toContainText(/Lợi suất \/ năm\s*5\s*%/);
         await expect(page.locator(".sim-chart-card + .sim-results")).toBeVisible();
         const chart = page.getByTestId("simulation-growth-chart");
@@ -243,6 +249,19 @@ for (const theme of themes) {
             return x >= 0 && y >= 0 && x + labelWidth <= width && y + labelHeight <= height;
           });
         })).toBe(true);
+        await allocation.getByRole("button",{name:"VALL",exact:true}).click();
+        const vallFee=(vallSnapshot.history.at(-1)?.ongoingChargesPercent ?? .07)/100;
+        const factor=1.05*(1-vallFee);
+        const vallEnd=(amount:number)=>amount*(yearGrowth-1)/monthlyRate*(1-vallFee)*(factor**30-1)/(factor-1);
+        await expect(chart.locator(".sim-chart-values strong")).toContainText(rounded(vallEnd(120)));
+        await allocation.getByRole("button",{name:"200 €",exact:true}).click();
+        await expect(chart.locator(".sim-chart-values strong")).toContainText(rounded(vallEnd(200)));
+        await expect(page.locator(".summary-strip")).toContainText(rounded(200*12*30));
+        await allocation.getByRole("button",{name:"50 / 50",exact:true}).click();
+        await expect(chart.locator(".sim-chart-values strong")).toContainText(rounded((vallEnd(200)+projected*200/120)/2));
+        await allocation.getByRole("button",{name:"Theo sổ thực"}).click();
+        await allocation.getByRole("button",{name:"120 €",exact:true}).click();
+        await assertFits(page);
       }
       await page.screenshot({ path: testInfo.outputPath(`${name}.png`), animations: "disabled" });
       if (name === "simulation") {
@@ -253,7 +272,7 @@ for (const theme of themes) {
         await expect(plan.locator("table")).toHaveCount(0);
         await expect(plan).toContainText("Hãy tưởng tượng quỹ này như một ống heo:");
         await expect(plan).toContainText(/591,95/);
-        await expect(plan).toContainText(/120,00/);
+        if(Number(currentPlanMonthly)>0) await expect(plan).toContainText(Number(currentPlanMonthly).toLocaleString("vi-VN",{minimumFractionDigits:2,maximumFractionDigits:2}));
         await expect(plan.locator(".exit-plan-steps > li")).toHaveCount(3);
         await plan.evaluate((element) => element.scrollIntoView({ block: "start" }));
         await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-empty.png"), animations: "disabled" });
@@ -380,7 +399,13 @@ for (const theme of themes) {
         await page.getByRole("button", { name: "Điều chỉnh giả định" }).click();
         await expect(page.locator(".bottom-dock")).toBeHidden();
         await page.locator("details", { has: page.locator("#sim-starting-balance") }).locator("summary").click();
+        // The allocation test explicitly returned to the actual ledger above.
+        // Verify both states rather than expecting the earlier zero-start example.
+        await expect(page.locator("#sim-starting-balance")).toHaveValue("");
+        await expect(page.locator("#sim-starting-balance")).toHaveAttribute("placeholder","591.95");
+        await page.locator("#sim-starting-balance").fill("0");
         await expect(page.locator("#sim-starting-balance")).toHaveValue("0");
+        await page.locator("#sim-starting-balance").fill("");
         await page.getByRole("button", { name: "Đóng", exact: true }).click();
         await expect(page.locator(".bottom-dock")).toBeVisible();
       }
@@ -518,6 +543,7 @@ test(`German reference screenshots · 390x844 · ${germanTheme}`, async ({ page 
     if (name === "simulation") {
       // Same zero-start 120 €/month, 5 %, 30 years, TER fixture as the approved mockup.
       await page.getByRole("button", { name: /Beispiel ab 0 € laden/ }).click();
+      await page.getByTestId("simulation-etf-allocation").getByRole("button",{name:"VWCE",exact:true}).click();
       await expect(page.locator(".sim-chart-values strong")).toContainText(/95\.277/);
       const plan = page.getByTestId("simulation-exit-plan");
       await expect(plan).toContainText("Stellen Sie sich Ihr Depot wie ein Sparschwein vor:");

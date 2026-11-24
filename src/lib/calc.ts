@@ -2,7 +2,7 @@
 
 import { resolveInstrumentIsin, isSecurityBuy, isSecuritySell, hasResolvableInstrumentIsin, isValidIsin } from "./instrument";
 import { VWCE_ISIN } from "./types";
-import type { Transaction } from "./types";
+import type { Goal, Transaction } from "./types";
 import {
   classifyTransactionAgainstHoldings,
   compareTransactionReplayOrder,
@@ -17,6 +17,12 @@ export function inflate(presentValue: number, inflationRate: number, years: numb
   if (!Number.isFinite(presentValue) || !Number.isFinite(inflationRate)) return presentValue;
   const y = Math.max(0, years);
   return presentValue * Math.pow(1 + inflationRate, y);
+}
+
+/** Goal amount in euros of its due year, matching the Goals page. No buffer or sale assumption. */
+export function goalAmountAtDueDate(goal:Pick<Goal,"amount"|"mode"|"dueDate"|"baseYear"|"inflationRate">):number {
+  const years=Math.max(0,parseDate(goal.dueDate).getFullYear()-goal.baseYear);
+  return goal.mode==="purchasing_power" ? inflate(goal.amount,goal.inflationRate,years) : goal.amount;
 }
 
 export function monthsBetween(from: Date, to: Date): number {

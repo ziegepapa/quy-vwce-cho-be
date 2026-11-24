@@ -22,13 +22,18 @@ export type ProjectInput = {
   lumpSum: number;
   annualContributionGrowth: number;
   ter: number;
+  /** Optional independently compounded sleeves; weights apply to new money only. */
+  sleeves?: readonly ProjectionSleeve[];
 };
+
+export type ProjectionSleeve = { id: string; initialBalance: number; contributionShare: number; ter: number; cash?: boolean };
 
 export type ProjectOutput = {
   yearEnds: YearPoint[];
   terminal: number;
   contributed: number;
   interest: number;
+  sleeveEnds?: { id: string; terminal: number }[];
 };
 
 export const TAX_RATE = 0.26375;
@@ -40,6 +45,23 @@ export const DEFAULT_TER = 0.0014;
 export const MAX_YEARS = 40;
 
 export function projectEnd(input: ProjectInput): ProjectOutput {
+  if (input.sleeves?.length) {
+    const sleeves = input.sleeves;
+    // Reuse the existing annual fee/monthly contribution convention for each sleeve.
+    const outputs = sleeves.map(s => projectEnd({ ...input, sleeves: undefined,
+      initialBalance: s.initialBalance, lumpSum: Math.max(0,input.lumpSum)*s.contributionShare,
+      monthlyContribution: Math.max(0,input.monthlyContribution)*s.contributionShare,
+      annualReturn: s.cash ? 0 : input.annualReturn, ter: s.ter,
+    }));
+    const sum = (values: number[]) => round2(values.reduce((a,b)=>a+b,0));
+    const terminal = sum(outputs.map(o=>o.terminal));
+    const capital = projectEnd({ ...input, sleeves: undefined, initialBalance: 0, annualReturn: 0, ter: 0 });
+    const contributed = capital.contributed;
+    return {terminal,contributed,interest:round2(terminal-contributed-input.initialBalance),
+      yearEnds:outputs[0].yearEnds.map((p,i)=>({yearIndex:p.yearIndex,total:sum(outputs.map(o=>o.yearEnds[i].total)),contributed:capital.yearEnds[i].contributed})),
+      sleeveEnds:sleeves.map((s,i)=>({id:s.id,terminal:outputs[i].terminal})),
+    };
+  }
   const years = Math.max(0, Math.min(MAX_YEARS, Math.floor(input.years)));
   const months = years * 12;
   const rMonth =
@@ -138,7 +160,10 @@ export function findMonthlyForTarget(
     if (r.terminal >= target) hi = mid;
     else lo = mid;
   }
-  return round2(hi);
+  // Round up to a spendable cent, never return a rate below the target.
+  let monthly = Math.ceil(hi * 100 - 1e-7) / 100;
+  if (projectEnd({ ...base, monthlyContribution: monthly }).terminal < target) monthly = round2(monthly + .01);
+  return monthly;
 }
 
 export function findYearsForTarget(
@@ -146,21 +171,11 @@ export function findYearsForTarget(
   base: Omit<ProjectInput, "years">,
 ): { years: number; reached: boolean } {
   if (target <= 0) return { years: 0, reached: true };
-  const at0 = projectEnd({ ...base, years: 0 });
-  if (at0.terminal >= target) return { years: 0, reached: true };
-
-  let lo = 0;
-  let hi = MAX_YEARS;
-  const atMax = projectEnd({ ...base, years: MAX_YEARS });
-  if (atMax.terminal < target) return { years: MAX_YEARS, reached: false };
-
-  for (let i = 0; i < 32; i++) {
-    const mid = Math.floor((lo + hi) / 2);
-    const r = projectEnd({ ...base, years: mid });
-    if (r.terminal >= target) hi = mid;
-    else lo = mid + 1;
-  }
-  return { years: hi, reached: true };
+  // A falling market or shrinking contributions can make the path non-monotone.
+  // Scan the bounded yearly points once, not just the terminal 40-year balance.
+  const path = projectEnd({ ...base, years: MAX_YEARS }).yearEnds;
+  const reached = path.find(point => point.total >= target);
+  return reached ? { years: reached.yearIndex, reached: true } : { years: MAX_YEARS, reached: false };
 }
 
 export function purchasingPower(nominal: number, inflation: number, years: number): number {
