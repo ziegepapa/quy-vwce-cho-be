@@ -399,7 +399,13 @@ for (const theme of themes) {
         await page.getByRole("button", { name: "Điều chỉnh giả định" }).click();
         await expect(page.locator(".bottom-dock")).toBeHidden();
         await page.locator("details", { has: page.locator("#sim-starting-balance") }).locator("summary").click();
+        // The allocation test explicitly returned to the actual ledger above.
+        // Verify both states rather than expecting the earlier zero-start example.
+        await expect(page.locator("#sim-starting-balance")).toHaveValue("");
+        await expect(page.locator("#sim-starting-balance")).toHaveAttribute("placeholder","591.95");
+        await page.locator("#sim-starting-balance").fill("0");
         await expect(page.locator("#sim-starting-balance")).toHaveValue("0");
+        await page.locator("#sim-starting-balance").fill("");
         await page.getByRole("button", { name: "Đóng", exact: true }).click();
         await expect(page.locator(".bottom-dock")).toBeVisible();
       }
