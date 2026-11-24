@@ -1,0 +1,85 @@
+{
+  "date": "2026-11-24",
+  "scope": "Read-only hosted management API and database catalog; no endpoint invocation or application rows. Archived retired stubs and original manual health-check are evidence, NOT deployable files.",
+  "sourceCommit": "e72be9cd3ea513113c4070229dd56b6a8c36cccf",
+  "functions": [
+    {
+      "slug": "silent-guardian-health-check",
+      "version": 7,
+      "verifyJwt": true,
+      "bundleSha256": "d060242ad9bd615e92db52773315d012745b2d425ae2a1bb0bef1dd2ba1a071c",
+      "repoEntrypointPresent": true,
+      "repoEntrypointExact": false,
+      "archivedSource": "import \"jsr:@supabase/functions-js/edge-runtime.d.ts\";\n\nconst transactionTypes = new Set([\n  \"buy_vwce\", \"sell_vwce\", \"buy_security\", \"sell_security\",\n  \"cash_in\", \"cash_out\", \"tax\", \"fee\", \"safe_interest\", \"adjust\",\n]);\n\ntype RecordRow = { id: string; data: Record<string, unknown> | null; deleted_at: string | null };\nconst jsonHeaders = { \"Content-Type\": \"application/json\", \"Cache-Control\": \"no-store\" };\n\nfunction reply(data: unknown, status = 200): Response {\n  return new Response(JSON.stringify(data), { status, headers: jsonHeaders });\n}\nfunction plainObject(value: unknown): value is Record<string, unknown> {\n  return value !== null && typeof value === \"object\" && !Array.isArray(value);\n}\nfunction dateIsValid(value: unknown): boolean {\n  if (typeof value !== \"string\" || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) return false;\n  const timestamp = Date.parse(value + \"T00:00:00Z\");\n  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value;\n}\nfunction finite(value: unknown): boolean {\n  return typeof value === \"number\" && Number.isFinite(value);\n}\n\nDeno.serve(async (req: Request) => {\n  if (req.method !== \"GET\") return reply({ ok: false, error: \"GET required\" }, 405);\n  const baseUrl = Deno.env.get(\"SUPABASE_URL\");\n  const anon = Deno.env.get(\"SUPABASE_ANON_KEY\");\n  const auth = req.headers.get(\"Authorization\") ?? \"\";\n  if (!baseUrl || !anon) return reply({ ok: false, error: \"Server configuration unavailable\" }, 503);\n  if (!/^Bearer[ ]+[^ ]+$/i.test(auth)) return reply({ ok: false, error: \"Sign-in required\" }, 401);\n  try {\n    const identityResponse = await fetch(baseUrl + \"/auth/v1/user\", {\n      headers: { Authorization: auth, apikey: anon },\n      signal: AbortSignal.timeout(8000),\n    });\n    if (!identityResponse.ok) return reply({ ok: false, error: \"Sign-in required\" }, 401);\n    const identity = await identityResponse.json();\n    const userId = identity?.id;\n    if (typeof userId !== \"string\" || !/^[a-f0-9-]{36}$/i.test(userId)) {\n      return reply({ ok: false, error: \"Sign-in required\" }, 401);\n    }\n\n    async function load(domain: string): Promise<RecordRow[]> {\n      const search = new URLSearchParams({\n        select: \"id,data,deleted_at\",\n        user_id: \"eq.\" + userId,\n        limit: \"1001\",\n      });\n      const response = await fetch(baseUrl + \"/rest/v1/\" + domain + \"?\" + search.toString(), {\n        headers: { Authorization: auth, apikey: anon, Accept: \"application/json\" },\n        signal: AbortSignal.timeout(10000),\n      });\n      if (!response.ok) throw new Error(\"Database read blocked: \" + domain + \":\" + response.status);\n      const rows = await response.json();\n      if (!Array.isArray(rows)) throw new Error(\"Unexpected database response\");\n      return rows;\n    }\n\n    const domains = [\"transactions\", \"goals\", \"app_settings\"];\n    const datasets = await Promise.all(domains.map(load));\n    const checks: Record<string, unknown> = {};\n    let errors = 0;\n    let incomplete = false;\n    for (let j = 0; j < domains.length; j++) {\n      const domain = domains[j];\n      const rows = datasets[j];\n      if (rows.length >= 1000) incomplete = true;\n      const active = rows.filter((r) => r.deleted_at === null);\n      let mismatchedIds = 0;\n      let invalidAmount = 0;\n      let invalidType = 0;\n      let invalidDate = 0;\n      for (const row of active) {\n        if (!plainObject(row.data) || row.id !== row.data.id) mismatchedIds++;\n        if (!plainObject(row.data)) continue;\n        if (domain !== \"app_settings\" && !finite(row.data.amount)) invalidAmount++;\n        if (domain === \"transactions\") {\n          if (!transactionTypes.has(String(row.data.type))) invalidType++;\n          if (!dateIsValid(row.data.date)) invalidDate++;\n        }\n      }\n      const issues = { mismatchedIds, invalidAmount, invalidType, invalidDate };\n      errors += Object.values(issues).reduce((a, b) => a + b, 0);\n      checks[domain] = { active: active.length, tombstones: rows.length - active.length, issues };\n    }\n\n    return reply({\n      ok: true,\n      mode: \"read_only\",\n      notificationsEnabled: false,\n      status: incomplete ? \"incomplete\" : errors > 0 ? \"review\" : \"pass_basic_checks\",\n      checkedAt: new Date().toISOString(),\n      checks,\n      limitations: [\n        \"Server-side rows only; local Dexie and pending outbox are not visible\",\n        \"Basic structural checks only; not a financial or sync completeness audit\",\n        ...(incomplete ? [\"Over 1000 rows in at least one domain; results are incomplete\"] : []),\n      ],\n    });\n  } catch (error) {\n    console.error(\"Guardian read-only check failed\", error instanceof Error ? error.message : \"unknown\");\n    return reply({ ok: false, error: \"Read-only check unavailable\" }, 503);\n  }\n});\n"
+    },
+    {
+      "slug": "silent-guardian-worker",
+      "version": 5,
+      "verifyJwt": false,
+      "bundleSha256": "a872777acb58e182af963661ce9f9e05cb3f3033098712b23bdaf63cd4166683",
+      "repoEntrypointPresent": true,
+      "repoEntrypointExact": true
+    },
+    {
+      "slug": "silent-guardian-email-test",
+      "version": 7,
+      "verifyJwt": true,
+      "bundleSha256": "960c7726e2369c3d28b680d5e2a236dcd3f1d2990abc7eee92f44217a195a143",
+      "repoEntrypointPresent": true,
+      "repoEntrypointExact": false,
+      "archivedSource": "import \"jsr:@supabase/functions-js/edge-runtime.d.ts\";\n\nDeno.serve(() => Response.json({\n  ok: false,\n  status: \"retired\",\n  message: \"One-time Resend delivery test completed. This endpoint no longer sends mail.\"\n}, { status: 410, headers: { \"Cache-Control\": \"no-store\" } }));\n"
+    },
+    {
+      "slug": "silent-guardian-e2e-test",
+      "version": 6,
+      "verifyJwt": true,
+      "bundleSha256": "b07bc736e40d10b77ee9bf6139480f41416a5d33ea24a4b0b6bcbb64918af45c",
+      "repoEntrypointPresent": false,
+      "repoEntrypointExact": false,
+      "archivedSource": "import \"jsr:@supabase/functions-js/edge-runtime.d.ts\";\n// E2E completed successfully on 2026-11-21. Permanently retired;\n// no test endpoint may send further emails.\nDeno.serve(() => Response.json({ok:false,status:\"retired\",message:\"E2E finished\"},{\n status:410,headers:{\"Cache-Control\":\"no-store\"}\n}));\n"
+    },
+    {
+      "slug": "gemini-vault-explain",
+      "version": 14,
+      "verifyJwt": true,
+      "bundleSha256": "c0524bb08bdb720b55925921a9f9bb6b43145959fc6e58e8e56202e36f2109f8",
+      "repoEntrypointPresent": true,
+      "repoEntrypointExact": true
+    }
+  ],
+  "readOnlyCatalog": {
+    "transaction_read_only": "on",
+    "publicPolicies": 23,
+    "publicIndexes": 21,
+    "publicForceRlsTables": [
+      "annual_checklists",
+      "app_settings",
+      "goals",
+      "monthly_snapshots",
+      "profiles",
+      "transactions"
+    ],
+    "ownerDefaultTables": [
+      "annual_checklists",
+      "app_settings",
+      "goals",
+      "monthly_snapshots",
+      "transactions"
+    ],
+    "aiTables": [
+      "gemini_flash_daily",
+      "gemini_reply_cache",
+      "global_daily",
+      "user_daily"
+    ],
+    "guardianTables": [
+      "config",
+      "deliveries",
+      "scans",
+      "tickets"
+    ],
+    "effectiveClientTruncateGrants": 12,
+    "workerClaimDefinitionMd5": "2304647283faaa9cf65b158384fd0b13",
+    "fullInventory": "docs/evidence/h5-hosted-catalog-2026-11-24.json"
+  }
+}
