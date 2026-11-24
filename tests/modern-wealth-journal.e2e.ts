@@ -218,9 +218,11 @@ for (const theme of themes) {
         await expect(page.getByRole("meter")).toHaveAttribute("value", "25");
         await expect(page.locator(".mwj-goal-progress strong")).toHaveText(/250,00\s*€/);
       }
+      let currentPlanMonthly = "";
       if (name === "simulation") {
         const allocation = page.getByTestId("simulation-etf-allocation");
         await expect(allocation).toBeVisible();
+        currentPlanMonthly=await allocation.locator("#sim-quick-monthly").inputValue();
         await expect(allocation.getByRole("button",{name:"VALL",exact:true})).toHaveAttribute("aria-pressed","true");
         await page.getByRole("button", { name: "Thử ví dụ từ 0 €" }).click();
         await allocation.getByRole("button",{name:"VWCE",exact:true}).click();
@@ -270,7 +272,7 @@ for (const theme of themes) {
         await expect(plan.locator("table")).toHaveCount(0);
         await expect(plan).toContainText("Hãy tưởng tượng quỹ này như một ống heo:");
         await expect(plan).toContainText(/591,95/);
-        await expect(plan).toContainText(/120,00/);
+        if(Number(currentPlanMonthly)>0) await expect(plan).toContainText(Number(currentPlanMonthly).toLocaleString("vi-VN",{minimumFractionDigits:2,maximumFractionDigits:2}));
         await expect(plan.locator(".exit-plan-steps > li")).toHaveCount(3);
         await plan.evaluate((element) => element.scrollIntoView({ block: "start" }));
         await page.screenshot({ path: testInfo.outputPath("simulation-exit-plan-empty.png"), animations: "disabled" });

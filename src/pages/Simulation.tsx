@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   parseDate,
+  goalAmountAtDueDate,
   parseDecimal,
   round2,
 } from "../lib/calc";
@@ -22,6 +23,8 @@ import { useRecoveryReadOnly } from "../lib/recoveryReadOnly";
 import { useLocale } from "../lib/locale";
 import { formatDisplayMoney } from "../ui/localeFormatting";
 import SimulationDemoShell from "../components/demo-v10/SimulationDemoShell";
+import { configuredMonthlyAt } from "../lib/configuredMonthly";
+import { isValidAsOfDate } from "../lib/instrument";
 import { buildGeminiVaultFacts } from "../lib/geminiVaultFacts";
 import "../styles/demo-v10-simulation.css";
 import "../styles/clean-shared.css";
@@ -57,7 +60,7 @@ export default function Simulation() {
 
   const [mode, setMode] = useState<Mode>("A");
   const [years, setYears] = useState(30);
-  const [monthly, setMonthly] = useState("120");
+  const [monthly, setMonthly] = useState("0");
   const [growthOn, setGrowthOn] = useState(false);
   const [growthPct, setGrowthPct] = useState("2");
   const [lumpSum, setLumpSum] = useState("0");
@@ -96,8 +99,8 @@ export default function Simulation() {
       setGoals(await listGoals());
       setTxs(await listTransactions());
       setQuotes(await listQuotes());
-      const recurringContribution = s.contributionY2 > 0 ? s.contributionY2 : s.contributionY1;
-      if (Number.isFinite(recurringContribution)) setMonthly(String(Math.max(0,recurringContribution)));
+      // Start with the current configured plan rate, including an explicit zero.
+      setMonthly(String(configuredMonthlyAt(s,new Date()) ?? 0));
       if (s.inflationRate > 0) setInflationPct(String(round2(s.inflationRate * 100)));
       if (Number.isFinite(s.vwceReturn)) setRateInput(String(round2(s.vwceReturn * 100)));
       const targetDate = s.planTarget?.targetUseDate;
@@ -133,6 +136,7 @@ export default function Simulation() {
   const lumpN = Math.max(0, parseDecimal(lumpSum));
   const inflationN = inflationOn ? Math.max(0, parseDecimal(inflationPct) / 100) : 0;
   const targetN = Math.max(0, parseDecimal(targetAmount));
+  const targetAmountValid = Number.isFinite(targetN) && targetN > 0;
   // The last recorded ETF buy is a starting suggestion, not a broker Sparplan.
   const suggestedShare = useMemo(()=>suggestedVallShare(txs),[txs]);
   const vallShare = allocationOverride ?? suggestedShare;
@@ -165,26 +169,27 @@ export default function Simulation() {
 
   const requiredMonthlyBase = useMemo(() => {
     if (mode !== "B") return monthlyN;
-    if (!targetYearValid) return -1;
+    if (!targetYearValid || !targetAmountValid) return -1;
     const br = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
     return findMonthlyForTarget(targetN, { ...baseCommon, years: yearsB, annualReturn: br });
-  }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN,targetYearValid]);
+  }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN,targetYearValid,targetAmountValid]);
 
   const monthlyForProject = mode === "B" ? Math.max(0, requiredMonthlyBase) : monthlyN;
 
   const yearsC = useMemo(() => {
     if (mode !== "C") return { years: effectiveYears, reached: true };
+    if (!targetAmountValid) return {years:0,reached:false};
     const br = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
     return findYearsForTarget(targetN, {
       ...baseCommon,
       monthlyContribution: monthlyN,
       annualReturn: br,
     });
-  }, [mode, targetN, baseCommon, monthlyN, scenarios, effectiveYears]);
+  }, [mode, targetN, baseCommon, monthlyN, scenarios, effectiveYears,targetAmountValid]);
 
   const yearsForProject = mode === "C" ? yearsC.years : effectiveYears;
-  const planUnreachable = mode === "B" && requiredMonthlyBase < 0;
-  const targetUnreachable = mode === "C" && !yearsC.reached;
+  const planUnreachable = (mode === "B" && requiredMonthlyBase < 0) || (mode==="C"&&!targetAmountValid);
+  const targetUnreachable = mode === "C" && targetAmountValid && !yearsC.reached;
 
   const results = useMemo(() => {
     return scenarios.map((sc) => {
@@ -204,20 +209,23 @@ export default function Simulation() {
   const goalMarkers = useMemo(() => {
     const nowY = new Date().getFullYear();
     return goals
+      .filter(g=>!g.deletedAt&&isValidAsOfDate(g.dueDate))
       .map((g) => {
         const due = parseDate(g.dueDate);
         const yi = due.getFullYear() - nowY;
-        return { name: g.name, yearIndex: yi, amount: g.amount };
+        return { name: g.name, yearIndex: yi, amount: goalAmountAtDueDate(g) };
       })
-      .filter((m) => m.yearIndex >= 0 && m.yearIndex <= MAX_YEARS);
+      .filter((m) => m.yearIndex >= 0 && m.yearIndex <= MAX_YEARS && Number.isFinite(m.amount) && m.amount>0);
   }, [goals]);
 
   function applyYearsFromGoal(g: Goal) {
+    if(g.deletedAt||!isValidAsOfDate(g.dueDate)) return;
     const due = parseDate(g.dueDate);
     const y = Math.max(1, Math.min(MAX_YEARS, due.getFullYear() - new Date().getFullYear()));
     setYears(y);
     setTargetYear(String(due.getFullYear()));
-    if (g.amount > 0) setTargetAmount(String(g.amount));
+    const amount=goalAmountAtDueDate(g);
+    setTargetAmount(Number.isFinite(amount)&&amount>0?String(round2(amount)):"0");
   }
 
   function moneyEq(a: number, b: number): boolean {
@@ -464,8 +472,12 @@ export default function Simulation() {
   const geminiFacts = buildGeminiVaultFacts({
     settings, transactions: txs,
     currentValue: startValue.valuationStatus === "fresh" ? realBalance : null,
-    today: new Date(), simulationEndYear: nowY + yearsForProject,
-    scenarioTotals: Object.fromEntries(results.map(({ sc, out }) => [sc.id, out.terminal])),
+    today: new Date(), simulationEndYear: planUnreachable ? null : nowY + yearsForProject,
+    scenarioTotals: planUnreachable || (!balanceOverride.trim()&&startValue.valuationStatus==="missing") ? undefined : {
+      cautious:results.find(r=>r.sc.id==="cautious")?.out.terminal,
+      base:results.find(r=>r.sc.id==="base")?.out.terminal,
+      optimistic:results.find(r=>r.sc.id==="bull")?.out.terminal,
+    },
   });
 
   return (
@@ -476,6 +488,7 @@ export default function Simulation() {
       planUnreachable={planUnreachable}
       targetUnreachable={targetUnreachable}
       invalidTargetYear={mode==="B"&&!targetYearValid}
+      invalidTargetAmount={mode!=="A"&&!targetAmountValid}
       headlineValue={headlineValue}
       yearsForProject={yearsForProject}
       monthlyForProject={monthlyForProject}
@@ -507,7 +520,7 @@ export default function Simulation() {
       goals={goals}
       geminiFacts={geminiFacts}
       exitPlanActualBalance={startValue.valuationStatus === "fresh" ? realBalance : null}
-      exitPlanActualMonthly={settings && Number.isFinite(settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1) ? (settings.contributionY2 > 0 ? settings.contributionY2 : settings.contributionY1) : null}
+      exitPlanActualMonthly={configuredMonthlyAt(settings,new Date())}
       applyYearsFromGoal={applyYearsFromGoal}
       advSummary={advSummary}
       bandInput={bandInput}

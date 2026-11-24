@@ -27,6 +27,7 @@ export type SimulationDemoShellProps = {
   planUnreachable: boolean;
   targetUnreachable: boolean;
   invalidTargetYear?: boolean;
+  invalidTargetAmount?: boolean;
   headlineValue: number;
   yearsForProject: number;
   monthlyForProject: number;
@@ -185,7 +186,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <>
             <div className="sh-big sim-hero-amount" data-testid="simulation-hero-amount">—</div>
             <div className="sh-sub">{text.unavailable}</div>
-            <div className="sh-note">{p.invalidTargetYear ? (de?`Zieljahr: ${nowY+1}–${nowY+MAX_YEARS}`:`Năm mục tiêu: ${nowY+1}–${nowY+MAX_YEARS}`) : text.unavailableNote}</div>
+            <div className="sh-note">{p.invalidTargetYear ? (de?`Zieljahr: ${nowY+1}–${nowY+MAX_YEARS}`:`Năm mục tiêu: ${nowY+1}–${nowY+MAX_YEARS}`) : p.invalidTargetAmount ? (de?"Zielbetrag muss größer als 0 € sein.":"Số tiền mục tiêu phải lớn hơn 0 €.") : text.unavailableNote}</div>
           </>
         ) : (
           <>
@@ -242,6 +243,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         {mode !== "B" && <div className="sim-etf-monthly">
           <label htmlFor="sim-quick-monthly">{de?"Gesamt pro Monat (€)":"Tổng góp mỗi tháng (€)"}</label>
           <input id="sim-quick-monthly" className="inp" type="number" min="0" step="0.01" inputMode="decimal" value={monthly} onChange={e=>setMonthly(e.target.value)} disabled={readOnly}/>
+          <p className="sim-etf-note">{de?"Startwert der Rate aus der aktuellen Planphase; im Modell konstant, sofern kein Beitragswachstum gewählt ist.":"Mặc định lấy mức góp của giai đoạn kế hoạch hiện tại; mô hình giữ nguyên mức này nếu không bật tăng góp theo năm."}</p>
           <div className="sim-etf-options sim-etf-quick-rates">{[120,200,300].map(amount=><button key={amount} type="button" className="secondary" disabled={readOnly} aria-pressed={Number(monthly)===amount} onClick={()=>setMonthly(String(amount))}>{amount} €</button>)}</div>
         </div>}
         {mode==="B" && <p className="sim-etf-note">{de?"Die Monatsrate wird aus Zielbetrag und Zieljahr berechnet.":"Mức góp được tính từ số tiền và năm mục tiêu."}</p>}
@@ -548,9 +550,9 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           ) : null}
           {goals.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {goals.map((g) => (
+              {goals.filter(g=>!g.deletedAt).map((g) => (
                 <button key={g.id} type="button" className="show-all-btn" onClick={() => applyYearsFromGoal(g)}>
-                  {text.goal}: {g.name}
+                  {text.goal}: {g.name}{g.mode==="purchasing_power"?(de?" · Betrag zum Zieljahr":" · quy đổi tới năm mục tiêu"):""}
                 </button>
               ))}
             </div>

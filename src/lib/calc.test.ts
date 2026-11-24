@@ -427,3 +427,11 @@ describe("security tx with bad ISIN checksum fail-safe", () => {
     expect(s.totalFees).toBe(before.fees);
   });
 });
+
+// Goal simulation and the Goals page use the same due-year amount.
+import {goalAmountAtDueDate} from "./calc";
+it("converts purchasing-power goals only, without adding a buffer or sale date",()=>{
+  const goal={amount:10000,baseYear:2026,dueDate:"2038-06-30",inflationRate:.02,mode:"purchasing_power" as const};
+  expect(goalAmountAtDueDate(goal)).toBeCloseTo(10000*1.02**12,6);
+  expect(goalAmountAtDueDate({...goal,mode:"nominal"})).toBe(10000);
+});

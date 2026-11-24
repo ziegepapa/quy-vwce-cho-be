@@ -3,6 +3,7 @@ import { deleteGoal, listGoals, uid, upsertGoal } from "../lib/db";
 import type { Goal, GoalMode, GoalUrgency } from "../lib/types";
 import {
   goalProgressStatus,
+  goalAmountAtDueDate,
   inflate,
   monthsBetween,
   parseDate,
@@ -113,9 +114,7 @@ export default function Goals() {
     let nearestMonths = Infinity;
     for (const g of goals) {
       const due = parseDate(g.dueDate);
-      const years = Math.max(0, due.getFullYear() - g.baseYear);
-      const adj =
-        g.mode === "purchasing_power" ? inflate(g.amount, g.inflationRate, years) : g.amount;
+      const adj = goalAmountAtDueDate(g);
       need += adj;
       protectedSum += g.protectedAmount;
       const m = monthsBetween(today, due);
@@ -239,9 +238,7 @@ export default function Goals() {
       <div className="mwj-goal-list">
         {goals.map((g) => {
           const due = parseDate(g.dueDate);
-          const years = Math.max(0, due.getFullYear() - g.baseYear);
-          const adj =
-            g.mode === "purchasing_power" ? inflate(g.amount, g.inflationRate, years) : g.amount;
+          const adj = goalAmountAtDueDate(g);
           const months = monthsBetween(today, due);
           const status = goalProgressStatus({
             targetAdjusted: adj || 1,

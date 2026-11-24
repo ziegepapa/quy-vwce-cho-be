@@ -1,3 +1,4 @@
+import { configuredMonthlyAt } from "./configuredMonthly";
 import { computeHeroLifetimeContribution } from "./heroLifetime";
 import { validExitDate } from "./simulation/exitPlan";
 import { buildPlanVsReality } from "../pages/planVsReality";
@@ -36,19 +37,7 @@ export function buildGeminiVaultFacts(input: {
   const contributedResult = computeHeroLifetimeContribution({
     transactions, trackInAppCash: settings?.trackInAppCash,
   });
-  // The configured rates are for the first 12 plan months and subsequent
-  // months, not a preference for Y2 whenever it is non-zero.
-  const start = settings && /^\d{4}-\d{2}-\d{2}$/.test(settings.startDate)
-    ? new Date(`${settings.startDate}T12:00:00`) : null;
-  const validStart = start && Number.isFinite(start.getTime())
-    && [start.getFullYear(), String(start.getMonth() + 1).padStart(2, "0"),
-      String(start.getDate()).padStart(2, "0")].join("-") === settings?.startDate;
-  const todayDate = [current, String(today.getMonth() + 1).padStart(2, "0"),
-    String(today.getDate()).padStart(2, "0")].join("-");
-  const monthsSinceStart = validStart && settings!.startDate <= todayDate
-    ? (current - start!.getFullYear()) * 12 + today.getMonth() - start!.getMonth() : null;
-  const monthly = settings && monthsSinceStart !== null && monthsSinceStart >= 0
-    ? amount(monthsSinceStart < 12 ? settings.contributionY1 : settings.contributionY2) : null;
+  const monthly = configuredMonthlyAt(settings,today);
   const progress = settings ? buildPlanVsReality({
     startDate: settings.startDate,
     contributionY1: settings.contributionY1,
