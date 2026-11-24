@@ -32,7 +32,8 @@ export class VwceDB extends Dexie {
   quotePreferences!: Table<QuoteSelectionPreference, string>;
 
   constructor() {
-    super("quy_vwce_cho_be");
+    // Sharing rehearsal has a separate writable owner database, never the legacy cache.
+    super(import.meta.env.VITE_MU3_LOCAL_REHEARSAL === "true" && import.meta.env.VITE_SUPABASE_URL === "http://127.0.0.1:54321" ? "quy_vwce_mu4_local_owner" : "quy_vwce_cho_be");
     this.version(1).stores({
       settings: "id",
       goals: "id, dueDate",
