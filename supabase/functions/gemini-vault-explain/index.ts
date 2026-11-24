@@ -206,8 +206,15 @@ async function askGoogle(model: string, payload: SafeRequest, key: string): Prom
   const url = apiBase + "/v1beta/models/" + encodeURIComponent(model) + ":generateContent";
   const signal = AbortSignal.timeout(googleTimeoutMs(model));
   let httpStatus: number | undefined;
+  let client: Deno.HttpClient | undefined;
   try {
+    // Generation POSTs spend scarce provider quota and are not idempotent.
+    // A fresh client prevents Deno from replaying a POST on a stale pooled
+    // connection. Do not share it with auth/RPC, probes or another generation.
+    client = Deno.createHttpClient({ poolMaxIdlePerHost: 0 });
     const response = await fetch(url, {
+      client,
+      redirect: "error",
       method: "POST",
       headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -243,6 +250,8 @@ async function askGoogle(model: string, payload: SafeRequest, key: string): Prom
     return { status: 200, output: clean, httpStatus };
   } catch {
     return { status: 503, output: null, reason: signal.aborted ? "timeout" : "network", httpStatus };
+  } finally {
+    client?.close();
   }
 }
 

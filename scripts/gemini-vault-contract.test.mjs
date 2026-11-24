@@ -163,3 +163,10 @@ test("generation deadlines are model-specific; timeout and network cannot trigge
   assert.ok(client.includes("GOOGLE_TIMEOUT:t.errTimeout"));
   assert.ok(client.includes("GOOGLE_NETWORK_ERROR:t.errNetwork"));
 });
+
+test("non-idempotent generation uses a private non-pooled HTTP client with no redirect replay",()=>{
+  const generation=server.slice(server.indexOf("async function askGoogle"),server.indexOf("Deno.serve"));
+  assert.match(generation,/Deno\.createHttpClient\(\{ poolMaxIdlePerHost: 0 \}\)/);
+  assert.match(generation,/fetch\(url, \{\s*client,\s*redirect: "error"/);
+  assert.match(generation,/finally \{\s*client\?\.close\(\)/);
+});

@@ -85,7 +85,7 @@ const stub = http.createServer(async(req,res)=>{
       assert.equal(req.headers["x-goog-api-key"],"only-ci-not-real");
       assert.equal(req.headers.authorization,undefined);
       const msg=await body(req);
-      calls.push({url:req.url,msg});
+      calls.push({url:req.url,msg,socket:req.socket});
       if(providerMode==="rate") return reply(res,429,{error:"quota"});
       if(providerMode==="overloaded") return reply(res,503,{error:"unavailable"});
       if(providerMode==="empty") return reply(res,200,{candidates:[{content:{parts:[]},finishReason:"MAX_TOKENS"}]});
@@ -100,6 +100,8 @@ const stub = http.createServer(async(req,res)=>{
       if(providerMode==="body-timeout-lite") {
         res.writeHead(200,{"Content-Type":"application/json"});res.flushHeaders();res.write("{");return;
       }
+      // Reset AFTER consuming the POST, BEFORE any response headers. A replay
+      // would reach this stub again and consume real provider quota in production.
       if(providerMode==="network-flash") {res.destroy();return;}
       const txt=providerMode==="unsafe" ? "Sie sollten im Jahr 2042 verkaufen.":
         "Nach den eingetragenen Zahlen wurde bisher ein Teil des Plans erreicht. Es ist keine Anlageberatung.";
@@ -364,6 +366,13 @@ try{
   for(const secret of [userId,"mock-user-jwt","mock-private-role","only-ci-not-real","591.95","17000"]){
     assert.ok(!flashDiagnostics.join("\n").includes(secret),"Flash diagnostics must not contain identity, data or secrets");
   }
+  // Confirm generation requests never reuse the previous socket. Keep the
+  // abrupt reset test below strict at one actual POST, not just one log entry.
+  requests=0;paused=false;calls=[];flashAttempts=0;providerMode="normal";
+  assert.equal((await call({...safe,topic:"goal",facts:goalFacts})).status,200);
+  assert.equal((await call({...safe,topic:"goal",facts:goalFacts})).status,200);
+  assert.equal(calls.length,2);assert.notEqual(calls[0].socket,calls[1].socket);
+  assert.equal(requests,2);assert.equal(flashAttempts,2);
   // Production deadline tests: real durations, no test-only timeout override.
   for(const [mode,expected,status,count] of [
     ["slow-lite","gemini-3.5-flash-lite",200,2],
@@ -379,7 +388,10 @@ try{
     assert.equal(response.status,status,mode);
     const result=await response.json();
     assert.equal(status===200?result.model:result.code,expected,mode);
-    assert.equal(requests,1,mode);assert.equal(flashAttempts,1,mode);assert.equal(calls.length,count,mode);
+    assert.equal(requests,1,mode+": Vault claims");
+    assert.equal(flashAttempts,1,mode+": Flash reservations");
+    assert.equal(calls.length,count,mode+": actual provider POSTs (including any transport replay)");
+    if(count===2) assert.notEqual(calls[0].socket,calls[1].socket,mode+": separate generation connections");
     if(mode==="slow-lite") assert.ok(Date.now()-started>=12000);
     await sleep(100);
     const trace=logs.slice(before).split(/\r?\n/).filter(l=>l.includes("[gemini-generation]")).map(l=>JSON.parse(l.slice(l.indexOf("{"))));
