@@ -1,0 +1,85 @@
+name: MU3 Local Member Management
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/*MemberManagement.tsx'
+      - 'src/pages/Settings.tsx'
+      - 'src/styles/mu3-members.css'
+      - 'supabase/functions/mu3-members/**'
+      - 'scripts/mu2-*'
+      - 'scripts/h5-003-*'
+      - 'tests/mu3/**'
+      - 'playwright.mu3.config.ts'
+      - '.github/workflows/mu3-local-members.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local:
+    name: MU3 local Auth + browser (PG17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      MU3_LOCAL_REHEARSAL: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.119.0
+      - run: npm ci
+      - name: Check service types
+        run: deno check supabase/functions/mu3-members/index.ts
+      - name: Start disposable H5 and MU2 baseline
+        run: |
+          set -euo pipefail
+          node scripts/h5-migration-guard.mjs
+          sed -i 's/^major_version = 15$/major_version = 17/' supabase/config.toml
+          supabase start -x studio,imgproxy,logflare,vector,supavisor
+          bash scripts/h5-materialize-003.sh
+          bash scripts/h5-003-apply.sh reset
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
+          src=supabase_db_vwce-vault-local-h4h5
+          sp() { docker exec -i "$src" psql -U supabase_admin -d postgres -X -v ON_ERROR_STOP=1 "$@"; }
+          sp -c 'create role mu2_disposable_marker nologin'
+          sp < scripts/mu2-membership-candidate.sql
+          sp < scripts/mu2-catalog-check.sql
+          test "$(psql "$DB_URL" -XAt -c "select current_setting('server_version_num')::int/10000")" = 17
+      - name: Real local service and two-account browser test
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          test "$API_URL" = http://127.0.0.1:54321
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+          export SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          deno run --allow-env --allow-net=127.0.0.1:54321,127.0.0.1:8000 supabase/functions/mu3-members/index.ts >"$RUNNER_TEMP/mu3-service.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/ || true)" = 405; then break; fi
+            sleep 1
+          done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/)" = 405
+          docker run --rm --network host -v "$PWD:/work" -w /work -e CI=true -e SUPABASE_URL -e SUPABASE_ANON_KEY -e SUPABASE_SERVICE_ROLE_KEY mcr.microsoft.com/playwright:v1.65.1-jammy npx playwright test --config playwright.mu3.config.ts | tee mu3-test.log
+          grep -F 'PASS owner UI revoked; same member JWT remains valid but shared read denied; owner row unchanged' mu3-test.log
+      - name: Upload synthetic UI screenshots and redacted test log
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mu3-evidence-${{ github.run_id }}
+          path: |
+            test-results/**/mu3-owner-*.png
+            mu3-test.log
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop disposable Supabase
+        if: always()
+        run: supabase stop --no-backup
