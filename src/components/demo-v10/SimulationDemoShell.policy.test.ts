@@ -14,7 +14,7 @@ const simulationPageSource = readFileSync("src/pages/Simulation.tsx", "utf8");
 
 const noop = vi.fn();
 
-function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false, planChanged = false, mode: "A" | "B" | "C" = "A", band = 0, showInflation = false) {
+function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInterest = 0, targetUnreachable = false, planChanged = false, mode: "A" | "B" | "C" = "A", band = 0, showInflation = false, etfAllocation?: SimulationDemoShellProps["etfAllocation"]) {
   const props: SimulationDemoShellProps = {
     locale,
     mode,
@@ -30,6 +30,7 @@ function renderShell(locale: "vi" | "de", startingBalanceWarning = "", shownInte
     startingBalanceWarning,
     primary: undefined,
     initialBalance: 0,
+    etfAllocation,
     shownInterest,
     results: [
       { sc: { id: "cautious", label: locale === "de" ? "Vorsichtig" : "Thận trọng", rate: -0.02 }, out: { yearEnds: [], terminal: 800, contributed: 900, interest: -100 } },
@@ -364,4 +365,14 @@ describe("SimulationDemoShell financial-policy containment", () => {
     expect(screen.queryByText(/DE-Steuern|nach Steuern|mit Steuern/i)).toBeNull();
     expect(document.body.textContent).not.toMatch(/Thuế DE|afterTax|after-tax/i);
   });
+});
+
+it("shows two independent ETF fees, allocation controls and missing quotes without inventing values",()=>{
+  const setVallShare=vi.fn();const reset=vi.fn();
+  renderShell("vi","",0,false,false,"A",.02,false,{vallShare:1,setVallShare,reset,suggested:true,fees:{vwce:.0014,vall:.0007,vallAsOf:"2026-10-31",fallback:false},sleeves:[{id:"VWCE",initialBalance:350,contributionShare:0,ter:.0014},{id:"VALL",initialBalance:0,contributionShare:1,ter:.0007}],missingFunds:["VALL"],overridden:false,ter:.0007});
+  expect(screen.getByTestId("simulation-etf-allocation").textContent).toContain("Thiếu giá");
+  expect(screen.getByText("Phí góp mới").nextElementSibling?.textContent).toContain("0,07");
+  fireEvent.click(screen.getByRole("button",{name:"50 / 50"}));expect(setVallShare).toHaveBeenCalledWith(.5);
+  fireEvent.click(screen.getByRole("button",{name:"Theo sổ thực"}));expect(reset).toHaveBeenCalled();
+  expect(screen.getByText("Vốn mô phỏng",{selector:"dt"})).toBeTruthy();
 });

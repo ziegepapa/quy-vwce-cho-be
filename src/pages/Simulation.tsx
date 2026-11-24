@@ -482,7 +482,7 @@ export default function Simulation() {
       startingBalanceWarning={startingBalanceWarning}
       primary={primary}
       initialBalance={initialBalance}
-      etfAllocation={{vallShare,setVallShare:setAllocationOverride,reset:()=>{setAllocationOverride(null);setBalanceOverride("");},suggested:allocationOverride===null,fees,sleeves,overridden:balanceOverride.trim()!=="",ter}}
+      etfAllocation={{vallShare,setVallShare:setAllocationOverride,reset:()=>{setAllocationOverride(null);setBalanceOverride("");},suggested:allocationOverride===null,fees,sleeves,missingFunds:startValue.missingIsins.map(displayIsin),overridden:balanceOverride.trim()!=="",ter}}
       shownInterest={shownInterest}
       results={results}
       goalMarkers={goalMarkers}

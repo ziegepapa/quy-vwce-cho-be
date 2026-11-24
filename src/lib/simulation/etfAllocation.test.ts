@@ -1,6 +1,6 @@
 import {describe,it,expect} from "vitest";
 import {projectEnd,findMonthlyForTarget,findYearsForTarget} from "./engine";
-import {buildEtfSleeves,simulationFees} from "./etfAllocation";
+import {buildEtfSleeves,simulationFees,suggestedVallShare} from "./etfAllocation";
 import {VWCE_ISIN,VALL_ISIN} from "../types";
 const start={balance:550,valuesByIsin:{[VWCE_ISIN]:350,[VALL_ISIN]:200},cash:0,missingIsins:[],staleIsins:[],valuationStatus:"fresh" as const};
 const base={years:30,initialBalance:550,monthlyContribution:120,annualReturn:.05,lumpSum:0,annualContributionGrowth:0,ter:.0014};
@@ -28,4 +28,11 @@ describe("two ETF simulation",()=>{
     expect(demo.every(s=>s.initialBalance===0)).toBe(true);
     expect(projectEnd({...base,initialBalance:0,sleeves:demo}).terminal).toBe(projectEnd({...base,initialBalance:0,ter:simulationFees.vall}).terminal);
   });
+});
+
+it("suggests the last recorded eligible ETF buy, never an active broker plan",()=>{
+  const t=(id:string,isin:string,date:string)=>({id,date,instrumentIsin:isin,type:"buy_security" as const,amount:120,quantity:1,notes:"",createdAt:date,updatedAt:date});
+  const rows=[t("a",VWCE_ISIN,"2026-10-01"),t("b",VALL_ISIN,"2026-11-02"),t("c",VWCE_ISIN,"2026-12-01"),{...t("d",VWCE_ISIN,"2026-11-15"),deletedAt:"2026-11-16"}];
+  expect(suggestedVallShare(rows,"2026-11-24")).toBe(1);
+  expect(suggestedVallShare([],"2026-11-24")).toBe(.5);
 });

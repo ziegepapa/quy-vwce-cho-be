@@ -1,5 +1,5 @@
 import { round2 } from "../calc";
-import { isSecurityBuy, resolveInstrumentIsin } from "../instrument";
+import { isSecurityBuy, resolveInstrumentIsin, toDateOnly } from "../instrument";
 import { VALL_ISIN, VWCE_ISIN, type Transaction } from "../types";
 import snapshot from "../../data/vall-health.json";
 import { parseVallHealth } from "../vallHealthSnapshot";
@@ -16,8 +16,7 @@ export const simulationFees = {
 };
 
 /** A recorded purchase is not proof of an active broker savings plan. */
-export function suggestedVallShare(txs: readonly Transaction[]): number {
-  const today = new Date().toISOString().slice(0,10);
+export function suggestedVallShare(txs: readonly Transaction[], today = toDateOnly()): number {
   const latest = [...txs].filter(t=>!t.deletedAt && t.date<=today && isSecurityBuy(t.type)
     && Number.isFinite(t.amount) && t.amount>0 && (resolveInstrumentIsin(t)===VALL_ISIN || resolveInstrumentIsin(t)===VWCE_ISIN))
     .sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id))[0];

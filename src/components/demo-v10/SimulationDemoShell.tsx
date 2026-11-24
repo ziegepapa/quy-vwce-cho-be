@@ -33,7 +33,7 @@ export type SimulationDemoShellProps = {
   startingBalanceWarning: string;
   primary: { out: ProjectOutput; pp: number } | undefined;
   initialBalance: number;
-  etfAllocation?: { vallShare:number; setVallShare:(share:number)=>void; reset:()=>void; suggested:boolean; fees:{vwce:number;vall:number;vallAsOf:string;fallback:boolean}; sleeves:readonly ProjectionSleeve[]; overridden:boolean;ter:number };
+  etfAllocation?: { vallShare:number; setVallShare:(share:number)=>void; reset:()=>void; suggested:boolean; fees:{vwce:number;vall:number;vallAsOf:string;fallback:boolean}; sleeves:readonly ProjectionSleeve[]; missingFunds:readonly string[]; overridden:boolean;ter:number };
   shownInterest: number;
   results: { sc: Scenario; out: ProjectOutput }[];
   goalMarkers: { name: string; yearIndex: number; amount: number }[];
@@ -236,9 +236,9 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <button type="button" className="secondary" onClick={allocation.reset}>{de?"Depot übernehmen":"Theo sổ thực"}</button></div>
         <p className="sim-etf-note">{allocation.overridden?(de?"Beispiel-Startwert nach neuer Rate aufgeteilt.":"Vốn đầu kỳ giả định chia theo tỷ lệ góp mới."):(de?"Bestehende Anteile bleiben im jeweiligen ETF.":"Phần đang giữ vẫn nằm ở từng ETF, không giả định bán hay chuyển quỹ.")}</p>
         <div className="sim-etf-grid">
-          {allocation.sleeves.filter(s=>s.id==="VWCE"||s.id==="VALL"||s.initialBalance>0).map(s=><div key={s.id} className="sim-etf-row">
+          {allocation.sleeves.filter(s=>s.id==="VWCE"||s.id==="VALL"||s.initialBalance>0||(s.id==="other"&&!allocation.overridden&&allocation.missingFunds.some(id=>id!=="VWCE"&&id!=="VALL"))).map(s=><div key={s.id} className="sim-etf-row">
             <span><b>{s.id==="cash"?(de?"Bargeld":"Tiền mặt"):s.id==="other"?(de?"Weitere Anlagen":"Tài sản khác"):s.id}</b><small>{s.id==="cash"?(de?"0% Rendite":"Không sinh lãi"):percent.format(s.ter)+(s.id==="other"?(de?" · Annahme":" · giả định"):"")}</small></span>
-            <span><small>{de?"Start":"Đầu kỳ"}</small><b>{formatDisplayMoney(s.initialBalance,locale)}</b></span>
+            <span><small>{de?"Start":"Đầu kỳ"}</small><b>{!allocation.overridden&&(allocation.missingFunds.includes(s.id)||(s.id==="other"&&allocation.missingFunds.some(id=>id!=="VWCE"&&id!=="VALL")))?(de?"Kurs fehlt":"Thiếu giá"):formatDisplayMoney(s.initialBalance,locale)}</b></span>
             <span><small>{de?"Neu / Monat":"Góp mới / tháng"}</small><b>{planUnreachable?"—":formatDisplayMoney(monthlyForProject*s.contributionShare,locale)}</b></span>
           </div>)}
         </div>
@@ -252,7 +252,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         </label>
         <p className="sim-etf-note">{allocation.suggested?(de?"Vorschlag aus dem letzten erfassten ETF-Kauf (ohne Kauf: 50/50). Kein bestätigter Sparplan.":"Gợi ý theo lệnh mua ETF gần nhất trong sổ (nếu chưa có: 50/50). Không phải Sparplan đã xác nhận."):(de?"Nur Simulation; kein Auftrag und keine Änderung des Sparplans.":"Chỉ là giả định mô phỏng; không đổi Sparplan hoặc đặt lệnh.")} {de?"Gleiche Bruttorendite, eigene jährliche Fondskosten je ETF.":"Cùng giả định lợi suất trước phí, trừ phí riêng từng ETF."}</p>
         <p className="sim-etf-note">{allocation.fees.fallback?(de?"VALL-Gebühr: letzte bekannte Modellannahme.":"Phí VALL: giả định theo mức đã biết gần nhất."):`VALL · Factsheet ${allocation.fees.vallAsOf}`}.</p>
-        {primary?.out.sleeveEnds && !planUnreachable && <div className="sim-etf-end"><b>{de?"Endwert je Anteil":"Giá trị cuối kỳ từng phần"}</b>{primary.out.sleeveEnds.filter(s=>s.id==="VWCE"||s.id==="VALL"||s.terminal>0).map(s=><span key={s.id}>{s.id==="cash"?(de?"Bargeld":"Tiền mặt"):s.id==="other"?(de?"Weitere Anlagen":"Tài sản khác"):s.id}<strong>{formatDisplayMoney(s.terminal,locale)}</strong></span>)}</div>}
+        {primary?.out.sleeveEnds && !planUnreachable && <div className="sim-etf-end"><b>{de?"Endwert je Anteil (vor Inflation)":"Giá trị cuối kỳ từng phần (chưa chỉnh lạm phát)"}</b>{primary.out.sleeveEnds.filter(s=>s.id==="VWCE"||s.id==="VALL"||s.terminal>0).map(s=><span key={s.id}>{s.id==="cash"?(de?"Bargeld":"Tiền mặt"):s.id==="other"?(de?"Weitere Anlagen":"Tài sản khác"):s.id}<strong>{formatDisplayMoney(s.terminal,locale)}</strong></span>)}</div>}
       </section>}
       <section id="simulation-growth-chart" className="gl sim-chart-card" data-testid="simulation-growth-chart">
         <div className="sim-chart-heading">
@@ -313,7 +313,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         <div className="yr-table-head" role="row">
           <span role="columnheader">{text.year}</span>
           <span role="columnheader">{text.forecastNav}</span>
-          <span role="columnheader">{text.contributed}</span>
+          <span role="columnheader">{allocation?(de?"Neue Einzahlungen":"Góp tương lai"):text.contributed}</span>
         </div>
         {yearRows.map((yi) => {
           const basePt = baseMap.get(yi);
