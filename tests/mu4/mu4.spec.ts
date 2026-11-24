@@ -44,8 +44,16 @@ test("MU4 actual app two synthetic accounts, isolated reader and revocation",asy
     await p.locator("#password").fill(password);
     await p.locator("form").getByRole("button",{name:"Anmelden",exact:true}).click();
   }
+  const failures:string[]=[];
+  page.on("pageerror",e=>failures.push(e.name+": "+e.message.slice(0,200)));
+  page.on("response",r=>{const u=new URL(r.url());if(u.pathname.startsWith("/auth/v1/")||u.pathname.startsWith("/rest/v1/")) failures.push(r.request().method()+" "+u.pathname+" "+r.status());});
   await signIn(page,member.email);
-  await expect(page.getByText("Nur Lesen",{exact:true})).toBeVisible();
+  try {
+    await expect(page.getByText("Nur Lesen",{exact:true})).toBeVisible();
+  } catch(e) {
+    console.log("MU4 login diagnostics",JSON.stringify(failures),await page.locator("body").innerText());
+    throw e;
+  }
   await expect(page.getByText("Synthetischer Familienplan",{exact:true})).toBeVisible();
   await expect(page.locator(".mu4-total")).toContainText("250,00");
   await expect(page.getByRole("heading",{name:"VWCE",exact:true})).toBeVisible();
