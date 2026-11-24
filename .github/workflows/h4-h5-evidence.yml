@@ -132,7 +132,8 @@ jobs:
       - name: Apply ordered migrations from a clean local database
         run: |
           set -euo pipefail
-          supabase db reset --local --yes
+          export DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          bash scripts/h5-003-apply.sh reset
           node --input-type=module -e '
             import fs from "node:fs";
             import { createHash } from "node:crypto";
@@ -143,7 +144,7 @@ jobs:
               .update(fs.readFileSync("supabase/schema.sql")).digest("hex");
             evidence.blankInstall = {
               result: "PASS",
-              command: "supabase db reset --yes",
+              command: "local reset through 002; guard refusal; create NOLOGIN marker; local migration up to 003",
               target: "disposable-supabase-local",
               sourceCommit: process.env.SOURCE_COMMIT ?? process.env.GITHUB_SHA ?? null,
               workflowRunId: process.env.GITHUB_RUN_ID ?? null,
@@ -228,7 +229,7 @@ jobs:
           grep -q "COPY public.goals" "$RUNNER_TEMP/h5-pre002-backup.sql"
 
           # Apply the pending migration exactly as a normal local upgrade would.
-          supabase migration up --local
+          bash scripts/h5-003-apply.sh upgrade
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
           node scripts/h5-upgrade-recovery.mjs verify-upgrade
 
@@ -244,7 +245,7 @@ jobs:
           supabase db reset --local --yes --version 002
           node scripts/h5-full-seed.mjs
           node scripts/h5-003-verify-upgrade.mjs before
-          supabase migration up --local
+          bash scripts/h5-003-apply.sh upgrade
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
           node scripts/h5-003-verify-upgrade.mjs after
           node scripts/h5-restored-http.mjs
@@ -252,7 +253,7 @@ jobs:
 
       - name: H5 hosted metadata comparison (offline fixture; no hosted access)
         run: |
-          supabase db reset --local --yes
+          bash scripts/h5-003-apply.sh reset
           node scripts/h5-compare-catalog.mjs
 
       - name: H5 full local database backup and clean cluster restore

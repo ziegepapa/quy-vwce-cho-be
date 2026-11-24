@@ -12,7 +12,7 @@ mapfile -t created < <(find supabase/migrations -maxdepth 1 -name '*_h5_owner_on
 cp scripts/h5-003-owner-only-candidate.sql "${created[0]}"
 mv "${created[0]}" supabase/migrations/003_owner_only_least_privilege.sql
 cmp -s scripts/h5-003-owner-only-candidate.sql supabase/migrations/003_owner_only_least_privilege.sql
-# Cluster-level NOLOGIN marker survives local db reset, never exists on hosted by design.
-docker exec supabase_db_vwce-vault-local-h4h5 psql -U supabase_admin -d postgres -X -v ON_ERROR_STOP=1 -c 'create role h5_disposable_003_marker nologin;'
+# The reset may remove roles. Marker creation and negative guard probe now belong
+# exclusively to h5-003-apply.sh, immediately before migration up.
 node scripts/h5-migration-guard.mjs
 echo 'PASS: CLI-generated 003 candidate materialized in disposable runner only'

@@ -90,7 +90,7 @@ echo 'PASS: restored synthetic Gemini quota and cache RPC behavior; no Gemini re
 # Separate recovery onto freshly reset original disposable Supabase stack, using
 # Auth identities and all public app data from the same full archive. This is an
 # HTTP service recovery test, not a claim that all managed services were restored.
-supabase db reset --local --yes >/dev/null
+bash scripts/h5-003-apply.sh reset
 [[ "$(sp -c 'select count(*) from auth.users')" == 0 ]]
 docker exec -i "$src" pg_restore -U supabase_admin -d postgres --exit-on-error --single-transaction --data-only --disable-triggers --schema=auth --schema=public --table=users --table=identities --table=profiles --table=app_settings --table=goals --table=transactions --table=annual_checklists --table=monthly_snapshots < "$tmp/database.dump" > "$tmp/http-restore.log" 2>&1 || { echo 'FAIL: service recovery data restore (private log withheld)'; exit 1; }
 for table in auth.users auth.identities public.profiles public.app_settings public.goals public.transactions public.annual_checklists public.monthly_snapshots; do
