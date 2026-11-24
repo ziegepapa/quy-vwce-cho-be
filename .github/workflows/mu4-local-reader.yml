@@ -1,0 +1,73 @@
+name: MU4 Local Read Only
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/App.tsx'
+      - 'src/components/LocalSharingGate.tsx'
+      - 'src/components/SharedMemberVault.tsx'
+      - 'src/lib/mu4SharedReader.ts'
+      - 'src/styles/mu4-shared.css'
+      - 'tests/mu4/**'
+      - 'playwright.mu4.config.ts'
+      - 'scripts/mu2-*'
+      - 'scripts/h5-003-*'
+      - '.github/workflows/mu4-local-reader.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local:
+    name: MU4 local Auth + full app (PG17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.119.0
+      - run: npm ci
+      - name: Start disposable H5 and MU2 baseline
+        run: |
+          set -euo pipefail
+          node scripts/h5-migration-guard.mjs
+          sed -i 's/^major_version = 15$/major_version = 17/' supabase/config.toml
+          supabase start -x studio,imgproxy,logflare,vector,supavisor
+          bash scripts/h5-materialize-003.sh
+          bash scripts/h5-003-apply.sh reset
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
+          src=supabase_db_vwce-vault-local-h4h5
+          sp() { docker exec -i "$src" psql -U supabase_admin -d postgres -X -v ON_ERROR_STOP=1 "$@"; }
+          sp -c 'create role mu2_disposable_marker nologin'
+          sp < scripts/mu2-membership-candidate.sql
+          sp < scripts/mu2-catalog-check.sql
+          test "$(psql "$DB_URL" -XAt -c "select current_setting('server_version_num')::int/10000")" = 17
+      - name: Actual app and synthetic two-account RLS test
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          test "$API_URL" = http://127.0.0.1:54321
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+          export SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          export VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" VITE_MU3_LOCAL_REHEARSAL=true
+          docker run --rm --network host -v "$PWD:/work" -w /work -e CI=true -e SUPABASE_URL -e SUPABASE_ANON_KEY -e SUPABASE_SERVICE_ROLE_KEY -e VITE_SUPABASE_URL -e VITE_SUPABASE_ANON_KEY -e VITE_MU3_LOCAL_REHEARSAL mcr.microsoft.com/playwright:v1.65.1-jammy npx playwright test --config playwright.mu4.config.ts | tee mu4-test.log
+          grep -F 'PASS owner normal app mounts after member logout; owner three transactions preserved' mu4-test.log
+      - name: Upload synthetic UI evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mu4-evidence-${{ github.run_id }}
+          path: |
+            test-results/**/mu4-member-*.png
+            mu4-test.log
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop disposable Supabase
+        if: always()
+        run: supabase stop --no-backup
