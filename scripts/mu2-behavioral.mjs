@@ -57,8 +57,34 @@ async function identity(label) {
   return { id: created.data.user.id, token: login.data.session.access_token, client };
 }
 function sqlFile(path) {
-  execFileSync("docker", ["exec","-i","supabase_db_vwce-vault-local-h4h5","psql","-U","supabase_admin","-d","postgres","-X","-v","ON_ERROR_STOP=1"],
-    { input: readFileSync(path), stdio: ["pipe","ignore","pipe"] });
+  try {
+    execFileSync("docker", ["exec","-i","supabase_db_vwce-vault-local-h4h5","psql","-U","supabase_admin","-d","postgres","-X","-v","ON_ERROR_STOP=1"],
+      { input: readFileSync(path), stdio: ["pipe","ignore","pipe"] });
+  } catch (error) {
+    // SQL runs only against synthetic local fixtures; omit raw rows/detail and credentials.
+    const line = String(error.stderr ?? "").split("\n").find(l => /ERROR:/.test(l));
+    console.error("SQL candidate failure in " + path + ": " + (line?.slice(0, 240) ?? "no SQL error line"));
+    throw new Error("local SQL execution failed");
+  }
+}
+async function waitForMembershipApi() {
+  for (let i = 0; i < 30; i++) {
+    const r = await request(service, "vault_memberships", { filter: { limit: "1" } });
+    if (r.status === 200 && Array.isArray(r.data)) { record("PostgREST membership schema cache ready"); return; }
+    if (r.data?.code !== "PGRST205" && r.data?.code !== "42P01") {
+      throw new Error("unexpected membership API readiness response: HTTP " + r.status);
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  throw new Error("membership schema cache not ready");
+}
+async function ownerCrud(owner, phase) {
+  for (const table of tables) {
+    const id = rowId + "-" + phase.replaceAll(" ", "-");
+    rows(await request(owner.token, table, { method: "POST", body: payload(owner, id) }), 1, phase + " owner " + table + " INSERT");
+    rows(await request(owner.token, table, { method: "PATCH", filter: scope(owner, id), body: { data: { id, edited: true } } }), 1, phase + " owner " + table + " UPDATE");
+    rows(await request(owner.token, table, { method: "DELETE", filter: scope(owner, id) }), 1, phase + " owner " + table + " DELETE");
+  }
 }
 const tables = ["app_settings","goals","transactions","annual_checklists","monthly_snapshots"];
 const rowId = "mu2-" + stamp;
@@ -96,6 +122,9 @@ try {
   }
   sqlFile("scripts/mu2-membership-candidate.sql");
   record("guarded MU2 applied after H5 003 and existing owner rows");
+  sqlFile("scripts/mu2-catalog-check.sql");
+  record("MU2 catalog, RLS and least-privilege grants verified");
+  await waitForMembershipApi();
   await unchanged(owner, "upgrade");
   for (const table of tables) {
     rows(await request(member.token, table, { filter: scope(owner) }), 0, "unrelated " + table + " denied");
@@ -123,6 +152,7 @@ try {
   denied(await request(member.token, "vault_memberships", { method: "DELETE", filter: ms }), "member cannot delete membership");
   await verifyMemberDenied(owner, member, "active");
   await unchanged(owner, "after member attacks");
+  await ownerCrud(owner, "active member");
   rows(await request(member.token, "transactions", { method: "POST", body: payload(member) }), 1, "member retains own independent vault");
   rows(await request(owner.token, "transactions", { filter: scope(member) }), 0, "sharing not reciprocal");
 
@@ -143,6 +173,7 @@ try {
   await verifyMemberDenied(owner, member, "revoked same JWT");
   denied(await request(member.token, "vault_memberships", { method: "PATCH", filter: ms, body: { status: "active" } }), "revoked member cannot reactivate");
   await unchanged(owner, "after revoke");
+  await ownerCrud(owner, "revoked member");
   // Trusted reactivation is fixture-only; prove rollback removes active access.
   rows(await request(service, "vault_memberships", { method: "PATCH", filter: ms, body: { status: "active", activated_at: new Date().toISOString(), revoked_at: null } }), 1, "trusted synthetic reactivation");
   rows(await request(member.token, "transactions", { filter: scope(owner) }), 1, "member access before rollback");
@@ -160,7 +191,7 @@ try {
   evidence.result = "PASS";
 } catch (error) {
   // Only assertion labels; do not print credentials, raw responses or SQL error content.
-  const name = error?.code === "ERR_ASSERTION" ? error.message : "local runner/SQL failure (inspect workflow step)";
+  const name = error?.code === "ERR_ASSERTION" ? error.message : (error?.message?.startsWith("membership schema cache") || error?.message?.startsWith("unexpected membership API") ? error.message : "local runner/SQL failure (inspect workflow step)");
   cases.push({ name, status: "FAIL" });
   console.error("FAIL: " + name);
   process.exitCode = 1;
