@@ -54,6 +54,7 @@ import "../styles/settings-horizon.css";
 import "../styles/settings-clarity.css";
 
 const VallHealthPanel = lazy(() => import("../components/VallHealthPanel"));
+const LocalMemberManagement = lazy(() => import("../components/LocalMemberManagement"));
 
 const SETTINGS_AUTOSAVE_MS = 650;
 type SettingsChildView = "password" | "mfa" | "diagnostics" | "backup" | "restore" | null;
@@ -922,6 +923,7 @@ export default function SettingsPage({
             {deleteConfirmation}
           </>}
         />
+        {import.meta.env.VITE_MU3_LOCAL_REHEARSAL === "true" && import.meta.env.VITE_SUPABASE_URL === "http://127.0.0.1:54321" && auth.session && auth.vaultReady && !readOnly ? <Suspense fallback={null}><LocalMemberManagement key={auth.session.user.id} ownerId={auth.session.user.id} token={auth.session.access_token} locale={locale}/></Suspense> : null}
         {settingsChild ? (
           <div className="settings-child-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSettingsChild(); }}>
             <section className="settings-child-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-child-title">
@@ -1080,6 +1082,7 @@ export default function SettingsPage({
         />
       ) : null}
 
+      {import.meta.env.VITE_MU3_LOCAL_REHEARSAL === "true" && import.meta.env.VITE_SUPABASE_URL === "http://127.0.0.1:54321" && auth.session && auth.vaultReady && !readOnly ? <Suspense fallback={null}><LocalMemberManagement key={auth.session.user.id} ownerId={auth.session.user.id} token={auth.session.access_token} locale={locale}/></Suspense> : null}
       <section className="set-atelier-cluster set-security-cluster" aria-label={text.security}>
       <header className="set-section-head"><span>{text.security}</span><small>{text.securitySubtitle}</small></header>
       <section className="set-group">
