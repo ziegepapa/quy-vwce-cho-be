@@ -37,11 +37,12 @@ export default function SharedMemberVault({session,ownerId,locale,onLogout}: {se
       if(!navigator.onLine||document.visibilityState==="hidden")return;
       setState("loading");
       const current=++generation.current;
-      controller=new AbortController();
-      const deadline=setTimeout(()=>controller?.abort(),12000);
+      const requestController=new AbortController();
+      controller=requestController;
+      const deadline=setTimeout(()=>requestController.abort(),12000);
       try {
-        const snapshot=await readSharedSnapshot(session,ownerId,controller.signal);
-        if(!alive||current!==generation.current||controller.signal.aborted)return;
+        const snapshot=await readSharedSnapshot(session,ownerId,requestController.signal);
+        if(!alive||current!==generation.current||requestController.signal.aborted)return;
         setData(snapshot);setState("ready");
       }catch{if(alive&&current===generation.current){setData(null);setState("locked");}}
       finally{clearTimeout(deadline);if(alive&&current===generation.current)timer=setTimeout(()=>void load(),5000);}
