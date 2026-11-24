@@ -67,7 +67,9 @@ Deno.serve(async (req: Request) => {
       const rows = await scopedRows(token, u.id);
       if (!Array.isArray(rows) || rows.length > 20) throw new Rejection(503);
       const members = await Promise.all(rows.map(async row => {
-        const user = await admin("/auth/v1/admin/users/" + row.member_user_id) as Identity;
+        const response = await admin("/auth/v1/admin/users/" + row.member_user_id);
+        const user = (response.user ?? response) as Identity;
+        if (user.id !== row.member_user_id) throw new Rejection(503);
         const name = user.user_metadata?.display_name;
         return { id: row.member_user_id, email: user.email ?? "", name: typeof name === "string" ? name.slice(0, 120) : "", role: row.role, status: row.status };
       }));
@@ -83,8 +85,14 @@ Deno.serve(async (req: Request) => {
       // Real enrollment (including external email transport and acceptance) is a separate gate.
       const result = await admin("/auth/v1/admin/users?page=1&per_page=100");
       if (!Array.isArray(result.users) || result.users.length >= 100) throw new Rejection(503);
-      const target = result.users.find((item: Identity) => item.email && normalizedEmail(item.email) === email) as Identity | undefined;
-      if (!target || !target.email_confirmed_at || !uuid.test(target.id) || target.id === u.id) return reply({ ok: false }, 400);
+      let target = result.users.find((item: Identity) => item.email && normalizedEmail(item.email) === email) as Identity | undefined;
+      if (!target) {
+        // Auth Admin generateLink(type=invite) creates the invited identity
+        // without delivering mail. Discard every link/token; never expose them.
+        const generated = await admin("/auth/v1/admin/generate_link", { method: "POST", body: JSON.stringify({ type: "invite", email }) });
+        target = (generated.user ?? generated) as Identity;
+      }
+      if (!target || !target.email || normalizedEmail(target.email) !== email || !uuid.test(target.id) || target.id === u.id) return reply({ ok: false }, 400);
       if (rows.some(row => row.member_user_id === target.id)) return reply({ ok: false }, 409);
       // Never accept a role or status from the browser. No activation/email.
       await admin(table, { method: "POST", body: JSON.stringify({ owner_user_id: u.id, member_user_id: target.id, role: "member", status: "invited" }) });
