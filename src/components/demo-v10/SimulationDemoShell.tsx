@@ -2,7 +2,7 @@ import { useState } from "react";
 import ExitPlanSection from "../ExitPlanSection";
 import GeminiVaultExplainer from "../GeminiVaultExplainer";
 import type { GeminiFacts } from "../../lib/geminiVaultFacts";
-import type { Mode, ProjectOutput, Scenario } from "../../lib/simulation/engine";
+import type { Mode, ProjectOutput, Scenario, ProjectionSleeve } from "../../lib/simulation/engine";
 import type { Goal } from "../../lib/types";
 import { DEFAULT_TER, MAX_YEARS } from "../../lib/simulation/engine";
 import { SimulationDemoChart } from "./SimulationDemoChart";
@@ -33,6 +33,7 @@ export type SimulationDemoShellProps = {
   startingBalanceWarning: string;
   primary: { out: ProjectOutput; pp: number } | undefined;
   initialBalance: number;
+  etfAllocation?: { vallShare:number; setVallShare:(share:number)=>void; reset:()=>void; suggested:boolean; fees:{vwce:number;vall:number;vallAsOf:string;fallback:boolean}; sleeves:readonly ProjectionSleeve[]; overridden:boolean;ter:number };
   shownInterest: number;
   results: { sc: Scenario; out: ProjectOutput }[];
   goalMarkers: { name: string; yearIndex: number; amount: number }[];
@@ -127,6 +128,10 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
     confirmPersist,
   } = p;
   const text = simulationCopy(locale);
+  const allocation = p.etfAllocation;
+  const de = locale === "de";
+  const capitalLabel = allocation ? (de ? "Modellkapital" : "Vốn mô phỏng") : text.contributed;
+  const chartResults = allocation ? results.map(r=>({...r,out:{...r.out,yearEnds:r.out.yearEnds.map(pt=>({...pt,contributed:pt.contributed+initialBalance}))}})) : results;
   const displayLocale = locale === "de" ? "de-DE" : "vi-VN";
   const percent = new Intl.NumberFormat(displayLocale, { style: "percent", maximumFractionDigits: 2 });
   const modeledEndValue = primary && !planUnreachable ? formatMoneyRounded(primary.out.terminal, locale) : "—";
@@ -214,7 +219,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           <div><dt>{locale === "de" ? "Monatsbeitrag" : "Góp mỗi tháng"}</dt><dd>{planUnreachable ? "—" : formatMoneyRounded(monthlyForProject, locale)}</dd></div>
           <div><dt>{text.duration}</dt><dd>{yearsForProject} {text.years}</dd></div>
           <div><dt>{locale === "de" ? "Rendite / Jahr" : "Lợi suất / năm"}</dt><dd>{percent.format(baseRate)}</dd></div>
-          <div><dt>{locale === "de" ? "TER / Jahr" : "TER / năm"}</dt><dd>{percent.format(DEFAULT_TER)}</dd></div>
+          <div><dt>{allocation ? (de ? "TER neue Rate" : "Phí góp mới") : (de ? "TER / Jahr" : "TER / năm")}</dt><dd>{percent.format(allocation?.ter ?? DEFAULT_TER)}</dd></div>
         </dl>
         <div className="sim-hero-actions">
           <button type="button" className={mode === "A" ? "sim-parameters-trigger mwj-sim-float-button" : "sim-parameters-trigger"} aria-label={text.adjust} aria-haspopup="dialog" onClick={() => setParamsOpen(true)}>
@@ -226,13 +231,36 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
       {targetUnreachable ? <p className="sh-note sim-valuation-warning" role="status">{text.targetUnreachable}</p> : null}
       {startingBalanceWarning ? <p className="sh-note sim-valuation-warning" role="status">{startingBalanceWarning}</p> : null}
 
+      {allocation && <section className="gl sim-etf-allocation" data-testid="simulation-etf-allocation" aria-label={de?"ETF-Aufteilung":"Phân bổ ETF"}>
+        <div className="sim-etf-title"><h2>{de?"Zwei ETFs · ein Plan":"Hai ETF · một kế hoạch"}</h2>
+          <button type="button" className="secondary" onClick={allocation.reset}>{de?"Depot übernehmen":"Theo sổ thực"}</button></div>
+        <p className="sim-etf-note">{allocation.overridden?(de?"Beispiel-Startwert nach neuer Rate aufgeteilt.":"Vốn đầu kỳ giả định chia theo tỷ lệ góp mới."):(de?"Bestehende Anteile bleiben im jeweiligen ETF.":"Phần đang giữ vẫn nằm ở từng ETF, không giả định bán hay chuyển quỹ.")}</p>
+        <div className="sim-etf-grid">
+          {allocation.sleeves.filter(s=>s.id==="VWCE"||s.id==="VALL"||s.initialBalance>0).map(s=><div key={s.id} className="sim-etf-row">
+            <span><b>{s.id==="cash"?(de?"Bargeld":"Tiền mặt"):s.id==="other"?(de?"Weitere Anlagen":"Tài sản khác"):s.id}</b><small>{s.id==="cash"?(de?"0% Rendite":"Không sinh lãi"):percent.format(s.ter)+(s.id==="other"?(de?" · Annahme":" · giả định"):"")}</small></span>
+            <span><small>{de?"Start":"Đầu kỳ"}</small><b>{formatDisplayMoney(s.initialBalance,locale)}</b></span>
+            <span><small>{de?"Neu / Monat":"Góp mới / tháng"}</small><b>{planUnreachable?"—":formatDisplayMoney(monthlyForProject*s.contributionShare,locale)}</b></span>
+          </div>)}
+        </div>
+        <div className="sim-etf-bar" aria-hidden="true"><span style={{width:`${(1-allocation.vallShare)*100}%`}}/><span style={{width:`${allocation.vallShare*100}%`}}/></div>
+        <div className="sim-etf-ratio"><span>VWCE {percent.format(1-allocation.vallShare)}</span><span>VALL {percent.format(allocation.vallShare)}</span></div>
+        <div className="sim-etf-options" role="group" aria-label={de?"Neue Beiträge aufteilen":"Phân bổ góp mới"}>
+          {[[0,"VWCE"],[0.5,"50 / 50"],[1,"VALL"]].map(([share,label])=><button type="button" key={label} className="secondary" aria-pressed={allocation.vallShare===share} onClick={()=>allocation.setVallShare(Number(share))}>{label}</button>)}
+        </div>
+        <label className="sim-etf-slider">{de?"VALL-Anteil neuer Beiträge":"Tỷ lệ VALL của vốn góp mới"}
+          <input type="range" min="0" max="100" step="1" value={Math.round(allocation.vallShare*100)} onChange={e=>allocation.setVallShare(Number(e.target.value)/100)}/>
+        </label>
+        <p className="sim-etf-note">{allocation.suggested?(de?"Vorschlag aus dem letzten erfassten ETF-Kauf (ohne Kauf: 50/50). Kein bestätigter Sparplan.":"Gợi ý theo lệnh mua ETF gần nhất trong sổ (nếu chưa có: 50/50). Không phải Sparplan đã xác nhận."):(de?"Nur Simulation; kein Auftrag und keine Änderung des Sparplans.":"Chỉ là giả định mô phỏng; không đổi Sparplan hoặc đặt lệnh.")} {de?"Gleiche Bruttorendite, eigene jährliche Fondskosten je ETF.":"Cùng giả định lợi suất trước phí, trừ phí riêng từng ETF."}</p>
+        <p className="sim-etf-note">{allocation.fees.fallback?(de?"VALL-Gebühr: letzte bekannte Modellannahme.":"Phí VALL: giả định theo mức đã biết gần nhất."):`VALL · Factsheet ${allocation.fees.vallAsOf}`}.</p>
+        {primary?.out.sleeveEnds && !planUnreachable && <div className="sim-etf-end"><b>{de?"Endwert je Anteil":"Giá trị cuối kỳ từng phần"}</b>{primary.out.sleeveEnds.filter(s=>s.id==="VWCE"||s.id==="VALL"||s.terminal>0).map(s=><span key={s.id}>{s.id==="cash"?(de?"Bargeld":"Tiền mặt"):s.id==="other"?(de?"Weitere Anlagen":"Tài sản khác"):s.id}<strong>{formatDisplayMoney(s.terminal,locale)}</strong></span>)}</div>}
+      </section>}
       <section id="simulation-growth-chart" className="gl sim-chart-card" data-testid="simulation-growth-chart">
         <div className="sim-chart-heading">
           <h2 className="sim-chart-title">{text.chart}</h2>
           <span className="sim-live-tag">{text.baseScenario}</span>
         </div>
         <SimulationDemoChart
-          results={results}
+          results={chartResults}
           markers={goalMarkers}
           years={yearsForProject}
           band={band}
@@ -240,7 +268,7 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
           locale={locale}
         />
         <div className="chart-legend">
-          <span><i style={{ background: "var(--primary-600)" }} /> {text.contributed}</span>
+          <span><i style={{ background: "var(--primary-600)" }} /> {capitalLabel}</span>
           <span><i style={{ background: "var(--success-600)" }} /> {text.forecast}</span>
         </div>
       </section>
@@ -249,9 +277,10 @@ export default function SimulationDemoShell(p: SimulationDemoShellProps) {
         <h2 id="sim-results-title">{text.summary}</h2>
         <dl className="summary-strip">
           <div><dt>{text.end}</dt><dd><strong>{mode === "A" && inflationOn && showPP && primary && !planUnreachable ? formatMoneyRounded(primary.pp, locale) : modeledEndValue}</strong></dd></div>
-          <div><dt>{text.contributed}</dt><dd><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong></dd></div>
+          <div><dt>{capitalLabel}</dt><dd><strong>{primary && !planUnreachable ? formatMoneyRounded(primary.out.contributed + initialBalance, locale) : "—"}</strong></dd></div>
           <div><dt>{text.gain}</dt><dd><strong className={shownInterest < -0.005 ? "loss" : "gain"}>{primary && !planUnreachable ? formatMoneyRounded(shownInterest, locale) : "—"}</strong></dd></div>
         </dl>
+        {allocation && <p className="sim-etf-note">{de?"Modellkapital = heutiger Startwert + künftige Einzahlungen. Gewinn/Verlust ab heute, nicht historische Depot-Rendite.":"Vốn mô phỏng = giá trị đầu kỳ + khoản góp tương lai. Lãi/lỗ tính từ hôm nay, không phải lãi/lỗ lịch sử."}</p>}
       </section>
 
       <ExitPlanSection goals={goals} locale={locale} actualBalance={exitPlanActualBalance} actualMonthly={exitPlanActualMonthly} />

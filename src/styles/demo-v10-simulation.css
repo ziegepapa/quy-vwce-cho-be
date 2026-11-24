@@ -1240,3 +1240,25 @@
 .sim-wrap .sim-results { padding: 14px; border: 1px solid var(--border-subtle); border-radius: 18px; background: var(--mwj-card); }
 .sim-results h2 { margin: 0 0 10px; font: 600 20px/1.15 var(--mwj-display); }
 .sim-results .summary-strip > div { min-width: 0; padding: 9px; border-radius: 10px; background: var(--surface-raised); }
+
+/* Two-ETF simulation: theme-native, compact and safe on narrow phones. */
+.sim-wrap .sim-etf-allocation { padding: 16px; display: grid; gap: 12px; }
+.sim-etf-title {display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.sim-etf-title h2 {font-size:1.05rem;margin:0;}
+.sim-etf-title button {font-size:.8rem;min-height:44px;}
+.sim-etf-note {font-size:.78rem;line-height:1.5;margin:0;opacity:.85;}
+.sim-etf-grid {display:grid;gap:8px;}
+.sim-etf-row {display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1.2fr);gap:6px;padding:10px 0;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent);}
+.sim-etf-row span {display:grid;gap:3px;min-width:0;font-size:.82rem;overflow-wrap:anywhere;}
+.sim-etf-row span:not(:first-child) {text-align:right;}
+.sim-etf-row small {font-size:.68rem;opacity:.8;}
+.sim-etf-bar {display:flex;height:9px;border-radius:99px;overflow:hidden;background:var(--primary-600);}
+.sim-etf-bar span:first-child {background:var(--primary-600);}
+.sim-etf-bar span:last-child {background:var(--success-600);}
+.sim-etf-ratio,.sim-etf-end span {display:flex;justify-content:space-between;gap:8px;font-size:.82rem;}
+.sim-etf-options {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+.sim-etf-options button {min-height:44px;padding:6px;}
+.sim-etf-options button[aria-pressed=true] {background:var(--primary-600);color:white;}
+.sim-etf-slider {display:grid;gap:4px;font-size:.78rem;}
+.sim-etf-slider input {width:100%;min-height:44px;accent-color:var(--primary-600);}
+.sim-etf-end {display:grid;gap:8px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);padding-top:10px;font-size:.83rem;}

@@ -22,13 +22,18 @@ export type ProjectInput = {
   lumpSum: number;
   annualContributionGrowth: number;
   ter: number;
+  /** Optional independently compounded sleeves; weights apply to new money only. */
+  sleeves?: readonly ProjectionSleeve[];
 };
+
+export type ProjectionSleeve = { id: string; initialBalance: number; contributionShare: number; ter: number; cash?: boolean };
 
 export type ProjectOutput = {
   yearEnds: YearPoint[];
   terminal: number;
   contributed: number;
   interest: number;
+  sleeveEnds?: { id: string; terminal: number }[];
 };
 
 export const TAX_RATE = 0.26375;
@@ -40,6 +45,22 @@ export const DEFAULT_TER = 0.0014;
 export const MAX_YEARS = 40;
 
 export function projectEnd(input: ProjectInput): ProjectOutput {
+  if (input.sleeves?.length) {
+    const sleeves = input.sleeves;
+    // Reuse the existing annual fee/monthly contribution convention for each sleeve.
+    const outputs = sleeves.map(s => projectEnd({ ...input, sleeves: undefined,
+      initialBalance: s.initialBalance, lumpSum: Math.max(0,input.lumpSum)*s.contributionShare,
+      monthlyContribution: Math.max(0,input.monthlyContribution)*s.contributionShare,
+      annualReturn: s.cash ? 0 : input.annualReturn, ter: s.ter,
+    }));
+    const sum = (values: number[]) => round2(values.reduce((a,b)=>a+b,0));
+    const terminal = sum(outputs.map(o=>o.terminal));
+    const contributed = sum(outputs.map(o=>o.contributed));
+    return {terminal,contributed,interest:round2(terminal-contributed-input.initialBalance),
+      yearEnds:outputs[0].yearEnds.map((p,i)=>({yearIndex:p.yearIndex,total:sum(outputs.map(o=>o.yearEnds[i].total)),contributed:sum(outputs.map(o=>o.yearEnds[i].contributed))})),
+      sleeveEnds:sleeves.map((s,i)=>({id:s.id,terminal:outputs[i].terminal})),
+    };
+  }
   const years = Math.max(0, Math.min(MAX_YEARS, Math.floor(input.years)));
   const months = years * 12;
   const rMonth =

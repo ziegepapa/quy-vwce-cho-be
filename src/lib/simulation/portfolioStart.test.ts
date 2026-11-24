@@ -27,6 +27,8 @@ describe("buildSimulationStartValue", () => {
       nowDate: DATE,
     });
     expect(result.balance).toBe(350);
+    expect(result.valuesByIsin).toEqual({[VWCE_ISIN]:200,[VALL_ISIN]:150});
+    expect(result.cash).toBe(0);
     expect(result.missingIsins).toEqual([]);
     expect(result.valuationStatus).toBe("fresh");
   });
@@ -39,6 +41,7 @@ describe("buildSimulationStartValue", () => {
     });
     expect(result.balance).toBe(200);
     expect(result.missingIsins).toEqual([VALL_ISIN]);
+    expect(result.valuesByIsin[VALL_ISIN]).toBeNull();
     expect(result.valuationStatus).toBe("missing");
   });
 

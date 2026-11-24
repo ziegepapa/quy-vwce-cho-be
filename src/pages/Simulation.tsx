@@ -6,9 +6,9 @@ import {
 } from "../lib/calc";
 import { getSettings, listGoals, listQuotes, listTransactions, saveSettings } from "../lib/db";
 import { buildSimulationStartValue } from "../lib/simulation/portfolioStart";
+import { buildEtfSleeves, simulationFees, suggestedVallShare } from "../lib/simulation/etfAllocation";
 import { VALL_ISIN, VWCE_ISIN } from "../lib/types";
 import {
-  DEFAULT_TER,
   MAX_YEARS,
   clamp,
   findMonthlyForTarget,
@@ -37,11 +37,11 @@ function simulationPageCopy(locale: "vi" | "de") {
   return locale === "de" ? {
     cautious: "Vorsichtig", base: "Basis", bull: "Günstig", heroEstimateUnadjusted: "Schätzung · ohne deutsche Steuern · ohne Inflationsanpassung", heroEstimateAdjusted: "Schätzung · ohne deutsche Steuern · in heutiger Kaufkraft",
     missingPrices: (funds: string) => `Startwert unvollständig: Für ${funds} fehlt ein verwendbarer Kurs; der nicht bewertete Anteil ist nicht enthalten.`,
-    stalePrices: (funds: string) => `Veraltete Kurse für ${funds}; die Projektion nutzt den letzten verfügbaren Stand.`, setYearOne: (value: string) => `Jahr 1 wurde auf ${value} gesetzt`, setFromYearTwo: (value: string) => `Beitrag ab Jahr 2 wurde auf ${value} gesetzt`, setReturn: (value: string) => `VWCE-Rendite wurde auf ${value} gesetzt`, yearOne: (value: string) => `Jahr 1 = ${value}`, fromYearTwo: (value: string) => `Beitrag ab Jahr 2 = ${value}`, return: (value: string) => `VWCE-Rendite = ${value}`, savedChanges: (count: number) => `${count} Änderungen wurden gespeichert`, noSelection: "Keine Auswahl", saveOne: "1 Änderung speichern", saveMany: (count: number) => `${count} Änderungen speichern`, range: "Bandbreite", inflation: (value: string) => `Inflation ${value}%`, contributionGrowth: (value: string) => `Beitrag ${value}% / Jahr`, terFee: (value: string) => `TER ${value}%/Jahr`, advanced: (parts: string) => `Erweiterte Optionen · ${parts}`,
+    stalePrices: (funds: string) => `Veraltete Kurse für ${funds}; die Projektion nutzt den letzten verfügbaren Stand.`, setYearOne: (value: string) => `Jahr 1 wurde auf ${value} gesetzt`, setFromYearTwo: (value: string) => `Beitrag ab Jahr 2 wurde auf ${value} gesetzt`, setReturn: (value: string) => `VWCE-Rendite wurde auf ${value} gesetzt`, yearOne: (value: string) => `Jahr 1 = ${value}`, fromYearTwo: (value: string) => `Beitrag ab Jahr 2 = ${value}`, return: (value: string) => `VWCE-Rendite = ${value}`, savedChanges: (count: number) => `${count} Änderungen wurden gespeichert`, noSelection: "Keine Auswahl", saveOne: "1 Änderung speichern", saveMany: (count: number) => `${count} Änderungen speichern`, range: "Bandbreite", inflation: (value: string) => `Inflation ${value}%`, contributionGrowth: (value: string) => `Beitrag ${value}% / Jahr`, terFee: (value: string) => `TER neue Beiträge ${value}%/Jahr`, advanced: (parts: string) => `Erweiterte Optionen · ${parts}`,
   } : {
     cautious: "Thận trọng", base: "Cơ sở", bull: "Thuận lợi", heroEstimateUnadjusted: "Ước tính · chưa tính thuế · chưa chỉnh lạm phát", heroEstimateAdjusted: "Ước tính · chưa tính thuế · theo sức mua hôm nay",
     missingPrices: (funds: string) => `Giá trị đầu kỳ chưa đầy đủ: ${funds} chưa có giá dùng được; phần chưa định giá không được tính vào số dư ban đầu.`,
-    stalePrices: (funds: string) => `Giá của ${funds} đã cũ; mô phỏng dùng mức giá gần nhất còn khả dụng.`, setYearOne: (value: string) => `Đã đặt Góp năm 1 = ${value}`, setFromYearTwo: (value: string) => `Đã đặt Góp từ năm 2 = ${value}`, setReturn: (value: string) => `Đã đặt Lợi nhuận VWCE = ${value}`, yearOne: (value: string) => `Góp năm 1 = ${value}`, fromYearTwo: (value: string) => `Góp từ năm 2 = ${value}`, return: (value: string) => `Lợi nhuận VWCE = ${value}`, savedChanges: (count: number) => `Đã lưu ${count} thay đổi`, noSelection: "Chưa chọn gì", saveOne: "Lưu 1 thay đổi", saveMany: (count: number) => `Lưu ${count} thay đổi`, range: "biên độ", inflation: (value: string) => `lạm phát ${value}%`, contributionGrowth: (value: string) => `góp ${value}%/năm`, terFee: (value: string) => `phí ${value}%/năm`, advanced: (parts: string) => `Tùy chọn nâng cao · ${parts}`,
+    stalePrices: (funds: string) => `Giá của ${funds} đã cũ; mô phỏng dùng mức giá gần nhất còn khả dụng.`, setYearOne: (value: string) => `Đã đặt Góp năm 1 = ${value}`, setFromYearTwo: (value: string) => `Đã đặt Góp từ năm 2 = ${value}`, setReturn: (value: string) => `Đã đặt Lợi nhuận VWCE = ${value}`, yearOne: (value: string) => `Góp năm 1 = ${value}`, fromYearTwo: (value: string) => `Góp từ năm 2 = ${value}`, return: (value: string) => `Lợi nhuận VWCE = ${value}`, savedChanges: (count: number) => `Đã lưu ${count} thay đổi`, noSelection: "Chưa chọn gì", saveOne: "Lưu 1 thay đổi", saveMany: (count: number) => `Lưu ${count} thay đổi`, range: "biên độ", inflation: (value: string) => `lạm phát ${value}%`, contributionGrowth: (value: string) => `góp ${value}%/năm`, terFee: (value: string) => `phí vốn góp mới ${value}%/năm`, advanced: (parts: string) => `Tùy chọn nâng cao · ${parts}`,
   };
 }
 
@@ -62,6 +62,7 @@ export default function Simulation() {
   const [growthPct, setGrowthPct] = useState("2");
   const [lumpSum, setLumpSum] = useState("0");
   const [balanceOverride, setBalanceOverride] = useState("");
+  const [allocationOverride, setAllocationOverride] = useState<number | null>(null);
   const [rateInput, setRateInput] = useState("5");
   const [bandInput, setBandInput] = useState("2");
   const [inflationOn, setInflationOn] = useState(true);
@@ -132,8 +133,12 @@ export default function Simulation() {
   const lumpN = Math.max(0, parseDecimal(lumpSum));
   const inflationN = inflationOn ? Math.max(0, parseDecimal(inflationPct) / 100) : 0;
   const targetN = Math.max(0, parseDecimal(targetAmount));
-  // TER remains a disclosed simulation assumption. Tax calculation is not part of the production path.
-  const ter = DEFAULT_TER;
+  // The last recorded ETF buy is a starting suggestion, not a broker Sparplan.
+  const suggestedShare = useMemo(()=>suggestedVallShare(txs),[txs]);
+  const vallShare = allocationOverride ?? suggestedShare;
+  const fees = simulationFees;
+  const ter = fees.vwce*(1-vallShare)+fees.vall*vallShare;
+  const sleeves = useMemo(()=>buildEtfSleeves(startValue,initialBalance,balanceOverride.trim()!=="",vallShare,fees),[startValue,initialBalance,balanceOverride,vallShare,fees]);
 
   // Permit negative nominal returns so the cautious scenario can model drawdowns.
   const baseRate = clamp(parseDecimal(rateInput) / 100, -0.5, 0.5);
@@ -155,8 +160,8 @@ export default function Simulation() {
   const effectiveYears = mode === "B" ? yearsB : years;
 
   const baseCommon = useMemo(
-    () => ({ initialBalance, lumpSum: lumpN, annualContributionGrowth: growthN, ter }),
-    [initialBalance, lumpN, growthN, ter],
+    () => ({ initialBalance, lumpSum: lumpN, annualContributionGrowth: growthN, ter, sleeves }),
+    [initialBalance, lumpN, growthN, ter, sleeves],
   );
 
   const requiredMonthlyBase = useMemo(() => {
@@ -477,6 +482,7 @@ export default function Simulation() {
       startingBalanceWarning={startingBalanceWarning}
       primary={primary}
       initialBalance={initialBalance}
+      etfAllocation={{vallShare,setVallShare:setAllocationOverride,reset:()=>{setAllocationOverride(null);setBalanceOverride("");},suggested:allocationOverride===null,fees,sleeves,overridden:balanceOverride.trim()!=="",ter}}
       shownInterest={shownInterest}
       results={results}
       goalMarkers={goalMarkers}

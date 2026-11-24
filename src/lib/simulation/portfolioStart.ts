@@ -13,6 +13,9 @@ export type SimulationStartValueInput = {
 export type SimulationStartValue = {
   /** Matches Overview: valued securities plus non-negative cash assets. */
   balance: number;
+  /** Actual market values, null for held but unpriced instruments. */
+  valuesByIsin: Record<string, number | null>;
+  cash: number;
   /** Holdings whose current value is unknown because no usable quote exists. */
   missingIsins: string[];
   staleIsins: string[];
@@ -28,6 +31,8 @@ export function buildSimulationStartValue(input: SimulationStartValueInput): Sim
   const snapshot = buildTodayCenterPortfolioSnapshot(input);
   return {
     balance: round2(snapshot.market.securities + Math.max(0, snapshot.portfolio.cashBalance)),
+    valuesByIsin: Object.fromEntries(Object.entries(snapshot.market.byIsin).map(([isin,row])=>[isin,row.value])),
+    cash: Math.max(0,snapshot.portfolio.cashBalance),
     missingIsins: [...snapshot.market.missingIsins],
     staleIsins: [...snapshot.stalePriceIsins],
     valuationStatus: snapshot.valuationStatus,
