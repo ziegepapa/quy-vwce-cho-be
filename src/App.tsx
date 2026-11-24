@@ -24,6 +24,8 @@ import { IconHome, IconMenu, IconSettings, IconSim, IconTimeline, IconTx } from 
 import { conflictCtaLabel, hasLogoutBlockers, openSyncConflictSection, readSyncConflictFocusToken, reconcileVisibleLogoutBlockers, type LogoutBlockerCounts } from "./components/SyncConflictSection";
 import { buildSyncHealth } from "./components/syncHealth";
 import { recordLocalDiagnostic } from "./components/localDiagnostics";
+import { localSharingEnabled } from "./lib/mu4SharedReader";
+const LocalSharingGate = lazy(() => import("./components/LocalSharingGate"));
 const Overview = lazy(() => import("./pages/Overview"));
 const Transactions = lazy(() => import("./pages/Transactions"));
 const Goals = lazy(() => import("./pages/Goals"));
@@ -165,6 +167,11 @@ async function readLogoutSafety(userId: string): Promise<LogoutSafetySnapshot> {
 }
 
 export default function App() {
+  if (localSharingEnabled) return <Suspense fallback={null}><LocalSharingGate ownerApp={<OwnerApp/>}/></Suspense>;
+  return <OwnerApp/>;
+}
+
+function OwnerApp() {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
