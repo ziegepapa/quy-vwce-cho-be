@@ -12,7 +12,7 @@ BEGIN
     IF (SELECT count(*) FROM pg_policy WHERE polrelid=rel)<>expected_count THEN RAISE EXCEPTION 'Unexpected policy count: %',t; END IF;
     FOR p IN SELECT polname,polcmd,polroles,polpermissive,pg_get_expr(polqual,polrelid) AS qual,pg_get_expr(polwithcheck,polrelid) AS check_expr FROM pg_policy WHERE polrelid=rel LOOP
       IF p.polroles<>ARRAY[(SELECT oid FROM pg_roles WHERE rolname='authenticated')] OR NOT p.polpermissive OR
-         p.polname<>t||'_'||case p.polcmd when 'r' then 'select' when 'a' then 'insert' when 'w' then 'update' when 'd' then 'delete' else 'invalid' end||'_own'
+         p.polname<>(t||'_'||(case p.polcmd when 'r' then 'select' when 'a' then 'insert' when 'w' then 'update' when 'd' then 'delete' else 'invalid' end)||'_own')
       THEN RAISE EXCEPTION 'Unexpected policy: %.%',t,p.polname; END IF;
       IF p.polcmd IN ('r','w','d') AND p.qual IS DISTINCT FROM format('(auth.uid() = %s)',key_name) THEN RAISE EXCEPTION 'Incorrect USING: %.%',t,p.polname; END IF;
       IF p.polcmd IN ('a','w') AND p.check_expr IS DISTINCT FROM format('(auth.uid() = %s)',key_name) THEN RAISE EXCEPTION 'Incorrect WITH CHECK: %.%',t,p.polname; END IF;
@@ -30,5 +30,6 @@ BEGIN
     END LOOP;
     IF NOT has_table_privilege('service_role',rel,'SELECT') THEN RAISE EXCEPTION 'Service role read lost: %',t; END IF;
   END LOOP;
-END $h4$;
+END;
+$h4$;
 SELECT 'PASS: six FORCE RLS tables, 23 exact owner policies, owner defaults and least-privilege effective ACLs' AS evidence;
