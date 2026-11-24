@@ -120,3 +120,4 @@ begin
   end loop;
 end $mu2$;
 commit;
+notify pgrst, 'reload schema';
