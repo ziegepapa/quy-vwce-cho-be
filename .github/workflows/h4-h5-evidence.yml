@@ -15,6 +15,10 @@ on:
       - "scripts/h5-migration-guard-lib.mjs"
       - "scripts/h5-migration-guard-contract.mjs"
       - "scripts/h5-upgrade-recovery.mjs"
+      - "scripts/h5-full-*"
+      - "scripts/h5-schema-inventory.sql"
+      - "scripts/h5-compare-catalog.mjs"
+      - "docs/evidence/h5-hosted-catalog-*.json"
       - ".github/workflows/h4-h5-evidence.yml"
   pull_request:
     paths:
@@ -28,6 +32,10 @@ on:
       - "scripts/h5-migration-guard-lib.mjs"
       - "scripts/h5-migration-guard-contract.mjs"
       - "scripts/h5-upgrade-recovery.mjs"
+      - "scripts/h5-full-*"
+      - "scripts/h5-schema-inventory.sql"
+      - "scripts/h5-compare-catalog.mjs"
+      - "docs/evidence/h5-hosted-catalog-*.json"
       - ".github/workflows/h4-h5-evidence.yml"
 
 concurrency:
@@ -207,12 +215,20 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/h5-pre002-backup.sql"
           node scripts/h5-upgrade-recovery.mjs verify-restore
 
+      - name: H5 hosted metadata comparison (offline fixture; no hosted access)
+        run: |
+          supabase db reset --local --yes
+          node scripts/h5-compare-catalog.mjs
+
+      - name: H5 full local database backup and clean cluster restore
+        run: bash scripts/h5-full-recovery.sh
+
       - name: Validate machine-readable evidence JSON
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          for file in h4-evidence.json h4-catalog-evidence.json h5-migration-evidence.json; do
+          for file in h4-evidence.json h4-catalog-evidence.json h5-migration-evidence.json h5-catalog-diff.json h5-full-recovery-evidence.json; do
             if [ ! -s "$file" ]; then
               echo "Missing evidence file: $file"
               exit 1
@@ -246,5 +262,7 @@ jobs:
             h4-evidence.json
             h4-catalog-evidence.json
             h5-migration-evidence.json
+            h5-catalog-diff.json
+            h5-full-recovery-evidence.json
           if-no-files-found: ignore
           retention-days: 14
