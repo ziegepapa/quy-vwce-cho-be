@@ -10,6 +10,7 @@ assert.equal(new URL(url).origin,"http://127.0.0.1:54321");
 const opts={auth:{persistSession:false,autoRefreshToken:false}};
 const admin=createClient(url,process.env.SUPABASE_SERVICE_ROLE_KEY,opts);
 const users=[];
+const credentials=[];
 const tables=["app_settings","goals","transactions","annual_checklists","monthly_snapshots"];
 for(const suffix of ["a","b"]){
  const email="h5-full-"+suffix+"-"+randomBytes(8).toString("hex")+"@example.invalid";
@@ -20,6 +21,7 @@ for(const suffix of ["a","b"]){
  const client=createClient(url,process.env.SUPABASE_ANON_KEY,opts);
  const login=await client.auth.signInWithPassword({email,password});assert.ok(!login.error&&login.data.session,"synthetic user sign-in");
  users.push(uid);
+ credentials.push({uid,email,password});
  for(const table of tables){
    for(const kind of ["live","deleted"]){
      const id="h5-"+kind;
@@ -31,4 +33,5 @@ for(const suffix of ["a","b"]){
  }
 }
 writeFileSync(join(process.env.RUNNER_TEMP,"h5-full-users.json"),JSON.stringify(users),{mode:0o600});
+writeFileSync(join(process.env.RUNNER_TEMP,"h5-full-credentials.json"),JSON.stringify(credentials),{mode:0o600});
 console.log("PASS: two synthetic Auth users, profiles, 20 rows across all five sync tables; live/tombstone/version probes");
