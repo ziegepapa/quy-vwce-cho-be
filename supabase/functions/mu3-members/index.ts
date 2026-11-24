@@ -1,4 +1,6 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// This loopback-only rehearsal runs under standard Deno. Native Deno.serve,
+// Deno.env and Fetch types suffice; Supabase's hosted ambient declarations
+// are unused and pull in unrelated npm type dependencies (including OpenAI).
 
 // Local rehearsal only. No hosted invocation or real email is possible in MU3.
 const endpoint = Deno.env.get("SUPABASE_URL");
