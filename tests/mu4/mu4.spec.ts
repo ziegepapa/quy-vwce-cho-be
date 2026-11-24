@@ -69,7 +69,7 @@ test("MU4 actual app two synthetic accounts, isolated reader and revocation",asy
     await expect(page.getByRole("button",{name:/Einladung|löschen|hinzufügen|bearbeiten|wiederherstellen|exportieren/i})).toHaveCount(0);
   }
   // Member never opens the legacy writable owner database, even on deep links.
-  expect(await page.evaluate(async()=> (await indexedDB.databases()).some(db=>db.name==="quy_vwce_cho_be"))).toBe(false);
+  expect(await page.evaluate(async()=> (await indexedDB.databases()).some(db=>db.name==="quy_vwce_cho_be"||db.name==="quy_vwce_mu4_local_owner"))).toBe(false);
   expect(writes).toEqual([]);
   console.log("PASS real member app overview, ETFs, history, simulation, goals, deep links; no writable store or REST mutations");
   const tables=["app_settings","goals","transactions","annual_checklists","monthly_snapshots"];
