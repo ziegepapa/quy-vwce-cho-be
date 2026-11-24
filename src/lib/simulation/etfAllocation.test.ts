@@ -36,3 +36,12 @@ it("suggests the last recorded eligible ETF buy, never an active broker plan",()
   expect(suggestedVallShare(rows,"2026-11-24")).toBe(1);
   expect(suggestedVallShare([],"2026-11-24")).toBe(.5);
 });
+
+it("conserves total contributions for arbitrary cents, split and growth",()=>{
+  const input={...base,monthlyContribution:200.01,lumpSum:12.03,annualContributionGrowth:.023};
+  const out=projectEnd({...input,sleeves:buildEtfSleeves(start,550,false,.37)});
+  const unsplit=projectEnd(input);
+  expect(out.contributed).toBe(unsplit.contributed);
+  expect(out.yearEnds.map(p=>p.contributed)).toEqual(unsplit.yearEnds.map(p=>p.contributed));
+  expect(out.terminal).toBeCloseTo(out.sleeveEnds!.reduce((n,s)=>n+s.terminal,0),2);
+});

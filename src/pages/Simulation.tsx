@@ -97,7 +97,7 @@ export default function Simulation() {
       setTxs(await listTransactions());
       setQuotes(await listQuotes());
       const recurringContribution = s.contributionY2 > 0 ? s.contributionY2 : s.contributionY1;
-      if (recurringContribution > 0) setMonthly(String(recurringContribution));
+      if (Number.isFinite(recurringContribution)) setMonthly(String(Math.max(0,recurringContribution)));
       if (s.inflationRate > 0) setInflationPct(String(round2(s.inflationRate * 100)));
       if (Number.isFinite(s.vwceReturn)) setRateInput(String(round2(s.vwceReturn * 100)));
       const targetDate = s.planTarget?.targetUseDate;
@@ -152,10 +152,9 @@ export default function Simulation() {
     [baseRate, band, text],
   );
 
-  const yearsB = useMemo(() => {
-    const ty = Number(targetYear) || new Date().getFullYear();
-    return Math.max(1, Math.min(MAX_YEARS, ty - new Date().getFullYear()));
-  }, [targetYear]);
+  const requestedYear = Number(targetYear);
+  const targetYearValid = Number.isInteger(requestedYear) && requestedYear > new Date().getFullYear() && requestedYear <= new Date().getFullYear()+MAX_YEARS;
+  const yearsB = targetYearValid ? requestedYear-new Date().getFullYear() : 0;
 
   const effectiveYears = mode === "B" ? yearsB : years;
 
@@ -166,9 +165,10 @@ export default function Simulation() {
 
   const requiredMonthlyBase = useMemo(() => {
     if (mode !== "B") return monthlyN;
+    if (!targetYearValid) return -1;
     const br = scenarios.find((s) => s.id === "base")?.rate ?? 0.065;
     return findMonthlyForTarget(targetN, { ...baseCommon, years: yearsB, annualReturn: br });
-  }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN]);
+  }, [mode, targetN, baseCommon, yearsB, scenarios, monthlyN,targetYearValid]);
 
   const monthlyForProject = mode === "B" ? Math.max(0, requiredMonthlyBase) : monthlyN;
 
@@ -405,11 +405,11 @@ export default function Simulation() {
     if (initialBalance > 0) milestones.add(0);
     const all: number[] = [];
     for (let yi = 0; yi <= yearsForProject; yi++) {
-      if (yi === 0 && initialBalance <= 0) continue;
+      if (yi === 0 && initialBalance <= 0 && lumpN <= 0 && yearsForProject > 0) continue;
       if (showAllYears || milestones.has(yi)) all.push(yi);
     }
     return all;
-  }, [yearsForProject, goalYearSet, initialBalance, showAllYears]);
+  }, [yearsForProject, goalYearSet, initialBalance, showAllYears,lumpN]);
 
   if (loading) {
     return <main className="demo-v10-screen" aria-busy="true" />;
@@ -456,7 +456,7 @@ export default function Simulation() {
   advParts.push(`${text.range} ±${round2(band * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN")}`);
   if (inflationOn) advParts.push(text.inflation(inflationPct));
   if (growthOn) advParts.push(text.contributionGrowth(growthPct));
-  advParts.push(text.terFee(round2(ter * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN")));
+  advParts.push(text.terFee((ter * 100).toLocaleString(locale === "de" ? "de-DE" : "vi-VN",{maximumFractionDigits:3})));
   const advSummary = text.advanced(advParts.join(" · "));
 
   // Read-only facts from the same ledger valuation and contribution definitions
@@ -475,6 +475,7 @@ export default function Simulation() {
       setMode={setMode}
       planUnreachable={planUnreachable}
       targetUnreachable={targetUnreachable}
+      invalidTargetYear={mode==="B"&&!targetYearValid}
       headlineValue={headlineValue}
       yearsForProject={yearsForProject}
       monthlyForProject={monthlyForProject}

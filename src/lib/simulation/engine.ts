@@ -55,9 +55,10 @@ export function projectEnd(input: ProjectInput): ProjectOutput {
     }));
     const sum = (values: number[]) => round2(values.reduce((a,b)=>a+b,0));
     const terminal = sum(outputs.map(o=>o.terminal));
-    const contributed = sum(outputs.map(o=>o.contributed));
+    const capital = projectEnd({ ...input, sleeves: undefined, initialBalance: 0, annualReturn: 0, ter: 0 });
+    const contributed = capital.contributed;
     return {terminal,contributed,interest:round2(terminal-contributed-input.initialBalance),
-      yearEnds:outputs[0].yearEnds.map((p,i)=>({yearIndex:p.yearIndex,total:sum(outputs.map(o=>o.yearEnds[i].total)),contributed:sum(outputs.map(o=>o.yearEnds[i].contributed))})),
+      yearEnds:outputs[0].yearEnds.map((p,i)=>({yearIndex:p.yearIndex,total:sum(outputs.map(o=>o.yearEnds[i].total)),contributed:capital.yearEnds[i].contributed})),
       sleeveEnds:sleeves.map((s,i)=>({id:s.id,terminal:outputs[i].terminal})),
     };
   }
@@ -159,7 +160,10 @@ export function findMonthlyForTarget(
     if (r.terminal >= target) hi = mid;
     else lo = mid;
   }
-  return round2(hi);
+  // Round up to a spendable cent, never return a rate below the target.
+  let monthly = Math.ceil(hi * 100 - 1e-7) / 100;
+  if (projectEnd({ ...base, monthlyContribution: monthly }).terminal < target) monthly = round2(monthly + .01);
+  return monthly;
 }
 
 export function findYearsForTarget(
@@ -167,21 +171,11 @@ export function findYearsForTarget(
   base: Omit<ProjectInput, "years">,
 ): { years: number; reached: boolean } {
   if (target <= 0) return { years: 0, reached: true };
-  const at0 = projectEnd({ ...base, years: 0 });
-  if (at0.terminal >= target) return { years: 0, reached: true };
-
-  let lo = 0;
-  let hi = MAX_YEARS;
-  const atMax = projectEnd({ ...base, years: MAX_YEARS });
-  if (atMax.terminal < target) return { years: MAX_YEARS, reached: false };
-
-  for (let i = 0; i < 32; i++) {
-    const mid = Math.floor((lo + hi) / 2);
-    const r = projectEnd({ ...base, years: mid });
-    if (r.terminal >= target) hi = mid;
-    else lo = mid + 1;
-  }
-  return { years: hi, reached: true };
+  // A falling market or shrinking contributions can make the path non-monotone.
+  // Scan the bounded yearly points once, not just the terminal 40-year balance.
+  const path = projectEnd({ ...base, years: MAX_YEARS }).yearEnds;
+  const reached = path.find(point => point.total >= target);
+  return reached ? { years: reached.yearIndex, reached: true } : { years: MAX_YEARS, reached: false };
 }
 
 export function purchasingPower(nominal: number, inflation: number, years: number): number {

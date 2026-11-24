@@ -1262,3 +1262,8 @@
 .sim-etf-slider {display:grid;gap:4px;font-size:.78rem;}
 .sim-etf-slider input {width:100%;min-height:44px;accent-color:var(--primary-600);}
 .sim-etf-end {display:grid;gap:8px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);padding-top:10px;font-size:.83rem;}
+
+.sim-etf-monthly {display:grid;gap:8px;min-width:0;}
+.sim-etf-monthly label {font-size:.82rem;font-weight:700;}
+.sim-etf-monthly input {width:100%;min-width:0;box-sizing:border-box;min-height:44px;}
+.sim-etf-quick-rates button {font-variant-numeric:tabular-nums;}

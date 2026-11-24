@@ -372,6 +372,7 @@ it("shows two independent ETF fees, allocation controls and missing quotes witho
   renderShell("vi","",0,false,false,"A",.02,false,{vallShare:1,setVallShare,reset,suggested:true,fees:{vwce:.0014,vall:.0007,vallAsOf:"2026-10-31",fallback:false},sleeves:[{id:"VWCE",initialBalance:350,contributionShare:0,ter:.0014},{id:"VALL",initialBalance:0,contributionShare:1,ter:.0007}],missingFunds:["VALL"],overridden:false,ter:.0007});
   expect(screen.getByTestId("simulation-etf-allocation").textContent).toContain("Thiếu giá");
   expect(screen.getByText("Phí góp mới").nextElementSibling?.textContent).toContain("0,07");
+  expect(screen.getByLabelText("Tổng góp mỗi tháng (€)")).toBeTruthy();
   fireEvent.click(screen.getByRole("button",{name:"50 / 50"}));expect(setVallShare).toHaveBeenCalledWith(.5);
   fireEvent.click(screen.getByRole("button",{name:"Theo sổ thực"}));expect(reset).toHaveBeenCalled();
   expect(screen.getByText("Vốn mô phỏng",{selector:"dt"})).toBeTruthy();

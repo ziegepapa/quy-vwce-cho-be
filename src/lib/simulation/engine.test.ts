@@ -166,3 +166,17 @@ describe("clamp", () => {
   it("above hi", () => expect(clamp(99, 0, 10)).toBe(10));
   it("in range", () => expect(clamp(4, 0, 10)).toBe(4));
 });
+
+it("finds a target reached earlier even if the portfolio subsequently falls",()=>{
+  const base={...baseInput,initialBalance:0,lumpSum:0,monthlyContribution:1000,annualReturn:-.15,annualContributionGrowth:-.2,ter:.0014};
+  const path=projectEnd({...base,years:40}).yearEnds;
+  const peak=Math.max(...path.map(p=>p.total));
+  const target=peak*.9;
+  expect(path.at(-1)!.total).toBeLessThan(target);
+  expect(findYearsForTarget(target,base)).toEqual({years:path.find(p=>p.total>=target)!.yearIndex,reached:true});
+});
+it("returns a cent-denominated rate sufficient to reach the target",()=>{
+  const base={...baseInput,years:1,initialBalance:0,annualReturn:0};
+  const rate=findMonthlyForTarget(1000.01,base);
+  expect(projectEnd({...base,monthlyContribution:rate}).terminal).toBeGreaterThanOrEqual(1000.01);
+});
