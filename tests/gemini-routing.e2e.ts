@@ -21,6 +21,9 @@ export const supabase = {
         ready:true,remaining:19,limitPerDay:20,
         modelChecks:[{status:200},{status:200}],
       }};
+      const failure=new URLSearchParams(location.search).get("failure");
+      if(failure==="device") return {data:null,error:{}};
+      if(failure==="timeout"||failure==="network") return {data:null,error:{context:new Response(JSON.stringify({code:failure==="timeout"?"GOOGLE_TIMEOUT":"GOOGLE_NETWORK_ERROR",remaining:18}),{status:503})}};
       const p=options?.body || {};
       const hard=p.topic==="goal" || p.topic==="simulation";
       const exhausted=new URLSearchParams(location.search).get("exhausted")==="1";
@@ -98,4 +101,23 @@ for(const locale of ["de","vi"] as const){
       await page.screenshot({path:testInfo.outputPath(`visual-evidence-gemini-${locale}-${theme}-goal-Flash-exhausted.png`),animations:"disabled"});
     });
   }
+}
+
+for(const locale of ["de","vi"] as const) {
+  test(`Gemini diagnostics distinguish Google timeout, upstream network and device/server connection · ${locale}`,async({page})=>{
+    for(const [failure,vi,de] of [
+      ["timeout","Google phản hồi quá thời gian chờ","Google hat nicht rechtzeitig geantwortet"],
+      ["network","Máy chủ AI không kết nối được với Google","Verbindung vom KI-Server zu Google fehlgeschlagen"],
+      ["device","Không nhận được phản hồi từ máy chủ Vault","Keine Antwort vom Vault-Server"],
+    ]) {
+      await page.goto(`${url}?locale=${locale}&failure=${failure}`);
+      const card=page.getByTestId("gemini-vault-explainer");
+      await card.getByRole("checkbox").check();
+      await card.getByRole("button",{name:labels[locale].plan,exact:true}).click();
+      await card.getByRole("button",{name:labels[locale].ask}).click();
+      await expect(card.getByText(locale==="vi"?vi:de,{exact:false})).toBeVisible();
+      await expect(card.getByTestId("gemini-vault-model")).toHaveCount(0);
+      if(failure!=="device") await expect(card.getByText("2/20",{exact:false})).toBeVisible();
+    }
+  });
 }

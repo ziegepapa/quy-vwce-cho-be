@@ -61,7 +61,9 @@ const copy = {
     errBusy: "Google überlastet (503).",
     errEmpty: "KI-Antwort leer (Tokenlimit?).",
     errRejected: "Unsichere Antwort verworfen.",
-    errNetwork: "Netzfehler/Timeout.",
+    errNetwork: "Verbindung vom KI-Server zu Google fehlgeschlagen.",
+    errTimeout: "Google hat nicht rechtzeitig geantwortet. Bitte später erneut versuchen.",
+    errDevice: "Keine Antwort vom Vault-Server. Verbindung prüfen.",
     limitNotice: "Nur Typ und Summen, nie dein Fragetext.",
     cached: "Geräte-Cache · keine neue Anfrage.",
     cacheClear: "KI-Cache löschen", cacheCleared: "KI-Cache gelöscht.",
@@ -117,7 +119,9 @@ const copy = {
     errBusy: "Google quá tải (503).",
     errEmpty: "Phản hồi trống.",
     errRejected: "Phản hồi không an toàn.",
-    errNetwork: "Lỗi mạng/timeout.",
+    errNetwork: "Máy chủ AI không kết nối được với Google.",
+    errTimeout: "Google phản hồi quá thời gian chờ. Vui lòng thử lại sau.",
+    errDevice: "Không nhận được phản hồi từ máy chủ Vault. Hãy kiểm tra kết nối.",
     limitNotice: "Chỉ gửi chủ đề và số tổng, không gửi chữ gõ.",
     cached: "Cache trên máy · không trừ lượt AI.",
     cacheClear: "Xóa cache AI", cacheCleared: "Đã xóa cache.",
@@ -315,9 +319,9 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
             GOOGLE_KEY_INVALID:t.errKey, GOOGLE_ACCESS_DENIED:t.errKey,
             GOOGLE_MODEL_NOT_FOUND:t.errModel, GOOGLE_BAD_REQUEST:t.errBadRequest,
             GOOGLE_OVERLOADED:t.errBusy, AI_EMPTY_OUTPUT:t.errEmpty,
-            AI_RESPONSE_REJECTED:t.errRejected, GOOGLE_NETWORK_ERROR:t.errNetwork,
+            AI_RESPONSE_REJECTED:t.errRejected, GOOGLE_NETWORK_ERROR:t.errNetwork, GOOGLE_TIMEOUT:t.errTimeout,
           } as Record<string,string>)[result.code ?? ""];
-          setDiagnostic(message || (ctx?.status === 429 ? t.limited : t.error));
+          setDiagnostic(message || (ctx?.status === 429 ? t.limited : ctx ? t.error : t.errDevice));
           setStatus(ctx?.status === 429 ? "limit" : "error");
           return;
         }
@@ -332,7 +336,7 @@ export default function GeminiVaultExplainer({ locale, goals, facts }: Props) {
         setRemaining(Number.isInteger(data.remaining) ? data.remaining : null);
         setStatus("answered");
         if (key && model) saveGeminiAnswer(key, clean, model); // Cache model label alongside successful explanations.
-      } catch { if (context === contextRef.current) setStatus("error"); }
+      } catch { if (context === contextRef.current) { setDiagnostic(t.errDevice); setStatus("error"); } }
     } catch { if (context === contextRef.current) setStatus("error"); }
     finally { asking.current = false; }
   }

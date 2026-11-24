@@ -94,6 +94,13 @@ const stub = http.createServer(async(req,res)=>{
       if(providerMode==="lite404" && req.url.includes("gemini-3.5")) return reply(res,404,{error:"missing"});
       if(providerMode==="flash503" && req.url.includes("gemini-3.8")) return reply(res,503,{error:"unavailable"});
       if(providerMode==="flash404" && req.url.includes("gemini-3.8")) return reply(res,404,{error:"missing"});
+      if(["slow-lite","timeout-lite","body-timeout-lite"].includes(providerMode) && req.url.includes("gemini-3.8")) return reply(res,503,{error:"unavailable"});
+      if(providerMode==="slow-lite") await sleep(13000); // Actual > old 12s deadline, < new 25s.
+      if(providerMode==="timeout-lite" || providerMode==="timeout-flash") return; // No headers until client aborts.
+      if(providerMode==="body-timeout-lite") {
+        res.writeHead(200,{"Content-Type":"application/json"});res.flushHeaders();res.write("{");return;
+      }
+      if(providerMode==="network-flash") {res.destroy();return;}
       const txt=providerMode==="unsafe" ? "Sie sollten im Jahr 2042 verkaufen.":
         "Nach den eingetragenen Zahlen wurde bisher ein Teil des Plans erreicht. Es ist keine Anlageberatung.";
       return reply(res,200,{candidates:[{content:{parts:[{text:txt}]}}]});
@@ -356,6 +363,34 @@ try{
   }).sort((a,b)=>a-b),[404,429,503,503]); // Primary Flash 503 plus Flash fallback 503 after Lite overload.
   for(const secret of [userId,"mock-user-jwt","mock-private-role","only-ci-not-real","591.95","17000"]){
     assert.ok(!flashDiagnostics.join("\n").includes(secret),"Flash diagnostics must not contain identity, data or secrets");
+  }
+  // Production deadline tests: real durations, no test-only timeout override.
+  for(const [mode,expected,status,count] of [
+    ["slow-lite","gemini-3.5-flash-lite",200,2],
+    ["timeout-lite","GOOGLE_TIMEOUT",503,2],
+    ["body-timeout-lite","GOOGLE_TIMEOUT",503,2],
+    ["timeout-flash","GOOGLE_TIMEOUT",503,1],
+    ["network-flash","GOOGLE_NETWORK_ERROR",503,1],
+  ]) {
+    requests=0;paused=false;calls=[];flashAttempts=0;providerMode=mode;
+    const before=logs.length;
+    const started=Date.now();
+    response=await call({...safe,topic:"goal",facts:goalFacts});
+    assert.equal(response.status,status,mode);
+    const result=await response.json();
+    assert.equal(status===200?result.model:result.code,expected,mode);
+    assert.equal(requests,1,mode);assert.equal(flashAttempts,1,mode);assert.equal(calls.length,count,mode);
+    if(mode==="slow-lite") assert.ok(Date.now()-started>=12000);
+    await sleep(100);
+    const trace=logs.slice(before).split(/\r?\n/).filter(l=>l.includes("[gemini-generation]")).map(l=>JSON.parse(l.slice(l.indexOf("{"))));
+    assert.equal(trace.length,count,mode);
+    assert.equal(trace[0].timeoutMs,12000);
+    assert.equal(trace[0].attempt,"primary");
+    if(count===2){assert.equal(trace[1].timeoutMs,25000);assert.equal(trace[1].attempt,"fallback");assert.equal(trace[0].httpStatus,503);}
+    assert.equal(trace.at(-1).outcome,status===200?"success":mode==="network-flash"?"network":"timeout");
+    if(mode==="body-timeout-lite") assert.equal(trace.at(-1).httpStatus,200);
+    for(const line of trace) assert.deepEqual(Object.keys(line).sort(),["attempt","elapsedMs","httpStatus","model","outcome","timeoutMs"]);
+    for(const secret of [userId,"mock-user-jwt","mock-private-role","only-ci-not-real","591.95","17000"]) assert.ok(!logs.slice(before).includes(secret));
   }
   // Nothing in this isolated test calls the real project or Google API.
   console.log("Gemini isolated smoke OK: key/model metadata GET, Flash-only status logs, auth, no-PII, fallback and rate circuit.");

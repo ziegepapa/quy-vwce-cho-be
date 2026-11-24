@@ -152,3 +152,14 @@ test("PWA shows provider-confirmed model (including device cache hits) without l
   assert.ok(server.includes('"goalProgress"')); // Preserve the existing 8-topic contract.
   assert.ok(server.includes('code:"VAULT_ONLY"')); // Preserve factual safeguards.
 });
+
+test("generation deadlines are model-specific; timeout and network cannot trigger fallback",()=>{
+  assert.match(server,/FLASH_TIMEOUT_MS = 12000/);
+  assert.match(server,/LITE_TIMEOUT_MS = 25000/);
+  assert.match(server,/AbortSignal\.timeout\(googleTimeoutMs\(model\)\)/);
+  assert.ok(server.indexOf('if (result.reason === "timeout" || result.reason === "network")') < server.indexOf('if (i === 0 && (result.status === 404 || result.status === 503))'));
+  assert.ok(server.includes('console.info("[gemini-generation]"'));
+  assert.ok(server.includes('console.info("[gemini-fallback]"'));
+  assert.ok(client.includes("GOOGLE_TIMEOUT:t.errTimeout"));
+  assert.ok(client.includes("GOOGLE_NETWORK_ERROR:t.errNetwork"));
+});

@@ -192,41 +192,58 @@ async function checkModel(model: string, key: string): Promise<{model: string; s
     return { model, status: null };
   }
 }
-type GoogleResult = { status: number; output: string | null; reason?: "empty" | "rejected" };
+type GoogleResult = { status: number; output: string | null; reason?: "empty" | "rejected" | "timeout" | "network"; httpStatus?: number };
+const FLASH_TIMEOUT_MS = 12000;
+const LITE_TIMEOUT_MS = 25000;
+function googleTimeoutMs(model: string): number {
+  return model === MODELS[1] ? FLASH_TIMEOUT_MS : LITE_TIMEOUT_MS;
+}
 async function askGoogle(model: string, payload: SafeRequest, key: string): Promise<GoogleResult> {
   // The override is only for isolated local CI; production always reaches Google.
   const apiBase = Deno.env.get("GEMINI_TEST_MODE") === "1"
     ? Deno.env.get("GEMINI_TEST_API_BASE") || "https://generativelanguage.googleapis.com"
     : "https://generativelanguage.googleapis.com";
   const url = apiBase + "/v1beta/models/" + encodeURIComponent(model) + ":generateContent";
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: payload.locale === "de"
-        ? SYSTEM_DE + "\n" + TOPIC_GUIDE_DE[payload.topic]
-        : SYSTEM_VI + "\n" + TOPIC_GUIDE_VI[payload.topic] }] },
-      contents: [{ role: "user", parts: [{ text: JSON.stringify({
-        topic: payload.topic, requestedYear: payload.queryYear, facts: payload.facts,
-      }) }] }],
-      generationConfig: { maxOutputTokens: 512 },
-    }),
-    signal: AbortSignal.timeout(12000),
-  });
-  if (!response.ok) return { status: response.status, output: null };
-  const data: unknown = await response.json().catch(() => null);
-  const candidates = isObject(data) ? data.candidates : null;
-  const first = Array.isArray(candidates) ? candidates[0] : null;
-  const parts = isObject(first) && isObject(first.content) ? first.content.parts : null;
-  const text = Array.isArray(parts) ? parts.map(p => isObject(p) && typeof p.text === "string" ? p.text : "").join(" ") : "";
-  const clean = text.replace(/<[^>]*>/g,"").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,800);
-  // Separate an empty/over-budget response from a safety-policy rejection.
-  if (!clean) return { status: 502, output: null, reason: "empty" };
-  if (/[0-9€$%]|(?:trăm|mươi|nghìn|ngàn|triệu|tỉ|tỷ|hundert|tausend|million)/iu.test(clean)
-    || /\b(?:IBAN|ISIN|kaufen Sie|verkaufen Sie|ich empfehle|sollten Sie kaufen)\b/i.test(clean)) {
-    return { status: 422, output: null, reason: "rejected" };
+  const signal = AbortSignal.timeout(googleTimeoutMs(model));
+  let httpStatus: number | undefined;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: payload.locale === "de"
+          ? SYSTEM_DE + "\n" + TOPIC_GUIDE_DE[payload.topic]
+          : SYSTEM_VI + "\n" + TOPIC_GUIDE_VI[payload.topic] }] },
+        contents: [{ role: "user", parts: [{ text: JSON.stringify({
+          topic: payload.topic, requestedYear: payload.queryYear, facts: payload.facts,
+        }) }] }],
+        generationConfig: { maxOutputTokens: 512 },
+      }),
+      signal,
+    });
+    httpStatus = response.status;
+    if (!response.ok) return { status: response.status, output: null, httpStatus };
+    // The deadline covers the response body as well as the response headers.
+    // Do not mislabel an aborted body as an empty model response.
+    const data: unknown = await response.json().catch((error: unknown) => {
+      if (signal.aborted || !(error instanceof SyntaxError)) throw error;
+      return null;
+    });
+    const candidates = isObject(data) ? data.candidates : null;
+    const first = Array.isArray(candidates) ? candidates[0] : null;
+    const parts = isObject(first) && isObject(first.content) ? first.content.parts : null;
+    const text = Array.isArray(parts) ? parts.map(p => isObject(p) && typeof p.text === "string" ? p.text : "").join(" ") : "";
+    const clean = text.replace(/<[^>]*>/g,"").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,800);
+    // Separate an empty/over-budget response from a safety-policy rejection.
+    if (!clean) return { status: 502, output: null, reason: "empty", httpStatus };
+    if (/[0-9€$%]|(?:trăm|mươi|nghìn|ngàn|triệu|tỉ|tỷ|hundert|tausend|million)/iu.test(clean)
+      || /\b(?:IBAN|ISIN|kaufen Sie|verkaufen Sie|ich empfehle|sollten Sie kaufen)\b/i.test(clean)) {
+      return { status: 422, output: null, reason: "rejected", httpStatus };
+    }
+    return { status: 200, output: clean, httpStatus };
+  } catch {
+    return { status: 503, output: null, reason: signal.aborted ? "timeout" : "network", httpStatus };
   }
-  return { status: 200, output: clean };
 }
 
 Deno.serve(async (req: Request) => {
@@ -311,7 +328,21 @@ Deno.serve(async (req: Request) => {
       if (model === flash && !reservedPrimary && !(await reserveFlash(base,role))) {
         return json(req,503,{code:"AI_UNAVAILABLE",remaining:claim.remaining});
       }
+      const started = performance.now();
       const result = await askGoogle(model,payload,key);
+      // Fixed enums, timing and numeric status only: never exception text,
+      // raw Google body, prompt, user, auth or portfolio values.
+      console.info("[gemini-generation]", JSON.stringify({
+        model, attempt: i === 0 ? "primary" : "fallback",
+        timeoutMs: googleTimeoutMs(model), elapsedMs: Math.round(performance.now()-started),
+        httpStatus: result.httpStatus ?? null,
+        outcome: result.reason ?? (result.status === 200 ? "success" : "http_error"),
+      }));
+      // A local deadline or transport failure is NOT an upstream HTTP 503.
+      // Keep the existing policy: fallback only after actual Google 404/503.
+      if (result.reason === "timeout" || result.reason === "network") {
+        return json(req,503,{code:result.reason === "timeout" ? "GOOGLE_TIMEOUT" : "GOOGLE_NETWORK_ERROR",remaining:claim.remaining});
+      }
       // Only upstream HTTP errors for actual Flash generation, never the request,
       // provider response body, auth details, or local validation failures.
       if (model === flash && result.status >= 400 && result.reason === undefined) {
@@ -331,7 +362,10 @@ Deno.serve(async (req: Request) => {
         return json(req,429,{code:"FREE_LIMIT",reason:"google_limit",remaining:claim.remaining});
       }
       // At most one backup, solely on Google 404/503; never after 429.
-      if (i === 0 && (result.status === 404 || result.status === 503)) continue;
+      if (i === 0 && (result.status === 404 || result.status === 503)) {
+        console.info("[gemini-fallback]", JSON.stringify({from:model,to:second,httpStatus:result.status}));
+        continue;
+      }
       const upstream = result.status;
       const code = result.reason === "empty" ? "AI_EMPTY_OUTPUT"
         : result.reason === "rejected" ? "AI_RESPONSE_REJECTED"
