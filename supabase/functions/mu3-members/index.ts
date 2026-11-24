@@ -36,7 +36,7 @@ async function caller(token: string): Promise<Identity> {
   if (u.factors?.some(f => f.status === "verified") && claims.aal !== "aal2") throw new Rejection(403);
   return u;
 }
-Deno.serve(async (req: Request) => {
+Deno.serve({ hostname: "127.0.0.1", port: 8000 }, async (req: Request) => {
   const origin = req.headers.get("Origin");
   const headers: Record<string,string> = { "Content-Type": "application/json", "Cache-Control": "no-store", "Vary": "Origin" };
   if (origin && origins.has(origin)) {
