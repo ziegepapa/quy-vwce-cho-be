@@ -14,6 +14,12 @@ trap cleanup EXIT
 [[ "$(docker inspect -f '{{.State.Running}}' "$src")" == true ]]
 image=$(docker inspect -f '{{.Image}}' "$src")
 sp() { docker exec -i "$src" psql -U supabase_admin -d postgres -XAt -v ON_ERROR_STOP=1 "$@"; }
+# Diagnostic metadata only: no user rows, token values, or SQL body.
+policy_probe="select jsonb_build_object('role',current_user,'search_path',current_setting('search_path'),'with_check',pg_get_expr(polwithcheck,polrelid)) from pg_policy where polrelid='public.profiles'::regclass and polname='profiles_insert_own'"
+echo 'H5 source role postgres (before canonicalization):'
+psql "$DB_URL" -XAt -v ON_ERROR_STOP=1 -c "$policy_probe"
+echo 'H5 source role supabase_admin (before canonicalization):'
+sp -c "$policy_probe"
 # Baseline is fresh and must have no identities before fixtures.
 [[ "$(sp -c 'select count(*) from auth.users')" == 0 ]]
 node scripts/h5-full-seed.mjs
@@ -31,11 +37,24 @@ echo 'PASS: full logical PostgreSQL database archive and cluster globals created
 docker run -d --network none --name "$dst" --user postgres --entrypoint /bin/sh "$image" -c 'sleep infinity' >/dev/null
 docker exec "$dst" sh -ec 'mkdir -p /tmp/h5cluster /tmp/h5socket; b=$(pg_config --bindir); "$b/initdb" -D /tmp/h5cluster -U h5_restore_bootstrap --auth=trust --no-locale -E UTF8 >/tmp/h5-init.log; "$b/pg_ctl" -D /tmp/h5cluster -l /tmp/h5-postgres.log -o "-c listen_addresses= -c unix_socket_directories=/tmp/h5socket -c shared_preload_libraries=pg_cron,pg_stat_statements" -w start' >/dev/null
 dp() { docker exec -i "$dst" psql -h /tmp/h5socket -U supabase_admin -d postgres -XAt -v ON_ERROR_STOP=1 "$@"; }
-docker exec -i "$dst" psql -h /tmp/h5socket -U h5_restore_bootstrap -d postgres -Xq -v ON_ERROR_STOP=1 < "$tmp/globals.sql" > "$tmp/globals-restore.log" 2>&1 || { echo 'FAIL: cluster globals restore (private log withheld)'; exit 1; }
+# Keep strict stop-on-error. On failure report only filtered diagnostic metadata.
+# Never print globals.sql or raw logs (they may contain password hashes).
+docker exec -i "$dst" psql -h /tmp/h5socket -U h5_restore_bootstrap -d postgres -Xq -v ON_ERROR_STOP=1 -v VERBOSITY=verbose -f - < "$tmp/globals.sql" > "$tmp/globals-restore.log" 2>&1 || {
+  echo 'FAIL: cluster globals restore'
+  node scripts/h5-full-restore-diagnostics.mjs "$tmp/globals-restore.log" "$tmp/globals.sql"
+  exit 1
+}
+echo 'PASS: cluster globals restored with ON_ERROR_STOP'
 # template postgres has no app schema. pg_restore must succeed, including ACLs and FK validation.
 [[ "$(dp -c "select count(*) from pg_namespace where nspname='auth'")" == 0 ]]
 docker exec -i "$dst" pg_restore -h /tmp/h5socket -U supabase_admin -d postgres --exit-on-error --single-transaction < "$tmp/database.dump" > "$tmp/restore.log" 2>&1 || { echo 'FAIL: whole database pg_restore (private log withheld)'; exit 1; }
 echo 'PASS: entire logical archive restored into blank network-isolated cluster'
+echo 'H5 restored role supabase_admin (before canonicalization):'
+dp -c "$policy_probe"
+echo 'H5 source role postgres (canonical):'
+psql "$DB_URL" -XAt -v ON_ERROR_STOP=1 -c "begin; set local search_path=pg_catalog,public; $policy_probe; rollback;"
+echo 'H5 restored role supabase_admin (canonical):'
+dp -c "begin; set local search_path=pg_catalog,public; $policy_probe; rollback;"
 # Catalog, actual row content hashes and counts (never print rows or auth secrets).
 sp < scripts/h5-schema-inventory.sql > "$tmp/source-catalog.json"
 dp < scripts/h5-schema-inventory.sql > "$tmp/restored-catalog.json"

@@ -1,4 +1,7 @@
 -- H4/H5 exact owner-only candidate catalog and effective privileges.
+BEGIN;
+-- Stable deparser context: exclude auth (and per-role schemas), preserve qualification.
+SET LOCAL search_path = pg_catalog, public;
 DO $h4$
 DECLARE t text; rel oid; p record; role_name text; priv text; expected boolean; key_name text; expected_count int;
 BEGIN
@@ -32,4 +35,5 @@ BEGIN
   END LOOP;
 END;
 $h4$;
+COMMIT;
 SELECT 'PASS: six FORCE RLS tables, 23 exact owner policies, owner defaults and least-privilege effective ACLs' AS evidence;
