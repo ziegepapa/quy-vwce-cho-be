@@ -16,7 +16,7 @@ export default function LocalSharingGate({ownerApp}:{ownerApp:ReactNode}) {
   useEffect(()=>{
     if(!session||!auth.vaultReady||!auth.ready){setResult(null);return;}
     const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),12000);
+    const timeout=setTimeout(()=>{controller.abort();setResult({token:session.access_token,scope:{kind:"locked"}});},12000);
     setResult(null);
     void resolveMemberScope(session,controller.signal).then(scope=>{
       if(controller.signal.aborted)return;
@@ -40,6 +40,6 @@ export default function LocalSharingGate({ownerApp}:{ownerApp:ReactNode}) {
   if(!session||!auth.vaultReady)return <AuthPage/>;
   const resolved=result?.token===session.access_token?result.scope:null;
   if(!logoutPending&&resolved?.kind==="owner")return <>{ownerApp}</>;
-  if(!logoutPending&&resolved?.kind==="member")return <SharedMemberVault key={session.user.id+":"+session.access_token+":"+resolved.ownerId} session={session} ownerId={resolved.ownerId} locale={locale} onLogout={logout}/>;
+  if(!logoutPending&&resolved?.kind==="member")return <SharedMemberVault key={session.user.id+":"+resolved.ownerId} session={session} ownerId={resolved.ownerId} locale={locale} onLogout={logout}/>;
   return <main className="mu4-shell"><section className="mu4-card" role="status"><h1>{de?"Vault-Zugriff":"Quyền truy cập quỹ"}</h1><p>{resolved?.kind==="locked"?(de?"Kein freigegebener Zugriff. Verwenden Sie ein separates Browserprofil für einen anderen Eigentümer.":"Không có quyền chia sẻ. Dùng hồ sơ trình duyệt riêng cho chủ quỹ khác."):(de?"Zugriff wird geprüft…":"Đang kiểm tra quyền…")}</p><button type="button" disabled={logoutPending} onClick={()=>setAttempt(n=>n+1)}>{de?"Erneut prüfen":"Kiểm tra lại"}</button><button type="button" disabled={logoutPending} onClick={()=>void logout()}>{de?"Abmelden":"Đăng xuất"}</button></section></main>;
 }
