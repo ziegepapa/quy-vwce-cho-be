@@ -41,6 +41,8 @@ sp < scripts/h5-schema-inventory.sql > "$tmp/source-catalog.json"
 dp < scripts/h5-schema-inventory.sql > "$tmp/restored-catalog.json"
 cmp -s "$tmp/source-catalog.json" "$tmp/restored-catalog.json" || { echo 'FAIL: restored app catalog differs'; exit 1; }
 echo 'PASS: app catalog identical, including policies, grants, constraints, triggers and function hashes'
+dp < scripts/h4-rls-catalog-check.sql
+dp < scripts/h5-truncate-probe.sql
 for table in auth.users auth.identities public.profiles public.app_settings public.goals public.transactions public.annual_checklists public.monthly_snapshots; do
   sql="select count(*),md5(coalesce(string_agg(to_jsonb(t)::text,E'\\n' order by to_jsonb(t)::text),'')) from $table t"
   s=$(sp -c "$sql"); d=$(dp -c "$sql")
@@ -70,8 +72,11 @@ for table in app_settings goals transactions annual_checklists monthly_snapshots
   actual=$(dp -c "begin; set local role authenticated; select set_config('request.jwt.claim.sub','$own',true); select count(*) from public.$table where user_id='$own'; select count(*) from public.$table where user_id='$other'; with x as (update public.$table set data='{}' where user_id='$other' returning 1) select count(*) from x; with x as (delete from public.$table where user_id='$other' returning 1) select count(*) from x; rollback;" | grep -E '^[0-9]+$' | paste -sd, -)
   [[ "$actual" == 2,0,0,0 ]] || { echo "FAIL: restored owner/cross-user RLS $table"; exit 1; }
  done
- actual=$(dp -c "begin; set local role anon; select count(*) from public.$table; rollback;" | grep -E '^[0-9]+$')
- [[ "$actual" == 0 ]] || { echo "FAIL: restored anonymous RLS $table"; exit 1; }
+ # Anonymous must now lack SELECT at the grant layer, not merely see zero rows.
+ if dp -c "begin; set local role anon; select count(*) from public.$table; rollback;" > "$tmp/anon.log" 2>&1; then
+   echo "FAIL: restored anonymous SELECT permitted $table"; exit 1
+ fi
+ grep -qi 'permission denied' "$tmp/anon.log"
  echo "PASS: restored $table own/cross-user/anonymous SQL RLS"
 done
 # Rehearse cascade in transaction; rollback preserves the restored evidence state.
@@ -94,4 +99,4 @@ for table in auth.users auth.identities public.profiles public.app_settings publ
 done
 node scripts/h5-restored-http.mjs
 
-node --input-type=module -e 'import fs from "node:fs"; const p="h5-full-recovery-evidence.json"; fs.writeFileSync(p,JSON.stringify({result:"PASS",target:"disposable-local-cluster-network-none",sourceCommit:process.env.SOURCE_COMMIT,workflowRunId:process.env.GITHUB_RUN_ID,mechanism:"pg_dumpall globals + full pg_dump custom + fresh initdb + pg_restore",catalogMatch:true,fixtureUsers:2,syncRows:20,profiles:2,restoredSqlRls:"PASS",cascade:"PASS",privateTables:8,privateRpcGrants:"PASS",syntheticGeminiRpc:"PASS",restoredHttpAuth:"PASS",scope:"001/002 local baseline plus sanitized private operational fixture; separate HTTP recovery of Auth identities and all public app rows; excludes Guardian dispatch, hosted-only drift, Storage objects, hosted service configuration and production credentials",engine:JSON.parse(fs.readFileSync(process.argv[1],"utf8"))},null,2)+"\n",{mode:0o600});' "$tmp/engine.json"
+node --input-type=module -e 'import fs from "node:fs"; const p="h5-full-recovery-evidence.json"; fs.writeFileSync(p,JSON.stringify({result:"PASS",target:"disposable-local-cluster-network-none",sourceCommit:process.env.SOURCE_COMMIT,workflowRunId:process.env.GITHUB_RUN_ID,mechanism:"pg_dumpall globals + full pg_dump custom + fresh initdb + pg_restore",catalogMatch:true,fixtureUsers:2,syncRows:20,profiles:2,restoredSqlRls:"PASS",cascade:"PASS",privateTables:8,privateRpcGrants:"PASS",syntheticGeminiRpc:"PASS",restoredHttpAuth:"PASS",scope:"001/002 plus runner-only 003 candidate and sanitized private operational fixture; separate HTTP recovery of Auth identities and all public app rows; excludes Guardian dispatch, hosted-only drift, Storage objects, hosted service configuration and production credentials",engine:JSON.parse(fs.readFileSync(process.argv[1],"utf8"))},null,2)+"\n",{mode:0o600});' "$tmp/engine.json"

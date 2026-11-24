@@ -304,7 +304,9 @@ async function main() {
     const markerA = "owner-a-" + stamp;
     const markerB = "owner-b-" + stamp;
 
-    const insertA = await clientA.from(table.name).insert({ ...rowA, data: { ...table.sample.data, h4OwnerMarker: markerA } });
+    // Omit user_id once: 003 must assign the authenticated owner, not trust a client identity.
+    const { user_id: omittedOwner, ...implicitOwnerRow } = rowA;
+    const insertA = await clientA.from(table.name).insert({ ...implicitOwnerRow, data: { ...table.sample.data, h4OwnerMarker: markerA } });
     if (insertA.error) fail(table.name + " A insert own — " + insertA.error.message);
     else pass(table.name + " A insert own");
     const insertB = await clientB.from(table.name).insert({ ...rowB, data: { ...table.sample.data, h4OwnerMarker: markerB } });
@@ -359,6 +361,8 @@ async function main() {
     if (afterUpdateAB?.data?.h4OwnerMarker !== markerB) fail(table.name + " A changed B's row");
     else pass(table.name + " A cannot update B");
 
+    expectDeniedInsert(await clientA.from(table.name).update({user_id:userB.id}).eq("id",rowA.id).eq("user_id",userA.id),table.name+" A cannot reassign own row to B");
+    await readDataRow(clientA,table.name,userA.id,rowA.id,table.name+" A retains ownership");
     const deleteBA = await clientB.from(table.name).delete().eq("id", rowA.id).eq("user_id", userA.id);
     inspectMutationError(deleteBA.error, table.name + " B delete A");
     await readDataRow(clientA, table.name, userA.id, rowA.id, table.name + " A after B delete");
