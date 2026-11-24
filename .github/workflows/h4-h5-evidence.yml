@@ -66,6 +66,9 @@ jobs:
       - name: Test migration numbering and dependency guard
         run: node --test scripts/h5-migration-guard-contract.mjs
 
+      - name: Test globals diagnostics and bootstrap replay contract
+        run: node --test scripts/h5-full-globals.test.mjs
+
       - name: Run migration numbering guard
         run: node scripts/h5-migration-guard.mjs
 

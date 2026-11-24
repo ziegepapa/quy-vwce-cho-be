@@ -33,17 +33,66 @@ docker exec "$src" pg_dumpall -U supabase_admin --globals-only > "$tmp/globals.s
 docker exec "$src" pg_dump -U supabase_admin -d postgres -Fc > "$tmp/database.dump"
 test -s "$tmp/globals.sql"; test -s "$tmp/database.dump"
 echo 'PASS: full logical PostgreSQL database archive and cluster globals created (synthetic only)'
-# A second clean cluster, same image, no network access; no service or cron dispatch can contact production.
-docker run -d --network none --name "$dst" --user postgres --entrypoint /bin/sh "$image" -c 'sleep infinity' >/dev/null
-docker exec "$dst" sh -ec 'mkdir -p /tmp/h5cluster /tmp/h5socket; b=$(pg_config --bindir); "$b/initdb" -D /tmp/h5cluster -U h5_restore_bootstrap --auth=trust --no-locale -E UTF8 >/tmp/h5-init.log; "$b/pg_ctl" -D /tmp/h5cluster -l /tmp/h5-postgres.log -o "-c listen_addresses= -c unix_socket_directories=/tmp/h5socket -c shared_preload_libraries=pg_cron,pg_stat_statements" -w start' >/dev/null
-dp() { docker exec -i "$dst" psql -h /tmp/h5socket -U supabase_admin -d postgres -XAt -v ON_ERROR_STOP=1 "$@"; }
-# Keep strict stop-on-error. On failure report only filtered diagnostic metadata.
-# Never print globals.sql or raw logs (they may contain password hashes).
-docker exec -i "$dst" psql -h /tmp/h5socket -U h5_restore_bootstrap -d postgres -Xq -v ON_ERROR_STOP=1 -v VERBOSITY=verbose -f - < "$tmp/globals.sql" > "$tmp/globals-restore.log" 2>&1 || {
-  echo 'FAIL: cluster globals restore'
-  node scripts/h5-full-restore-diagnostics.mjs "$tmp/globals-restore.log" "$tmp/globals.sql"
-  exit 1
+# Source identity/role attributes and membership statements (no passwords).
+major=$(sp -c "select current_setting('server_version_num')::int/10000")
+source_bootstrap=$(sp -c "select rolname from pg_roles where oid=10 and rolsuper and rolcanlogin")
+[[ "$source_bootstrap" == supabase_admin ]]
+echo "H5 source PG$major bootstrap OID=10 role=$source_bootstrap"
+sp -c "select jsonb_build_object('role',rolname,'superuser',rolsuper,'createrole',rolcreaterole,'inherit',rolinherit,'login',rolcanlogin) from pg_roles where rolname in ('supabase_admin','postgres') order by rolname"
+node scripts/h5-full-globals-prepare.mjs inventory "$tmp/globals.sql"
+# Compare full role metadata privately: attributes and password hash, role settings,
+# and membership/grantor/options. No fingerprints or password values printed.
+role_query="select jsonb_agg(to_jsonb(r)-'oid' order by r.rolname) from pg_authid r"
+# pg_authid contains attributes and password, not role config. Compare role-level
+# config separately by names, and all membership options by names (OIDs differ).
+config_query="select coalesce(jsonb_agg(jsonb_build_array(r.rolname,s.setconfig) order by r.rolname),'[]') from pg_db_role_setting s join pg_roles r on r.oid=s.setrole where s.setdatabase=0"
+member_query="select coalesce(jsonb_agg(jsonb_build_object('role',r.rolname,'member',m.rolname,'grantor',g.rolname,'options',to_jsonb(a)-'oid'-'roleid'-'member'-'grantor') order by r.rolname,m.rolname,g.rolname),'[]') from pg_auth_members a join pg_roles r on r.oid=a.roleid join pg_roles m on m.oid=a.member join pg_roles g on g.oid=a.grantor"
+# A clean cluster, same image, network none; no external dispatch.
+init_target() {
+ local bootstrap="$1"
+ docker run -d --network none --name "$dst" --user postgres --entrypoint /bin/sh "$image" -c 'sleep infinity' >/dev/null
+ docker exec "$dst" sh -ec 'mkdir -p /tmp/h5cluster /tmp/h5socket; b=$(pg_config --bindir); "$b/initdb" -D /tmp/h5cluster -U "$1" --auth=trust --no-locale -E UTF8 >/tmp/h5-init.log; "$b/pg_ctl" -D /tmp/h5cluster -l /tmp/h5-postgres.log -o "-c listen_addresses= -c unix_socket_directories=/tmp/h5socket -c shared_preload_libraries=pg_cron,pg_stat_statements" -w start' sh "$bootstrap" >/dev/null
 }
+restore_globals() {
+ docker exec -i "$dst" psql -h /tmp/h5socket -U "$1" -d postgres -Xq -v ON_ERROR_STOP=1 -v VERBOSITY=verbose -f - < "$2" > "$3" 2>&1
+}
+dp() { docker exec -i "$dst" psql -h /tmp/h5socket -U supabase_admin -d postgres -XAt -v ON_ERROR_STOP=1 "$@"; }
+if [[ "$major" == 17 ]]; then
+ # Reproduce #156 on a separate disposable cluster with mismatched bootstrap.
+ init_target h5_restore_bootstrap
+ docker exec "$dst" psql -h /tmp/h5socket -U h5_restore_bootstrap -d postgres -XAt -v ON_ERROR_STOP=1 -c "select 'H5 negative target bootstrap OID=10 role='||rolname from pg_roles where oid=10"
+ if restore_globals h5_restore_bootstrap "$tmp/globals.sql" "$tmp/globals-negative.log"; then
+   echo 'FAIL: mismatched-bootstrap regression unexpectedly succeeded; investigate before changing restore'; exit 1
+ fi
+ node scripts/h5-full-restore-diagnostics.mjs "$tmp/globals-negative.log" "$tmp/globals.sql"
+ grep -Eq '42501:.*permission denied to grant privileges as role "supabase_admin"' "$tmp/globals-negative.log"
+ echo 'PASS: PG17 mismatched bootstrap reproduces original grantor denial'
+ docker rm -f "$dst" >/dev/null
+ # Preserve grantor identity: initdb creates source bootstrap at OID 10.
+ # Its CREATE ROLE is already fulfilled by initdb; assert that identity in
+ # place of the duplicate declaration. All ALTERs, settings and GRANTs replay.
+ init_target "$source_bootstrap"
+ node scripts/h5-full-globals-prepare.mjs prepare "$tmp/globals.sql" "$tmp/globals-replay.sql" "$source_bootstrap"
+ restore_globals "$source_bootstrap" "$tmp/globals-replay.sql" "$tmp/globals-restore.log" || {
+   echo 'FAIL: cluster globals restore with matching bootstrap'
+   node scripts/h5-full-restore-diagnostics.mjs "$tmp/globals-restore.log" "$tmp/globals-replay.sql"; exit 1
+ }
+ [[ "$(dp -c "select rolname from pg_roles where oid=10 and rolsuper and rolcanlogin")" == "$source_bootstrap" ]]
+ for q in "$role_query" "$config_query" "$member_query"; do
+   sp -c "$q" > "$tmp/source-global-check.json"
+   dp -c "$q" > "$tmp/target-global-check.json"
+   cmp -s "$tmp/source-global-check.json" "$tmp/target-global-check.json" || { echo 'FAIL: exact global roles/settings/memberships differ'; exit 1; }
+ done
+ echo 'PASS: PG17 original bootstrap, exact role attributes/settings and memberships including grantor/options preserved'
+else
+ # PG15 already passed #156; preserve original restore behavior.
+ [[ "$major" == 15 ]]
+ init_target h5_restore_bootstrap
+ restore_globals h5_restore_bootstrap "$tmp/globals.sql" "$tmp/globals-restore.log" || {
+   echo 'FAIL: cluster globals restore'
+   node scripts/h5-full-restore-diagnostics.mjs "$tmp/globals-restore.log" "$tmp/globals.sql"; exit 1
+ }
+fi
 echo 'PASS: cluster globals restored with ON_ERROR_STOP'
 # template postgres has no app schema. pg_restore must succeed, including ACLs and FK validation.
 [[ "$(dp -c "select count(*) from pg_namespace where nspname='auth'")" == 0 ]]

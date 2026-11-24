@@ -1,6 +1,7 @@
 // Only print error code, line number, an allowlisted statement kind, and a
 // redacted error message. The full dump/log remain temporary, never artifacts.
 import fs from "node:fs";
+import {safeRoleSql,lineKind} from "./h5-full-globals-lib.mjs";
 const [logPath,dumpPath]=process.argv.slice(2);
 if(process.env.GITHUB_ACTIONS!=="true"||!logPath?.startsWith(process.env.RUNNER_TEMP+"/h5-full.")||!dumpPath?.startsWith(process.env.RUNNER_TEMP+"/h5-full.")) throw Error("local runner diagnostics only");
 const log=fs.readFileSync(logPath,"utf8");
@@ -21,5 +22,13 @@ for(const l of failures){
   .slice(0,500);
  if(/password|secret|token|credential/i.test(msg))msg=msg.match(/^(?:ERROR|FATAL|PANIC):\s*(?:[0-9A-Z]{5}:)?/)?.[0]+" [credential-related error text withheld]";
  console.log("H5 globals diagnostic: line="+(n??"unknown")+" statement="+kind+" "+msg);
+ if(n){
+  for(let i=Math.max(0,n-4);i<Math.min(lines.length,n+3);i++){
+   const safe=safeRoleSql(lines[i]);
+   console.log("H5 globals context line="+(i+1)+": "+(safe??("["+lineKind(lines[i])+"; contents withheld]")));
+  }
+  for(let i=0;i<n-1;i++){const safe=safeRoleSql(lines[i]);if(safe&&/^(SET|RESET)\s/i.test(safe))console.log("H5 preceding role switch line="+(i+1)+": "+safe);}
+ }
+
 }
 if(!failures.length)console.log("H5 globals diagnostic: no PostgreSQL ERROR/FATAL line found; raw output withheld.");
