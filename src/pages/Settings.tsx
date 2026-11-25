@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   clearAllData,
@@ -443,7 +444,7 @@ export default function SettingsPage({
       if (event.key === "Escape" && settingsChild) closeSettingsChild();
     };
     window.addEventListener("keydown", onKeyDown);
-    if (settingsChild) requestAnimationFrame(() => childBackRef.current?.focus());
+    if (settingsChild) requestAnimationFrame(() => childBackRef.current?.focus({ preventScroll: true }));
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       document.documentElement.classList.remove("settings-child-open");
@@ -924,7 +925,7 @@ export default function SettingsPage({
           </>}
         />
         {import.meta.env.VITE_MU3_LOCAL_REHEARSAL === "true" && import.meta.env.VITE_SUPABASE_URL === "http://127.0.0.1:54321" && auth.session && auth.vaultReady && !readOnly ? <Suspense fallback={null}><LocalMemberManagement key={auth.session.user.id} ownerId={auth.session.user.id} token={auth.session.access_token} locale={locale}/></Suspense> : null}
-        {settingsChild ? (
+        {settingsChild ? (createPortal(
           <div className="settings-child-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSettingsChild(); }}>
             <section className="settings-child-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-child-title">
               <div className="settings-child-grabber" aria-hidden />
@@ -937,8 +938,8 @@ export default function SettingsPage({
                 {settingsChild === "restore" ? <><p>{locale === "de" ? "Wählen Sie eine JSON-Sicherung. Die vorhandenen Sicherheitsprüfungen bleiben aktiv." : "Chọn bản sao JSON. Các bước bảo vệ dữ liệu hiện có vẫn được áp dụng."}</p><label className="settings-child-primary settings-file-action"><IconUpload />{t("importBackup")}<input type="file" accept="application/json,.json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) doImport(file); event.target.value = ""; }} /></label></> : null}
               </div>
             </section>
-          </div>
-        ) : null}
+          </div>, document.body
+        )) : null}
         {pendingFile ? (
           <section className="gl" style={{ padding: 16 }} role="alertdialog"><strong>{t("replaceData").replace("{file}", pendingFile.name)}</strong>{pendingSync ? <div role="alert"><p>{text.pendingImportTitle}</p><p>{pendingSyncDetails(pendingSync, locale)}</p><p>{text.pendingImportRisk}</p></div> : null}<div className="stack" style={{ marginTop: 12 }}>{pendingSync && auth.user?.id ? <button type="button" disabled={importing || pendingSyncPushing} onClick={() => void pushPendingSyncBeforeImport()}>{pendingSyncPushing ? t("syncing") : text.pendingPushFirst}</button> : null}<button type="button" disabled={importing || pendingSyncPushing} onClick={() => void confirmImport()}>{importing ? t("importing") : pendingSync ? text.pendingAcceptRisk : t("confirmImport")}</button><button type="button" className="secondary" disabled={importing} onClick={closeImport}>{t("cancel")}</button></div></section>
         ) : null}
@@ -1133,7 +1134,7 @@ export default function SettingsPage({
       </section>
       </section>
 
-      {settingsChild ? (
+      {settingsChild ? (createPortal(
         <div className="settings-child-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSettingsChild(); }}>
           <section className="settings-child-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-child-title">
             <div className="settings-child-grabber" aria-hidden />
@@ -1146,8 +1147,8 @@ export default function SettingsPage({
               {settingsChild === "restore" ? <><p>{locale === "de" ? "Wählen Sie eine JSON-Sicherung. Die vorhandenen Sicherheitsprüfungen bleiben aktiv." : "Chọn bản sao JSON. Các bước bảo vệ dữ liệu hiện có vẫn được áp dụng."}</p><label className="settings-child-primary settings-file-action"><IconUpload />{t("importBackup")}<input type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = ""; }} /></label></> : null}
             </div>
           </section>
-        </div>
-      ) : null}
+        </div>, document.body
+      )) : null}
 
       {pendingFile ? (
         <section className="gl" style={{ padding: 16 }} role="alertdialog">

@@ -149,7 +149,7 @@
 .p40-danger-zone .cbo-action-row small, .p40-danger-zone .cbo-action-row > svg { color: color-mix(in srgb, var(--p40-danger) 70%, var(--p40-muted)); }
 
 .p40-sheet-layer {
-  position: fixed; inset: 0; z-index: var(--z-sheet, 80); display: flex; align-items: flex-end; padding: max(10px, env(safe-area-inset-top)) 0 0; background: rgba(13, 23, 21, .32);
+  position: fixed; inset: 0; bottom: auto; height: 100vh; height: 100dvh; box-sizing: border-box; z-index: var(--z-sheet, 80); display: flex; align-items: flex-end; padding: max(10px, env(safe-area-inset-top, 0px)) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px); background: rgba(13, 23, 21, .32); overscroll-behavior: contain;
   /* Portal render ra body nên cần định nghĩa lại biến ở đây */
   --p40-canvas: var(--bg-base);
   --p40-surface: var(--surface-raised);
@@ -168,12 +168,12 @@
   --p40-safe: var(--primary-600);
   --p40-safe-soft: var(--primary-050);
 }
-.p40-sheet { width: min(100%, 680px); max-height: min(86dvh, 760px); margin: 0 auto; overflow: auto; border-radius: 18px 18px 0 0; background: var(--p40-surface); box-shadow: 0 -12px 36px rgba(17, 33, 29, .16); }
+.p40-sheet { width: min(100%, 680px); min-width: 0; max-height: min(100%, 760px); margin: 0 auto; box-sizing: border-box; overflow: hidden; display: grid; grid-template-rows: auto auto minmax(0,1fr); border-radius: 18px 18px 0 0; background: var(--p40-surface); box-shadow: 0 -12px 36px rgba(17, 33, 29, .16); }
 .p40-sheet-grabber { width: 38px; height: 4px; margin: 10px auto 2px; border-radius: 4px; background: var(--p40-line-strong); }
 .p40-sheet > header { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--p40-line); }
 .p40-sheet > header strong { font-size: 20px; letter-spacing: -.025em; }
 .p40-sheet > header button { width: 44px; height: 44px; color: var(--p40-muted); font-size: 27px; line-height: 1; border: 0; background: transparent; }
-.p40-sheet-body { display: grid; gap: 18px; padding: 20px max(20px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+.p40-sheet-body { min-height: 0; min-width: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; align-content: start; gap: 18px; padding: 20px max(20px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
 .p40-sheet-result { display: grid; gap: 8px; padding: 14px; border-radius: 14px; background: var(--p40-surface-subtle); border: 1px solid var(--p40-line); }
 .p40-sheet-result > span { color: var(--p40-muted); font-size: 11px; font-weight: 740; letter-spacing: .04em; text-transform: uppercase; }
 .p40-sheet-result strong { font-size: 15px; line-height: 1.35; color: var(--p40-ink); }
