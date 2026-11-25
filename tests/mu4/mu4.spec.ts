@@ -33,7 +33,7 @@ test("MU4 actual app two synthetic accounts, isolated reader and revocation",asy
   const membership={owner_user_id:owner.id,member_user_id:member.id};
   expect((await privileged.from("vault_memberships").insert({...membership,role:"member",status:"active",activated_at:now})).error).toBeNull();
   const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
-  await ctx.addInitScript(()=>localStorage.setItem("vwce-locale","de"));
+  await ctx.addInitScript(()=>{if(!localStorage.getItem("vwce-locale"))localStorage.setItem("vwce-locale","de");});
   await ctx.route("**/data/quotes.json",r=>r.fulfill({json:{schemaVersion:2,generatedAt:now,quotes:[{instrumentIsin:"IE00BK5BQT80",currency:"EUR",price:100,asOf:date},{instrumentIsin:"IE000VAHT5T0",currency:"EUR",price:5,asOf:date}]}}));
   const page=await ctx.newPage();
   const writes:string[]=[];
@@ -80,6 +80,18 @@ test("MU4 actual app two synthetic accounts, isolated reader and revocation",asy
   await page.screenshot({path:info.outputPath("mu4-member-simulation.png")});
   await page.getByRole("button",{name:"Ziele",exact:true}).click();
   await expect(page.getByText("Testziel",{exact:true})).toBeVisible();
+  await page.screenshot({path:info.outputPath("mu4-member-goals.png")});
+  await page.evaluate(()=>localStorage.setItem("vwce-locale","vi"));
+  await page.reload();
+  await expect(page.getByText("Chỉ xem",{exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Tổng quan",exact:true})).toBeVisible();
+  await expect(page.locator(".mu4-total")).toContainText("250");
+  await page.getByRole("button",{name:"Mục tiêu",exact:true}).click();
+  await expect(page.getByText("Testziel",{exact:true})).toBeVisible();
+  await page.screenshot({path:info.outputPath("mu4-member-goals-vi.png")});
+  await page.evaluate(()=>localStorage.setItem("vwce-locale","de"));
+  await page.reload();
+  console.log("PASS German and Vietnamese member views");
   for(const hash of ["#/settings","#/transactions","#/notfallmappe","#/goals"]){
     await page.goto(base+hash);
     await expect(page.getByText("Nur Lesen",{exact:true})).toBeVisible();
@@ -109,6 +121,7 @@ test("MU4 actual app two synthetic accounts, isolated reader and revocation",asy
   const promote=await member.client.from("vault_memberships").update({role:"admin"}).match(membership).select();
   expect(promote.error?.code==="42501"||promote.data?.length===0).toBe(true);
   console.log("PASS five entity tables deny member INSERT/UPDATE/DELETE and self-promotion; exact owner rows unchanged");
+  await page.getByRole("button",{name:"Übersicht",exact:true}).click();
   await seed("transactions","mu4-owner-new",tx("mu4-owner-new","IE000VAHT5T0",2,5));
   await page.getByRole("button",{name:"Erneut prüfen",exact:true}).click();
   await expect(page.locator(".mu4-total")).toContainText("260,00");
