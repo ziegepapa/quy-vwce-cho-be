@@ -1,0 +1,14 @@
+.mu4-shell{max-width:820px;margin:auto;padding:24px 16px 48px;display:grid;gap:16px;color:inherit}
+.mu4-head,.mu4-footer{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.mu4-head h1{font-size:1.6rem;margin:8px 0}.mu4-head p,.mu4-card p{line-height:1.5;margin:6px 0;font-size:.88rem;overflow-wrap:anywhere}
+.mu4-readonly{border-radius:100px;padding:5px 10px;font-weight:700;background:#235f53;color:white;font-size:.78rem}
+.mu4-card{min-width:0;border:1px solid var(--line,rgba(127,127,127,.35));border-radius:16px;padding:18px;background:var(--surface,transparent);display:grid;gap:6px}
+.mu4-card h2{font-size:1rem;margin:0}.mu4-total{font-size:2rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.mu4-holdings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mu4-holdings strong{font-size:1.15rem}.mu4-card small{font-size:.72rem;overflow-wrap:anywhere;opacity:.8}
+.mu4-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mu4-shell button{color:inherit;background:transparent;border:1px solid var(--line,rgba(127,127,127,.4));border-radius:10px;min-height:44px;padding:8px 12px;font:inherit;font-weight:600;cursor:pointer}
+.mu4-tabs button[aria-pressed=true]{background:#235f53;color:white;border-color:#235f53}
+.mu4-shell button:focus-visible,.mu4-shell input:focus-visible{outline:2px solid #2a9d86;outline-offset:2px}
+.mu4-rows{list-style:none;padding:0;margin:0;display:grid;gap:4px}.mu4-rows li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line,rgba(127,127,127,.25))}
+.mu4-rows span{display:grid;gap:4px;min-width:0;overflow-wrap:anywhere}.mu4-rows strong{white-space:nowrap}.mu4-footer small{opacity:.75}
+@media(max-width:350px){.mu4-holdings{grid-template-columns:1fr}.mu4-head{align-items:flex-start}.mu4-shell{padding-inline:12px}}

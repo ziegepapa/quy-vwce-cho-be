@@ -24,6 +24,8 @@ import { IconHome, IconMenu, IconSettings, IconSim, IconTimeline, IconTx } from 
 import { conflictCtaLabel, hasLogoutBlockers, openSyncConflictSection, readSyncConflictFocusToken, reconcileVisibleLogoutBlockers, type LogoutBlockerCounts } from "./components/SyncConflictSection";
 import { buildSyncHealth } from "./components/syncHealth";
 import { recordLocalDiagnostic } from "./components/localDiagnostics";
+const LocalSharingGate = import.meta.env.VITE_MU3_LOCAL_REHEARSAL === "true" && import.meta.env.VITE_SUPABASE_URL === "http://127.0.0.1:54321"
+  ? lazy(() => import("./components/LocalSharingGate")) : null;
 const Overview = lazy(() => import("./pages/Overview"));
 const Transactions = lazy(() => import("./pages/Transactions"));
 const Goals = lazy(() => import("./pages/Goals"));
@@ -165,6 +167,11 @@ async function readLogoutSafety(userId: string): Promise<LogoutSafetySnapshot> {
 }
 
 export default function App() {
+  if (LocalSharingGate) return <Suspense fallback={null}><LocalSharingGate ownerApp={<OwnerApp/>}/></Suspense>;
+  return <OwnerApp/>;
+}
+
+function OwnerApp() {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
