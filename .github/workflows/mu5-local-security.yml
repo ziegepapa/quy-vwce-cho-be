@@ -1,0 +1,86 @@
+name: MU5 Local Security Integration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/mu2-*'
+      - 'scripts/mu5-*'
+      - 'scripts/h5-003-*'
+      - 'scripts/h5-materialize-003.sh'
+      - 'supabase/**'
+      - '.github/workflows/mu5-local-security.yml'
+      - 'tests/mu4/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mu5-local:
+    name: MU5 Auth and Data API (PG${{ matrix.pg }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: [15, 17]
+    env:
+      SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      MU5_PG: ${{ matrix.pg }}
+      DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.119.0
+      - name: Reject non-local target
+        run: |
+          set -euo pipefail
+          if SUPABASE_URL=https://example.invalid node scripts/mu5-behavioral.mjs >"$RUNNER_TEMP/mu2-guard.log" 2>&1; then exit 1; fi
+          grep -F 'MU5 refuses non-disposable local target' "$RUNNER_TEMP/mu2-guard.log"
+      - name: Start disposable local Supabase and exact H5 baseline
+        run: |
+          set -euo pipefail
+          node scripts/h5-migration-guard.mjs
+          sed -i "s/^major_version = 15$/major_version = ${MU5_PG}/" supabase/config.toml
+          supabase start -x studio,imgproxy,logflare,vector,supavisor
+          bash scripts/h5-materialize-003.sh
+          bash scripts/h5-003-apply.sh reset
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h5-truncate-probe.sql
+          test "$(psql "$DB_URL" -XAt -c "select current_setting('server_version_num')::int/10000")" = "$MU5_PG"
+      - name: Prove MU2 SQL refuses missing marker
+        run: |
+          set -euo pipefail
+          src=supabase_db_vwce-vault-local-h4h5
+          sp() { docker exec -i "$src" psql -U supabase_admin -d postgres -XAt -v ON_ERROR_STOP=1 "$@"; }
+          if sp < scripts/mu2-membership-candidate.sql >"$RUNNER_TEMP/mu2-sql-guard.log" 2>&1; then exit 1; fi
+          grep -F 'MU2 refuses non-rehearsal execution' "$RUNNER_TEMP/mu2-sql-guard.log"
+          test "$(sp -c "select to_regclass('public.vault_memberships') is null")" = t
+          sp -c 'create role mu2_disposable_marker nologin'
+      - name: Real Auth JWT and PostgREST matrix with rollback
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+          SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" node scripts/mu5-behavioral.mjs
+      - name: Verify owner-only catalog after rollback
+        run: |
+          set -euo pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h4-rls-catalog-check.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/h5-truncate-probe.sql
+          node -e 'const e=require("./mu5-evidence.json"); if(e.result!=="PASS" || !e.cases.length || e.cases.some(c=>c.status!=="PASS")) process.exit(1)'
+      - name: Upload redacted MU2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mu5-evidence-${{ github.run_id }}-pg${{ matrix.pg }}
+          path: mu5-evidence.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop disposable stack
+        if: always()
+        run: supabase stop --no-backup
