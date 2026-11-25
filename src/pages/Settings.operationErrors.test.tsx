@@ -201,7 +201,7 @@ describe("German Settings and mobile Advanced hierarchy", () => {
   });
 
   it("keeps malformed and unsupported German backup imports fail-closed", async () => {
-    const { container } = renderGermanSettings("/settings?tab=data");
+    renderGermanSettings("/settings?tab=data");
     await screen.findByRole("dialog", { name: "Synchronisierung" });
     fireEvent.click(screen.getByRole("button", { name: "Schließen" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -253,7 +253,8 @@ describe("German Settings and mobile Advanced hierarchy", () => {
     const restoreBtn = await screen.findByText("Daten wiederherstellen");
     fireEvent.click(restoreBtn.closest("button") as HTMLButtonElement);
     await screen.findByRole("dialog", { name: "Daten wiederherstellen" });
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = screen.getByRole("dialog", { name: "Daten wiederherstellen" }).querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input).toBeTruthy();
     const validJson = JSON.stringify({ schemaVersion: 3, exportedAt: "2026-08-14T06:00:00Z" });
     const backup = new File([validJson], "backup.json", { type: "application/json" });
     Object.defineProperty(backup, "text", { value: () => Promise.resolve(validJson) });
@@ -355,7 +356,7 @@ describe("Settings operation errors", () => {
 
   it("aborts import when the mandatory pre-import backup cannot be created", async () => {
     dbMocks.exportBackup.mockRejectedValueOnce(new Error("PREBACKUP_SECRET_CANARY"));
-    const { container } = renderSettings("/settings?tab=data");
+    renderSettings("/settings?tab=data");
     await screen.findByRole("dialog", { name: "Đồng bộ" });
     fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -363,7 +364,8 @@ describe("Settings operation errors", () => {
     const transfersDialogVi2 = await screen.findByRole("dialog", { name: "Sao lưu & khôi phục" });
     fireEvent.click(within(transfersDialogVi2).getByRole("button", { name: /Khôi phục dữ liệu/ }));
     await screen.findByText("Nhập sao lưu");
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = screen.getByRole("dialog", { name: "Khôi phục dữ liệu" }).querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input).toBeTruthy();
     const file = new File([JSON.stringify({ schemaVersion: 3, exportedAt: "2026-08-14T06:00:00Z" })], "backup.json", { type: "application/json" });
     Object.defineProperty(file, "text", { value: () => Promise.resolve(JSON.stringify({ schemaVersion: 3, exportedAt: "2026-08-14T06:00:00Z" })) });
     fireEvent.change(input, { target: { files: [file] } });
