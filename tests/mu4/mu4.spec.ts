@@ -126,6 +126,14 @@ test("MU4 actual app two synthetic accounts, isolated reader and revocation",asy
   await page.getByRole("button",{name:"Erneut prüfen",exact:true}).click();
   await expect(page.locator(".mu4-total")).toContainText("260,00");
   console.log("PASS owner write reflected by next member refresh");
+  await ctx.setOffline(true);
+  await page.getByRole("button",{name:"Erneut prüfen",exact:true}).click();
+  await expect(page.locator(".mu4-total,.mu4-holdings,.mu4-tabs")).toHaveCount(0);
+  expect(writes).toEqual([]);
+  console.log("PASS offline refresh fails closed without writable owner store");
+  await ctx.setOffline(false);
+  await page.reload();
+  await expect(page.locator(".mu4-total")).toContainText("260,00");
   const rev=await owner.client.from("vault_memberships").update({status:"revoked"}).match(membership).select();
   expect(rev.error).toBeNull();expect(rev.data?.[0]?.status).toBe("revoked");
   expect((await member.client.auth.getUser(member.token)).error).toBeNull();
