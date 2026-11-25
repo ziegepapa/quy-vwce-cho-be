@@ -46,7 +46,11 @@ test("MU4 actual app two synthetic accounts, isolated reader and revocation",asy
     expect(connect).toBe("connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321");
     await p.locator("#email").fill(email);
     await p.locator("#password").fill(password);
-    await p.locator("form").getByRole("button",{name:"Anmelden",exact:true}).click();
+    const [loginResponse]=await Promise.all([
+      p.waitForResponse(r=>{const u=new URL(r.url());return u.origin===url && u.pathname==="/auth/v1/token" && r.request().method()==="POST";},{timeout:5000}),
+      p.locator("form").getByRole("button",{name:"Anmelden",exact:true}).click(),
+    ]);
+    expect(loginResponse.status()).toBe(200);
   }
   const failures:string[]=[];
   page.on("pageerror",e=>failures.push(e.name+": "+e.message.slice(0,200)));
@@ -54,9 +58,7 @@ test("MU4 actual app two synthetic accounts, isolated reader and revocation",asy
   page.on("requestfailed",r=>{const u=new URL(r.url());if(u.origin===url && (u.pathname.startsWith("/auth/v1/")||u.pathname.startsWith("/rest/v1/"))) failures.push("requestfailed "+r.method()+" "+u.pathname+" "+(r.failure()?.errorText??"unknown"));});
   page.on("console",m=>{if(/Content Security Policy/i.test(m.text())&&m.text().includes("127.0.0.1:54321"))failures.push("local Auth/REST blocked by CSP");});
   try {
-    const loginResponse=page.waitForResponse(r=>{const u=new URL(r.url());return u.origin===url && u.pathname==="/auth/v1/token" && r.request().method()==="POST";},{timeout:5000});
     await signIn(page,member.email);
-    expect((await loginResponse).status()).toBe(200);
     await expect(page.getByText("Nur Lesen",{exact:true})).toBeVisible();
     console.log("PASS real browser password Auth HTTP 200 and German member view");
   } catch(e) {
