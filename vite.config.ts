@@ -14,6 +14,21 @@ export default defineConfig({
   plugins: [
     react(),
     {
+      // The static production CSP intentionally excludes loopback. Only the
+      // explicitly enabled, disposable Vite dev rehearsal needs local Auth/REST.
+      name: "mu4-local-rehearsal-csp",
+      apply: "serve",
+      transformIndexHtml(html, context) {
+        if (!context.server ||
+            process.env.VITE_MU3_LOCAL_REHEARSAL !== "true" ||
+            process.env.VITE_SUPABASE_URL !== "http://127.0.0.1:54321") return html;
+        const productionConnect = "connect-src 'self' https://*.supabase.co wss://*.supabase.co;";
+        if (!html.includes(productionConnect)) throw new Error("MU4 local CSP baseline changed");
+        return html.replace(productionConnect,
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321;");
+      },
+    },
+    {
       name: "app-release-version-metadata",
       transformIndexHtml(html) {
         return html.replace(
