@@ -315,12 +315,8 @@ async function ingestQuotesFeedInternal(
       const current: QuoteCandidate | undefined = await db.quoteCandidates.get(
         candidateId(row.instrumentIsin, currency, "auto"),
       );
-      if (current && current.asOf > row.asOf) {
-        errors.push(`${key}: older session rejected; stored quote retained`);
-        continue;
-      }
       const isNoOp = current ? isSameAutoQuoteSemantics(current, row) : false;
-      await putAutoCandidateAndResolve(row, { nowDate });
+      await putAutoCandidateAndResolve(row, { nowDate, rejectOlderFeed: true });
       if (isNoOp) unchanged += 1;
       else updated += 1;
     } catch (error) {

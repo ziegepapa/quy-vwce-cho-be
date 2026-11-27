@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db, getQuoteForIsin } from "./db";
+import { putAutoCandidateAndResolve } from "./db.m06";
 import { defaultSettings } from "./defaults";
 import { candidateId } from "./instrument";
 import { ingestQuotesFeed, validateQuoteFeed, type QuoteFeedFetch } from "./quoteFeed";
@@ -101,6 +102,30 @@ describe("quote feed ingestion", () => {
     expect(result.status).toBe("partial");
     expect(result.updated).toBe(0);
     expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(167.54);
+  });
+
+  it("rejects an older fetch from the same session even with a timezone offset", async () => {
+    await ingestQuotesFeed({ fetchImpl: jsonFetch(envelope([row()])), now: NOW, online: true });
+    const key = candidateId(VWCE_ISIN, "EUR", "auto");
+    const before = await db.quoteCandidates.get(key);
+    const result = await ingestQuotesFeed({
+      fetchImpl: jsonFetch(envelope([row({ price: 99, fetchedAt: "2026-08-04T22:08:00+02:00" })])),
+      now: NOW, online: true,
+    });
+    expect(result).toMatchObject({ status: "partial", updated: 0 });
+    expect(await db.quoteCandidates.get(key)).toEqual(before);
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(167.54);
+  });
+
+  it("enforces the feed guard within the database writer and accepts a newer correction", async () => {
+    await ingestQuotesFeed({ fetchImpl: jsonFetch(envelope([row()])), now: NOW, online: true });
+    const input = { instrumentIsin: VWCE_ISIN, currency: "EUR", venue: "XETRA", asOf: "2026-08-04", price: 168, provider: "yahoo_finance_chart" };
+    await expect(putAutoCandidateAndResolve({ ...input, fetchedAt: "2026-08-04T20:00:00Z" },
+      { nowDate: "2026-08-04", rejectOlderFeed: true })).rejects.toThrow(/older quote feed/);
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(167.54);
+    await putAutoCandidateAndResolve({ ...input, fetchedAt: "2026-08-04T20:30:00Z" },
+      { nowDate: "2026-08-04", rejectOlderFeed: true });
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(168);
   });
 
   it("rejects timestamps without an explicit timezone", () => {
