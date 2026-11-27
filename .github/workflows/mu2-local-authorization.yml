@@ -3,6 +3,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'docs/MU6-LOCAL-ACCEPTANCE.md'
       - 'scripts/mu2-*'
       - 'scripts/h5-003-*'
       - 'scripts/h5-materialize-003.sh'

@@ -3,6 +3,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'docs/MU6-LOCAL-ACCEPTANCE.md'
       - 'src/App.tsx'
       - 'src/components/LocalSharingGate.tsx'
       - 'src/components/SharedMemberVault.tsx'

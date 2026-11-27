@@ -27,6 +27,7 @@ on:
       - ".github/workflows/h4-h5-evidence.yml"
   pull_request:
     paths:
+      - 'docs/MU6-LOCAL-ACCEPTANCE.md'
       - "supabase/**"
       - "docs/LONG_TERM_READINESS.md"
       - "docs/H4-H5-CLOSURE-PLAN.md"
