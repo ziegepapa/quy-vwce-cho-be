@@ -86,6 +86,9 @@ function cleanOptionalString(value: unknown, field: string): string | undefined 
 
 function parseTimestamp(value: unknown, field: string, nowMs: number): string {
   const raw = cleanRequiredString(value, field);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(raw)) {
+    throw new Error(`${field} must include an explicit ISO-8601 timezone`);
+  }
   const parsed = Date.parse(raw);
   if (!Number.isFinite(parsed)) throw new Error(`${field} must be ISO-8601`);
   if (parsed > nowMs + FUTURE_TOLERANCE_MS) {
@@ -312,6 +315,10 @@ async function ingestQuotesFeedInternal(
       const current: QuoteCandidate | undefined = await db.quoteCandidates.get(
         candidateId(row.instrumentIsin, currency, "auto"),
       );
+      if (current && current.asOf > row.asOf) {
+        errors.push(`${key}: older session rejected; stored quote retained`);
+        continue;
+      }
       const isNoOp = current ? isSameAutoQuoteSemantics(current, row) : false;
       await putAutoCandidateAndResolve(row, { nowDate });
       if (isNoOp) unchanged += 1;

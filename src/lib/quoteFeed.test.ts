@@ -95,6 +95,17 @@ describe("quote feed envelope validation", () => {
 });
 
 describe("quote feed ingestion", () => {
+  it("retains a newer stored session when a cached older feed arrives", async () => {
+    await ingestQuotesFeed({ fetchImpl: jsonFetch(envelope([row()])), now: NOW, online: true });
+    const result = await ingestQuotesFeed({ fetchImpl: jsonFetch(envelope([row({ asOf: "2026-08-03", price: 99 })])), now: NOW, online: true });
+    expect(result.status).toBe("partial");
+    expect(result.updated).toBe(0);
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(167.54);
+  });
+
+  it("rejects timestamps without an explicit timezone", () => {
+    expect(validateQuoteFeed(envelope([row({ fetchedAt: "2026-08-04T20:09:02" })]), { now: NOW }).skipped).toHaveLength(1);
+  });
   it("writes a valid auto candidate and effective quote", async () => {
     const result = await ingestQuotesFeed({
       fetchImpl: jsonFetch(envelope([row()])),
