@@ -3,6 +3,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'docs/MU6-LOCAL-ACCEPTANCE.md'
       - 'src/components/*MemberManagement.tsx'
       - 'src/pages/Settings.tsx'
       - 'src/styles/mu3-members.css'
