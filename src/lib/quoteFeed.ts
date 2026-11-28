@@ -1,4 +1,5 @@
 import type { QuoteCandidate } from "./types";
+import { VWCE_ISIN, VALL_ISIN } from "./types";
 import type { AutoQuoteInput } from "./db.m06";
 import { db } from "./db.m01a";
 import { isSameAutoQuoteSemantics, putAutoCandidateAndResolve } from "./db.m06";
@@ -86,6 +87,9 @@ function cleanOptionalString(value: unknown, field: string): string | undefined 
 
 function parseTimestamp(value: unknown, field: string, nowMs: number): string {
   const raw = cleanRequiredString(value, field);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(raw)) {
+    throw new Error(`${field} must include an explicit ISO-8601 timezone`);
+  }
   const parsed = Date.parse(raw);
   if (!Number.isFinite(parsed)) throw new Error(`${field} must be ISO-8601`);
   if (parsed > nowMs + FUTURE_TOLERANCE_MS) {
@@ -127,6 +131,12 @@ function validateRow(value: unknown, now: Date): AutoQuoteInput {
 
   const currency = cleanRequiredString(value.currency, "currency").toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) throw new Error("currency must be a 3-letter code");
+
+  // The configured VWCE/VALL feed tracks the EUR listings. Reject mislabeled
+  // foreign-currency rows instead of silently creating another price series.
+  if ((instrumentIsin === VWCE_ISIN || instrumentIsin === VALL_ISIN) && currency !== "EUR") {
+    throw new Error("configured ETF quote must use EUR");
+  }
 
   const venue = cleanRequiredString(value.venue, "venue");
   if (typeof value.price !== "number" || !Number.isFinite(value.price) || value.price <= 0) {
@@ -313,7 +323,7 @@ async function ingestQuotesFeedInternal(
         candidateId(row.instrumentIsin, currency, "auto"),
       );
       const isNoOp = current ? isSameAutoQuoteSemantics(current, row) : false;
-      await putAutoCandidateAndResolve(row, { nowDate });
+      await putAutoCandidateAndResolve(row, { nowDate, rejectOlderFeed: true });
       if (isNoOp) unchanged += 1;
       else updated += 1;
     } catch (error) {
@@ -322,7 +332,7 @@ async function ingestQuotesFeedInternal(
   }
 
   return {
-    status: errors.length > 0 ? "partial" : "ok",
+    status: errors.length > 0 || validation.skipped.length > 0 ? "partial" : "ok",
     url,
     totalRows: validation.rows.length + validation.skipped.length,
     acceptedRows: validation.rows.length,

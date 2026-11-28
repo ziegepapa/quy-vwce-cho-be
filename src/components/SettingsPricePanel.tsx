@@ -268,6 +268,21 @@ export default function SettingsPricePanel({
                         </span>
                       </div>
 
+                      {effective?.source === "auto" && (
+                        <p className="p40-price-hint">
+                          {locale === "de" ? "Veröffentlichter Tageskurs (kein Livekurs)" : "Giá phiên đã công bố (không phải giá trực tiếp)"}
+                          {" · "}{effective.venue || (locale === "de" ? "Börse unbekannt" : "Chưa rõ sàn")}
+                          {" · "}{effective.provider || (locale === "de" ? "Quelle unbekannt" : "Chưa rõ nguồn")}
+                          {effective.fetchedAt && Number.isFinite(Date.parse(effective.fetchedAt)) ? (
+                            <>{" · "}{locale === "de" ? "Bot-Abruf" : "Bot lấy giá"}{" "}
+                              {new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "vi-VN", {
+                                timeZone: "Europe/Berlin", dateStyle: "short", timeStyle: "short",
+                              }).format(new Date(effective.fetchedAt))} (Berlin)</>
+                          ) : null}
+                          {" · "}{locale === "de" ? "Kann vom aktuellen Brokerkurs abweichen." : "Có thể lệch với giá hiện tại của công ty môi giới."}
+                        </p>
+                      )}
+
                       <div className="p40-price-mode" role="group" aria-label={`${text.source} ${name}`}>
                         <button
                           type="button"
