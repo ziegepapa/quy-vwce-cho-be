@@ -899,6 +899,14 @@ export default function SettingsPage({
           syncHealthPanel={syncHealth ? <SyncHealthSummary health={syncHealth} onAction={onSyncHealthAction} compact /> : null}
           syncConflictPanel={conflictPanel}
           mfaEnrolled={auth.mfaEnrolled}
+          accountReady={auth.ready}
+          signedIn={Boolean(auth.user?.id)}
+          mfaReady={auth.mfaReady}
+          online={online}
+          readOnly={readOnly}
+          {...(syncHealth ? { syncState: syncHealth.state, syncSummaryLabel: syncHealthCopy(syncHealth, locale).menuMeta } : {})}
+          backupAt={metaBackup || null}
+          saveFailed={saveState === "error"}
           lastSyncAt={lastLocalSyncAt || null}
           appVersion={APP_RELEASE_VERSION}
           onPatchSettings={patchSettings}

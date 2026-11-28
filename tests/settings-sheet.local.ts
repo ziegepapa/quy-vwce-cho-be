@@ -42,6 +42,8 @@ for (const variant of cases) {
     await expect(page.locator(".ovb2")).toBeVisible();
     await page.goto("./#/settings");
     await expect(page.locator(".set2")).toBeVisible();
+    await expect(page.getByTestId("settings-status-center")).toBeVisible();
+    await page.screenshot({ path: info.outputPath("settings-sheet-overview-after.png"), animations: "disabled", fullPage: true });
     const close = de ? "Schließen" : "Đóng";
     for (const [row, title, id] of [
       [de ? "Passwort" : "Mật khẩu", de ? "Passwort ändern" : "Đổi mật khẩu", "change"],
@@ -74,3 +76,20 @@ for (const variant of cases) {
     // No password email, TOTP enrollment, export or restore action is submitted.
   });
 }
+
+
+test.describe("desktop Settings overview", () => {
+  test.use({ isMobile: false, hasTouch: false, viewport: { width: 1440, height: 900 } });
+  test("local status, groups and no horizontal overflow", async ({ page }, info) => {
+    await page.addInitScript(() => { localStorage.setItem("vwce-locale", "de"); localStorage.setItem("vwce-theme", "light"); });
+    await page.goto("./");
+    await page.getByRole("button", { name: "Starten", exact: true }).click();
+    await expect(page.locator(".ovb2")).toBeVisible();
+    await page.goto("./#/settings");
+    const center = page.getByTestId("settings-status-center");
+    await expect(center).toBeVisible();
+    await expect(page.getByRole("heading", { name: "ERWEITERT", exact: true })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    await page.screenshot({ path: info.outputPath("settings-sheet-desktop-after.png"), animations: "disabled", fullPage: true });
+  });
+});
