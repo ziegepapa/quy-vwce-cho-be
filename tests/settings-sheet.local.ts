@@ -43,7 +43,7 @@ for (const variant of cases) {
     await page.goto("./#/settings");
     await expect(page.locator(".set2")).toBeVisible();
     await expect(page.getByTestId("settings-status-center")).toBeVisible();
-    await page.screenshot({ path: info.outputPath("settings-overview-after.png"), animations: "disabled", fullPage: true });
+    await page.screenshot({ path: info.outputPath("settings-sheet-overview-after.png"), animations: "disabled", fullPage: true });
     const close = de ? "Schließen" : "Đóng";
     for (const [row, title, id] of [
       [de ? "Passwort" : "Mật khẩu", de ? "Passwort ändern" : "Đổi mật khẩu", "change"],
@@ -90,6 +90,6 @@ test.describe("desktop Settings overview", () => {
     await expect(center).toBeVisible();
     await expect(page.getByRole("heading", { name: "ERWEITERT", exact: true })).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-    await page.screenshot({ path: info.outputPath("settings-desktop-after.png"), animations: "disabled", fullPage: true });
+    await page.screenshot({ path: info.outputPath("settings-sheet-desktop-after.png"), animations: "disabled", fullPage: true });
   });
 });
