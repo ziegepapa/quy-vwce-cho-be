@@ -6,6 +6,7 @@ import { THEME_OPTIONS, type ThemeChoice } from "../lib/theme";
 import { IconArchive, IconCash, IconChevronRight, IconClose, IconGoal, IconLanguage, IconLock, IconShield, IconSim, IconSliders, IconSync, IconUpload } from "./Icons";
 import "../styles/settings-cbo.css";
 import "../styles/settings-v2.css";
+import type { SyncHealthState } from "./syncHealth";
 
 const CONTRIBUTION_PRESETS = [100, 120, 150, 200, 300] as const;
 
@@ -49,6 +50,14 @@ type Props = {
   onOpenMigrate?: () => void;
   onSignOut?: () => void;
   mfaEnrolled?: boolean;
+  accountReady?: boolean;
+  signedIn?: boolean;
+  mfaReady?: boolean;
+  online?: boolean;
+  readOnly?: boolean;
+  syncState?: SyncHealthState;
+  backupAt?: string | null;
+  saveFailed?: boolean;
   lastSyncAt?: string | null;
   appVersion?: string;
   handoffAction?: ReactNode;
@@ -325,6 +334,29 @@ export default function SettingsCboWorkspace(props: Props) {
   const planName = props.settings.planName || "VWCE Vault";
   const avatarInitial = (props.settings.childName || planName).trim().slice(0, 1).toUpperCase();
 
+  const de = props.locale === "de";
+  const unknown = de ? "Nicht geprüft" : "Chưa xác minh";
+  const accountStatus = !props.accountReady ? unknown : props.signedIn
+    ? (de ? "Angemeldet" : "Đã đăng nhập") : (de ? "Nur lokal" : "Chỉ lưu cục bộ");
+  const securityStatus = !props.accountReady || !props.signedIn || !props.mfaReady
+    ? (props.accountReady && !props.signedIn ? (de ? "Kein Cloud-Konto" : "Không có phiên cloud") : unknown)
+    : props.mfaEnrolled ? copy.mfaOn : copy.mfaOff;
+  const backupDate = props.backupAt ? new Date(props.backupAt) : null;
+  const backupStatus = backupDate && Number.isFinite(backupDate.getTime())
+    ? new Intl.DateTimeFormat(de ? "de-DE" : "vi-VN", { dateStyle: "medium" }).format(backupDate)
+    : props.backupAt === null ? (de ? "Kein Export vermerkt" : "Chưa ghi nhận bản xuất") : unknown;
+  const syncStatus = props.syncing ? (de ? "Läuft" : "Đang chạy")
+    : props.syncState ? props.syncLabel : props.online === false ? (de ? "Offline" : "Ngoại tuyến") : unknown;
+  const syncNeedsAttention = props.syncState === "recovery" || props.syncState === "conflict"
+    || props.syncState === "retry" || props.syncState === "pending";
+  const priority = props.readOnly || props.saveFailed ? null
+    : syncNeedsAttention ? "sync"
+    : props.accountReady && props.signedIn && props.mfaReady && props.online === true && !props.mfaEnrolled ? "mfa"
+    : props.backupAt === null ? "backup" : null;
+  const priorityText = priority === "sync" ? (de ? "Synchronisierung prüfen" : "Kiểm tra đồng bộ")
+    : priority === "mfa" ? (de ? "Kontoschutz einrichten" : "Thiết lập bảo vệ tài khoản")
+    : (de ? "Lokale Sicherung erstellen" : "Tạo bản sao lưu cục bộ");
+
   return <div className="set2">
     <header className="mwj-page-head mwj-settings-head">
     <h1 className="set2-title">{copy.title}</h1>
@@ -337,6 +369,20 @@ export default function SettingsCboWorkspace(props: Props) {
       <IconChevronRight aria-hidden="true" />
     </button>
     </header>
+    <section className="set2-overview" aria-label={de ? "Gerätestatus" : "Tình trạng thiết bị"} data-testid="settings-status-center">
+      <h2>{de ? "Ihr Vault im Überblick" : "Tổng quan Vault"}</h2>
+      <dl className="set2-status-grid">
+        <div><dt>{de ? "Konto" : "Tài khoản"}</dt><dd>{accountStatus}</dd></div>
+        <div><dt>{de ? "Abgleich" : "Đồng bộ"}</dt><dd>{syncStatus}</dd></div>
+        <div><dt>{de ? "Kontoschutz" : "Bảo vệ tài khoản"}</dt><dd>{securityStatus}</dd></div>
+        <div><dt>{de ? "Letzter lokaler Export" : "Bản xuất cục bộ gần nhất"}</dt><dd>{backupStatus}</dd></div>
+      </dl>
+      {priority ? <button type="button" className="set2-priority" onClick={() => {
+        if (priority === "sync") setSheet("sync");
+        else props.onOpenChild(priority);
+      }}><span><small>{de ? "Nächster Schritt" : "Việc nên làm tiếp"}</small><strong>{priorityText}</strong></span><IconChevronRight aria-hidden="true" /></button> : null}
+      {props.readOnly ? <p>{de ? "Nur Lesen – Änderungen sind gesperrt." : "Chỉ đọc – không thể thay đổi dữ liệu."}</p> : null}
+    </section>
 
     <section className="mwj-settings-group">
     <h2 className="set2-gtitle">{copy.planGroup}</h2>
@@ -375,11 +421,6 @@ export default function SettingsCboWorkspace(props: Props) {
       <SetRow icon={<IconSync />} label={copy.syncRow} value={props.lastSyncAt ? relativeTime(props.lastSyncAt, props.locale) : undefined} onClick={() => setSheet("sync")} />
       <SetRow icon={<IconCash />} label={copy.vwcePrice} onClick={() => setSheet("prices")} />
       <SetRow icon={<IconShield />} label="VALL Health Monitor" onClick={() => setSheet("vall")} />
-      <button type="button" className="set2-row" onClick={props.onExportCsv}>
-        <span className="set2-ric" aria-hidden="true"><IconUpload /></span>
-        <span className="set2-rtitle">{copy.csv}</span>
-        <IconChevronRight aria-hidden="true" />
-      </button>
     </div>
 
     </section>
@@ -388,7 +429,7 @@ export default function SettingsCboWorkspace(props: Props) {
     <div className="set2-group">
       <SetRow icon={<IconLock />} label={copy.passwordRow} onClick={() => props.onOpenChild("password-change")} />
       <SetRow icon={<IconShield />} label={copy.recovery} onClick={() => props.onOpenChild("password-reset")} />
-      <SetRow icon={<IconShield />} label={copy.mfaRow} value={props.mfaEnrolled ? copy.mfaOn : copy.mfaOff} onClick={() => props.onOpenChild("mfa")} />
+      <SetRow icon={<IconShield />} label={copy.mfaRow} value={securityStatus} onClick={() => props.onOpenChild("mfa")} />
       {props.onSignOut ? (
         <button type="button" className="set2-row" onClick={props.onSignOut}>
           <span className="set2-ric" aria-hidden="true"><IconClose /></span>
@@ -399,12 +440,13 @@ export default function SettingsCboWorkspace(props: Props) {
     </div>
 
     </section>
-    {props.handoffAction ? (
-      <section className="mwj-settings-group">
-        <h2 className="set2-gtitle">{copy.otherGroup}</h2>
-        <div className="set2-group set2-legacy">{props.handoffAction}</div>
-      </section>
-    ) : null}
+    <section className="mwj-settings-group">
+      <h2 className="set2-gtitle">{de ? "ERWEITERT" : "NÂNG CAO"}</h2>
+      <div className="set2-group">
+        <SetRow icon={<IconSliders />} label={copy.diagnostics} onClick={() => props.onOpenChild("diagnostics")} />
+        {props.handoffAction ? <div className="set2-legacy">{props.handoffAction}</div> : null}
+      </div>
+    </section>
     {props.dangerAction ? (
       <section className="mwj-settings-group set2-danger">
         <h2 className="set2-gtitle">{props.locale === "de" ? "Daten löschen" : "Xóa dữ liệu"}</h2>
@@ -413,7 +455,7 @@ export default function SettingsCboWorkspace(props: Props) {
     ) : null}
 
     <p className="set2-foot">
-      <span className="set2-saved" role="status">✓ {props.saveLabel || copy.saved}</span>
+      <span className="set2-saved" role="status">{props.saveLabel || unknown}</span>
       {props.appVersion ? <span>{copy.versionLabel} {props.appVersion}</span> : null}
     </p>
 
@@ -519,7 +561,7 @@ export default function SettingsCboWorkspace(props: Props) {
       <button type="button" className="p40-advanced-link" onClick={() => { setSimReturn("plan"); setSheet("simulation"); }}>{copy.advanced}<small>{copy.advancedHelp}</small><IconChevronRight aria-hidden /></button>
       <button type="button" className="p40-sheet-done" onClick={() => setSheet(null)}>{copy.save}</button>
     </Sheet> : null}
-    {sheet === "simulation" ? <Sheet title={copy.simulation} closeLabel={copy.close} onClose={() => setSheet(simReturn)}><p className="p40-sheet-note">{copy.simulationNote}</p><div className="p40-sheet-fields p40-percent-grid"><label><span>{copy.vwceReturn}</span><input inputMode="decimal" value={String(props.settings.vwceReturn * 100)} onChange={(event) => updateRate("vwceReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.inflation}</span><input inputMode="decimal" value={String(props.settings.inflationRate * 100)} onChange={(event) => updateRate("inflationRate", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.safeReturn}</span><input inputMode="decimal" value={String(props.settings.safeReturn * 100)} onChange={(event) => updateRate("safeReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.buffer}</span><input inputMode="decimal" value={String(props.settings.bufferPct * 100)} onChange={(event) => updateRate("bufferPct", event.target.value)} /><small>%</small></label></div><button type="button" className="p40-sheet-done" onClick={() => setSheet("plan")}>{copy.save}</button></Sheet> : null}
+    {sheet === "simulation" ? <Sheet title={copy.simulation} closeLabel={copy.close} onClose={() => setSheet(simReturn)}><p className="p40-sheet-note">{copy.simulationNote}</p><div className="p40-sheet-fields p40-percent-grid"><label><span>{copy.vwceReturn}</span><input inputMode="decimal" value={String(props.settings.vwceReturn * 100)} onChange={(event) => updateRate("vwceReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.inflation}</span><input inputMode="decimal" value={String(props.settings.inflationRate * 100)} onChange={(event) => updateRate("inflationRate", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.safeReturn}</span><input inputMode="decimal" value={String(props.settings.safeReturn * 100)} onChange={(event) => updateRate("safeReturn", event.target.value)} /><small>{copy.perYear}</small></label><label><span>{copy.buffer}</span><input inputMode="decimal" value={String(props.settings.bufferPct * 100)} onChange={(event) => updateRate("bufferPct", event.target.value)} /><small>%</small></label></div><button type="button" className="p40-sheet-done" onClick={() => setSheet(simReturn)}>{copy.save}</button></Sheet> : null}
 
     {sheet === "theme" ? <Sheet title={copy.appearance} closeLabel={copy.close} onClose={() => setSheet(null)}>
       <div className="set2-theme-list">
@@ -567,6 +609,7 @@ export default function SettingsCboWorkspace(props: Props) {
         <IconSync aria-hidden="true" />{props.syncing ? props.syncLabel : copy.syncNow}
       </button>
       <div className="set2-panel">{props.syncConflictPanel}</div>
+      <div className="set2-panel">{props.dataHealthPanel}</div>
     </Sheet> : null}
     {sheet === "transfers" ? <Sheet title={copy.backupRestore} closeLabel={copy.close} onClose={() => setSheet(null)}>
       <div className="set2-actions">
