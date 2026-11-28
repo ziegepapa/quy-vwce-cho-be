@@ -56,6 +56,7 @@ type Props = {
   online?: boolean;
   readOnly?: boolean;
   syncState?: SyncHealthState;
+  syncSummaryLabel?: string;
   backupAt?: string | null;
   saveFailed?: boolean;
   lastSyncAt?: string | null;
@@ -346,7 +347,7 @@ export default function SettingsCboWorkspace(props: Props) {
     ? new Intl.DateTimeFormat(de ? "de-DE" : "vi-VN", { dateStyle: "medium" }).format(backupDate)
     : props.backupAt === null ? (de ? "Kein Export vermerkt" : "Chưa ghi nhận bản xuất") : unknown;
   const syncStatus = props.syncing ? (de ? "Läuft" : "Đang chạy")
-    : props.syncState ? props.syncLabel : props.online === false ? (de ? "Offline" : "Ngoại tuyến") : unknown;
+    : props.syncState ? (props.syncSummaryLabel ?? props.syncLabel) : props.online === false ? (de ? "Offline" : "Ngoại tuyến") : unknown;
   const syncNeedsAttention = props.syncState === "recovery" || props.syncState === "conflict"
     || props.syncState === "retry" || props.syncState === "pending";
   const priority = props.readOnly || props.saveFailed ? null

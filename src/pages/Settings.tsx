@@ -904,7 +904,7 @@ export default function SettingsPage({
           mfaReady={auth.mfaReady}
           online={online}
           readOnly={readOnly}
-          {...(syncHealth ? { syncState: syncHealth.state } : {})}
+          {...(syncHealth ? { syncState: syncHealth.state, syncSummaryLabel: syncHealthCopy(syncHealth, locale).menuMeta } : {})}
           backupAt={metaBackup || null}
           saveFailed={saveState === "error"}
           lastSyncAt={lastLocalSyncAt || null}
