@@ -1,10 +1,11 @@
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db, getQuoteForIsin } from "./db";
+import { putAutoCandidateAndResolve } from "./db.m06";
 import { defaultSettings } from "./defaults";
 import { candidateId } from "./instrument";
 import { ingestQuotesFeed, validateQuoteFeed, type QuoteFeedFetch } from "./quoteFeed";
-import { VWCE_ISIN } from "./types";
+import { VWCE_ISIN, VALL_ISIN } from "./types";
 
 const OTHER_ISIN = "FR0010315770";
 const NOW = new Date("2026-08-04T21:00:00.000Z");
@@ -73,11 +74,36 @@ describe("quote feed envelope validation", () => {
       row({ instrumentIsin: OTHER_ISIN, venue: "PARIS", price: 42 }),
     ]);
     const result = await ingestQuotesFeed({ fetchImpl: jsonFetch(payload), now: NOW, online: true });
-    expect(result.status).toBe("ok");
+    expect(result.status).toBe("partial");
     expect(result.updated).toBe(2);
     expect(result.skipped).toHaveLength(1);
     expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(167.54);
     expect((await getQuoteForIsin(OTHER_ISIN))?.price).toBe(42);
+  });
+
+  it("rejects non-EUR quotes for both configured ETFs, retaining existing EUR quotes", async () => {
+    await ingestQuotesFeed({ fetchImpl: jsonFetch(envelope([
+      row(), row({ instrumentIsin: VALL_ISIN, price: 4.25 }),
+    ])), now: NOW, online: true });
+    const result = await ingestQuotesFeed({ fetchImpl: jsonFetch(envelope([
+      row({ currency: "USD", price: 199 }),
+      row({ instrumentIsin: VALL_ISIN, currency: "GBP", price: 3.5 }),
+    ])), now: NOW, online: true });
+    expect(result).toMatchObject({ status: "partial", updated: 0, acceptedRows: 0 });
+    expect(result.skipped).toHaveLength(2);
+    expect(result.skipped.every(issue => issue.reason.includes("EUR"))).toBe(true);
+    expect(await db.quoteCandidates.get(candidateId(VWCE_ISIN, "USD", "auto"))).toBeUndefined();
+    expect(await db.quoteCandidates.get(candidateId(VALL_ISIN, "GBP", "auto"))).toBeUndefined();
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(167.54);
+    expect((await getQuoteForIsin(VALL_ISIN))?.price).toBe(4.25);
+  });
+
+  it("preserves support for unrelated instruments quoted in other currencies", () => {
+    const result = validateQuoteFeed(envelope([row({
+      instrumentIsin: OTHER_ISIN, currency: "USD", venue: "OTHER",
+    })]), { now: NOW });
+    expect(result.skipped).toHaveLength(0);
+    expect(result.rows[0]?.currency).toBe("USD");
   });
 
   it("rejects a future incoming row without changing its prior candidate", async () => {
@@ -95,6 +121,41 @@ describe("quote feed envelope validation", () => {
 });
 
 describe("quote feed ingestion", () => {
+  it("retains a newer stored session when a cached older feed arrives", async () => {
+    await ingestQuotesFeed({ fetchImpl: jsonFetch(envelope([row()])), now: NOW, online: true });
+    const result = await ingestQuotesFeed({ fetchImpl: jsonFetch(envelope([row({ asOf: "2026-08-03", price: 99 })])), now: NOW, online: true });
+    expect(result.status).toBe("partial");
+    expect(result.updated).toBe(0);
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(167.54);
+  });
+
+  it("rejects an older fetch from the same session even with a timezone offset", async () => {
+    await ingestQuotesFeed({ fetchImpl: jsonFetch(envelope([row()])), now: NOW, online: true });
+    const key = candidateId(VWCE_ISIN, "EUR", "auto");
+    const before = await db.quoteCandidates.get(key);
+    const result = await ingestQuotesFeed({
+      fetchImpl: jsonFetch(envelope([row({ price: 99, fetchedAt: "2026-08-04T22:08:00+02:00" })])),
+      now: NOW, online: true,
+    });
+    expect(result).toMatchObject({ status: "partial", updated: 0 });
+    expect(await db.quoteCandidates.get(key)).toEqual(before);
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(167.54);
+  });
+
+  it("enforces the feed guard within the database writer and accepts a newer correction", async () => {
+    await ingestQuotesFeed({ fetchImpl: jsonFetch(envelope([row()])), now: NOW, online: true });
+    const input = { instrumentIsin: VWCE_ISIN, currency: "EUR", venue: "XETRA", asOf: "2026-08-04", price: 168, provider: "yahoo_finance_chart" };
+    await expect(putAutoCandidateAndResolve({ ...input, fetchedAt: "2026-08-04T20:00:00Z" },
+      { nowDate: "2026-08-04", rejectOlderFeed: true })).rejects.toThrow(/older quote feed/);
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(167.54);
+    await putAutoCandidateAndResolve({ ...input, fetchedAt: "2026-08-04T20:30:00Z" },
+      { nowDate: "2026-08-04", rejectOlderFeed: true });
+    expect((await getQuoteForIsin(VWCE_ISIN))?.price).toBe(168);
+  });
+
+  it("rejects timestamps without an explicit timezone", () => {
+    expect(validateQuoteFeed(envelope([row({ fetchedAt: "2026-08-04T20:09:02" })]), { now: NOW }).skipped).toHaveLength(1);
+  });
   it("writes a valid auto candidate and effective quote", async () => {
     const result = await ingestQuotesFeed({
       fetchImpl: jsonFetch(envelope([row()])),

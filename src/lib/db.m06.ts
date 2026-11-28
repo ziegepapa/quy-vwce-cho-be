@@ -89,7 +89,7 @@ function buildInstrument(input: AutoQuoteInput, t: string): Instrument {
 
 export async function putAutoCandidateAndResolve(
   input: AutoQuoteInput,
-  opts?: { nowDate?: string },
+  opts?: { nowDate?: string; rejectOlderFeed?: boolean },
 ): Promise<Quote | null> {
   await ensureQuoteFoundationMigrated();
   await assertQuoteWritesUnlocked();
@@ -135,6 +135,20 @@ export async function putAutoCandidateAndResolve(
         db.quotes.get(quoteId(isin, currency)),
         db.quotePreferences.get(preferenceId(isin, currency)),
       ]);
+
+      // Check inside the write transaction, not just before it: another tab
+      // may have stored a newer feed between the caller's read and this write.
+      if (opts?.rejectOlderFeed && prior) {
+        const previousFetch = Date.parse(prior.fetchedAt ?? "");
+        const incomingFetch = Date.parse(candidate.fetchedAt ?? "");
+        if (prior.asOf > candidate.asOf || (
+          prior.asOf === candidate.asOf &&
+          Number.isFinite(previousFetch) &&
+          (!Number.isFinite(incomingFetch) || previousFetch > incomingFetch)
+        )) {
+          throw new Error("older quote feed rejected; stored quote retained");
+        }
+      }
 
       if (!existingInstrument) {
         await db.instruments.put(instrument);
