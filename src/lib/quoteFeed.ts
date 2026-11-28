@@ -1,4 +1,5 @@
 import type { QuoteCandidate } from "./types";
+import { VWCE_ISIN, VALL_ISIN } from "./types";
 import type { AutoQuoteInput } from "./db.m06";
 import { db } from "./db.m01a";
 import { isSameAutoQuoteSemantics, putAutoCandidateAndResolve } from "./db.m06";
@@ -130,6 +131,12 @@ function validateRow(value: unknown, now: Date): AutoQuoteInput {
 
   const currency = cleanRequiredString(value.currency, "currency").toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) throw new Error("currency must be a 3-letter code");
+
+  // The configured VWCE/VALL feed tracks the EUR listings. Reject mislabeled
+  // foreign-currency rows instead of silently creating another price series.
+  if ((instrumentIsin === VWCE_ISIN || instrumentIsin === VALL_ISIN) && currency !== "EUR") {
+    throw new Error("configured ETF quote must use EUR");
+  }
 
   const venue = cleanRequiredString(value.venue, "venue");
   if (typeof value.price !== "number" || !Number.isFinite(value.price) || value.price <= 0) {
@@ -325,7 +332,7 @@ async function ingestQuotesFeedInternal(
   }
 
   return {
-    status: errors.length > 0 ? "partial" : "ok",
+    status: errors.length > 0 || validation.skipped.length > 0 ? "partial" : "ok",
     url,
     totalRows: validation.rows.length + validation.skipped.length,
     acceptedRows: validation.rows.length,
